@@ -1,0 +1,14 @@
+# Node.js
+node_modules/
+dist/
+.DS_Store
+*.local
+.env
+.cursor/
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Office Temporary Files
+~$*

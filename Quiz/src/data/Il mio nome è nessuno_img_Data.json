@@ -1,0 +1,43 @@
+{
+  "_note": {
+    "immagineSegreta": "Rapporto 1:1 (Quadrata). Dimensioni consigliate: 1000x1000px.",
+    "iconeIndizi": "Rapporto 1:1. Dimensioni consigliate: 200x200px (formato .svg o .png)."
+  },
+  "sfondo": "",
+  "immagineSegreta": "/Icone/Il mio nome è nessuno_img/Prova.png",
+  "indizi": [
+    {
+      "step": 1,
+      "testo": "Primo indizio sull'immagine",
+      "colore": "#fe7507",
+      "icona": "/Icone/Il mio nome è nessuno_img/Icona indizio.svg"
+    },
+    {
+      "step": 2,
+      "testo": "Secondo indizio sull'immagine",
+      "colore": "#fe7507",
+      "icona": "/Icone/Il mio nome è nessuno_img/Icona indizio.svg"
+    },
+    {
+      "step": 3,
+      "testo": "Terzo indizio sull'immagine",
+      "colore": "#fe7507",
+      "icona": "/Icone/Il mio nome è nessuno_img/Icona indizio.svg"
+    },
+    {
+      "step": 4,
+      "testo": "Quarto indizio sull'immagine",
+      "colore": "#fe7507",
+      "icona": "/Icone/Il mio nome è nessuno_img/Icona indizio.svg"
+    }
+  ],
+  "soluzione": {
+    "titolo": "Nome Personaggio/Oggetto",
+    "categoria": "Categoria Immagine",
+    "anno": "2026"
+  },
+  "griglia": {
+    "colonne": 4,
+    "righe": 4
+  }
+}

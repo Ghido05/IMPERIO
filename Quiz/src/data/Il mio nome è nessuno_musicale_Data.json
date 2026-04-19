@@ -1,0 +1,68 @@
+{
+  "indizi": [
+    {
+      "id": 1,
+      "color": "#009200",
+      "text": ""
+    },
+    {
+      "id": 2,
+      "color": "#FF0000",
+      "text": ""
+    },
+    {
+      "id": 3,
+      "color": "#0000FF",
+      "text": ""
+    },
+    {
+      "id": 4,
+      "color": "#FE7507",
+      "text": ""
+    }
+  ],
+  "strumenti": [
+    {
+      "step": 1,
+      "nome": "Strumento Segreto",
+      "icona": "Il mio nome è nessuno_musicale/Icona di base.svg",
+      "audio": "",
+      "posizione": "top-[33.98%] left-[1.87%]"
+    },
+    {
+      "step": 3,
+      "nome": "Strumento Segreto",
+      "icona": "Il mio nome è nessuno_musicale/Icona di base.svg",
+      "audio": "",
+      "posizione": "top-[49.25%] left-[21.09%]"
+    },
+    {
+      "step": 5,
+      "nome": "Strumento Segreto",
+      "icona": "Il mio nome è nessuno_musicale/Icona di base.svg",
+      "audio": "",
+      "posizione": "top-[18.56%] left-[48.12%]"
+    },
+    {
+      "step": 7,
+      "nome": "Strumento Segreto",
+      "icona": "Il mio nome è nessuno_musicale/Icona di base.svg",
+      "audio": "",
+      "posizione": "top-[49.25%] left-[71.87%]"
+    },
+    {
+      "step": 9,
+      "nome": "Strumento Segreto",
+      "icona": "Il mio nome è nessuno_musicale/Icona di base.svg",
+      "audio": "",
+      "posizione": "top-[79.94%] left-[91.51%]"
+    }
+  ],
+  "soluzione": {
+    "titolo": "Titolo",
+    "artista": "Autore",
+    "anno": "Anno",
+    "audio": ""
+  },
+  "sfondo": ""
+}

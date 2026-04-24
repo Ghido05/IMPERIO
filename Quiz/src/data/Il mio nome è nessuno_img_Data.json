@@ -37,7 +37,11 @@
     "anno": "2026"
   },
   "griglia": {
-    "colonne": 4,
-    "righe": 4
+    "colonne": 10,
+    "righe": 10,
+    "puntoFocale": {
+      "colonna": 5,
+      "riga": 5
+    }
   }
 }

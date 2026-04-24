@@ -1,0 +1,26 @@
+{
+  "titolo": "Titolo della Classifica",
+  "sfondo": "",
+  "immagineSegreta": "/Icone/Il mio nome è nessuno_img/Prova.png",
+  "audio": "/Audio/canzone_1.mp3",
+  "griglia": {
+    "colonne": 10,
+    "righe": 10,
+    "puntoFocale": {
+      "colonna": 5,
+      "riga": 5
+    }
+  },
+  "elementi": [
+    { "posizione": 1, "testo": "Risposta 1" },
+    { "posizione": 2, "testo": "Risposta 2" },
+    { "posizione": 3, "testo": "Risposta 3" },
+    { "posizione": 4, "testo": "Risposta 4" },
+    { "posizione": 5, "testo": "Risposta 5" },
+    { "posizione": 6, "testo": "Risposta 6" },
+    { "posizione": 7, "testo": "Risposta 7" },
+    { "posizione": 8, "testo": "Risposta 8" },
+    { "posizione": 9, "testo": "Risposta 9" },
+    { "posizione": 10, "testo": "Risposta 10" }
+  ]
+}

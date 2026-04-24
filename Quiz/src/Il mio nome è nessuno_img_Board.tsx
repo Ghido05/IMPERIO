@@ -12,11 +12,46 @@ const GameBoard = (): React.JSX.Element => {
 
   const MAX_STEP = 5;
 
-  // Generiamo l'ordine di rivelazione dei tasselli (shuffled)
+  // Generiamo l'ordine di rivelazione dei tasselli (pesato per svelare prima i bordi)
   const totalTiles = gameData.griglia.colonne * gameData.griglia.righe;
-  const [tileOrder] = useState(() => 
-    Array.from({ length: totalTiles }, (_, i) => i).sort(() => Math.random() - 0.5)
-  );
+  const tileOrder = React.useMemo(() => {
+    const cols = gameData.griglia.colonne;
+    const rows = gameData.griglia.righe;
+    
+    // Controlliamo se esiste un punto focale definito nel JSON, altrimenti usiamo il centro perfetto
+    const centerCol = (gameData.griglia as any)?.puntoFocale?.colonna !== undefined 
+      ? (gameData.griglia as any).puntoFocale.colonna 
+      : (cols - 1) / 2;
+      
+    const centerRow = (gameData.griglia as any)?.puntoFocale?.riga !== undefined 
+      ? (gameData.griglia as any).puntoFocale.riga 
+      : (rows - 1) / 2;
+    
+    // Massima distanza teorica dal punto focale agli angoli della griglia
+    const maxDist = Math.max(
+      Math.sqrt(Math.pow(0 - centerCol, 2) + Math.pow(0 - centerRow, 2)), // Angolo Top-Left
+      Math.sqrt(Math.pow(cols - 1 - centerCol, 2) + Math.pow(0 - centerRow, 2)), // Angolo Top-Right
+      Math.sqrt(Math.pow(0 - centerCol, 2) + Math.pow(rows - 1 - centerRow, 2)), // Angolo Bottom-Left
+      Math.sqrt(Math.pow(cols - 1 - centerCol, 2) + Math.pow(rows - 1 - centerRow, 2)) // Angolo Bottom-Right
+    );
+    
+    const tiles = Array.from({ length: totalTiles }, (_, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      const dist = Math.sqrt(Math.pow(col - centerCol, 2) + Math.pow(row - centerRow, 2));
+      
+      // Normalizziamo (da 0 a 1, dove 1 è il bordo)
+      const normalizedDist = dist / (maxDist || 1);
+      
+      // Diamo priorità ai bordi (70% peso alla distanza, 30% casuale)
+      const weight = (normalizedDist * 0.7) + (Math.random() * 0.3);
+      
+      return { index: i, weight };
+    });
+    
+    // Ordine decrescente: i più alti (bordi) vengono prima
+    return tiles.sort((a, b) => b.weight - a.weight).map(t => t.index);
+  }, [totalTiles, gameData.griglia.colonne, gameData.griglia.righe]);
 
   // Quanti tasselli rivelare per ogni step (16 tasselli / 5 step = ~3.2)
   const tilesPerStep = Math.ceil(totalTiles / MAX_STEP);
@@ -119,12 +154,18 @@ const GameBoard = (): React.JSX.Element => {
             />
             
             {/* Griglia di Copertura (Tasselli) */}
-            <div className="absolute inset-0 grid grid-cols-4 grid-rows-4">
+            <div 
+              className="absolute inset-0 grid"
+              style={{
+                gridTemplateColumns: `repeat(${gameData.griglia.colonne}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${gameData.griglia.righe}, minmax(0, 1fr))`
+              }}
+            >
               {Array.from({ length: totalTiles }).map((_, i) => (
                 <div 
                   key={i}
                   className={`w-full h-full bg-[#181a1d] border border-white/5 transition-all duration-700 ease-in-out ${
-                    isTileRevealed(i) ? 'opacity-0 scale-95 blur-none' : 'opacity-100 blur-sm'
+                    isTileRevealed(i) ? 'opacity-0 scale-95' : 'opacity-100'
                   }`}
                 />
               ))}

@@ -26,17 +26,35 @@
     - **Icone:** Cerchio perfetto con altezza e larghezza fisse a **102px**.
     - **Box Testo:** Larghezza **600px** e altezza fissa **102px** (allineamento perfetto con l'icona).
 - [x] **Soluzione Dinamica:** Box della categoria sempre visibile che transiziona alla soluzione finale con animazione zoom-in.
+- [x] **Punto Focale (NOVITÀ):** Gestione dinamica del punto centrale per la rivelazione dell'immagine tramite il campo `puntoFocale` in `griglia` nel JSON.
 - [x] **Integrazione Dati:** Gestione completa tramite `Il mio nome è nessuno_img_Data.json` con note documentali integrate per gli asset.
 
-## 4. Specifiche Asset (NOVITÀ)
-- **Immagini Gioco 2:** Rapporto 1:1, consigliato 1000x1000px.
-- **Icone Indizi:** Rapporto 1:1, consigliato 200x200px (.svg o .png trasparente).
-- **Audio:** Canzoni caricate in `/public/Audio/` e mappate nel JSON per il modulo musicale.
+## 4. Modulo GIOCO 3 - CLASSIFICA (`Gioco classifica_Board.tsx`) (NOVITÀ & REFACTOR)
+- [x] **Stato:** **COMPLETATO**.
+- [x] **Logica a 10 Indizi:** Svelamento progressivo di 10 indizi/risposte.
+- [x] **Gestione Cromatica e Peso:**
+    - Indizi 1-5 (Azzurri): Svelano i bordi (gradiente da chiaro a scuro).
+    - Indizi 6-8 (Verdi): Svelano la fascia intermedia (gradiente da chiaro a scuro).
+    - Indizi 9-10 (Gialli): Svelano il centro (gradiente da chiaro a scuro).
+- [x] **Griglia Immagine & Punto Focale:** Tasselli opachi colorati dinamicamente. Integrazione di `puntoFocale` per decidere il centro della rivelazione.
+- [x] **Audio:** Integrazione del supporto audio opzionale in background (tasto `M`).
+- [x] **Titolo a Sorpresa:** Titolo della classifica nascosto e rivelato con animazione tramite tasto `T`.
+- [x] **Sistema di Errore:** Integrazione del feedback visivo di errore standardizzato (tasto `E` / `X`).
+- [x] **Integrazione Dati:** Dati gestiti tramite `Gioco classifica_Data.json`.
+- [x] **Layout:** Responsive basato su aspect-ratio 16/9, con sfondi globali personalizzabili tramite JSON.
 
-## 5. Note Tecniche & Comandi
+## 5. Specifiche Asset (AGGIORNAMENTO)
+- **Immagini Gioco 2 e 3:** Rapporto 1:1, consigliato 1000x1000px.
+- **Icone Indizi:** Rapporto 1:1, consigliato 200x200px (.svg o .png trasparente).
+- **Audio:** Canzoni caricate in `/public/Audio/` e mappate nel JSON per i moduli musicale e classifica.
+
+## 6. Note Tecniche & Comandi
 - **Esecuzione:** `cd Quiz && npm run dev`
 - **Comandi Tastiera (Standardizzati):** 
-    - `Frecce`: Navigazione step.
+    - `Frecce`: Navigazione step (Gioco 1 e 2).
+    - `1` a `9`, `0` (per 10): Rivelazione specifica (Gioco 3).
     - `Invio / S`: Rivelazione automatica.
     - `E / X`: Animazione errore.
+    - `T`: Rivela titolo (Gioco 3).
+    - `M`: Play/Pause Musica (Gioco 3).
 - **Agenti:** Utilizzo attivo dei file `.md` nella cartella `Gemini CLI/agents/` per ogni operazione di scrittura codice.

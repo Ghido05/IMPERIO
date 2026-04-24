@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import ImgBoard from './Il mio nome è nessuno_img_Board';
 import MusicBoard from './Il mio nome è nessuno_musicale_Board';
+import ClassificaBoard from './Gioco classifica_Board';
 
 function App() {
-  const [game, setGame] = useState<'img' | 'music'>('img');
+  const [game, setGame] = useState<'img' | 'music' | 'classifica'>('img');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get('game') === 'musica') {
+    const gameParam = params.get('game');
+    if (gameParam === 'musica') {
       setGame('music');
+    } else if (gameParam === 'classifica') {
+      setGame('classifica');
     } else {
       setGame('img');
     }
@@ -16,7 +20,9 @@ function App() {
 
   return (
     <>
-      {game === 'img' ? <ImgBoard /> : <MusicBoard />}
+      {game === 'img' && <ImgBoard />}
+      {game === 'music' && <MusicBoard />}
+      {game === 'classifica' && <ClassificaBoard />}
       
       {/* Piccolo selettore rapido in alto a sinistra (opzionale, solo per debug) */}
       <div className="fixed top-2 left-2 z-[1000] opacity-20 hover:opacity-100 transition-opacity flex gap-2">
@@ -31,6 +37,12 @@ function App() {
           className={`px-3 py-1 rounded text-xs font-bold ${game === 'music' ? 'bg-blue-500 text-white' : 'bg-gray-800 text-gray-400'}`}
         >
           MUSICA
+        </button>
+        <button 
+          onClick={() => { window.location.href = '/?game=classifica'; }}
+          className={`px-3 py-1 rounded text-xs font-bold ${game === 'classifica' ? 'bg-purple-500 text-white' : 'bg-gray-800 text-gray-400'}`}
+        >
+          CLASSIFICA
         </button>
       </div>
     </>

@@ -1,22 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import ImgBoard from './Il mio nome è nessuno_img_Board';
-import MusicBoard from './Il mio nome è nessuno_musicale_Board';
+import MusicBoard from './Il mio nome è nessuno_musicale_Board';
 import ClassificaBoard from './Gioco classifica_Board';
 
 function App() {
-  const [game, setGame] = useState<'img' | 'music' | 'classifica'>('img');
-
-  useEffect(() => {
+  const [game] = useState<'img' | 'music' | 'classifica'>(() => {
     const params = new URLSearchParams(window.location.search);
     const gameParam = params.get('game');
-    if (gameParam === 'musica') {
-      setGame('music');
-    } else if (gameParam === 'classifica') {
-      setGame('classifica');
-    } else {
-      setGame('img');
-    }
-  }, []);
+    if (gameParam === 'musica') return 'music';
+    if (gameParam === 'classifica') return 'classifica';
+    return 'img';
+  });
 
   return (
     <>

@@ -1,0 +1,23 @@
+{
+  "titolo": "Classifica Musicale",
+  "sfondo": "",
+  "immagineSegreta": "/Icone/Il mio nome è nessuno_img/Prova.png",
+  "canzoneFinale": "/Audio/Modà - Come un Pittore con Testo.mp3",
+  "griglia": {
+    "colonne": 10,
+    "righe": 10,
+    "puntoFocale": {
+      "colonna": 5,
+      "riga": 5
+    }
+  },
+  "elementi": [
+    { "posizione": 1, "testo": "Batteria", "audio": "/Audio/canzone_1.mp3" },
+    { "posizione": 2, "testo": "Basso", "audio": "/Audio/canzone_2.mp3" },
+    { "posizione": 3, "testo": "Chitarra Acustica", "audio": "/Audio/canzone_3.mp3" },
+    { "posizione": 4, "testo": "Pianoforte", "audio": "/Audio/canzone_4.mp3" },
+    { "posizione": 5, "testo": "Archi", "audio": "/Audio/canzone_5.mp3" },
+    { "posizione": 6, "testo": "Strumento 6", "audio": "" },
+    { "posizione": 7, "testo": "Strumento 7", "audio": "" }
+  ]
+}

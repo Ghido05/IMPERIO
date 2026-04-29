@@ -331,7 +331,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
         
         {/* PENTAGRAMMA (Sempre visibile) */}
         <div className={`absolute left-0 w-full z-0 pointer-events-none flex justify-center transition-opacity duration-1000 ${step === 10 ? 'opacity-0' : 'opacity-40'}`} style={{ top: '28.44%', height: '63.17%' }}>
-          <img src="/Icone/Il mio nome è nessuno_musicale/Pentagramma.svg" alt="Pentagramma" className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+          <img src="/Icone/Il mio nome è nessuno_musicale/Pentagramma.svg" alt="Pentagramma" className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
         </div>
 
         {/* STRUMENTI (Gestiti dallo stato 'step' e da gameData) */}
@@ -350,7 +350,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
         {/* Primo Indizio (Verde) - Nota sulla 2ª riga dal basso, Box sopra la 1ª riga */}
         <DynamicHint 
           note={gameData.indizi[0]}
-          fileName="Il mio nome è nessuno_musicale/Nota1.svg" 
+          fileName="Il mio nome è nessuno_musicale/Nota1.svg" 
           altText="Primo Indizio"
           isVisible={step >= 2 && step < 10} 
           className="top-[12.5%] left-[7.13%]"
@@ -362,7 +362,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
         {/* Secondo Indizio (Rosso) - Nota sulla 3ª riga dal basso, Box sopra il verde */}
         <DynamicHint 
           note={gameData.indizi[1]}
-          fileName="Il mio nome è nessuno_musicale/Nota2.svg" 
+          fileName="Il mio nome è nessuno_musicale/Nota2.svg" 
           altText="Secondo Indizio"
           isVisible={step >= 4 && step < 10} 
           className="top-[-3.77%] left-[11.77%]"
@@ -374,7 +374,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
         {/* Terzo Indizio (Blu) - Nota sulla 2ª riga dal basso, Box sopra la 1ª riga */}
         <DynamicHint 
           note={gameData.indizi[2]}
-          fileName="Il mio nome è nessuno_musicale/Nota3.svg" 
+          fileName="Il mio nome è nessuno_musicale/Nota3.svg" 
           altText="Terzo Indizio"
           isVisible={step >= 6 && step < 10} 
           className="top-[12.5%] left-[56.66%]"
@@ -386,7 +386,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
         {/* Quarto Indizio (Arancione) - Nota sulla 3ª riga dal basso, Box sopra il blu */}
         <DynamicHint 
           note={gameData.indizi[3]}
-          fileName="Il mio nome è nessuno_musicale/Nota4.svg" 
+          fileName="Il mio nome è nessuno_musicale/Nota4.svg" 
           altText="Quarto Indizio"
           isVisible={step >= 8 && step < 10} 
           className="top-[-3.77%] left-[61.35%]"

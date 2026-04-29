@@ -1,0 +1,36 @@
+{
+  "livelli": [
+    {
+      "tema": "PIANETI",
+      "sfondo": "",
+      "parole": [
+        "MERCURIO",
+        "VENERE",
+        "TERRA",
+        "SATURNO",
+        "PLUTONE",
+        "GIOVE"
+      ]
+    },
+    {
+      "tema": "CUCINA",
+      "sfondo": "sfondo_cucina.png",
+      "parole": [
+        "SCHIACCIANOCI",
+        "FORBICI",
+        "FERMACARTE",
+        "APRISCATOLE"
+      ]
+    },
+    {
+      "tema": "MATEMATICA",
+      "sfondo": "sfondo_matematica.png",
+      "parole": [
+        "SINUSOIDE",
+        "DERIVATA",
+        "INTEGRALE",
+        "MATEMATICA"
+      ]
+    }
+  ]
+}

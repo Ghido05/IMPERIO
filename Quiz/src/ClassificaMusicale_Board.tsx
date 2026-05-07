@@ -247,7 +247,8 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
         >
           {/* L'Immagine Segreta */}
           <img 
-            src={gameData.immagineSegreta || "/Icone/Il mio nome è nessuno_img/Prova.png"} 
+            src={(gameData as any).immagineSegreta || "/Icone/Il mio nome è nessuno_img/Prova.png"}
+ 
             alt="Immagine Segreta" 
             className="w-full h-full object-cover"
           />

@@ -1,181 +1,230 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import gameData from './data/Gioco frasetempo_Data.json';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import phrasesData from './data/FraseConTempo_Data.json';
 
-const FraseTempoBoard: React.FC = () => {
-  const [fraseIdx, setFraseIdx] = useState(0);
-  const [frase, setFrase] = useState<string>('');
-  const [revealedLetters, setRevealedLetters] = useState<boolean[]>([]);
-  const [timeLeft, setTimeLeft] = useState<number>(30);
-  const [timerActive, setTimerActive] = useState<boolean>(false);
-  const [score, setScore] = useState<number | null>(null);
+const FraseConTempo_Board: React.FC = () => {
+  const [index, setIndex] = useState(0);
+  const [tokens, setTokens] = useState<string[]>([]);
+  const [targetTokens, setTargetTokens] = useState<string[]>([]);
+  const [time, setTime] = useState(30.0);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [revealed, setRevealed] = useState(false);
+  const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
 
-  const markers = [
-    { time: 25, val: 8 },
-    { time: 20, val: 7 },
-    { time: 16, val: 6 },
-    { time: 12, val: 5 },
-    { time: 8, val: 4 },
-    { time: 4, val: 3 },
-    { time: 0, val: 2 },
-  ];
+  const timerRef = useRef<any | null>(null);
 
-  // Inizializza o cambia frase
-  useEffect(() => {
-    if (gameData.frasi.length === 0) return;
-    const currentFrase = gameData.frasi[fraseIdx].toUpperCase();
-    setFrase(currentFrase);
-    setRevealedLetters(new Array(currentFrase.length).fill(false));
-    setTimeLeft(30);
-    setTimerActive(true);
-    setScore(null);
-  }, [fraseIdx]);
+  const thresholds = [25, 20, 16, 12, 8, 4, 0];
+  const values = [8, 7, 6, 5, 4, 3, 2];
 
-  // Gestione Timer
-  useEffect(() => {
-    if (!timerActive || timeLeft <= 0) return;
-
-    const interval = setInterval(() => {
-      setTimeLeft(prev => {
-        const next = prev - 0.1;
-        if (next <= 0) {
-          setTimerActive(false);
-          return 0;
-        }
-        return next;
-      });
-    }, 100);
-
-    return () => clearInterval(interval);
-  }, [timerActive, timeLeft]);
-
-  // Gestione Tastiera
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Svela la lettera digitata
-    if (/^[A-Z]$/i.test(e.key)) {
-      const letter = e.key.toUpperCase();
-      setRevealedLetters(prev => {
-        const next = [...prev];
-        let changed = false;
-        for (let i = 0; i < frase.length; i++) {
-          if (frase[i] === letter && !next[i]) {
-            next[i] = true;
-            changed = true;
-          }
-        }
-        return changed ? next : prev;
-      });
+  const initGame = useCallback((idx: number) => {
+    const phraseList = phrasesData.frasi ?? [];
+    if (phraseList.length === 0) {
+      setTargetTokens([]);
+      setTokens([]);
+      setTime(30.0);
+      setIsTimerRunning(false);
+      setRevealed(false);
+      setSelectedMarker(null);
+      return;
     }
-
-    // Invio o S = Svela tutto e ferma timer
-    if (e.key === 'Enter' || e.key.toUpperCase() === 'S') {
-      setRevealedLetters(new Array(frase.length).fill(true));
-      setTimerActive(false);
-      
-      // Calcola punteggio
-      let currentScore = 2;
-      for (const m of markers) {
-        if (timeLeft >= m.time) {
-          currentScore = Math.max(currentScore, m.val);
-        }
+    const frase = phraseList[idx % phraseList.length].toUpperCase();
+    const targets: string[] = [];
+    let i = 0;
+    while (i < frase.length) {
+      const c = frase[i];
+      if (i + 1 < frase.length && frase[i + 1] === "'") {
+        targets.push(c + "'");
+        i += 2;
+      } else {
+        targets.push(c);
+        i += 1;
       }
-      setScore(currentScore);
     }
+    setTargetTokens(targets);
+    setTokens(targets.map(t => (/[A-Z]/.test(t[0]) ? '_' : t)));
+    setTime(30.0);
+    setIsTimerRunning(false);
+    setRevealed(false);
+    setSelectedMarker(null);
+  }, []);
 
-    // Freccia Destra = Prossima Frase
-    if (e.key === 'ArrowRight') {
-      setFraseIdx(prev => (prev + 1) % gameData.frasi.length);
+  useEffect(() => {
+    initGame(index);
+  }, [index, initGame]);
+
+  useEffect(() => {
+    if (isTimerRunning && time > 0) {
+      timerRef.current = setInterval(() => {
+        setTime(prev => Math.max(0, prev - 0.1));
+      }, 100);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
     }
-  }, [frase, timeLeft, markers]);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [isTimerRunning, time]);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (revealed) return;
+    const key = e.key.toUpperCase();
+    if (key.length === 1 && /[A-Z]/.test(key)) {
+      setTokens(prev => prev.map((t, i) => (targetTokens[i][0] === key ? targetTokens[i] : t)));
+    }
+  }, [targetTokens, revealed]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  const progressPercent = (timeLeft / 30) * 100;
-  
-  let barColor = 'bg-green-500';
-  if (timeLeft <= 20 && timeLeft > 10) barColor = 'bg-yellow-400';
-  if (timeLeft <= 10) barColor = 'bg-red-600';
+  const startTimer = () => setIsTimerRunning(true);
+  const stopTimer = () => setIsTimerRunning(false);
+
+  const revealSolution = () => {
+    stopTimer();
+    setRevealed(true);
+    setTokens([...targetTokens]);
+    
+    // Find the current marker
+    let markerIdx = -1;
+    for (let i = 0; i < thresholds.length; i++) {
+      if (time >= thresholds[i]) {
+        markerIdx = i;
+        break;
+      }
+    }
+    if (markerIdx !== -1) {
+      setSelectedMarker(markerIdx);
+    }
+  };
+
+  const nextPhrase = () => {
+    setIndex(prev => prev + 1);
+  };
+
+  const getTimerColor = () => {
+    if (time > 20) return '#00FF00';
+    if (time > 10) return '#FFFF00';
+    return '#FF0000';
+  };
+
+  // Group tokens into words for wrapping
+  const words: string[][] = [];
+  let currentWord: string[] = [];
+  tokens.forEach((t) => {
+    if (t === ' ') {
+      if (currentWord.length > 0) words.push(currentWord);
+      words.push([' ']);
+      currentWord = [];
+    } else {
+      currentWord.push(t);
+    }
+  });
+  if (currentWord.length > 0) words.push(currentWord);
 
   return (
-    <div className="relative w-full min-h-screen bg-gradient-to-br from-neutral-950 to-neutral-900 flex flex-col items-center py-20 font-sans overflow-hidden select-none">
-      {/* EFFETTI DI LUCE SULLO SFONDO (Decorativi) */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />
-      <h1 className="text-yellow-400 text-5xl font-bold mb-10 tracking-widest drop-shadow-[0_0_10px_rgba(250,204,21,0.8)]">
-        INDOVINA LA FRASE (TEMPO)
-      </h1>
+    <div className="relative w-full min-h-screen bg-black text-white flex flex-col items-center py-10 overflow-hidden">
+      <h1 className="text-5xl font-bold text-yellow-400 mb-10">INDOVINA LA FRASE (TEMPO)</h1>
+
+      {/* Frase Display */}
+      <div className="flex flex-wrap justify-center gap-2 max-w-6xl px-10 mb-10">
+        {words.map((word, wIdx) => (
+          <div key={wIdx} className="flex gap-1">
+            {word.map((t, tIdx) => (
+              t === ' ' ? (
+                <div key={tIdx} className="w-8" />
+              ) : (
+                <div 
+                  key={tIdx} 
+                  className="w-14 h-20 bg-blue-900 border-4 border-blue-400 rounded-md flex items-center justify-center text-4xl font-bold"
+                >
+                  {t === '_' ? '' : t}
+                </div>
+              )
+            ))}
+          </div>
+        ))}
+      </div>
 
       {/* Timer Bar */}
-      <div className="relative w-3/4 max-w-4xl h-12 bg-gray-800 border-4 border-cyan-400 rounded-full mb-20 overflow-hidden">
-        <div 
-          className={`h-full transition-all duration-100 ease-linear ${barColor}`}
-          style={{ width: `${progressPercent}%` }}
-        />
-        
+      <div className="relative w-[800px] h-40 mt-10">
+        {/* Progress Bar Container */}
+        <div className="absolute top-1/2 left-0 w-full h-10 -translate-y-1/2 border-4 border-cyan-400 bg-gray-800 rounded-lg overflow-hidden">
+            <div 
+                className="h-full transition-all duration-100 ease-linear"
+                style={{ 
+                    width: `${(time / 30) * 100}%`,
+                    backgroundColor: getTimerColor()
+                }}
+            />
+        </div>
+
         {/* Markers */}
-        {markers.map((m, i) => {
-          const isVisible = timeLeft >= m.time;
-          const isScored = score === m.val;
-          const leftPercent = (m.time / 30) * 100;
-          
-          if (!isVisible && !isScored && timeLeft > 0) return null; // Nascondi se superato (tranne l'ultimo 0 o se calcolato come score)
+        {thresholds.map((threshold, i) => {
+          const position = (threshold / 30) * 100;
+          const isVisible = time >= threshold || revealed;
+          const isSelected = selectedMarker === i;
 
           return (
             <div 
               key={i} 
-              className="absolute top-0 bottom-0 border-l-2 border-white flex flex-col justify-center items-center"
-              style={{ left: `${leftPercent}%` }}
+              className={`absolute top-0 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+              style={{ left: `${position}%`, transform: 'translateX(-50%)' }}
             >
-              <div className={`absolute -top-12 w-10 h-10 flex items-center justify-center font-bold text-xl rounded shadow-lg transition-all duration-300
-                ${isScored ? 'bg-orange-500 border-2 border-yellow-300 text-black scale-125 z-10' : 'bg-blue-700 text-white border border-white'}`}
-              >
-                {m.val}
+              <div className="flex flex-col items-center">
+                <div className={`w-12 h-12 rounded flex items-center justify-center text-2xl font-bold border-2 transition-colors ${
+                  isSelected ? 'bg-orange-500 border-yellow-300 scale-125' : 'bg-blue-700 border-white'
+                }`}>
+                  {values[i]}
+                </div>
+                <div className="w-0.5 h-20 bg-white mt-1" />
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* Frase Area */}
-      <div className="flex flex-wrap justify-center items-center gap-4 px-10 max-w-5xl mt-10">
-        {frase.split('').map((char, index) => {
-          if (char === ' ') {
-            return <div key={index} className="w-8 h-16"></div>;
-          }
-          if (char === "'") {
-            return <div key={index} className="flex items-start justify-center w-4 h-16 text-4xl text-white font-bold">'</div>;
-          }
-
-          const isRevealed = revealedLetters[index];
-
-          return (
-            <div 
-              key={index}
-              className={`w-14 h-16 flex items-center justify-center border-4 rounded-md text-4xl font-bold transition-all duration-300 shadow-md
-                ${isRevealed ? 'bg-blue-900 border-blue-500 text-white' : 'bg-blue-900 border-blue-800 text-transparent'}`}
-            >
-              {char}
-            </div>
-          );
-        })}
+      {/* Controls */}
+      <div className="flex gap-6 mt-16">
+        {!isTimerRunning && !revealed && (
+          <button 
+            onClick={startTimer}
+            className="px-10 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl text-2xl font-bold transition-all"
+          >
+            START TIMER
+          </button>
+        )}
+        {isTimerRunning && (
+          <button 
+            onClick={stopTimer}
+            className="px-10 py-4 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl text-2xl font-bold transition-all"
+          >
+            PAUSE
+          </button>
+        )}
+        <button 
+          onClick={revealSolution}
+          className="px-10 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-2xl font-bold transition-all"
+        >
+          MOSTRA SOLUZIONE
+        </button>
+        <button 
+          onClick={nextPhrase}
+          className="px-10 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-2xl font-bold transition-all"
+        >
+          PROSSIMA FRASE
+        </button>
       </div>
 
-      {/* Score Popup */}
-      {score !== null && (
-        <div className="fixed bottom-20 bg-green-600/90 text-white px-8 py-4 rounded-xl border-4 border-green-300 shadow-2xl animate-bounce">
-           <p className="text-4xl font-extrabold">PUNTI ASSEGNATI: {score}</p>
-        </div>
-      )}
-
-      <div className="fixed bottom-4 right-4 text-gray-500 text-sm space-y-1 text-right">
-        <p>Freccia DX: Prossima Frase</p>
-        <p>Invio/S: Svela e Ferma Tempo</p>
-        <p>Digita lettere: Svela la lettera</p>
-      </div>
+      {/* Back to Menu (using window.location for simplicity as per existing pattern) */}
+      <button 
+        onClick={() => { window.location.href = '/'; }}
+        className="mt-10 px-6 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded text-sm font-bold opacity-50 hover:opacity-100 transition-all"
+      >
+        MENU
+      </button>
     </div>
   );
 };
 
-export default FraseTempoBoard;
+export default FraseConTempo_Board;

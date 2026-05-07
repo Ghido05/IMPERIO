@@ -25,7 +25,7 @@ const CruciverbaBoard: React.FC = () => {
 
   const canPlaceWord = (word: string, r: number, c: number, d: Direction, currentGrid: Map<string, GridCell>) => {
     const wordLen = word.length;
-    const newCoords = [];
+    const newCoords: Array<[number, number]> = [];
     for (let i = 0; i < wordLen; i++) {
       newCoords.push(d === 'V' ? [r + i, c] : [r, c + i]);
     }
@@ -43,7 +43,7 @@ const CruciverbaBoard: React.FC = () => {
     if (currentGrid.has(pre) || currentGrid.has(post)) return false;
 
     for (const [cr, cc] of newCoords) {
-      const adjacent = [
+      const adjacent: Array<[number, number]> = [
         [cr - 1, cc], [cr + 1, cc], [cr, cc - 1], [cr, cc + 1]
       ];
       for (const [nr, nc] of adjacent) {

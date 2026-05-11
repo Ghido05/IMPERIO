@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import gameData from './data/Gioco password_Data.json';
+import gameDataRaw from './data/Gioco password_Data.json';
 
 type WordType = 'team1' | 'team2' | 'team3' | 'bomb' | 'neutral';
 
@@ -21,13 +21,32 @@ const teamColors = {
 const PasswordBoard: React.FC = () => {
   const [grid, setGrid] = useState<WordItem[]>([]);
   const [currentTeam, setCurrentTeam] = useState<number>(1);
+  const [currentManche, setCurrentManche] = useState<number>(0);
   const [chosenSuggestion, setChosenSuggestion] = useState<string>("");
   const [gameOver, setGameOver] = useState<string | null>(null);
   const [excludedTeams, setExcludedTeams] = useState<number[]>([]);
   const [winnersOrder, setWinnersOrder] = useState<number[]>([]);
 
+  const manches = gameDataRaw.manches;
+  const gameData = manches[currentManche] || manches[0];
+
   useEffect(() => {
-    // Inizializza la griglia
+    // Carica stato iniziale completo
+    const storedManche = localStorage.getItem('password_current_manche');
+    if (storedManche) setCurrentManche(parseInt(storedManche));
+
+    const storedTeam = localStorage.getItem('password_current_team');
+    if (storedTeam) setCurrentTeam(parseInt(storedTeam));
+    
+    const storedSugg = localStorage.getItem('password_chosen_suggestion');
+    if (storedSugg) setChosenSuggestion(storedSugg);
+
+    const storedExcluded = localStorage.getItem('password_excluded_teams');
+    if (storedExcluded) setExcludedTeams(JSON.parse(storedExcluded));
+
+    const storedWinners = localStorage.getItem('password_winners_order');
+    if (storedWinners) setWinnersOrder(JSON.parse(storedWinners));
+
     const allWords: WordItem[] = [
       ...gameData.squadra1.map(w => ({ word: w.toUpperCase(), type: 'team1' as WordType, guessed: false })),
       ...gameData.squadra2.map(w => ({ word: w.toUpperCase(), type: 'team2' as WordType, guessed: false })),
@@ -35,46 +54,45 @@ const PasswordBoard: React.FC = () => {
       ...gameData.altre.map((w, i) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType, guessed: false }))
     ];
 
-    // Carica stato iniziale completo
-    const storedTeam = localStorage.getItem('password_current_team');
-    if (storedTeam) setCurrentTeam(parseInt(storedTeam));
-    
-    const storedSugg = localStorage.getItem('password_chosen_suggestion');
-    if (storedSugg) setChosenSuggestion(storedSugg);
-
     const storedGrid = localStorage.getItem('password_grid_state');
     if (storedGrid) {
       setGrid(JSON.parse(storedGrid));
     } else {
       const shuffled = [...allWords].sort(() => Math.random() - 0.5);
       setGrid(shuffled);
+      localStorage.setItem('password_grid_state', JSON.stringify(shuffled));
     }
     
     const handleStorage = () => {
+      const manche = localStorage.getItem('password_current_manche');
       const team = localStorage.getItem('password_current_team');
       const sugg = localStorage.getItem('password_chosen_suggestion') || "";
       const gridState = localStorage.getItem('password_grid_state');
+      const excluded = localStorage.getItem('password_excluded_teams');
+      const winners = localStorage.getItem('password_winners_order');
 
-      // Se non c'è stato salvato, resetta tutto (gestione Reset Totale)
-      if (!team && !gridState) {
+      // Se non c'è stato salvato, resetta tutto
+      if (!manche && !gridState) {
+        setCurrentManche(0);
         setCurrentTeam(1);
         setChosenSuggestion("");
         setExcludedTeams([]);
         setWinnersOrder([]);
-        // Rimescola la griglia per un nuovo gioco
-        const reshuffled = [...allWords].sort(() => Math.random() - 0.5);
-        setGrid(reshuffled);
+        window.location.reload();
         return;
       }
 
-      setChosenSuggestion(sugg);
+      if (manche) setCurrentManche(parseInt(manche));
       if (team) setCurrentTeam(parseInt(team));
+      if (sugg) setChosenSuggestion(sugg);
       if (gridState) setGrid(JSON.parse(gridState));
+      if (excluded) setExcludedTeams(JSON.parse(excluded));
+      if (winners) setWinnersOrder(JSON.parse(winners));
     };
 
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
-  }, []);
+  }, [currentManche]);
 
   const handleWordClick = (index: number) => {
     if (gameOver || grid[index].guessed || excludedTeams.includes(currentTeam)) return;
@@ -85,12 +103,15 @@ const PasswordBoard: React.FC = () => {
     clickedWord.guessedBy = currentTeam;
     setGrid(newGrid);
 
+    let newExcluded = [...excludedTeams];
     if (clickedWord.type === 'bomb') {
-      setExcludedTeams(prev => [...prev, currentTeam]);
+      newExcluded.push(currentTeam);
+      setExcludedTeams(newExcluded);
+      localStorage.setItem('password_excluded_teams', JSON.stringify(newExcluded));
       alert(`SQUADRA ${currentTeam} HA COLPITO LA BOMBA ED È ESCLUSA!`);
     }
 
-    // Controlla vincitori in ordine di completamento
+    // Controlla vincitori
     const teams = ['team1', 'team2', 'team3'];
     const newWinners = [...winnersOrder];
     let winnersChanged = false;
@@ -98,7 +119,7 @@ const PasswordBoard: React.FC = () => {
     teams.forEach((t, i) => {
       const teamNum = i + 1;
       const teamWords = newGrid.filter(w => w.type === t);
-      if (teamWords.every(w => w.guessed) && !newWinners.includes(teamNum) && !excludedTeams.includes(teamNum)) {
+      if (teamWords.every(w => w.guessed) && !newWinners.includes(teamNum) && !newExcluded.includes(teamNum)) {
         newWinners.push(teamNum);
         winnersChanged = true;
       }
@@ -106,6 +127,7 @@ const PasswordBoard: React.FC = () => {
 
     if (winnersChanged) {
       setWinnersOrder(newWinners);
+      localStorage.setItem('password_winners_order', JSON.stringify(newWinners));
     }
 
     localStorage.setItem('password_grid_state', JSON.stringify(newGrid));
@@ -134,9 +156,12 @@ const PasswordBoard: React.FC = () => {
       <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(50,50,50,1)_0%,rgba(10,10,10,1)_100%)] z-0" />
       
       <div className="relative z-10 w-full max-w-6xl flex flex-col items-center">
-        <h1 className="text-6xl font-black mb-8 tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500">
-          PASSWORD
-        </h1>
+        <div className="flex flex-col items-center mb-4">
+          <h1 className="text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500">
+            PASSWORD
+          </h1>
+          <p className="text-xl font-bold text-gray-400 uppercase tracking-widest">MANCHE {currentManche + 1}</p>
+        </div>
 
         <div className="flex w-full justify-between mb-12">
           {[1, 2, 3].map(t => {
@@ -174,7 +199,7 @@ const PasswordBoard: React.FC = () => {
 
         <div className="flex gap-12 items-start">
           <div className="grid grid-cols-3 gap-4 bg-gray-800 p-6 rounded-2xl shadow-2xl border border-gray-700">
-            {grid.slice(0, 12).map((item, i) => (
+            {grid.map((item, i) => (
               <div
                 key={i}
                 onClick={() => handleWordClick(i)}
@@ -221,3 +246,4 @@ const PasswordBoard: React.FC = () => {
 };
 
 export default PasswordBoard;
+

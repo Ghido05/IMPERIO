@@ -29,12 +29,12 @@
 - [x] **Caratteristiche:** 7 strumenti (stems) che compongono un brano.
 - [x] **Aggiornamento:** Ripristinata la versione corretta dei dati (Batteria, Basso, Chitarra, ecc.) dopo un errore di sincronizzazione.
 
-## 6. Modulo GIOCO 5 - PASSWORD (SQUADRE & PRESCELTI) (NOVITÀ)
+## 6. Modulo GIOCO 5 - PASSWORD (SQUADRE & PRESCELTI)
 - [x] **Stato:** **COMPLETATO**.
 - [x] **Versioni:**
-  - **Password Squadre:** Gestione di 3 squadre con griglia di parole e sistema di punteggio.
-  - **Password Prescelti:** Modalità specifica per turni con indizi e parole segrete.
-- [x] **Integrazione Dati:** Gestione tramite `Gioco password_Data.json` (struttura a squadre, altre, e suggerimenti_turni).
+  - **Password Squadre:** Gestione di 3 squadre con griglia di parole e sistema di punteggio. **Novità:** Integrato il gioco finale dei Bussolotti direttamente a fine manche con animazioni dinamiche e classifica automatica.
+  - **Password Prescelti:** Modalità specifica per turni con indizi e parole segrete. Implementata la logica di turnazione basata sulle manches (Manche 1: 1-2-3, Manche 2: 2-3-1, Manche 3: 3-1-2).
+- [x] **Integrazione Dati:** Gestione tramite `Gioco password_Data.json` (struttura a squadre, altre, suggerimenti_turni e posizionamento bussolotti per manche).
 
 ## 7. Modulo GIOCO 6 - CRUCIVERBA (`Gioco cruciverba_Board.tsx`)
 - [x] **Stato:** **COMPLETATO**.
@@ -45,13 +45,17 @@
 - [x] **Caratteristiche:** Frase da indovinare con timer da 30s.
 - [x] **Visualizzazione:** Ripristinata la versione con **linea del tempo numerata** (marker 8, 7, 6, 5, 4, 3, 2) per l'assegnazione dinamica del punteggio in base ai secondi rimanenti.
 
-## 9. Moduli RIMOSSI
+## 9. Modulo GIOCO 8 - BUSSOLOTTI (INTEGRATO)
+- [x] **Stato:** **INTEGRATO IN PASSWORD SQUADRE**.
+- [x] **Note:** Il modulo separato (`Gioco bussolotti_Board.tsx`) è stato rimosso per essere inglobato fluidamente come dinamica di premiazione di fine manche in Password Squadre. Le logiche di 1, 3 o 5 bussolotti avvengono ora in automatico.
+
+## 10. Moduli RIMOSSI
 - [x] **Gioco Percorso:** Rimosso per semplificazione del progetto e pulizia del codice.
 
-## 10. Note Tecniche & Comandi
-- **Esecuzione:** `cd Quiz && npm run dev` (Porta 5174).
+## 11. Note Tecniche & Comandi
+- **Esecuzione:** `cd Quiz && npm run dev` (Porta 5173 o 5174).
 - **Comandi Tastiera:** 
-    - `1-9/0`: Rivelazione (Classifiche).
+    - `1-9/0`: Rivelazione (Classifiche) o scelta modalità in Bussolotti.
     - `Lettere (A-Z)`: Digitazione (Cruciverba, Frase Tempo).
     - `Invio / S`: Soluzione / Svelamento automatico.
     - `Frecce`: Navigazione step / Prossima frase.

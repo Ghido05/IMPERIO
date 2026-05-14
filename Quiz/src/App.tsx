@@ -7,10 +7,9 @@ import CruciverbaBoard from './Gioco cruciverba_Board';
 import GiocoFraseTempoBoard from './Gioco frasetempo_Board';
 import PasswordSquadreBoard from './Gioco password_squadre_Board';
 import PasswordPresceltiBoard from './Gioco password_prescelti_Board';
-import BussolottiBoard from './Gioco bussolotti_Board';
 
 function App() {
-  const [game] = useState<'img' | 'music' | 'classifica' | 'classifica_musicale' | 'cruciverba' | 'gioco_frase_tempo' | 'password_squadre' | 'password_prescelti' | 'bussolotti'>(() => {
+  const [game] = useState<'img' | 'music' | 'classifica' | 'classifica_musicale' | 'cruciverba' | 'gioco_frase_tempo' | 'password_squadre' | 'password_prescelti'>(() => {
     const params = new URLSearchParams(window.location.search);
     const gameParam = params.get('game');
     if (gameParam === 'musica') return 'music';
@@ -20,7 +19,6 @@ function App() {
     if (gameParam === 'gioco_frase_tempo') return 'gioco_frase_tempo';
     if (gameParam === 'password_squadre') return 'password_squadre';
     if (gameParam === 'password_prescelti') return 'password_prescelti';
-    if (gameParam === 'bussolotti') return 'bussolotti';
     return 'img';
   });
 
@@ -34,7 +32,6 @@ function App() {
       {game === 'gioco_frase_tempo' && <GiocoFraseTempoBoard />}
       {game === 'password_squadre' && <PasswordSquadreBoard />}
       {game === 'password_prescelti' && <PasswordPresceltiBoard />}
-      {game === 'bussolotti' && <BussolottiBoard />}
       
       {/* Piccolo selettore rapido in alto a sinistra */}
       <div className="fixed top-2 left-2 z-[1000] opacity-20 hover:opacity-100 transition-opacity flex flex-wrap gap-2 max-w-2xl">
@@ -85,12 +82,6 @@ function App() {
           className={`px-3 py-1 rounded text-xs font-bold ${game === 'password_prescelti' ? 'bg-fuchsia-600 text-white' : 'bg-gray-800 text-gray-400'}`}
         >
           PASS. PRESCELTI
-        </button>
-        <button 
-          onClick={() => { window.location.href = '/?game=bussolotti'; }}
-          className={`px-3 py-1 rounded text-xs font-bold ${game === 'bussolotti' ? 'bg-gray-500 text-white' : 'bg-gray-800 text-gray-400'}`}
-        >
-          BUSSOLOTTI
         </button>
       </div>
     </>

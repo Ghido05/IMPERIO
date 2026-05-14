@@ -93,60 +93,146 @@ const PasswordPresceltiBoard: React.FC = () => {
     window.dispatchEvent(new Event('storage'));
   };
 
-  const findNextValidTeam = (startTeam: number) => {
-    let next = startTeam + 1;
-    if (next > 3) next = 1;
-    
-    // Se tutte le squadre sono escluse (difficile ma possibile), ritorna quella di partenza
-    if (excludedTeams.length >= 3) return next;
-
-    while (excludedTeams.includes(next)) {
-      next = next + 1;
-      if (next > 3) next = 1;
-    }
-    return next;
+  const getTurnSequence = (mancheIndex: number) => {
+    if (mancheIndex === 0) return [1, 2, 3];
+    if (mancheIndex === 1) return [2, 3, 1];
+    if (mancheIndex === 2) return [3, 1, 2];
+    return [1, 2, 3];
   };
 
   const nextTurn = () => {
-    let nextTeam = findNextValidTeam(currentTeam);
+    const currentSeq = getTurnSequence(currentManche);
+    let currentIndex = currentSeq.indexOf(currentTeam);
+    
+    let nextTeam: number | null = null;
     let nextRound = currentRound;
-
-    // Se il giro ricomincia da una squadra "precedente" o uguale, aumenta il round
-    if (nextTeam <= currentTeam) {
-      nextRound += 1;
-    }
-
-    if (nextRound > 3) {
-      if (currentManche < manches.length - 1) {
-        if (confirm("Manche finita! Passare alla prossima manche?")) {
-          const nextM = currentManche + 1;
-          setCurrentManche(nextM);
-          setCurrentRound(1);
-          setCurrentTeam(1);
-          setExcludedTeams([]);
-          localStorage.setItem('password_current_manche', nextM.toString());
-          localStorage.setItem('password_current_round', "1");
-          localStorage.setItem('password_current_team', "1");
-          localStorage.setItem('password_excluded_teams', JSON.stringify([]));
-          localStorage.removeItem('password_grid_state');
-          localStorage.removeItem('password_chosen_suggestion');
-          window.location.reload(); // Ricarica per rigenerare la griglia
-          return;
-        }
-      } else {
-        alert("TUTTE LE MANCHES SONO FINITE!");
-        return;
+    
+    // Trova la prossima squadra valida in questo round
+    for (let i = currentIndex + 1; i < currentSeq.length; i++) {
+      if (!excludedTeams.includes(currentSeq[i])) {
+        nextTeam = currentSeq[i];
+        break;
       }
     }
 
-    setCurrentTeam(nextTeam);
-    setCurrentRound(nextRound);
-    setChosenSuggestion("");
+    // Se non ci sono altre squadre nel round, passa al prossimo round
+    if (nextTeam === null) {
+      nextRound += 1;
+      
+      if (nextRound > 3) {
+        if (currentManche < manches.length - 1) {
+          if (confirm("Manche finita! Passare alla prossima manche?")) {
+            const nextM = currentManche + 1;
+            const nextSeq = getTurnSequence(nextM);
+            setCurrentManche(nextM);
+            setCurrentRound(1);
+            setCurrentTeam(nextSeq[0]);
+            setExcludedTeams([]);
+            localStorage.setItem('password_current_manche', nextM.toString());
+            localStorage.setItem('password_current_round', "1");
+            localStorage.setItem('password_current_team', nextSeq[0].toString());
+            localStorage.setItem('password_excluded_teams', JSON.stringify([]));
+            localStorage.removeItem('password_grid_state');
+            localStorage.removeItem('password_chosen_suggestion');
+            window.location.reload();
+            return;
+          }
+        } else {
+          alert("TUTTE LE MANCHES SONO FINITE!");
+          return;
+        }
+      } else {
+        const nextSeq = getTurnSequence(currentManche);
+        for (let i = 0; i < nextSeq.length; i++) {
+          if (!excludedTeams.includes(nextSeq[i])) {
+            nextTeam = nextSeq[i];
+            break;
+          }
+        }
+        if (nextTeam === null) nextTeam = nextSeq[0];
+      }
+    }
+
+    if (nextTeam !== null) {
+      setCurrentTeam(nextTeam);
+      setCurrentRound(nextRound);
+      setChosenSuggestion("");
+      
+      localStorage.setItem('password_current_team', nextTeam.toString());
+      localStorage.setItem('password_current_round', nextRound.toString());
+      localStorage.removeItem('password_chosen_suggestion');
+      window.dispatchEvent(new Event('storage'));
+    }
+  };
+
+  const prevTurn = () => {
+    const currentSeq = getTurnSequence(currentManche);
+    let currentIndex = currentSeq.indexOf(currentTeam);
     
-    localStorage.setItem('password_current_team', nextTeam.toString());
-    localStorage.setItem('password_current_round', nextRound.toString());
-    localStorage.removeItem('password_chosen_suggestion');
-    window.dispatchEvent(new Event('storage'));
+    let prevTeam: number | null = null;
+    let prevRound = currentRound;
+    
+    // Trova la squadra precedente valida in questo round
+    for (let i = currentIndex - 1; i >= 0; i--) {
+      if (!excludedTeams.includes(currentSeq[i])) {
+        prevTeam = currentSeq[i];
+        break;
+      }
+    }
+
+    // Se non ci sono squadre precedenti in questo round, torna al round precedente
+    if (prevTeam === null) {
+      prevRound -= 1;
+      
+      if (prevRound < 1) {
+        if (currentManche > 0) {
+          if (confirm("Tornare alla manche precedente?")) {
+            const prevM = currentManche - 1;
+            setCurrentManche(prevM);
+            setCurrentRound(3);
+            
+            const prevSeq = getTurnSequence(prevM);
+            let lastTeam = prevSeq[2];
+            for (let i = prevSeq.length - 1; i >= 0; i--) {
+              if (!excludedTeams.includes(prevSeq[i])) {
+                lastTeam = prevSeq[i];
+                break;
+              }
+            }
+            
+            setCurrentTeam(lastTeam);
+            localStorage.setItem('password_current_manche', prevM.toString());
+            localStorage.setItem('password_current_round', "3");
+            localStorage.setItem('password_current_team', lastTeam.toString());
+            window.location.reload();
+            return;
+          }
+        } else {
+          alert("SEI GIÀ ALL'INIZIO DEL GIOCO!");
+          return;
+        }
+      } else {
+        const prevSeq = getTurnSequence(currentManche);
+        for (let i = prevSeq.length - 1; i >= 0; i--) {
+          if (!excludedTeams.includes(prevSeq[i])) {
+            prevTeam = prevSeq[i];
+            break;
+          }
+        }
+        if (prevTeam === null) prevTeam = prevSeq[prevSeq.length - 1];
+      }
+    }
+
+    if (prevTeam !== null) {
+      setCurrentTeam(prevTeam);
+      setCurrentRound(prevRound);
+      setChosenSuggestion("");
+      
+      localStorage.setItem('password_current_team', prevTeam.toString());
+      localStorage.setItem('password_current_round', prevRound.toString());
+      localStorage.removeItem('password_chosen_suggestion');
+      window.dispatchEvent(new Event('storage'));
+    }
   };
 
   const resetGame = () => {
@@ -223,12 +309,20 @@ const PasswordPresceltiBoard: React.FC = () => {
               ))}
             </div>
 
-            <button
-              onClick={nextTurn}
-              className="w-full py-4 bg-white text-black font-black text-xl rounded-xl hover:bg-yellow-400 transition-all shadow-lg uppercase tracking-tighter"
-            >
-              Prossimo Turno →
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={prevTurn}
+                className="flex-1 py-4 bg-slate-600 text-white font-black text-sm rounded-xl hover:bg-slate-500 transition-all shadow-lg uppercase tracking-tighter"
+              >
+                ← Indietro
+              </button>
+              <button
+                onClick={nextTurn}
+                className="flex-1 py-4 bg-white text-black font-black text-sm rounded-xl hover:bg-yellow-400 transition-all shadow-lg uppercase tracking-tighter"
+              >
+                Prossimo →
+              </button>
+            </div>
             
             {chosenSuggestion && (
               <div className="mt-4 p-4 bg-yellow-500 text-black rounded-lg text-center font-black animate-pulse">

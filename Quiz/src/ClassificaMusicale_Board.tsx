@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from "react";
 import gameData from "./data/ClassificaMusicale_Data.json";
 
+type ClassificaMusicaleData = {
+  titolo: string;
+  sfondo: string;
+  audio?: string;
+  canzoneFinale?: string;
+  immagineSegreta?: string;
+  elementi: Array<{
+    posizione: number;
+    testo: string;
+    immagine?: string;
+    audio?: string;
+  }>;
+};
+
 const ClassificaMusicaleBoard = (): React.JSX.Element => {
+  const data = gameData as ClassificaMusicaleData;
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [showError, setShowError] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
@@ -10,8 +25,8 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (gameData.audio) {
-      audioRef.current = new Audio(gameData.audio);
+    if (data.audio) {
+      audioRef.current = new Audio(data.audio);
     }
     return () => {
       if (audioRef.current) {
@@ -114,7 +129,7 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
   return (
     <div 
       className={`relative w-full min-h-screen ${gameData.sfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
-      style={gameData.sfondo ? { backgroundImage: `url(${gameData.sfondo})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
+      style={data.sfondo ? { backgroundImage: `url(${data.sfondo})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
       {/* Overlay Errore */}
       {showError && (
@@ -146,7 +161,7 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
           }}
         >
           <h1 className={`text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,42px)] text-center leading-none transition-all duration-1000 ${showTitle ? 'opacity-100 scale-100 blur-none' : 'opacity-0 scale-90 blur-[10px]'}`}>
-            {gameData.titolo}
+            {data.titolo}
           </h1>
         </div>
 
@@ -210,7 +225,7 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
               }}
             >
               <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${marker.value <= 4 ? 'text-white' : 'text-[#1b1b1b]'}`}>
-                {revealed[marker.value] ? gameData.elementi[marker.value - 1]?.testo : ""}
+                {revealed[marker.value] ? data.elementi[marker.value - 1]?.testo : ""}
               </p>
             </div>
 
@@ -233,7 +248,7 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
               }}
             >
               <img 
-                src={gameData.elementi[marker.value - 1]?.immagine} 
+                src={data.elementi[marker.value - 1]?.immagine} 
                 alt={`Strumento ${marker.value}`}
                 className="w-[80%] h-[80%] object-contain"
               />
@@ -247,8 +262,7 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
         >
           {/* L'Immagine Segreta */}
           <img 
-            src={(gameData as any).immagineSegreta || "/Icone/Il mio nome è nessuno_img/Prova.png"}
- 
+            src={data.immagineSegreta || "/Icone/Il mio nome è nessuno_img/Prova.png"} 
             alt="Immagine Segreta" 
             className="w-full h-full object-cover"
           />

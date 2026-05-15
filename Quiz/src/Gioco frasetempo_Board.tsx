@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import phrasesData from './data/FraseConTempo_Data.json';
+import phrasesData from "./data/Gioco frasetempo_Data.json";
 
 const FraseConTempo_Board: React.FC = () => {
   const [index, setIndex] = useState(0);

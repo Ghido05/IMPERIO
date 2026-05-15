@@ -54,68 +54,21 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
     });
   }, [revealed]);
 
-  // Generiamo l'ordine di rivelazione dei tasselli per l'immagine
-  const totalTiles = (gameData.griglia?.colonne || 10) * (gameData.griglia?.righe || 10);
-  const tileOrder = React.useMemo(() => {
-    const cols = gameData.griglia?.colonne || 10;
-    const rows = gameData.griglia?.righe || 10;
-    
-    // Controlliamo se esiste un punto focale definito nel JSON, altrimenti usiamo il centro perfetto
-    const centerCol = (gameData.griglia as any)?.puntoFocale?.colonna !== undefined 
-      ? (gameData.griglia as any).puntoFocale.colonna 
-      : (cols - 1) / 2;
-      
-    const centerRow = (gameData.griglia as any)?.puntoFocale?.riga !== undefined 
-      ? (gameData.griglia as any).puntoFocale.riga 
-      : (rows - 1) / 2;
-    
-    // Massima distanza teorica dal punto focale agli angoli della griglia
-    const maxDist = Math.max(
-      Math.sqrt(Math.pow(0 - centerCol, 2) + Math.pow(0 - centerRow, 2)), // Angolo Top-Left
-      Math.sqrt(Math.pow(cols - 1 - centerCol, 2) + Math.pow(0 - centerRow, 2)), // Angolo Top-Right
-      Math.sqrt(Math.pow(0 - centerCol, 2) + Math.pow(rows - 1 - centerRow, 2)), // Angolo Bottom-Left
-      Math.sqrt(Math.pow(cols - 1 - centerCol, 2) + Math.pow(rows - 1 - centerRow, 2)) // Angolo Bottom-Right
-    );
-    
-    const tiles = Array.from({ length: totalTiles }, (_, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const dist = Math.sqrt(Math.pow(col - centerCol, 2) + Math.pow(row - centerRow, 2));
-      const normalizedDist = dist / (maxDist || 1);
-      const weight = (normalizedDist * 0.7) + (Math.random() * 0.3);
-      
-      return { index: i, weight };
-    });
-    
-    return tiles.sort((a, b) => b.weight - a.weight).map(t => t.index);
-  }, [totalTiles, gameData.griglia]);
-
-  const isTileRevealed = (tileIndex: number) => {
-    const orderIndex = tileOrder.indexOf(tileIndex);
-    // Dividiamo i tasselli in 7 blocchi (chunk 0 a 6)
-    // chunk 0 (bordo esterno) è legato all'indizio 1, ecc... fino a chunk 6 (centro) per l'indizio 7.
-    const chunkIndex = Math.floor((orderIndex / totalTiles) * 7); 
-    const requiredClue = chunkIndex + 1; 
-    return !!revealed[requiredClue];
-  };
-
-  const getTileColor = (tileIndex: number) => {
-    const orderIndex = tileOrder.indexOf(tileIndex);
-    const chunkIndex = Math.floor((orderIndex / totalTiles) * 7); 
-    const clue = chunkIndex + 1; 
+  const getPhraseStyle = (clue: number, isRevealed: boolean) => {
+    if (!isRevealed) return "bg-white/5 border border-white/10";
     
     // 4 tonalità di Azzurro/Blu (dalla più chiara alla più scura)
-    if (clue === 1) return "bg-[#00b3f6]";
-    if (clue === 2) return "bg-[#0099ff]";
-    if (clue === 3) return "bg-[#007acc]";
-    if (clue === 4) return "bg-[#005c8a]";
+    if (clue === 1) return "bg-[#00b3f6] text-white";
+    if (clue === 2) return "bg-[#0099ff] text-white";
+    if (clue === 3) return "bg-[#007acc] text-white";
+    if (clue === 4) return "bg-[#005c8a] text-white";
     
     // 2 tonalità di Verde (dalla più chiara alla più scura)
-    if (clue === 5) return "bg-[#00ff00]";
-    if (clue === 6) return "bg-[#00b300]";
+    if (clue === 5) return "bg-[#00ff00] text-[#1b1b1b]";
+    if (clue === 6) return "bg-[#00b300] text-white";
     
     // 1 tonalità di Giallo
-    return "bg-[#f7f700]"; // clue 7
+    return "bg-[#f7f700] text-[#1b1b1b]"; // clue 7
   };
 
   // Gestione dell'animazione di errore
@@ -310,34 +263,26 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
       {/* Frame 16:9 scalato automaticamente sul viewport */}
       <div className="relative w-full max-w-[1920px] aspect-[16/9]">
         
-        {/* Riquadro sinistro (Immagine coperta dalla griglia) */}
+        {/* Riquadro sinistro (Frasi da svelare) */}
         <div
-          className="absolute left-[5.026%] top-[7.87%] w-[35.794%] h-[63.611%] border-[#8e3600] bg-black overflow-hidden flex-shrink-0"
+          className="absolute left-[5.026%] top-[7.87%] w-[35.794%] h-[63.611%] border-[#8e3600] bg-black/40 backdrop-blur-md overflow-hidden flex-shrink-0 p-4"
           style={{ borderWidth: "clamp(6px, 1.0417vw, 20px)" }}
         >
-          {/* L'Immagine Segreta */}
-          <img 
-            src={gameData.immagineSegreta} 
-            alt="Immagine Segreta" 
-            className="w-full h-full object-cover"
-          />
-          
-          {/* Griglia di Copertura (Tasselli) */}
-          <div 
-            className="absolute inset-0 grid"
-            style={{
-              gridTemplateColumns: `repeat(${gameData.griglia?.colonne || 10}, minmax(0, 1fr))`,
-              gridTemplateRows: `repeat(${gameData.griglia?.righe || 10}, minmax(0, 1fr))`
-            }}
-          >
-            {Array.from({ length: totalTiles }).map((_, i) => (
-              <div 
-                key={i}
-                className={`w-full h-full border border-white/10 transition-all duration-700 ease-in-out ${
-                  isTileRevealed(i) ? 'opacity-0 scale-95' : `opacity-100 ${getTileColor(i)}`
-                }`}
-              />
-            ))}
+          <div className="w-full h-full flex flex-col justify-around gap-2">
+            {gameData.elementi.map((el) => {
+              const isRevealed = !!revealed[el.posizione];
+              return (
+                <div 
+                  key={el.posizione}
+                  className={`flex-1 flex items-center justify-center rounded-xl transition-all duration-700 ${getPhraseStyle(el.posizione, isRevealed)}`}
+                  style={{ boxShadow: isRevealed ? "inset 0 0 20px rgba(255,255,255,0.2)" : "none" }}
+                >
+                  <span className={`font-black tracking-tight text-[clamp(14px,1.5vw,28px)] text-center px-4 transition-all duration-700 ${isRevealed ? 'opacity-100 scale-100' : 'opacity-0 scale-90 text-transparent'}`}>
+                    {(el as any).frase}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -434,9 +379,9 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
                Gioco Indizi
              </p>
           ) : (
-             <div className="animate-zoom-in">
-               <p className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,40px)] text-center leading-none">
-                 SOLUZIONE
+             <div className="animate-zoom-in w-full">
+               <p className="text-white font-black uppercase tracking-tight text-[clamp(14px,1.8vw,36px)] text-center leading-none drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
+                 {(gameData as any).soluzioneTesto}
                </p>
              </div>
           )}

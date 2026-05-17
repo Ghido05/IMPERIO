@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import gameData from "./data/Il mio nome è nessuno_img_Data.json";
+import ScoreAssigner from "./components/ScoreAssigner";
 
 // ============================================================================
 // Gioco 2 - IMMAGINE: Logica a Step con Rivelazione Griglia e Indizi
@@ -9,6 +10,7 @@ const GameBoard = (): React.JSX.Element => {
   const [step, setStep] = useState(0);
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [pointsAssigned, setPointsAssigned] = useState(false);
 
   const MAX_STEP = 5;
 
@@ -206,24 +208,40 @@ const GameBoard = (): React.JSX.Element => {
         </div>
 
         {/* AREA INFERIORE: CATEGORIA / SOLUZIONE */}
-        <div className={`w-[1000px] h-[130px] bg-[#792ba6] border-[9px] border-[#0f2d54] rounded-[70px] flex items-center justify-center shadow-xl transition-all duration-700 ${
-          step === MAX_STEP ? 'scale-105 shadow-[0_0_50px_rgba(121,43,166,0.6)]' : ''
-        }`}>
-          <div className="text-center px-12 w-full">
-            {step < MAX_STEP ? (
-              <div className="flex items-center justify-center">
-                <h2 className="text-white font-black text-5xl uppercase tracking-tighter">
-                  {gameData.soluzione.categoria}
-                </h2>
-              </div>
-            ) : (
-              <div className="animate-zoom-in">
-                <h2 className="text-white font-black text-6xl uppercase tracking-tighter leading-none">
-                  {gameData.soluzione.titolo}
-                </h2>
-              </div>
-            )}
+        <div className="relative flex flex-col items-center">
+          <div className={`w-[1000px] h-[130px] bg-[#792ba6] border-[9px] border-[#0f2d54] rounded-[70px] flex items-center justify-center shadow-xl transition-all duration-700 ${
+            step === MAX_STEP ? 'scale-105 shadow-[0_0_50px_rgba(121,43,166,0.6)]' : ''
+          }`}>
+            <div className="text-center px-12 w-full">
+              {step < MAX_STEP ? (
+                <div className="flex items-center justify-center">
+                  <h2 className="text-white font-black text-5xl uppercase tracking-tighter">
+                    {gameData.soluzione.categoria}
+                  </h2>
+                </div>
+              ) : (
+                <div className="animate-zoom-in">
+                  <h2 className="text-white font-black text-6xl uppercase tracking-tighter leading-none">
+                    {gameData.soluzione.titolo}
+                  </h2>
+                </div>
+              )}
+            </div>
           </div>
+
+          {step === MAX_STEP && !pointsAssigned && (
+            <ScoreAssigner 
+              points={3000} 
+              onAssigned={() => setPointsAssigned(true)} 
+              className="mt-8"
+            />
+          )}
+          
+          {pointsAssigned && (
+            <div className="mt-8 text-green-400 font-black text-2xl uppercase tracking-widest animate-bounce">
+              Punti Assegnati!
+            </div>
+          )}
         </div>
       </div>
     </div>

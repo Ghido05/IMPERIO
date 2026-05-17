@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import gameData from "./data/Gioco classifica_Data.json";
+import { CompactScoreAssigner } from "./components/ScoreAssigner";
 
 const ClassificaBoard = (): React.JSX.Element => {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+  const [pointsAssigned, setPointsAssigned] = useState<Record<number, boolean>>({});
   const [showError, setShowError] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
   const [showTitle, setShowTitle] = useState(false);
@@ -294,7 +296,7 @@ const ClassificaBoard = (): React.JSX.Element => {
 
             {/* Marker numerico a destra */}
             <div
-              className="absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center"
+              className="absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group"
               style={{
                 top: marker.top,
                 borderWidth: "clamp(2px, 0.2083vw, 4px)",
@@ -304,6 +306,21 @@ const ClassificaBoard = (): React.JSX.Element => {
               <span className="text-white font-black text-[clamp(12px,1.56vw,30px)] leading-none">
                 {marker.value}
               </span>
+
+              {/* Punti Selettore */}
+              {revealed[marker.value] && !pointsAssigned[marker.value] && (
+                <div className="absolute left-full ml-2 flex items-center h-full">
+                  <CompactScoreAssigner 
+                    points={marker.value <= 5 ? 1000 : marker.value <= 8 ? 2000 : marker.value === 9 ? 3000 : 5000}
+                    onAssigned={() => setPointsAssigned(prev => ({ ...prev, [marker.value]: true }))}
+                  />
+                </div>
+              )}
+              {pointsAssigned[marker.value] && (
+                <div className="absolute left-full ml-2 text-green-400 text-[10px] font-black uppercase">
+                  OK
+                </div>
+              )}
             </div>
           </React.Fragment>
         ))}

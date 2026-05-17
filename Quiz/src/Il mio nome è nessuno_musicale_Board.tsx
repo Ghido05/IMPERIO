@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import gameData from './data/Il mio nome è nessuno_musicale_Data.json';
+import ScoreAssigner from './components/ScoreAssigner';
 
 // ============================================================================
 // Layout esportato da Figma e reso Responsivo con Navigazione a Frecce e Audio
@@ -128,13 +129,13 @@ const DynamicHint: React.FC<{
 };
 
 // Componente per la Soluzione Finale
-const Solution: React.FC<{ isVisible: boolean }> = ({ isVisible }) => (
+const Solution: React.FC<{ isVisible: boolean, pointsAssigned: boolean, onAssigned: () => void }> = ({ isVisible, pointsAssigned, onAssigned }) => (
   <div 
     className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-all duration-1000 ${
       isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
     }`}
   >
-    <div className="relative group">
+    <div className="relative group flex flex-col items-center">
       {/* Bagliore retrostante */}
       <div className="absolute -inset-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition duration-1000"></div>
       
@@ -150,6 +151,20 @@ const Solution: React.FC<{ isVisible: boolean }> = ({ isVisible }) => (
           {gameData.soluzione.artista} - {gameData.soluzione.anno}
         </p>
       </div>
+
+      {isVisible && !pointsAssigned && (
+        <ScoreAssigner 
+          points={3000} 
+          onAssigned={onAssigned} 
+          className="mt-12 scale-125"
+        />
+      )}
+
+      {pointsAssigned && (
+        <div className="mt-12 text-green-400 font-black text-2xl uppercase tracking-widest animate-bounce">
+          Punti Assegnati!
+        </div>
+      )}
     </div>
   </div>
 );
@@ -160,6 +175,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
   const [prevStep, setPrevStep] = useState(0);
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [pointsAssigned, setPointsAssigned] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Gestione dell'animazione di errore (si spegne da sola dopo 800ms)
@@ -396,7 +412,11 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
         />
 
         {/* Soluzione Finale */}
-        <Solution isVisible={step === 10} />
+        <Solution 
+          isVisible={step === 10} 
+          pointsAssigned={pointsAssigned} 
+          onAssigned={() => setPointsAssigned(true)} 
+        />
 
       </div>
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import phrasesData from "./data/Gioco frasetempo_Data.json";
+import ScoreAssigner from './components/ScoreAssigner';
 
 const FraseConTempo_Board: React.FC = () => {
   const [index, setIndex] = useState(0);
@@ -9,6 +10,7 @@ const FraseConTempo_Board: React.FC = () => {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
+  const [pointsAssigned, setPointsAssigned] = useState(false);
 
   const timerRef = useRef<any | null>(null);
 
@@ -45,6 +47,7 @@ const FraseConTempo_Board: React.FC = () => {
     setIsTimerRunning(false);
     setRevealed(false);
     setSelectedMarker(null);
+    setPointsAssigned(false);
   }, []);
 
   useEffect(() => {
@@ -185,35 +188,50 @@ const FraseConTempo_Board: React.FC = () => {
       </div>
 
       {/* Controls */}
-      <div className="flex gap-6 mt-16">
-        {!isTimerRunning && !revealed && (
+      <div className="flex flex-col items-center gap-8 mt-16">
+        <div className="flex gap-6">
+          {!isTimerRunning && !revealed && (
+            <button 
+              onClick={startTimer}
+              className="px-10 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl text-2xl font-bold transition-all"
+            >
+              START TIMER
+            </button>
+          )}
+          {isTimerRunning && (
+            <button 
+              onClick={stopTimer}
+              className="px-10 py-4 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl text-2xl font-bold transition-all"
+            >
+              PAUSE
+            </button>
+          )}
           <button 
-            onClick={startTimer}
-            className="px-10 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl text-2xl font-bold transition-all"
+            onClick={revealSolution}
+            className="px-10 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-2xl font-bold transition-all"
           >
-            START TIMER
+            MOSTRA SOLUZIONE
           </button>
-        )}
-        {isTimerRunning && (
           <button 
-            onClick={stopTimer}
-            className="px-10 py-4 bg-yellow-600 hover:bg-yellow-700 text-white rounded-xl text-2xl font-bold transition-all"
+            onClick={nextPhrase}
+            className="px-10 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-2xl font-bold transition-all"
           >
-            PAUSE
+            PROSSIMA FRASE
           </button>
+        </div>
+
+        {revealed && !pointsAssigned && (
+          <ScoreAssigner 
+            points={3000} 
+            onAssigned={() => setPointsAssigned(true)} 
+          />
         )}
-        <button 
-          onClick={revealSolution}
-          className="px-10 py-4 bg-red-600 hover:bg-red-700 text-white rounded-xl text-2xl font-bold transition-all"
-        >
-          MOSTRA SOLUZIONE
-        </button>
-        <button 
-          onClick={nextPhrase}
-          className="px-10 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-2xl font-bold transition-all"
-        >
-          PROSSIMA FRASE
-        </button>
+        
+        {pointsAssigned && (
+          <div className="text-green-400 font-black text-2xl uppercase tracking-widest animate-bounce">
+            Punti Assegnati!
+          </div>
+        )}
       </div>
 
       {/* Back to Menu (using window.location for simplicity as per existing pattern) */}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import gameDataRaw from './data/Gioco password_Data.json';
+import { useScores } from './context/ScoreContext';
 
 type WordType = 'team1' | 'team2' | 'team3' | 'bomb' | 'neutral';
 type RankType = 1 | 2 | 3;
@@ -58,9 +59,21 @@ const BussolottiOverlay: React.FC<{
     }
   }, [selectedIndex, rank, showAll]);
 
+  const { toggleBonus, bonuses } = useScores();
+
   const handleOpen = (i: number) => {
     if (selectedIndex !== null) return; // Solo una scelta consentita
     setSelectedIndex(i);
+    
+    // Se è il vincitore, attiva il bonus
+    if (i === winningIndex) {
+      const teamIdx = teamNum - 1;
+      // Attiviamo il primo bonus non ancora attivo
+      const nextBonusIdx = bonuses[teamIdx].findIndex(b => !b);
+      if (nextBonusIdx !== -1) {
+        toggleBonus(teamIdx, nextBonusIdx);
+      }
+    }
   };
 
   const teamName = `SQUADRA ${teamNum}`;

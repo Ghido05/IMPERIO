@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import gameData from "./data/Gioco classifica musicale_Data.json";
+import { CompactScoreAssigner } from "./components/ScoreAssigner";
 
 const ClassificaMusicaleBoard = (): React.JSX.Element => {
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
+  const [pointsAssigned, setPointsAssigned] = useState<Record<number, boolean>>({});
   const [showError, setShowError] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
   const [showTitle, setShowTitle] = useState(false);
@@ -350,7 +352,7 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
 
             {/* Marker numerico a destra */}
             <div
-              className="absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center"
+              className="absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group"
               style={{
                 top: marker.top,
                 borderWidth: "clamp(2px, 0.2083vw, 4px)",
@@ -360,13 +362,28 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
               <span className="text-white font-black text-[clamp(12px,1.56vw,30px)] leading-none">
                 {marker.value}
               </span>
+
+              {/* Punti Selettore */}
+              {revealed[marker.value] && !pointsAssigned[marker.value] && (
+                <div className="absolute left-full ml-2 flex items-center h-full">
+                  <CompactScoreAssigner 
+                    points={marker.value <= 4 ? 1000 : marker.value <= 6 ? 2000 : 3000}
+                    onAssigned={() => setPointsAssigned(prev => ({ ...prev, [marker.value]: true }))}
+                  />
+                </div>
+              )}
+              {pointsAssigned[marker.value] && (
+                <div className="absolute left-full ml-2 text-green-400 text-[10px] font-black uppercase">
+                  OK
+                </div>
+              )}
             </div>
           </React.Fragment>
         ))}
 
         {/* Pill inferiore sinistra (Box di completamento o categoria) */}
         <div
-          className={`absolute left-[5.052%] top-[80%] w-[35.781%] h-[15.222%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-700 ${
+          className={`absolute left-[5.052%] top-[80%] w-[35.781%] h-[15.222%] bg-[#792ba6] border-[#0f2d54] flex flex-col items-center justify-center px-[2%] transition-all duration-700 ${
             showSolution ? 'scale-105 shadow-[0_0_50px_rgba(121,43,166,0.6)]' : ''
           }`}
           style={{
@@ -379,10 +396,18 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
                Gioco Indizi
              </p>
           ) : (
-             <div className="animate-zoom-in w-full">
-               <p className="text-white font-black uppercase tracking-tight text-[clamp(14px,1.8vw,36px)] text-center leading-none drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
+             <div className="animate-zoom-in flex flex-col items-center">
+               <p className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,30px)] text-center leading-tight mb-2">
                  {(gameData as any).soluzioneTesto}
                </p>
+               {!pointsAssigned[100] ? (
+                 <CompactScoreAssigner 
+                    points={5000}
+                    onAssigned={() => setPointsAssigned(prev => ({ ...prev, 100: true }))}
+                 />
+               ) : (
+                 <span className="text-green-400 font-black text-xs uppercase">Punti Assegnati</span>
+               )}
              </div>
           )}
         </div>

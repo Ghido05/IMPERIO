@@ -390,7 +390,20 @@ const PasswordBoard: React.FC = () => {
 
   return (
     <div className="relative w-full min-h-screen bg-neutral-900 text-white flex flex-col items-center p-8 font-sans select-none overflow-hidden">
+      {/* Sfondo base scuro */}
       <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(50,50,50,1)_0%,rgba(10,10,10,1)_100%)] z-0" />
+      
+      {/* Immagine di sfondo con trasparenza */}
+      {gameData.sfondo && (
+        <div 
+          className="absolute top-0 left-0 w-full h-full z-0 transition-all duration-1000 opacity-30" 
+          style={{
+            backgroundImage: `url(${gameData.sfondo})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center'
+          }}
+        />
+      )}
       
       {activeBussolottiRank !== null && getTeamForRank(activeBussolottiRank) && (
         <BussolottiOverlay 

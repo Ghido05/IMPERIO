@@ -21,18 +21,52 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [false, false, false]
   ]);
 
-  // Load from localStorage on init
+  // Load from localStorage on init and listen for changes from other windows
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const { scores: savedScores, bonuses: savedBonuses } = JSON.parse(saved);
-        if (savedScores) setScores(savedScores);
-        if (savedBonuses) setBonuses(savedBonuses);
-      } catch (e) {
-        console.error("Failed to parse saved scores", e);
+    const loadFromStorage = () => {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          const { scores: savedScores, bonuses: savedBonuses } = JSON.parse(saved);
+          if (savedScores) setScores(savedScores);
+          if (savedBonuses) {
+            // Assicuriamoci che ogni riga abbia 3 elementi
+            const normalizedBonuses = savedBonuses.map((row: boolean[]) => {
+              if (row.length > 3) return row.slice(0, 3);
+              if (row.length < 3) return [...row, ...Array(3 - row.length).fill(false)];
+              return row;
+            });
+            setBonuses(normalizedBonuses);
+          }
+        } catch (e) {
+          console.error("Failed to parse saved scores", e);
+        }
       }
-    }
+    };
+
+    loadFromStorage();
+
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const { scores: savedScores, bonuses: savedBonuses } = JSON.parse(e.newValue);
+          if (savedScores) setScores(savedScores);
+          if (savedBonuses) {
+            const normalizedBonuses = savedBonuses.map((row: boolean[]) => {
+              if (row.length > 3) return row.slice(0, 3);
+              if (row.length < 3) return [...row, ...Array(3 - row.length).fill(false)];
+              return row;
+            });
+            setBonuses(normalizedBonuses);
+          }
+        } catch (err) {
+          console.error("Error parsing storage change", err);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Save to localStorage whenever scores or bonuses change

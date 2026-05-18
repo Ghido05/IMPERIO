@@ -47,6 +47,8 @@ function App() {
     window.history.pushState({}, '', url);
   };
 
+  const isProjecting = new URLSearchParams(window.location.search).get('project') === 'true';
+
   return (
     <ScoreProvider>
       {game === 'img' && <ImgBoard />}
@@ -59,63 +61,66 @@ function App() {
       {game === 'password_prescelti' && <PasswordPresceltiBoard />}
       {game === 'classifica_generale' && <ClassificaGeneraleBoard />}
       
-      {/* Piccolo selettore rapido in alto a sinistra */}
-      <div className="fixed top-2 left-2 z-[1000] opacity-20 hover:opacity-100 transition-opacity flex flex-wrap gap-2 max-w-2xl">
-        <button 
-          onClick={() => changeGame('img')}
-          className={`px-3 py-1 rounded text-xs font-bold ${game === 'img' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400'}`}
-        >
-          IMMAGINE
-        </button>
-        <button 
-          onClick={() => changeGame('music')}
-          className={`px-3 py-1 rounded text-xs font-bold ${game === 'music' ? 'bg-blue-500 text-white' : 'bg-gray-800 text-gray-400'}`}
-        >
-          MUSICA
-        </button>
-        <button 
-          onClick={() => changeGame('classifica')}
-          className={`px-3 py-1 rounded text-xs font-bold ${game === 'classifica' ? 'bg-purple-500 text-white' : 'bg-gray-800 text-gray-400'}`}
-        >
-          CLASSIFICA
-        </button>
-        <button 
-          onClick={() => changeGame('classifica_musicale')}
-          className={`px-3 py-1 rounded text-xs font-bold ${game === 'classifica_musicale' ? 'bg-indigo-500 text-white' : 'bg-gray-800 text-gray-400'}`}
-        >
-          CLASS. MUSICALE
-        </button>
-        <button 
-          onClick={() => changeGame('cruciverba')}
-          className={`px-3 py-1 rounded text-xs font-bold ${game === 'cruciverba' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400'}`}
-        >
-          CRUCIVERBA
-        </button>
-        <button 
-          onClick={() => changeGame('gioco_frase_tempo')}
-          className={`px-3 py-1 rounded text-xs font-bold ${game === 'gioco_frase_tempo' ? 'bg-cyan-600 text-white' : 'bg-gray-800 text-gray-400'}`}
-        >
-          G. FRASE TEMPO
-        </button>
-        <button 
-          onClick={() => changeGame('password_squadre')}
-          className={`px-3 py-1 rounded text-xs font-bold ${game === 'password_squadre' ? 'bg-pink-600 text-white' : 'bg-gray-800 text-gray-400'}`}
-        >
-          PASS. SQUADRE
-        </button>
-        <button 
-          onClick={() => changeGame('password_prescelti')}
-          className={`px-3 py-1 rounded text-xs font-bold ${game === 'password_prescelti' ? 'bg-fuchsia-600 text-white' : 'bg-gray-800 text-gray-400'}`}
-        >
-          PASS. PRESCELTI
-        </button>
-        <button 
-          onClick={() => changeGame('classifica_generale')}
-          className={`px-3 py-1 rounded text-xs font-bold ${game === 'classifica_generale' ? 'bg-yellow-500 text-black' : 'bg-gray-800 text-gray-400'}`}
-        >
-          CLASSIFICA GENERALE
-        </button>
-      </div>
+      {/* Piccolo selettore rapido in alto a sinistra - Nascosto in modalità proiezione */}
+      {!isProjecting && (
+        <div className="fixed top-2 left-2 z-[1000] opacity-20 hover:opacity-100 transition-opacity flex flex-wrap gap-2 max-w-2xl">
+          <button 
+            onClick={() => changeGame('img')}
+            className={`px-3 py-1 rounded text-xs font-bold ${game === 'img' ? 'bg-orange-500 text-white' : 'bg-gray-800 text-gray-400'}`}
+          >
+            IMMAGINE
+          </button>
+          <button 
+            onClick={() => changeGame('music')}
+            className={`px-3 py-1 rounded text-xs font-bold ${game === 'music' ? 'bg-blue-500 text-white' : 'bg-gray-800 text-gray-400'}`}
+          >
+            MUSICA
+          </button>
+          <button 
+            onClick={() => changeGame('classifica')}
+            className={`px-3 py-1 rounded text-xs font-bold ${game === 'classifica' ? 'bg-purple-500 text-white' : 'bg-gray-800 text-gray-400'}`}
+          >
+            CLASSIFICA
+          </button>
+          <button 
+            onClick={() => changeGame('classifica_musicale')}
+            className={`px-3 py-1 rounded text-xs font-bold ${game === 'classifica_musicale' ? 'bg-indigo-500 text-white' : 'bg-gray-800 text-gray-400'}`}
+          >
+            CLASS. MUSICALE
+          </button>
+          <button 
+            onClick={() => changeGame('cruciverba')}
+            className={`px-3 py-1 rounded text-xs font-bold ${game === 'cruciverba' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400'}`}
+          >
+            CRUCIVERBA
+          </button>
+          <button 
+            onClick={() => changeGame('gioco_frase_tempo')}
+            className={`px-3 py-1 rounded text-xs font-bold ${game === 'gioco_frase_tempo' ? 'bg-cyan-600 text-white' : 'bg-gray-800 text-gray-400'}`}
+          >
+            G. FRASE TEMPO
+          </button>
+          <button 
+            onClick={() => changeGame('password_squadre')}
+            className={`px-3 py-1 rounded text-xs font-bold ${game === 'password_squadre' ? 'bg-pink-600 text-white' : 'bg-gray-800 text-gray-400'}`}
+          >
+            PASS. SQUADRE
+          </button>
+          <button 
+            onClick={() => changeGame('password_prescelti')}
+            className={`px-3 py-1 rounded text-xs font-bold ${game === 'password_prescelti' ? 'bg-fuchsia-600 text-white' : 'bg-gray-800 text-gray-400'}`}
+          >
+            PASS. PRESCELTI
+          </button>
+          <button 
+            onClick={() => window.open('?game=classifica_generale&project=true', '_blank', 'width=1280,height=720')}
+            className="px-3 py-1 rounded text-xs font-bold bg-yellow-500 text-black hover:bg-yellow-400"
+            title="Apri classifica in una nuova finestra per proiezione"
+          >
+            PROIETTA ↗
+          </button>
+        </div>
+      )}
     </ScoreProvider>
   );
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useScores } from './context/ScoreContext';
+import { assetUrl } from './lib/assetUrl';
 
 const teamConfigs = [
   { name: 'SQUADRA 1', color: 'bg-red-600', textColor: 'text-red-500' },
@@ -103,7 +104,7 @@ const ClassificaGenerale_Board: React.FC = () => {
                   `}
                 >
                   <img 
-                    src={`/Icone/Il mio nome è nessuno_musicale/${bonusIdx === 0 ? 'Primo' : bonusIdx === 1 ? 'Secondo' : 'Terzo'} indizio.svg`} 
+                    src={assetUrl(`Icone/nessuno_musicale/${bonusIdx === 0 ? 'Primo' : bonusIdx === 1 ? 'Secondo' : 'Terzo'} indizio.svg`)} 
                     alt="Bonus"
                     className="w-12 h-12 object-contain"
                     onError={(e) => {

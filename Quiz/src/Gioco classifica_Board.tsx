@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
-import gameData from "./data/Gioco classifica_Data.json";
+import { useGameData } from './context/GameDataContext';
 import { CompactScoreAssigner } from "./components/ScoreAssigner";
+import { assetUrl, assetUrlCss } from './lib/assetUrl';
 
 const ClassificaBoard = (): React.JSX.Element => {
+  const gameData = useGameData();
+  if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
+
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [pointsAssigned, setPointsAssigned] = useState<Record<number, boolean>>({});
   const [showError, setShowError] = useState(false);
@@ -16,7 +20,7 @@ const ClassificaBoard = (): React.JSX.Element => {
     // @ts-ignore - nel caso in cui audio non sia tipizzato su gameData
     if (gameData.audio) {
       // @ts-ignore
-      audioRef.current = new Audio(gameData.audio);
+      audioRef.current = new Audio(assetUrl(gameData.audio));
     }
     return () => {
       if (audioRef.current) {
@@ -169,7 +173,7 @@ const ClassificaBoard = (): React.JSX.Element => {
   return (
     <div 
       className={`relative w-full min-h-screen ${(gameData as any).sfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
-      style={(gameData as any).sfondo ? { backgroundImage: `url(${(gameData as any).sfondo})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
+      style={(gameData as any).sfondo ? { backgroundImage: assetUrlCss((gameData as any).sfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
       {/* EFFETTI DI LUCE SULLO SFONDO (Decorativi) */}
       {!(gameData as any).sfondo && (
@@ -208,7 +212,7 @@ const ClassificaBoard = (): React.JSX.Element => {
         >
           {/* L'Immagine Segreta */}
           <img 
-            src={gameData.immagineSegreta} 
+            src={assetUrl(gameData.immagineSegreta)} 
             alt="Immagine Segreta" 
             className="w-full h-full object-cover"
           />

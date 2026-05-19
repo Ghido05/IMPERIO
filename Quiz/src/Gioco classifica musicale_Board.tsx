@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from "react";
-import gameData from "./data/Gioco classifica musicale_Data.json";
+import { useGameData } from './context/GameDataContext';
 import { CompactScoreAssigner } from "./components/ScoreAssigner";
+import { assetUrl, assetUrlCss } from './lib/assetUrl';
 
 const ClassificaMusicaleBoard = (): React.JSX.Element => {
+  const gameData = useGameData();
+  if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
+
   const [revealed, setRevealed] = useState<Record<number, boolean>>({});
   const [pointsAssigned, setPointsAssigned] = useState<Record<number, boolean>>({});
   const [showError, setShowError] = useState(false);
@@ -18,9 +22,9 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
   // Inizializza gli audio stems e l'audio finale
   useEffect(() => {
     // Stems (iniziano mutati)
-    gameData.elementi.forEach(el => {
+    gameData.elementi.forEach((el: any) => {
       if ((el as any).audio) {
-        const audio = new Audio((el as any).audio);
+        const audio = new Audio(assetUrl((el as any).audio));
         audio.loop = false; // NON ripartono automaticamente alla fine
         audio.volume = 0;  // Partono tutti mutati
         audiosRef.current[el.posizione] = audio;
@@ -29,7 +33,7 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
 
     // Canzone finale (suona quando si preme T)
     if ((gameData as any).canzoneFinale) {
-      finalAudioRef.current = new Audio((gameData as any).canzoneFinale);
+      finalAudioRef.current = new Audio(assetUrl((gameData as any).canzoneFinale));
     }
 
     return () => {
@@ -233,7 +237,7 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
   return (
     <div 
       className={`relative w-full min-h-screen ${(gameData as any).sfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
-      style={(gameData as any).sfondo ? { backgroundImage: `url(${(gameData as any).sfondo})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
+      style={(gameData as any).sfondo ? { backgroundImage: assetUrlCss((gameData as any).sfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
       {/* EFFETTI DI LUCE SULLO SFONDO (Decorativi) */}
       {!(gameData as any).sfondo && (
@@ -271,7 +275,7 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
           style={{ borderWidth: "clamp(6px, 1.0417vw, 20px)" }}
         >
           <div className="w-full h-full flex flex-col justify-around gap-2">
-            {gameData.elementi.map((el) => {
+            {gameData.elementi.map((el: any) => {
               const isRevealed = !!revealed[el.posizione];
               return (
                 <div 

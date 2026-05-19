@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import gameDataRaw from './data/Gioco password_Data.json';
+import { useGameData } from './context/GameDataContext';
 import { useScores } from './context/ScoreContext';
+import { assetUrl, assetUrlCss } from './lib/assetUrl';
 
 type WordType = 'team1' | 'team2' | 'team3' | 'bomb' | 'neutral';
 type RankType = 1 | 2 | 3;
@@ -118,7 +119,7 @@ const BussolottiOverlay: React.FC<{
                   {isWinner ? (
                     <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-green-500/10">
                        <img 
-                        src={bussolottiConfig.immagine_premio} 
+                        src={assetUrl(bussolottiConfig.immagine_premio)} 
                         alt="PREMIO" 
                         className={`w-full h-full object-contain ${isWinningChoice ? 'animate-pulse' : 'animate-in zoom-in duration-300'}`}
                         onError={(e) => {
@@ -154,11 +155,14 @@ const BussolottiOverlay: React.FC<{
 };
 
 const PasswordBoard: React.FC = () => {
+  const gameDataRaw = useGameData();
+  if (!gameDataRaw) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
+
   const [grid, setGrid] = useState<WordItem[]>([]);
   const [currentTeam, setCurrentTeam] = useState<number>(1);
   const [currentManche, setCurrentManche] = useState<number>(0);
   const [chosenSuggestion, setChosenSuggestion] = useState<string>("");
-  const [gameOver, setGameOver] = useState<string | null>(null);
+  const [gameOver] = useState<string | null>(null);
   const [excludedTeams, setExcludedTeams] = useState<number[]>([]);
   const [winnersOrder, setWinnersOrder] = useState<number[]>([]);
   
@@ -206,12 +210,11 @@ const PasswordBoard: React.FC = () => {
     }
 
     const allWords: WordItem[] = [
-      ...gameData.squadra1.map(w => ({ word: w.toUpperCase(), type: 'team1' as WordType, guessed: false })),
-      ...gameData.squadra2.map(w => ({ word: w.toUpperCase(), type: 'team2' as WordType, guessed: false })),
-      ...gameData.squadra3.map(w => ({ word: w.toUpperCase(), type: 'team3' as WordType, guessed: false })),
-      ...gameData.altre.map((w, i) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType, guessed: false }))
+      ...gameData.squadra1.map((w: string) => ({ word: w.toUpperCase(), type: 'team1' as WordType, guessed: false })),
+      ...gameData.squadra2.map((w: string) => ({ word: w.toUpperCase(), type: 'team2' as WordType, guessed: false })),
+      ...gameData.squadra3.map((w: string) => ({ word: w.toUpperCase(), type: 'team3' as WordType, guessed: false })),
+      ...gameData.altre.map((w: string, i: number) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType, guessed: false }))
     ];
-
     const storedGrid = localStorage.getItem('password_grid_state');
     if (storedGrid) {
       setGrid(JSON.parse(storedGrid));
@@ -398,7 +401,7 @@ const PasswordBoard: React.FC = () => {
         <div 
           className="absolute top-0 left-0 w-full h-full z-0 transition-all duration-1000 opacity-30" 
           style={{
-            backgroundImage: `url(${gameData.sfondo})`,
+            backgroundImage: assetUrlCss(gameData.sfondo),
             backgroundSize: 'cover',
             backgroundPosition: 'center'
           }}

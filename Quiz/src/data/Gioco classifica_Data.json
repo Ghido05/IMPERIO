@@ -1,7 +1,7 @@
 {
   "titolo": "Titolo della Classifica",
   "sfondo": "",
-  "immagineSegreta": "/Icone/Il mio nome è nessuno_img/Prova.png",
+  "immagineSegreta": "/Icone/nessuno_img/Prova.png",
   "audio": "/Audio/canzone_1.mp3",
   "griglia": {
     "colonne": 10,

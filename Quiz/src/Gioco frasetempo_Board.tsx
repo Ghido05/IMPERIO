@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import phrasesData from "./data/Gioco frasetempo_Data.json";
+import { useGameData } from './context/GameDataContext';
 import ScoreAssigner from './components/ScoreAssigner';
 
 const FraseConTempo_Board: React.FC = () => {
+  const phrasesData = useGameData();
   const [index, setIndex] = useState(0);
   const [tokens, setTokens] = useState<string[]>([]);
   const [targetTokens, setTargetTokens] = useState<string[]>([]);

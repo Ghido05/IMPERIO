@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import gameData from './data/Il mio nome è nessuno_musicale_Data.json';
+import { useGameData } from './context/GameDataContext';
 import ScoreAssigner from './components/ScoreAssigner';
+import { assetUrl, assetUrlCss } from './lib/assetUrl';
 
 // ============================================================================
 // Layout esportato da Figma e reso Responsivo con Navigazione a Frecce e Audio
@@ -23,7 +24,7 @@ const SvgIcon: React.FC<SvgIconProps> = ({ fileName, className, altText, isVisib
       title={altText}
     >
       {fileName ? (
-        <img src={`/Icone/${fileName}`} alt={altText} className="w-full h-full object-contain filter drop-shadow-lg" />
+        <img src={assetUrl(`Icone/${fileName}`)} alt={altText} className="w-full h-full object-contain filter drop-shadow-lg" />
       ) : (
         <span className="text-white font-bold text-[clamp(0.6rem,1.2vw,1.2rem)] text-center leading-tight drop-shadow-md">{altText}</span>
       )}
@@ -116,7 +117,7 @@ const DynamicHint: React.FC<{
           }}
         >
           <img 
-            src={`/Icone/${fileName}`} 
+            src={assetUrl(`Icone/${fileName}`)} 
             alt={altText} 
             className={`${fileName.includes('Nota3.svg') ? 'w-[75%] h-[75%]' : 'w-[95%] h-[95%]'} object-contain transform rotate-[30.66deg]`} 
           />
@@ -129,7 +130,11 @@ const DynamicHint: React.FC<{
 };
 
 // Componente per la Soluzione Finale
-const Solution: React.FC<{ isVisible: boolean, pointsAssigned: boolean, onAssigned: () => void }> = ({ isVisible, pointsAssigned, onAssigned }) => (
+const Solution: React.FC<{ isVisible: boolean, pointsAssigned: boolean, onAssigned: () => void }> = ({ isVisible, pointsAssigned, onAssigned }) => {
+  const gameData = useGameData();
+  if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
+
+  return (
   <div 
     className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-all duration-1000 ${
       isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
@@ -167,9 +172,12 @@ const Solution: React.FC<{ isVisible: boolean, pointsAssigned: boolean, onAssign
       )}
     </div>
   </div>
-);
+  );
+};
 
-const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attuale (da 0 a 10)
+const GameBoard: React.FC = () => {
+  const gameData = useGameData();
+  // Stato per tenere traccia dello step attuale (da 0 a 10)
   // 0 = vuoto, 1-9 = Strumenti e Indizi, 10 = Soluzione
   const [step, setStep] = useState(0);
   const [prevStep, setPrevStep] = useState(0);
@@ -220,7 +228,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
 
 
   // Mappa delle canzoni per i passi in cui compaiono gli strumenti
-  const audioMap: Record<number, string> = gameData.strumenti.reduce((acc, obj) => {
+  const audioMap: Record<number, string> = gameData.strumenti.reduce((acc: any, obj: any) => {
     if (obj.audio) {
       acc[obj.step] = obj.audio;
     }
@@ -267,7 +275,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
     const isBackingFromSolution = prevStep === 10 && step === 9;
 
     if (audioMap[step] && !isAutoAdvancing && !isBackingFromSolution) {
-      const newAudio = new Audio(audioMap[step]);
+      const newAudio = new Audio(assetUrl(audioMap[step]));
       audioRef.current = newAudio;
       newAudio.play().catch(error => console.log('Autoplay intercettato dal browser:', error));
     }
@@ -313,7 +321,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
   return (
     <div 
       className={`relative w-full min-h-screen ${gameData.sfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
-      style={gameData.sfondo ? { backgroundImage: `url(${gameData.sfondo})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
+      style={gameData.sfondo ? { backgroundImage: assetUrlCss(gameData.sfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
       
       {/* Overlay di Errore (Flash Rosso + X Centrale) */}
@@ -347,11 +355,11 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
         
         {/* PENTAGRAMMA (Sempre visibile) */}
         <div className={`absolute left-0 w-full z-0 pointer-events-none flex justify-center transition-opacity duration-1000 ${step === 10 ? 'opacity-0' : 'opacity-40'}`} style={{ top: '28.44%', height: '63.17%' }}>
-          <img src="/Icone/Il mio nome è nessuno_musicale/Pentagramma.svg" alt="Pentagramma" className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
+          <img src={assetUrl('Icone/nessuno_musicale/Pentagramma.svg')} alt="Pentagramma" className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
         </div>
 
         {/* STRUMENTI (Gestiti dallo stato 'step' e da gameData) */}
-        {gameData.strumenti.map((strum) => (
+        {gameData.strumenti.map((strum: any) => (
           <SvgIcon 
             key={strum.step}
             fileName={strum.icona} 
@@ -366,7 +374,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
         {/* Primo Indizio (Verde) - Nota sulla 2ª riga dal basso, Box sopra la 1ª riga */}
         <DynamicHint 
           note={gameData.indizi[0]}
-          fileName="Il mio nome è nessuno_musicale/Nota1.svg" 
+          fileName="nessuno_musicale/Nota1.svg" 
           altText="Primo Indizio"
           isVisible={step >= 2 && step < 10} 
           className="top-[12.5%] left-[7.13%]"
@@ -378,7 +386,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
         {/* Secondo Indizio (Rosso) - Nota sulla 3ª riga dal basso, Box sopra il verde */}
         <DynamicHint 
           note={gameData.indizi[1]}
-          fileName="Il mio nome è nessuno_musicale/Nota2.svg" 
+          fileName="nessuno_musicale/Nota2.svg" 
           altText="Secondo Indizio"
           isVisible={step >= 4 && step < 10} 
           className="top-[-3.77%] left-[11.77%]"
@@ -390,7 +398,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
         {/* Terzo Indizio (Blu) - Nota sulla 2ª riga dal basso, Box sopra la 1ª riga */}
         <DynamicHint 
           note={gameData.indizi[2]}
-          fileName="Il mio nome è nessuno_musicale/Nota3.svg" 
+          fileName="nessuno_musicale/Nota3.svg" 
           altText="Terzo Indizio"
           isVisible={step >= 6 && step < 10} 
           className="top-[12.5%] left-[56.66%]"
@@ -402,7 +410,7 @@ const GameBoard: React.FC = () => {  // Stato per tenere traccia dello step attu
         {/* Quarto Indizio (Arancione) - Nota sulla 3ª riga dal basso, Box sopra il blu */}
         <DynamicHint 
           note={gameData.indizi[3]}
-          fileName="Il mio nome è nessuno_musicale/Nota4.svg" 
+          fileName="nessuno_musicale/Nota4.svg" 
           altText="Quarto Indizio"
           isVisible={step >= 8 && step < 10} 
           className="top-[-3.77%] left-[61.35%]"

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import gameDataRaw from './data/Gioco password_Data.json';
+import { useGameData } from './context/GameDataContext';
 
 type WordType = 'team1' | 'team2' | 'team3' | 'bomb' | 'neutral';
 
@@ -18,6 +18,9 @@ const teamColors = {
 };
 
 const PasswordPresceltiBoard: React.FC = () => {
+  const gameDataRaw = useGameData();
+  if (!gameDataRaw) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
+
   const [grid, setGrid] = useState<WordItem[]>([]);
   const [currentTeam, setCurrentTeam] = useState<number>(1);
   const [currentRound, setCurrentRound] = useState<number>(1);
@@ -73,10 +76,10 @@ const PasswordPresceltiBoard: React.FC = () => {
         setGrid(JSON.parse(storedGrid));
       } else {
         const allWords: WordItem[] = [
-          ...gameData.squadra1.map(w => ({ word: w.toUpperCase(), type: 'team1' as WordType })),
-          ...gameData.squadra2.map(w => ({ word: w.toUpperCase(), type: 'team2' as WordType })),
-          ...gameData.squadra3.map(w => ({ word: w.toUpperCase(), type: 'team3' as WordType })),
-          ...gameData.altre.map((w, i) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType }))
+          ...gameData.squadra1.map((w: string) => ({ word: w.toUpperCase(), type: 'team1' as WordType })),
+          ...gameData.squadra2.map((w: string) => ({ word: w.toUpperCase(), type: 'team2' as WordType })),
+          ...gameData.squadra3.map((w: string) => ({ word: w.toUpperCase(), type: 'team3' as WordType })),
+          ...gameData.altre.map((w: string, i: number) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType }))
         ];
         const sorted = [...allWords].sort((a, b) => a.word.localeCompare(b.word));
         setGrid(sorted);

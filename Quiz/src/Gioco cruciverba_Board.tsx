@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import gameData from './data/Gioco cruciverba_Data.json';
+import { useGameData } from './context/GameDataContext';
+import { assetUrl } from './lib/assetUrl';
 
 type Direction = 'H' | 'V';
 
@@ -17,6 +18,9 @@ interface WordInfo {
 }
 
 const CruciverbaBoard: React.FC = () => {
+  const gameData = useGameData();
+  if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
+
   const [levelIdx, setLevelIdx] = useState(0);
   const [grid, setGrid] = useState<Map<string, GridCell>>(new Map());
   const [wordsInfo, setWordsInfo] = useState<WordInfo[]>([]);
@@ -124,7 +128,7 @@ const CruciverbaBoard: React.FC = () => {
   useEffect(() => {
     if (levelIdx >= gameData.livelli.length) return;
     const level = gameData.livelli[levelIdx];
-    const { newGrid, newWordsInfo } = generateGrid(level.parole.map(w => w.toUpperCase()));
+    const { newGrid, newWordsInfo } = generateGrid(level.parole.map((w: string) => w.toUpperCase()));
     setGrid(newGrid);
     setWordsInfo(newWordsInfo);
     setCurrentWordIdx(0);
@@ -210,7 +214,7 @@ const CruciverbaBoard: React.FC = () => {
 
       {/* Sfondo Tema se presente */}
       {level.sfondo && (
-        <img src={level.sfondo} alt="Sfondo" className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none" />
+        <img src={assetUrl(level.sfondo)} alt="Sfondo" className="absolute inset-0 w-full h-full object-cover opacity-30 pointer-events-none" />
       )}
 
       {/* Errore X grande centrale */}

@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from "react";
-import gameData from "./data/Il mio nome è nessuno_img_Data.json";
+import { useGameData } from './context/GameDataContext';
 import ScoreAssigner from "./components/ScoreAssigner";
+import { assetUrl, assetUrlCss } from './lib/assetUrl';
 
 // ============================================================================
 // Gioco 2 - IMMAGINE: Logica a Step con Rivelazione Griglia e Indizi
 // ============================================================================
 
 const GameBoard = (): React.JSX.Element => {
+  const gameData = useGameData();
+  if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
+
   const [step, setStep] = useState(0);
   const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
   const [showError, setShowError] = useState(false);
@@ -111,7 +115,7 @@ const GameBoard = (): React.JSX.Element => {
   return (
     <div 
       className={`relative w-full min-h-screen ${gameData.sfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
-      style={gameData.sfondo ? { backgroundImage: `url(${gameData.sfondo})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
+      style={gameData.sfondo ? { backgroundImage: assetUrlCss(gameData.sfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
       {/* Overlay Errore */}
       {showError && (
@@ -150,7 +154,7 @@ const GameBoard = (): React.JSX.Element => {
           <div className="relative w-[600px] h-[600px] border-[18px] border-[#8e3600] bg-black overflow-hidden shadow-2xl flex-shrink-0">
             {/* L'Immagine Segreta */}
             <img 
-              src={gameData.immagineSegreta} 
+              src={assetUrl(gameData.immagineSegreta)} 
               alt="Immagine Segreta" 
               className="w-full h-full object-cover"
             />
@@ -176,7 +180,7 @@ const GameBoard = (): React.JSX.Element => {
 
           {/* AREA INDIZI (A Destra) */}
           <div className="flex flex-col justify-between h-[600px]">
-            {gameData.indizi.map((indizio, idx) => (
+            {gameData.indizi.map((indizio: any, idx: number) => (
               <div 
                 key={idx}
                 className={`relative flex items-stretch transition-all duration-700 ${
@@ -187,7 +191,7 @@ const GameBoard = (): React.JSX.Element => {
                 <div className="w-[102px] h-[102px] bg-[#fe7507] border-[9px] border-[#0f2d54] rounded-full flex items-center justify-center z-10 shadow-lg flex-shrink-0">
                   {indizio.icona ? (
                     <img 
-                      src={indizio.icona} 
+                      src={assetUrl(indizio.icona)} 
                       alt={`Icona ${idx + 1}`} 
                       className="w-[55%] h-[55%] object-contain"
                     />

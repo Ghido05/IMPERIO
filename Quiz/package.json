@@ -49,7 +49,7 @@
       "target": ["dmg", "zip"]
     },
     "directories": {
-      "output": "release"
+      "output": "../App-Builds"
     },
     "files": [
       "dist/**/*",

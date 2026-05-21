@@ -2,26 +2,60 @@ const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-let mainWindow;
+let presenterWindow;
+let gamesWindow;
+let scoresWindow;
 
-function createWindow() {
-  mainWindow = new BrowserWindow({
+function createWindows() {
+  const commonWebPreferences = {
+    preload: path.join(__dirname, 'preload.cjs'),
+    nodeIntegration: false,
+    contextIsolation: true,
+  };
+
+  // 1. Presenter Window
+  presenterWindow = new BrowserWindow({
     width: 1200,
     height: 800,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'),
-      nodeIntegration: false,
-      contextIsolation: true,
-    }
+    title: 'IMPERIO - Relatore',
+    webPreferences: commonWebPreferences
+  });
+
+  // 2. Games Window
+  gamesWindow = new BrowserWindow({
+    width: 1024,
+    height: 768,
+    title: 'IMPERIO - Giochi',
+    webPreferences: commonWebPreferences
+  });
+
+  // 3. Scores Window
+  scoresWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    title: 'IMPERIO - Punti',
+    webPreferences: commonWebPreferences
   });
 
   const isDev = process.env.NODE_ENV === 'development';
+  
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
+    presenterWindow.loadURL('http://localhost:5173/?mode=presenter');
+    gamesWindow.loadURL('http://localhost:5173/?mode=games');
+    scoresWindow.loadURL('http://localhost:5173/?mode=scores');
+    
+    // Optional: open devtools on presenter by default
+    presenterWindow.webContents.openDevTools();
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    presenterWindow.loadFile(path.join(__dirname, '../dist/index.html'), { query: { mode: 'presenter' } });
+    gamesWindow.loadFile(path.join(__dirname, '../dist/index.html'), { query: { mode: 'games' } });
+    scoresWindow.loadFile(path.join(__dirname, '../dist/index.html'), { query: { mode: 'scores' } });
   }
+
+  // Handle close events to avoid errors when interacting with closed windows
+  presenterWindow.on('closed', () => { presenterWindow = null; });
+  gamesWindow.on('closed', () => { gamesWindow = null; });
+  scoresWindow.on('closed', () => { scoresWindow = null; });
 
   createMenu();
 }
@@ -51,7 +85,7 @@ function createMenu() {
           label: 'Nuova Presentazione',
           accelerator: 'CmdOrCtrl+N',
           click: () => {
-            if (mainWindow) mainWindow.webContents.send('new-requested');
+            if (presenterWindow) presenterWindow.webContents.send('new-requested');
           }
         },
         {
@@ -66,7 +100,7 @@ function createMenu() {
           label: 'Salva',
           accelerator: 'CmdOrCtrl+S',
           click: () => {
-            if (mainWindow) mainWindow.webContents.send('save-requested');
+            if (presenterWindow) presenterWindow.webContents.send('save-requested');
           }
         },
         isMac ? { role: 'close' } : { role: 'quit' }
@@ -106,7 +140,7 @@ function createMenu() {
 
 // IPC Handlers per il File System
 async function handleOpenFile() {
-  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+  const { canceled, filePaths } = await dialog.showOpenDialog(presenterWindow, {
     title: 'Apri Presentazione IMPERIO',
     filters: [
       { name: 'IMPERIO Presentation', extensions: ['imp'] },
@@ -119,7 +153,7 @@ async function handleOpenFile() {
     try {
       const fileContent = fs.readFileSync(filePaths[0], 'utf-8');
       const data = JSON.parse(fileContent);
-      if (mainWindow) mainWindow.webContents.send('file-opened', data);
+      if (presenterWindow) presenterWindow.webContents.send('file-opened', data);
     } catch (error) {
       dialog.showErrorBox('Errore', 'Impossibile leggere il file. Formato non valido.');
     }
@@ -129,7 +163,7 @@ async function handleOpenFile() {
 ipcMain.handle('dialog:openFile', handleOpenFile);
 
 ipcMain.handle('dialog:saveFile', async (event, data) => {
-  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+  const { canceled, filePath } = await dialog.showSaveDialog(presenterWindow, {
     title: 'Salva Presentazione IMPERIO',
     filters: [
       { name: 'IMPERIO Presentation', extensions: ['imp'] }
@@ -148,12 +182,19 @@ ipcMain.handle('dialog:saveFile', async (event, data) => {
   return { success: false, canceled: true };
 });
 
+// IPC Handler for State Synchronization
+ipcMain.on('broadcast-state', (event, state) => {
+  // Broadcast state to Games and Scores windows
+  if (gamesWindow) gamesWindow.webContents.send('state-update', state);
+  if (scoresWindow) scoresWindow.webContents.send('state-update', state);
+});
+
 app.whenReady().then(() => {
-  createWindow();
+  createWindows();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createWindows();
     }
   });
 });

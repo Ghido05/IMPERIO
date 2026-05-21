@@ -5,9 +5,10 @@ interface Options {
   minWidth: number;
   maxWidth: number;
   storageKey?: string;
+  initialCollapsed?: boolean;
 }
 
-export function useResizablePanel({ initialWidth, minWidth, maxWidth, storageKey }: Options) {
+export function useResizablePanel({ initialWidth, minWidth, maxWidth, storageKey, initialCollapsed = false }: Options) {
   const [width, setWidth] = useState(() => {
     if (storageKey) {
       const saved = localStorage.getItem(storageKey);
@@ -18,7 +19,7 @@ export function useResizablePanel({ initialWidth, minWidth, maxWidth, storageKey
     }
     return initialWidth;
   });
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
   const dragging = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(0);

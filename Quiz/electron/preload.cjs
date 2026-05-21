@@ -11,5 +11,9 @@ contextBridge.exposeInMainWorld('electron', {
   },
   onNewRequested: (callback) => {
     ipcRenderer.on('new-requested', () => callback());
+  },
+  broadcastState: (state) => ipcRenderer.send('broadcast-state', state),
+  onStateUpdate: (callback) => {
+    ipcRenderer.on('state-update', (_event, state) => callback(state));
   }
 });

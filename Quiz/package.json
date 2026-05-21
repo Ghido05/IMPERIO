@@ -46,7 +46,10 @@
   "build": {
     "appId": "com.imperio.app",
     "mac": {
-      "target": ["dmg", "zip"]
+      "target": {
+        "target": "default",
+        "arch": "universal"
+      }
     },
     "directories": {
       "output": "../App-Builds"

@@ -196,8 +196,9 @@ const CruciverbaBoard: React.FC = () => {
     if (c > maxC) maxC = c;
   });
 
-  const rows = maxR - minR + 1;
-  const cols = maxC - minC + 1;
+  const hasGrid = grid.size > 0;
+  const rows = hasGrid ? maxR - minR + 1 : 0;
+  const cols = hasGrid ? maxC - minC + 1 : 0;
   const cellSize = 60; // px
   const gridWidth = cols * cellSize;
   const gridHeight = rows * cellSize;

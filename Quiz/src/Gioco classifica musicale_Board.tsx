@@ -2,17 +2,20 @@ import React, { useState, useEffect } from "react";
 import { useGameData } from './context/GameDataContext';
 import { CompactScoreAssigner } from "./components/ScoreAssigner";
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
+import { useSyncedState } from './hooks/useSyncedState';
 
-const ClassificaMusicaleBoard = (): React.JSX.Element => {
+const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX.Element => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
-  const [revealed, setRevealed] = useState<Record<number, boolean>>({});
-  const [pointsAssigned, setPointsAssigned] = useState<Record<number, boolean>>({});
+  const slideId = gameData.slideId ?? 'sandbox';
+
+  const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
+  const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_points`, {});
   const [showError, setShowError] = useState(false);
-  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
-  const [showTitle, setShowTitle] = useState(false);
-  const [showSolution, setShowSolution] = useState(false);
+  const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
+  const [showTitle, setShowTitle] = useSyncedState(`playstate_${slideId}_showtitle`, false);
+  const [showSolution, setShowSolution] = useSyncedState(`playstate_${slideId}_showsolution`, false);
   
   const audiosRef = React.useRef<Record<number, HTMLAudioElement>>({});
   const finalAudioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -21,6 +24,7 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
 
   // Inizializza gli audio stems e l'audio finale
   useEffect(() => {
+    if (!interactive) return;
     // Stems (iniziano mutati)
     gameData.elementi.forEach((el: any) => {
       if ((el as any).audio) {
@@ -220,9 +224,10 @@ const ClassificaMusicaleBoard = (): React.JSX.Element => {
       }
     };
 
+    if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAutoAdvancing, revealed]);
+  }, [isAutoAdvancing, revealed, interactive]);
 
   const rankingMarkers = [
     { value: 7, top: "34.070%" }, // Giallo (1 indizio)

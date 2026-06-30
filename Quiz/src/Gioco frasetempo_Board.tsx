@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGameData } from './context/GameDataContext';
-import ScoreAssigner from './components/ScoreAssigner';
+import { useSyncedState } from './hooks/useSyncedState';
 
-const FraseConTempo_Board: React.FC = () => {
+const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive = true }) => {
   const phrasesData = useGameData();
-  const [index, setIndex] = useState(0);
+  const slideId = phrasesData.slideId ?? 'sandbox';
+
+  const [index, setIndex] = useSyncedState(`playstate_${slideId}_index`, 0);
   const [tokens, setTokens] = useState<string[]>([]);
   const [targetTokens, setTargetTokens] = useState<string[]>([]);
   const [time, setTime] = useState(30.0);
-  const [isTimerRunning, setIsTimerRunning] = useState(false);
-  const [revealed, setRevealed] = useState(false);
-  const [selectedMarker, setSelectedMarker] = useState<number | null>(null);
-  const [pointsAssigned, setPointsAssigned] = useState(false);
+  const [syncedTime, setSyncedTime] = useSyncedState(`playstate_${slideId}_time`, 30.0);
+  const [isTimerRunning, setIsTimerRunning] = useSyncedState(`playstate_${slideId}_running`, false);
+  const [revealed, setRevealed] = useSyncedState(`playstate_${slideId}_revealed`, false);
+  const [selectedMarker, setSelectedMarker] = useSyncedState<number | null>(`playstate_${slideId}_marker`, null);
+  const [pointsAssigned, setPointsAssigned] = useSyncedState(`playstate_${slideId}_points`, false);
 
   const timerRef = useRef<any | null>(null);
 
@@ -45,6 +48,7 @@ const FraseConTempo_Board: React.FC = () => {
     setTargetTokens(targets);
     setTokens(targets.map(t => (/[A-Z]/.test(t[0]) ? '_' : t)));
     setTime(30.0);
+    setSyncedTime(30.0);
     setIsTimerRunning(false);
     setRevealed(false);
     setSelectedMarker(null);
@@ -55,7 +59,13 @@ const FraseConTempo_Board: React.FC = () => {
     initGame(index);
   }, [index, initGame]);
 
+  // Keep local time synced with the primary syncedTime
   useEffect(() => {
+    setTime(syncedTime);
+  }, [syncedTime]);
+
+  useEffect(() => {
+    if (!interactive) return;
     if (isTimerRunning && time > 0) {
       timerRef.current = setInterval(() => {
         setTime(prev => Math.max(0, prev - 0.1));
@@ -77,15 +87,24 @@ const FraseConTempo_Board: React.FC = () => {
   }, [targetTokens, revealed]);
 
   useEffect(() => {
+    if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+  }, [handleKeyDown, interactive]);
 
-  const startTimer = () => setIsTimerRunning(true);
-  const stopTimer = () => setIsTimerRunning(false);
+  const startTimer = () => {
+    setSyncedTime(time);
+    setIsTimerRunning(true);
+  };
+  
+  const stopTimer = () => {
+    setSyncedTime(time);
+    setIsTimerRunning(false);
+  };
 
   const revealSolution = () => {
-    stopTimer();
+    setSyncedTime(time);
+    setIsTimerRunning(false);
     setRevealed(true);
     setTokens([...targetTokens]);
     
@@ -220,19 +239,6 @@ const FraseConTempo_Board: React.FC = () => {
             PROSSIMA FRASE
           </button>
         </div>
-
-        {revealed && !pointsAssigned && (
-          <ScoreAssigner 
-            points={3000} 
-            onAssigned={() => setPointsAssigned(true)} 
-          />
-        )}
-        
-        {pointsAssigned && (
-          <div className="text-green-400 font-black text-2xl uppercase tracking-widest animate-bounce">
-            Punti Assegnati!
-          </div>
-        )}
       </div>
 
       {/* Back to Menu (using window.location for simplicity as per existing pattern) */}

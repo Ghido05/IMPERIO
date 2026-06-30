@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from "react";
 import { useGameData } from './context/GameDataContext';
-import { assetUrl } from './lib/assetUrl';
+import { CompactScoreAssigner } from "./components/ScoreAssigner";
+import { assetUrl, assetUrlCss } from './lib/assetUrl';
+import { useSyncedState } from './hooks/useSyncedState';
 
 type Direction = 'H' | 'V';
 
@@ -17,14 +19,17 @@ interface WordInfo {
   dir: Direction;
 }
 
-const CruciverbaBoard: React.FC = () => {
+const CruciverbaBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
-  const [levelIdx, setLevelIdx] = useState(0);
+  const slideId = gameData.slideId ?? 'sandbox';
+
+  const [levelIdx, setLevelIdx] = useSyncedState(`playstate_${slideId}_level`, 0);
   const [grid, setGrid] = useState<Map<string, GridCell>>(new Map());
   const [wordsInfo, setWordsInfo] = useState<WordInfo[]>([]);
-  const [currentWordIdx, setCurrentWordIdx] = useState(0);
+  const [currentWordIdx, setCurrentWordIdx] = useSyncedState(`playstate_${slideId}_word`, 0);
+  const [revealedCoords, setRevealedCoords] = useSyncedState<string[]>(`playstate_${slideId}_revealed_coords`, []);
   const [errorFlash, setErrorFlash] = useState(false);
 
   const canPlaceWord = (word: string, r: number, c: number, d: Direction, currentGrid: Map<string, GridCell>) => {
@@ -129,9 +134,23 @@ const CruciverbaBoard: React.FC = () => {
     if (levelIdx >= gameData.livelli.length) return;
     const level = gameData.livelli[levelIdx];
     const { newGrid, newWordsInfo } = generateGrid(level.parole.map((w: string) => w.toUpperCase()));
+    
+    // Apply synced coordinates
+    for (const key of revealedCoords) {
+      if (newGrid.has(key)) {
+        newGrid.get(key)!.revealed = true;
+      }
+    }
+    
     setGrid(newGrid);
     setWordsInfo(newWordsInfo);
-    setCurrentWordIdx(0);
+  }, [levelIdx, revealedCoords]);
+
+  // Reset coordinates when level changes
+  useEffect(() => {
+    if (levelIdx >= gameData.livelli.length) return;
+    // Don't clear if coordinates already contain elements for this level (e.g. on load)
+    // To keep it simple, we just initialize it if empty
   }, [levelIdx]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -143,15 +162,21 @@ const CruciverbaBoard: React.FC = () => {
       if (currentWordIdx < maxWords) {
         // Svela parola
         const newGrid = new Map(grid);
-        for (const cell of newGrid.values()) {
+        const newCoords = [...revealedCoords];
+        for (const [key, cell] of newGrid.entries()) {
           if (cell.words.includes(currentWordIdx)) {
             cell.revealed = true;
+            if (!newCoords.includes(key)) {
+              newCoords.push(key);
+            }
           }
         }
         setGrid(newGrid);
+        setRevealedCoords(newCoords);
         setCurrentWordIdx(prev => prev + 1);
       } else {
         // Prossimo livello
+        setRevealedCoords([]);
         setLevelIdx(prev => prev + 1);
       }
       return;
@@ -162,23 +187,29 @@ const CruciverbaBoard: React.FC = () => {
       const targetWord = wordsInfo[currentWordIdx].word;
       if (targetWord.includes(letter)) {
         const newGrid = new Map(grid);
-        for (const cell of newGrid.values()) {
+        const newCoords = [...revealedCoords];
+        for (const [key, cell] of newGrid.entries()) {
           if (cell.words.includes(currentWordIdx) && cell.char === letter) {
             cell.revealed = true;
+            if (!newCoords.includes(key)) {
+              newCoords.push(key);
+            }
           }
         }
         setGrid(newGrid);
+        setRevealedCoords(newCoords);
       } else {
         setErrorFlash(true);
         setTimeout(() => setErrorFlash(false), 500);
       }
     }
-  }, [grid, currentWordIdx, levelIdx, wordsInfo]);
+  }, [grid, currentWordIdx, levelIdx, wordsInfo, revealedCoords]);
 
   useEffect(() => {
+    if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleKeyDown]);
+  }, [handleKeyDown, interactive]);
 
   if (levelIdx >= gameData.livelli.length) {
     return <div className="w-full h-screen bg-black flex items-center justify-center text-white text-5xl">FINE GIOCO</div>;

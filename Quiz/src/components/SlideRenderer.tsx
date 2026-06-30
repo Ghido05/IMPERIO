@@ -11,20 +11,21 @@ import ClassificaGeneraleBoard from '../ClassificaGenerale_Board';
 
 interface SlideRendererProps {
   type: SlideType;
+  interactive?: boolean;
 }
 
-export default function SlideRenderer({ type }: SlideRendererProps) {
+export default function SlideRenderer({ type, interactive = true }: SlideRendererProps) {
   return (
     <>
-      <style>{`.min-h-screen { min-height: 1080px !important; }`}</style>
-      {type === 'img' && <ImgBoard />}
-      {type === 'music' && <MusicBoard />}
-      {type === 'classifica' && <ClassificaBoard />}
-      {type === 'classifica_musicale' && <ClassificaMusicaleBoard />}
-      {type === 'cruciverba' && <CruciverbaBoard />}
-      {type === 'gioco_frase_tempo' && <GiocoFraseTempoBoard />}
-      {type === 'password_squadre' && <PasswordSquadreBoard />}
-      {type === 'password_prescelti' && <PasswordPresceltiBoard />}
+      <style>{`.min-h-screen { min-height: 1080px !important; height: 1080px !important; }`}</style>
+      {type === 'img' && <ImgBoard interactive={interactive} />}
+      {type === 'music' && <MusicBoard interactive={interactive} />}
+      {type === 'classifica' && <ClassificaBoard interactive={interactive} />}
+      {type === 'classifica_musicale' && <ClassificaMusicaleBoard interactive={interactive} />}
+      {type === 'cruciverba' && <CruciverbaBoard interactive={interactive} />}
+      {type === 'gioco_frase_tempo' && <GiocoFraseTempoBoard interactive={interactive} />}
+      {type === 'password_squadre' && <PasswordSquadreBoard interactive={interactive} />}
+      {type === 'password_prescelti' && <PasswordPresceltiBoard interactive={interactive} />}
       {type === 'classifica_generale' && <ClassificaGeneraleBoard />}
     </>
   );

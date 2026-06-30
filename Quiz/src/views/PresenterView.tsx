@@ -5,7 +5,8 @@ import ResizableSidebar from '../components/ResizableSidebar';
 import GameSelector from '../components/GameSelector';
 import StructuredJsonEditor from '../components/StructuredJsonEditor';
 import WelcomeScreen from '../components/WelcomeScreen';
-import ScaledPreview from '../components/ScaledPreview';
+import PresenterPreviewPanel from '../components/PresenterPreviewPanel';
+import ScoreAssigner from '../components/ScoreAssigner';
 import { ScoreProvider } from '../context/ScoreContext';
 import { cloneDefaultData } from '../lib/defaultGameData';
 import { getGameMeta } from '../lib/gameMeta';
@@ -21,6 +22,8 @@ export default function PresenterView() {
   const [presentationName, setPresentationName] = useState('Presentazione senza titolo');
   const [slides, setSlides] = useState<Slide[]>([{ id: '1', type: 'empty' }]);
   const [activeSlideId, setActiveSlideId] = useState('1');
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const rightPanel = useResizablePanel({
     initialWidth: 320,
@@ -42,6 +45,40 @@ export default function PresenterView() {
       });
     }
   }, [slides, activeSlideId, viewMode]);
+
+  // Forward keyboard events (game control keys) to other windows (GamesView)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't forward if typing in an input/textarea
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
+        return;
+      }
+
+      // Ignore system shortcuts (like Cmd+R, Cmd+Option+I, etc.)
+      if (e.metaKey || e.ctrlKey) {
+        return;
+      }
+
+      const isElectron = (window as any).electron !== undefined;
+      if (isElectron && viewMode === 'editor') {
+        (window as any).electron.broadcastState({
+          forwardedKey: {
+            key: e.key,
+            code: e.code,
+            keyCode: e.keyCode,
+            shiftKey: e.shiftKey,
+            altKey: e.altKey,
+          }
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewMode]);
 
   useEffect(() => {
     const isElectron = (window as any).electron !== undefined;
@@ -129,6 +166,49 @@ export default function PresenterView() {
     setActiveSlideId(id);
   };
 
+  const moveSlideLeft = (index: number) => {
+    if (index === 0) return;
+    const newSlides = [...slides];
+    const temp = newSlides[index];
+    newSlides[index] = newSlides[index - 1];
+    newSlides[index - 1] = temp;
+    setSlides(newSlides);
+  };
+
+  const moveSlideRight = (index: number) => {
+    if (index === slides.length - 1) return;
+    const newSlides = [...slides];
+    const temp = newSlides[index];
+    newSlides[index] = newSlides[index + 1];
+    newSlides[index + 1] = temp;
+    setSlides(newSlides);
+  };
+
+  const deleteSlide = (id: string) => {
+    const newSlides = slides.filter(s => s.id !== id);
+    setSlides(newSlides);
+    
+    if (activeSlideId === id) {
+      const deletedIndex = slides.findIndex(s => s.id === id);
+      if (newSlides.length > 0) {
+        const nextActiveIdx = Math.max(0, deletedIndex - 1);
+        setActiveSlideId(newSlides[nextActiveIdx].id);
+      } else {
+        const newId = Date.now().toString();
+        setSlides([{ id: newId, type: 'empty' }]);
+        setActiveSlideId(newId);
+      }
+    }
+  };
+
+  const handleMoveSlide = (fromIndex: number | null, toIndex: number) => {
+    if (fromIndex === null || fromIndex === toIndex) return;
+    const newSlides = [...slides];
+    const [removed] = newSlides.splice(fromIndex, 1);
+    newSlides.splice(toIndex, 0, removed);
+    setSlides(newSlides);
+  };
+
   return (
     <ScoreProvider>
       <div className="flex flex-col h-screen w-full bg-[#191919] text-white overflow-hidden font-sans">
@@ -160,53 +240,112 @@ export default function PresenterView() {
         <div className="flex flex-1 min-h-0 relative">
           <main className="flex-1 flex flex-col min-w-0 bg-[#404040]">
             {/* Top Area: Previews */}
-            <div className="flex-1 flex flex-row p-4 gap-4 overflow-hidden">
-              {/* Top Left: Game Preview */}
-              <div className="flex-1 bg-black rounded-xl overflow-hidden shadow-2xl relative flex flex-col">
-                <div className="bg-[#2b2b2b] text-center text-xs py-1 text-white/50 border-b border-white/10 shrink-0">Anteprima Gioco</div>
-                <div className="flex-1 relative">
-                  {activeSlide && <SlideCanvas slide={activeSlide} interactive />}
-                </div>
-              </div>
-              
-              {/* Top Right: Scores Preview */}
-              <div className="flex-1 bg-black rounded-xl overflow-hidden shadow-2xl relative flex flex-col">
-                <div className="bg-[#2b2b2b] text-center text-xs py-1 text-white/50 border-b border-white/10 shrink-0">Punteggi</div>
-                <div className="flex-1 relative">
-                  <ScaledPreview interactive={false}>
-                    <ClassificaGenerale_Board />
-                  </ScaledPreview>
-                </div>
-              </div>
+            <div className="flex-1 grid grid-cols-2 gap-4 p-4 overflow-hidden min-h-0">
+              <PresenterPreviewPanel
+                title="Anteprima Gioco"
+                footer={<ScoreAssigner points={3000} />}
+              >
+                {activeSlide ? (
+                  <SlideCanvas slide={activeSlide} interactive viewportMode="none" />
+                ) : null}
+              </PresenterPreviewPanel>
+
+              <PresenterPreviewPanel title="Punteggi">
+                <ClassificaGenerale_Board />
+              </PresenterPreviewPanel>
             </div>
 
-            {/* Bottom Area: Timeline like PPT */}
-            <div className="h-48 bg-[#2b2b2b] border-t border-white/10 flex flex-col shrink-0">
-               <div className="flex items-center px-4 py-2 border-b border-white/10 justify-between">
-                  <span className="text-xs font-semibold text-white/60">Linea del Tempo (Diapositive)</span>
-                  <button
-                    type="button"
-                    onClick={addSlide}
-                    className="py-1 px-3 text-[11px] font-semibold rounded bg-white/10 hover:bg-white/15 border border-white/10"
-                  >
-                    + Nuova Diapositiva
-                  </button>
-               </div>
-               <div className="flex-1 flex flex-row overflow-x-auto overflow-y-hidden p-3 gap-2">
-                  {slides.map((slide, index) => (
-                    <div key={slide.id} className="h-full flex flex-col items-center gap-1 shrink-0 w-48">
-                      <div className="flex-1 w-full">
-                        <SlideThumbnail
-                          slide={slide}
-                          index={index}
-                          isActive={activeSlideId === slide.id}
-                          onClick={() => setActiveSlideId(slide.id)}
-                        />
-                      </div>
-                    </div>
-                  ))}
-               </div>
-            </div>
+             {/* Bottom Area: Timeline like PPT */}
+             <div className="h-48 bg-[#2b2b2b] border-t border-white/10 flex flex-col shrink-0">
+                <div className="flex items-center px-4 py-2 border-b border-white/10 justify-between">
+                   <span className="text-xs font-semibold text-white/60">Linea del Tempo (Diapositive)</span>
+                   <button
+                     type="button"
+                     onClick={addSlide}
+                     className="py-1 px-3 text-[11px] font-semibold rounded bg-white/10 hover:bg-white/15 border border-white/10"
+                   >
+                     + Aggiungi Diapositiva
+                   </button>
+                </div>
+                <div className="flex-1 flex flex-row overflow-x-auto overflow-y-hidden p-3 gap-3">
+                   {slides.map((slide, index) => {
+                     const isDragging = draggedIndex === index;
+                     const isOver = dragOverIndex === index;
+                     const isBefore = draggedIndex !== null && index < draggedIndex;
+
+                     return (
+                       <div 
+                         key={slide.id} 
+                         draggable
+                         onClick={() => setActiveSlideId(slide.id)}
+                         onDragStart={(e) => {
+                           setDraggedIndex(index);
+                           e.dataTransfer.effectAllowed = 'move';
+                           e.currentTarget.style.opacity = '0.4';
+                         }}
+                         onDragEnd={(e) => {
+                           setDraggedIndex(null);
+                           setDragOverIndex(null);
+                           e.currentTarget.style.opacity = '1';
+                         }}
+                         onDragOver={(e) => {
+                           e.preventDefault();
+                           if (draggedIndex !== index) {
+                             setDragOverIndex(index);
+                           }
+                         }}
+                         onDragLeave={() => {
+                           setDragOverIndex(prev => prev === index ? null : prev);
+                         }}
+                         onDrop={(e) => {
+                           e.preventDefault();
+                           if (draggedIndex !== null && draggedIndex !== index) {
+                             handleMoveSlide(draggedIndex, index);
+                           }
+                           setDraggedIndex(null);
+                           setDragOverIndex(null);
+                         }}
+                         className={`h-full flex flex-col items-center justify-between p-2 rounded bg-white/5 border transition-all shrink-0 w-44 relative cursor-grab active:cursor-grabbing ${
+                           activeSlideId === slide.id ? 'border-[#c75a3a]/40 bg-[#c75a3a]/5' : 'border-white/5'
+                         } ${isDragging ? 'opacity-40 border-dashed border-white/20' : ''}`}
+                       >
+                         {/* Slide Thumbnail wrapper to disable pointer events so drag starts on the outer card */}
+                         <div className="w-full flex-1 min-h-0 flex items-center justify-center pointer-events-none">
+                           <SlideThumbnail
+                             slide={slide}
+                             index={index}
+                             isActive={activeSlideId === slide.id}
+                             onClick={() => {}}
+                           />
+                         </div>
+                         
+                         <div className="flex items-center justify-end w-full mt-2 pt-1 border-t border-white/5 shrink-0">
+                           <button
+                             type="button"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               deleteSlide(slide.id);
+                             }}
+                             className="w-6 h-6 rounded flex items-center justify-center bg-red-950/40 hover:bg-red-900/60 border border-red-800/40 text-red-200 text-[10px] font-bold transition-colors"
+                             title="Elimina diapositiva"
+                           >
+                             🗑
+                           </button>
+                         </div>
+
+                         {/* Drop Insertion Indicator Line */}
+                         {isOver && draggedIndex !== null && (
+                           <div 
+                             className={`absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] z-50 ${
+                               isBefore ? '-left-2' : '-right-2'
+                             }`}
+                           />
+                         )}
+                       </div>
+                     );
+                   })}
+                </div>
+             </div>
           </main>
 
           {/* Right Panel: Properties */}
@@ -231,6 +370,15 @@ export default function PresenterView() {
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto p-3 flex flex-col min-h-0">
+                {activeSlide && activeSlide.type !== 'empty' && (
+                  <button
+                    type="button"
+                    onClick={() => handleGameSelect('empty')}
+                    className="mb-4 w-full py-2 px-3 rounded bg-red-950/40 hover:bg-red-900/60 border border-red-800/40 text-red-200 text-xs font-semibold transition-all shrink-0"
+                  >
+                    🔄 Cambia tipo di gioco
+                  </button>
+                )}
                 {activeSlide?.type === 'empty' ? (
                   <div>
                     <p className="text-xs text-white/50 mb-3">

@@ -2,21 +2,25 @@ import React, { useState, useEffect } from "react";
 import { useGameData } from './context/GameDataContext';
 import { CompactScoreAssigner } from "./components/ScoreAssigner";
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
+import { useSyncedState } from './hooks/useSyncedState';
 
-const ClassificaBoard = (): React.JSX.Element => {
+const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX.Element => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
-  const [revealed, setRevealed] = useState<Record<number, boolean>>({});
-  const [pointsAssigned, setPointsAssigned] = useState<Record<number, boolean>>({});
+  const slideId = gameData.slideId ?? 'sandbox';
+
+  const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
+  const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_points`, {});
   const [showError, setShowError] = useState(false);
-  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
-  const [showTitle, setShowTitle] = useState(false);
+  const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
+  const [showTitle, setShowTitle] = useSyncedState(`playstate_${slideId}_showtitle`, false);
   
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   // Inizializza l'audio se presente nel JSON
   useEffect(() => {
+    if (!interactive) return;
     // @ts-ignore - nel caso in cui audio non sia tipizzato su gameData
     if (gameData.audio) {
       // @ts-ignore
@@ -127,6 +131,8 @@ const ClassificaBoard = (): React.JSX.Element => {
 
   // Input da tastiera (1-9 e 0 per 10)
   useEffect(() => {
+    if (!interactive) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isAutoAdvancing) return;
 
@@ -155,7 +161,7 @@ const ClassificaBoard = (): React.JSX.Element => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAutoAdvancing]);
+  }, [isAutoAdvancing, interactive]);
 
   const rankingMarkers = [
     { value: 10, top: "31.389%" },

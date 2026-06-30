@@ -23,16 +23,22 @@ function createWindows() {
 
   // 2. Games Window
   gamesWindow = new BrowserWindow({
-    width: 1024,
-    height: 768,
+    width: 1920,
+    height: 1080,
+    useContentSize: true,
+    fullscreenable: true,
+    backgroundColor: '#000000',
     title: 'IMPERIO - Giochi',
     webPreferences: commonWebPreferences
   });
 
   // 3. Scores Window
   scoresWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1920,
+    height: 1080,
+    useContentSize: true,
+    fullscreenable: true,
+    backgroundColor: '#000000',
     title: 'IMPERIO - Punti',
     webPreferences: commonWebPreferences
   });
@@ -56,6 +62,20 @@ function createWindows() {
   presenterWindow.on('closed', () => { presenterWindow = null; });
   gamesWindow.on('closed', () => { gamesWindow = null; });
   scoresWindow.on('closed', () => { scoresWindow = null; });
+
+  [gamesWindow, scoresWindow].forEach((win) => {
+    if (!win) return;
+    const notifyViewport = () => {
+      setTimeout(() => {
+        if (win && !win.isDestroyed()) {
+          win.webContents.send('viewport-changed');
+        }
+      }, 50);
+    };
+    win.on('enter-full-screen', notifyViewport);
+    win.on('leave-full-screen', notifyViewport);
+    win.on('resize', notifyViewport);
+  });
 
   createMenu();
 }
@@ -184,9 +204,16 @@ ipcMain.handle('dialog:saveFile', async (event, data) => {
 
 // IPC Handler for State Synchronization
 ipcMain.on('broadcast-state', (event, state) => {
-  // Broadcast state to Games and Scores windows
-  if (gamesWindow) gamesWindow.webContents.send('state-update', state);
-  if (scoresWindow) scoresWindow.webContents.send('state-update', state);
+  // Broadcast state to all windows except the sender
+  if (presenterWindow && event.sender !== presenterWindow.webContents) {
+    presenterWindow.webContents.send('state-update', state);
+  }
+  if (gamesWindow && event.sender !== gamesWindow.webContents) {
+    gamesWindow.webContents.send('state-update', state);
+  }
+  if (scoresWindow && event.sender !== scoresWindow.webContents) {
+    scoresWindow.webContents.send('state-update', state);
+  }
 });
 
 app.whenReady().then(() => {

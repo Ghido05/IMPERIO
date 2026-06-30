@@ -1,31 +1,47 @@
 import { useState, useEffect } from 'react';
 import SlideCanvas from '../components/SlideCanvas';
-import { Slide } from '../App';
+import type { Slide } from '../App';
 import { ScoreProvider } from '../context/ScoreContext';
 
 export default function GamesView() {
   const [activeSlide, setActiveSlide] = useState<Slide | null>(null);
-  
+
   useEffect(() => {
     const isElectron = (window as any).electron !== undefined;
     if (isElectron) {
-      (window as any).electron.onStateUpdate((state: { activeSlide: Slide | null }) => {
-        setActiveSlide(state.activeSlide);
+      const unsubscribe = (window as any).electron.onStateUpdate((state: { activeSlide?: Slide | null, forwardedKey?: any }) => {
+        if (state.activeSlide !== undefined) {
+          setActiveSlide(state.activeSlide);
+        }
+        if (state.forwardedKey) {
+          const k = state.forwardedKey;
+          const event = new KeyboardEvent('keydown', {
+            key: k.key,
+            code: k.code,
+            bubbles: true,
+            cancelable: true,
+          });
+          
+          // Inject code and keycode properties for React & legacy event handlers
+          Object.defineProperty(event, 'keyCode', { value: k.keyCode });
+          Object.defineProperty(event, 'which', { value: k.keyCode });
+          
+          window.dispatchEvent(event);
+        }
       });
+      return unsubscribe;
     }
   }, []);
 
   return (
     <ScoreProvider>
-      <div className="w-full h-screen bg-black flex items-center justify-center overflow-hidden">
+      <div className="fixed inset-0 bg-black overflow-hidden">
         {activeSlide ? (
-          <div className="w-full h-full max-w-[100vw] max-h-[100vh] flex items-center justify-center">
-             <div style={{ width: 'min(100%, calc(100vh * 16 / 9))', aspectRatio: '16/9' }} className="relative bg-[#191919]">
-                <SlideCanvas slide={activeSlide} interactive={true} />
-             </div>
-          </div>
+          <SlideCanvas slide={activeSlide} interactive />
         ) : (
-          <div className="text-white/50 text-2xl font-bold">In attesa della presentazione...</div>
+          <div className="w-full h-full flex items-center justify-center text-white/50 text-2xl font-bold">
+            In attesa della presentazione...
+          </div>
         )}
       </div>
     </ScoreProvider>

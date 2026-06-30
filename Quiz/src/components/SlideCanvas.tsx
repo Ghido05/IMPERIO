@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { GameDataProvider } from '../context/GameDataContext';
 import type { Slide } from '../App';
 import { cloneDefaultData } from '../lib/defaultGameData';
 import SlideRenderer from './SlideRenderer';
-
-const BASE_W = 1920;
-const BASE_H = 1080;
+import StageViewport from './StageViewport';
+import { STAGE_H, STAGE_W, type StageMode } from '../hooks/useStageBox';
+import type { CSSProperties } from 'react';
 
 interface SlideCanvasProps {
   slide: Slide;
@@ -13,6 +12,8 @@ interface SlideCanvasProps {
   className?: string;
   mode?: 'full' | 'thumbnail';
   thumbWidth?: number;
+  /** fill = finestra esterna; fit = contenitore 16:9; none = solo canvas 1920×1080 (dentro PresenterPreviewPanel) */
+  viewportMode?: StageMode | 'none';
 }
 
 export default function SlideCanvas({
@@ -21,24 +22,8 @@ export default function SlideCanvas({
   className = '',
   mode = 'full',
   thumbWidth = 128,
+  viewportMode = 'fit',
 }: SlideCanvasProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(0.5);
-
-  useEffect(() => {
-    if (mode === 'thumbnail') return;
-    const el = containerRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        setScale(Math.min(width / BASE_W, height / BASE_H));
-      }
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [mode]);
-
   if (slide.type === 'empty') {
     if (mode === 'thumbnail') {
       const h = (thumbWidth * 9) / 16;
@@ -60,14 +45,17 @@ export default function SlideCanvas({
     );
   }
 
-  const data = slide.data ?? cloneDefaultData(slide.type);
+  const data = {
+    ...(slide.data ?? cloneDefaultData(slide.type)),
+    slideId: slide.id,
+  };
 
   if (mode === 'thumbnail') {
-    const thumbScale = thumbWidth / BASE_W;
+    const thumbScale = thumbWidth / STAGE_W;
     const thumbHeight = (thumbWidth * 9) / 16;
     const stageStyle: CSSProperties = {
-      width: BASE_W,
-      height: BASE_H,
+      width: STAGE_W,
+      height: STAGE_H,
       transform: `scale(${thumbScale})`,
       transformOrigin: 'top left',
     };
@@ -79,31 +67,33 @@ export default function SlideCanvas({
       >
         <div className="pointer-events-none" style={stageStyle}>
           <GameDataProvider data={data}>
-            <SlideRenderer type={slide.type} />
+            <SlideRenderer type={slide.type} interactive={false} />
           </GameDataProvider>
         </div>
       </div>
     );
   }
 
-  const stageStyle: CSSProperties = {
-    width: BASE_W,
-    height: BASE_H,
-    transform: `scale(${scale})`,
-    transformOrigin: 'center center',
-  };
+  const stageContent = (
+    <GameDataProvider data={data}>
+      <div
+        className={interactive ? 'relative' : 'relative pointer-events-none'}
+        style={{ width: STAGE_W, height: STAGE_H }}
+      >
+        <SlideRenderer type={slide.type} interactive={interactive} />
+      </div>
+    </GameDataProvider>
+  );
+
+  if (viewportMode === 'none') {
+    return <div className={`w-full h-full ${className}`}>{stageContent}</div>;
+  }
 
   return (
-    <div ref={containerRef} className={`relative w-full h-full overflow-hidden bg-black ${className}`}>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className={interactive ? '' : 'pointer-events-none'} style={stageStyle}>
-          <GameDataProvider data={data}>
-            <div className="relative" style={{ width: BASE_W, height: BASE_H }}>
-              <SlideRenderer type={slide.type} />
-            </div>
-          </GameDataProvider>
-        </div>
-      </div>
+    <div className={`w-full h-full ${className}`}>
+      <StageViewport interactive={interactive} mode={viewportMode}>
+        {stageContent}
+      </StageViewport>
     </div>
   );
 }

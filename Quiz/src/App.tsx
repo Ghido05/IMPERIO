@@ -26,6 +26,48 @@ function App() {
   const [mode, setMode] = useState<string | null>(null);
   const [isSandbox, setIsSandbox] = useState(false);
 
+  // Sync localStorage changes across Electron windows (specifically for the password board)
+  useEffect(() => {
+    const isElectron = (window as any).electron !== undefined;
+    if (!isElectron) return;
+
+    const electron = (window as any).electron;
+    const originalSetItem = Storage.prototype.setItem;
+
+    // Override setItem to broadcast modifications for password and general game playstates
+    Storage.prototype.setItem = function (key: string, value: string) {
+      originalSetItem.call(this, key, value);
+      if (key.startsWith('password_') || key.startsWith('playstate_')) {
+        electron.broadcastState({
+          localStorageUpdate: { key, value }
+        });
+      }
+    };
+
+    // Receive modifications from other windows and trigger local storage listeners
+    const handleStateUpdate = (state: any) => {
+      if (state && state.localStorageUpdate) {
+        const { key, value } = state.localStorageUpdate;
+        if (key.startsWith('password_') || key.startsWith('playstate_')) {
+          originalSetItem.call(localStorage, key, value);
+          const event = new StorageEvent('storage', {
+            key,
+            newValue: value,
+            storageArea: localStorage,
+          });
+          window.dispatchEvent(event);
+        }
+      }
+    };
+
+    const unsubscribe = electron.onStateUpdate(handleStateUpdate);
+
+    return () => {
+      Storage.prototype.setItem = originalSetItem;
+      unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const forceSandbox = urlParams.get('sandbox') === 'true';

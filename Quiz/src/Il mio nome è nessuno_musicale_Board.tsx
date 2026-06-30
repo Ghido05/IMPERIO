@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameData } from './context/GameDataContext';
-import ScoreAssigner from './components/ScoreAssigner';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
+import { useSyncedState } from './hooks/useSyncedState';
 
 // ============================================================================
 // Layout esportato da Figma e reso Responsivo con Navigazione a Frecce e Audio
@@ -130,7 +130,7 @@ const DynamicHint: React.FC<{
 };
 
 // Componente per la Soluzione Finale
-const Solution: React.FC<{ isVisible: boolean, pointsAssigned: boolean, onAssigned: () => void }> = ({ isVisible, pointsAssigned, onAssigned }) => {
+const Solution: React.FC<{ isVisible: boolean }> = ({ isVisible }) => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -156,34 +156,21 @@ const Solution: React.FC<{ isVisible: boolean, pointsAssigned: boolean, onAssign
           {gameData.soluzione.artista} - {gameData.soluzione.anno}
         </p>
       </div>
-
-      {isVisible && !pointsAssigned && (
-        <ScoreAssigner 
-          points={3000} 
-          onAssigned={onAssigned} 
-          className="mt-12 scale-125"
-        />
-      )}
-
-      {pointsAssigned && (
-        <div className="mt-12 text-green-400 font-black text-2xl uppercase tracking-widest animate-bounce">
-          Punti Assegnati!
-        </div>
-      )}
     </div>
   </div>
   );
 };
 
-const GameBoard: React.FC = () => {
+const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) => {
   const gameData = useGameData();
+  const slideId = gameData.slideId ?? 'sandbox';
+
   // Stato per tenere traccia dello step attuale (da 0 a 10)
   // 0 = vuoto, 1-9 = Strumenti e Indizi, 10 = Soluzione
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useSyncedState(`playstate_${slideId}_step`, 0);
   const [prevStep, setPrevStep] = useState(0);
-  const [isAutoAdvancing, setIsAutoAdvancing] = useState(false);
+  const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
   const [showError, setShowError] = useState(false);
-  const [pointsAssigned, setPointsAssigned] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Gestione dell'animazione di errore (si spegne da sola dopo 800ms)
@@ -274,15 +261,17 @@ const GameBoard: React.FC = () => {
     // - Stiamo tornando indietro dalla soluzione (da 10 a 9)
     const isBackingFromSolution = prevStep === 10 && step === 9;
 
-    if (audioMap[step] && !isAutoAdvancing && !isBackingFromSolution) {
+    if (audioMap[step] && !isAutoAdvancing && !isBackingFromSolution && interactive) {
       const newAudio = new Audio(assetUrl(audioMap[step]));
       audioRef.current = newAudio;
       newAudio.play().catch(error => console.log('Autoplay intercettato dal browser:', error));
     }
-  }, [step, isAutoAdvancing, prevStep]);
+  }, [step, isAutoAdvancing, prevStep, interactive]);
 
   // Ascolta la pressione dei tasti freccia e comandi speciali
   useEffect(() => {
+    if (!interactive) return;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Se stiamo avanzando automaticamente, ignoriamo gli input per evitare conflitti
       if (isAutoAdvancing) return;
@@ -420,11 +409,7 @@ const GameBoard: React.FC = () => {
         />
 
         {/* Soluzione Finale */}
-        <Solution 
-          isVisible={step === 10} 
-          pointsAssigned={pointsAssigned} 
-          onAssigned={() => setPointsAssigned(true)} 
-        />
+        <Solution isVisible={step === 10} />
 
       </div>
 

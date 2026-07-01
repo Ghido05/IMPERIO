@@ -51,7 +51,7 @@ function createWindows() {
     scoresWindow.loadURL('http://localhost:5173/?mode=scores');
     
     // Optional: open devtools on presenter by default
-    presenterWindow.webContents.openDevTools();
+    // presenterWindow.webContents.openDevTools();
   } else {
     presenterWindow.loadFile(path.join(__dirname, '../dist/index.html'), { query: { mode: 'presenter' } });
     gamesWindow.loadFile(path.join(__dirname, '../dist/index.html'), { query: { mode: 'games' } });

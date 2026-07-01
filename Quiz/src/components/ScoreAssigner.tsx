@@ -3,7 +3,7 @@ import { useScores } from '../context/ScoreContext';
 
 interface ScoreAssignerProps {
   points: number;
-  onAssigned?: () => void;
+  onAssigned?: (teamNum: number) => void;
   className?: string;
 }
 
@@ -12,7 +12,7 @@ const ScoreAssigner: React.FC<ScoreAssignerProps> = ({ points, onAssigned, class
 
   const handleAssign = (teamIdx: number) => {
     addScore(teamIdx, points);
-    if (onAssigned) onAssigned();
+    if (onAssigned) onAssigned(teamIdx + 1);
   };
 
   return (
@@ -37,7 +37,7 @@ export const CompactScoreAssigner: React.FC<ScoreAssignerProps> = ({ points, onA
 
   const handleAssign = (teamIdx: number) => {
     addScore(teamIdx, points);
-    if (onAssigned) onAssigned();
+    if (onAssigned) onAssigned(teamIdx + 1);
   };
 
   return (

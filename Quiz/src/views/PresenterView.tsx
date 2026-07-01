@@ -14,6 +14,7 @@ import { saveRecentProject, type RecentProject } from '../lib/recentProjects';
 import { useResizablePanel } from '../hooks/useResizablePanel';
 import { Slide, SlideType } from '../App';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
+import { useSyncedState } from '../hooks/useSyncedState';
 
 type PresenterViewMode = 'welcome' | 'editor';
 
@@ -24,6 +25,9 @@ export default function PresenterView() {
   const [activeSlideId, setActiveSlideId] = useState('1');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [activeRevealed, setActiveRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${activeSlideId}_revealed`, {});
+  const [activePointsAssigned, setActivePointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${activeSlideId}_points`, {});
+  const [activeLatestClue, setActiveLatestClue] = useSyncedState<number>(`playstate_${activeSlideId}_latest`, 0);
 
   const rightPanel = useResizablePanel({
     initialWidth: 320,
@@ -148,6 +152,43 @@ export default function PresenterView() {
 
   const activeSlide = slides.find((s) => s.id === activeSlideId);
 
+  const getPreviewFooter = () => {
+    if (!activeSlide) return undefined;
+
+    if (activeSlide.type === 'img') {
+      return <ScoreAssigner points={3000} />;
+    }
+
+    if (activeSlide.type === 'classifica' || activeSlide.type === 'classifica_musicale') {
+      if (activeLatestClue === 0) return undefined;
+      
+      const assignedTeam = activePointsAssigned[activeLatestClue];
+      if (assignedTeam === 1 || assignedTeam === 2 || assignedTeam === 3) {
+        return undefined;
+      }
+
+      const points = activeSlide.type === 'classifica'
+        ? (activeLatestClue <= 5 ? 1000 : activeLatestClue <= 8 ? 2000 : activeLatestClue === 9 ? 3000 : 5000)
+        : (activeLatestClue <= 4 ? 1000 : activeLatestClue <= 6 ? 2000 : 3000);
+
+      return (
+        <div className="flex flex-col items-center gap-1.5 w-full bg-[#1b1b1b]/50 p-2 rounded border border-white/5 animate-in fade-in duration-300">
+          <span className="text-[10px] text-white/50 font-black uppercase tracking-wider">
+            Assegna Punti (Indizio {activeLatestClue}):
+          </span>
+          <ScoreAssigner 
+            points={points} 
+            onAssigned={(teamNum) => {
+              setActivePointsAssigned(prev => ({ ...prev, [activeLatestClue]: teamNum }));
+            }}
+          />
+        </div>
+      );
+    }
+
+    return undefined;
+  };
+
   const handleGameSelect = (type: SlideType) => {
     setSlides(
       slides.map((s) =>
@@ -166,23 +207,6 @@ export default function PresenterView() {
     setActiveSlideId(id);
   };
 
-  const moveSlideLeft = (index: number) => {
-    if (index === 0) return;
-    const newSlides = [...slides];
-    const temp = newSlides[index];
-    newSlides[index] = newSlides[index - 1];
-    newSlides[index - 1] = temp;
-    setSlides(newSlides);
-  };
-
-  const moveSlideRight = (index: number) => {
-    if (index === slides.length - 1) return;
-    const newSlides = [...slides];
-    const temp = newSlides[index];
-    newSlides[index] = newSlides[index + 1];
-    newSlides[index + 1] = temp;
-    setSlides(newSlides);
-  };
 
   const deleteSlide = (id: string) => {
     const newSlides = slides.filter(s => s.id !== id);
@@ -221,17 +245,6 @@ export default function PresenterView() {
             ← Home
           </button>
           <span className="text-sm font-medium truncate flex-1">{presentationName}</span>
-          <button
-            type="button"
-            onClick={() => rightPanel.setCollapsed((c) => !c)}
-            className={`text-xs px-2 py-1 rounded border transition-colors ${
-              rightPanel.collapsed
-                ? 'border-[#d24726] text-[#d24726] bg-[#d24726]/10'
-                : 'border-white/15 text-white/60 hover:text-white hover:bg-white/10'
-            }`}
-          >
-            {rightPanel.collapsed ? '◀ Proprietà' : 'Proprietà ▶'}
-          </button>
           <span className="text-[10px] text-white/40 uppercase tracking-wider hidden sm:inline">
             Modellazione Relatore
           </span>
@@ -243,7 +256,7 @@ export default function PresenterView() {
             <div className="flex-1 grid grid-cols-2 gap-4 p-4 overflow-hidden min-h-0">
               <PresenterPreviewPanel
                 title="Anteprima Gioco"
-                footer={<ScoreAssigner points={3000} />}
+                footer={getPreviewFooter()}
               >
                 {activeSlide ? (
                   <SlideCanvas slide={activeSlide} interactive viewportMode="none" />
@@ -257,16 +270,29 @@ export default function PresenterView() {
 
              {/* Bottom Area: Timeline like PPT */}
              <div className="h-48 bg-[#2b2b2b] border-t border-white/10 flex flex-col shrink-0">
-                <div className="flex items-center px-4 py-2 border-b border-white/10 justify-between">
-                   <span className="text-xs font-semibold text-white/60">Linea del Tempo (Diapositive)</span>
-                   <button
-                     type="button"
-                     onClick={addSlide}
-                     className="py-1 px-3 text-[11px] font-semibold rounded bg-white/10 hover:bg-white/15 border border-white/10"
-                   >
-                     + Aggiungi Diapositiva
-                   </button>
-                </div>
+                 <div className="flex items-center px-4 py-2 border-b border-white/10 justify-between">
+                    <span className="text-xs font-semibold text-white/60">Linea del Tempo (Diapositive)</span>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => rightPanel.setCollapsed((c) => !c)}
+                        className={`py-1 px-3 text-[11px] font-semibold rounded border transition-colors ${
+                          rightPanel.collapsed
+                            ? 'border-[#d24726] text-[#d24726] bg-[#d24726]/10'
+                            : 'border-white/15 text-white/60 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        {rightPanel.collapsed ? '◀ Proprietà' : 'Proprietà ▶'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={addSlide}
+                        className="py-1 px-3 text-[11px] font-semibold rounded bg-white/10 hover:bg-white/15 border border-white/10"
+                      >
+                        + Aggiungi Diapositiva
+                      </button>
+                    </div>
+                 </div>
                 <div className="flex-1 flex flex-row overflow-x-auto overflow-y-hidden p-3 gap-3">
                    {slides.map((slide, index) => {
                      const isDragging = draggedIndex === index;

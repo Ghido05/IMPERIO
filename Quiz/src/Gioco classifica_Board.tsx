@@ -11,7 +11,8 @@ const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): Rea
   const slideId = gameData.slideId ?? 'sandbox';
 
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
-  const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_points`, {});
+  const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
+  const [, setLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
   const [showError, setShowError] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
   const [showTitle, setShowTitle] = useSyncedState(`playstate_${slideId}_showtitle`, false);
@@ -121,6 +122,7 @@ const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): Rea
       if (nextClue) {
         timer = setTimeout(() => {
           setRevealed(prev => ({ ...prev, [nextClue]: true }));
+          setLatestClue(nextClue);
         }, 1000);
       } else {
         setIsAutoAdvancing(false); // Tutti svelati, ferma l'avanzamento
@@ -138,9 +140,12 @@ const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): Rea
 
       const key = e.key;
       if (key >= '1' && key <= '9') {
-        setRevealed(prev => ({ ...prev, [Number(key)]: true }));
+        const num = Number(key);
+        setRevealed(prev => ({ ...prev, [num]: true }));
+        setLatestClue(num);
       } else if (key === '0') {
         setRevealed(prev => ({ ...prev, 10: true }));
+        setLatestClue(10);
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
         setIsAutoAdvancing(true);
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
@@ -317,18 +322,14 @@ const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): Rea
                 {marker.value}
               </span>
 
-              {/* Punti Selettore */}
-              {revealed[marker.value] && !pointsAssigned[marker.value] && (
-                <div className="absolute left-full ml-2 flex items-center h-full">
-                  <CompactScoreAssigner 
-                    points={marker.value <= 5 ? 1000 : marker.value <= 8 ? 2000 : marker.value === 9 ? 3000 : 5000}
-                    onAssigned={() => setPointsAssigned(prev => ({ ...prev, [marker.value]: true }))}
-                  />
-                </div>
-              )}
-              {pointsAssigned[marker.value] && (
-                <div className="absolute left-full ml-2 text-green-400 text-[10px] font-black uppercase">
-                  OK
+              {/* Mostra il pallino colorato della squadra che ha indovinato */}
+              {pointsAssigned[marker.value] !== undefined && pointsAssigned[marker.value] !== 0 && (
+                <div 
+                  className={`absolute left-full ml-2 w-[clamp(20px,2vw,40px)] h-[clamp(20px,2vw,40px)] rounded-full font-black text-white text-[clamp(12px,1.2vw,24px)] flex items-center justify-center border-2 border-white/30 shadow-md animate-zoom-in ${
+                    pointsAssigned[marker.value] === 1 ? 'bg-red-600' : pointsAssigned[marker.value] === 2 ? 'bg-blue-600' : 'bg-green-600'
+                  }`}
+                >
+                  {pointsAssigned[marker.value]}
                 </div>
               )}
             </div>

@@ -11,7 +11,8 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
   const slideId = gameData.slideId ?? 'sandbox';
 
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
-  const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_points`, {});
+  const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
+  const [, setLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
   const [showError, setShowError] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
   const [showTitle, setShowTitle] = useSyncedState(`playstate_${slideId}_showtitle`, false);
@@ -106,6 +107,7 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
             });
           }
           setRevealed(prev => ({ ...prev, [nextClue]: true }));
+          setLatestClue(nextClue);
         }, 1500); // Leggero ritardo tra un indizio e l'altro
       } else {
         setIsAutoAdvancing(false); // Tutti svelati, ferma l'avanzamento
@@ -163,6 +165,7 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
           if (p !== undefined) p.catch(err => console.log("Errore riproduzione stem:", err));
         });
         setRevealed(prev => ({ ...prev, [numKey]: true }));
+        setLatestClue(numKey);
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
         const allRevealed = Array.from({ length: 7 }, (_, i) => i + 1).every(i => revealed[i]);
         
@@ -372,18 +375,14 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
                 {marker.value}
               </span>
 
-              {/* Punti Selettore */}
-              {revealed[marker.value] && !pointsAssigned[marker.value] && (
-                <div className="absolute left-full ml-2 flex items-center h-full">
-                  <CompactScoreAssigner 
-                    points={marker.value <= 4 ? 1000 : marker.value <= 6 ? 2000 : 3000}
-                    onAssigned={() => setPointsAssigned(prev => ({ ...prev, [marker.value]: true }))}
-                  />
-                </div>
-              )}
-              {pointsAssigned[marker.value] && (
-                <div className="absolute left-full ml-2 text-green-400 text-[10px] font-black uppercase">
-                  OK
+              {/* Mostra il pallino colorato della squadra che ha indovinato */}
+              {pointsAssigned[marker.value] !== undefined && pointsAssigned[marker.value] !== 0 && (
+                <div 
+                  className={`absolute left-full ml-2 w-[clamp(20px,2vw,40px)] h-[clamp(20px,2vw,40px)] rounded-full font-black text-white text-[clamp(12px,1.2vw,24px)] flex items-center justify-center border-2 border-white/30 shadow-md animate-zoom-in ${
+                    pointsAssigned[marker.value] === 1 ? 'bg-red-600' : pointsAssigned[marker.value] === 2 ? 'bg-blue-600' : 'bg-green-600'
+                  }`}
+                >
+                  {pointsAssigned[marker.value]}
                 </div>
               )}
             </div>
@@ -409,14 +408,21 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
                <p className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,30px)] text-center leading-tight mb-2">
                  {(gameData as any).soluzioneTesto}
                </p>
-               {!pointsAssigned[100] ? (
-                 <CompactScoreAssigner 
-                    points={5000}
-                    onAssigned={() => setPointsAssigned(prev => ({ ...prev, 100: true }))}
-                 />
-               ) : (
-                 <span className="text-green-400 font-black text-xs uppercase">Punti Assegnati</span>
-               )}
+                {!pointsAssigned[100] ? (
+                  <CompactScoreAssigner 
+                     points={5000}
+                     onAssigned={(teamNum) => setPointsAssigned(prev => ({ ...prev, 100: teamNum }))}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="text-green-400 font-black text-xs uppercase">Punti Assegnati a:</span>
+                    <div className={`w-6 h-6 rounded-full font-black text-white text-[10px] flex items-center justify-center border border-white/40 ${
+                      pointsAssigned[100] === 1 ? 'bg-red-600' : pointsAssigned[100] === 2 ? 'bg-blue-600' : 'bg-green-600'
+                    }`}>
+                      {pointsAssigned[100]}
+                    </div>
+                  </div>
+                )}
              </div>
           )}
         </div>

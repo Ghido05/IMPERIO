@@ -5,6 +5,7 @@ import ResizableSidebar from '../components/ResizableSidebar';
 import GameSelector from '../components/GameSelector';
 import StructuredJsonEditor from '../components/StructuredJsonEditor';
 import WelcomeScreen from '../components/WelcomeScreen';
+import QuizSetupView from './QuizSetupView';
 import PresenterPreviewPanel from '../components/PresenterPreviewPanel';
 import ScoreAssigner from '../components/ScoreAssigner';
 import { ScoreProvider } from '../context/ScoreContext';
@@ -16,10 +17,10 @@ import { Slide, SlideType } from '../App';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import { useSyncedState } from '../hooks/useSyncedState';
 
-type PresenterViewMode = 'welcome' | 'editor';
+type PresenterViewMode = 'setup' | 'welcome' | 'editor';
 
 export default function PresenterView() {
-  const [viewMode, setViewMode] = useState<PresenterViewMode>('welcome');
+  const [viewMode, setViewMode] = useState<PresenterViewMode>('setup');
   const [presentationName, setPresentationName] = useState('Presentazione senza titolo');
   const [slides, setSlides] = useState<Slide[]>([{ id: '1', type: 'empty' }]);
   const [activeSlideId, setActiveSlideId] = useState('1');
@@ -130,6 +131,10 @@ export default function PresenterView() {
     }
   }, [presentationName]);
 
+  if (viewMode === 'setup') {
+    return <QuizSetupView onStartQuiz={() => setViewMode('editor')} />;
+  }
+
   if (viewMode === 'welcome') {
     return (
       <WelcomeScreen
@@ -237,6 +242,13 @@ export default function PresenterView() {
     <ScoreProvider>
       <div className="flex flex-col h-screen w-full bg-[#191919] text-white overflow-hidden font-sans">
         <header className="h-10 flex items-center px-4 border-b border-white/10 bg-[#2b2b2b] shrink-0 gap-4">
+          <button
+            type="button"
+            onClick={() => setViewMode('setup')}
+            className="text-xs font-semibold text-[#d24726] bg-[#d24726]/10 hover:bg-[#d24726]/20 border border-[#d24726]/30 px-2.5 py-1 rounded transition-all"
+          >
+            ⚙️ Pagina 0: Setup
+          </button>
           <button
             type="button"
             onClick={() => setViewMode('welcome')}

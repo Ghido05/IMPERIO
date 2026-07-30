@@ -38,13 +38,15 @@ const DynamicHint: React.FC<{
   note: { id: number; text: string; color: string };
   fileName: string;
   altText: string;
-  isVisible: boolean;
+  isDotVisible: boolean;
+  isStructureVisible: boolean;
   className: string;
   stemSide: 'left' | 'right';
   compH: number;
   innerRef?: React.RefObject<HTMLDivElement | null>;
   yOffset?: number;
-}> = ({ note, fileName, altText, isVisible, className, stemSide, compH, innerRef, yOffset = 0 }) => {
+}> = ({ note, fileName, altText, isDotVisible, isStructureVisible, className, stemSide, compH, innerRef, yOffset = 0 }) => {
+  const isActive = isDotVisible || isStructureVisible;
   const isUp = fileName.includes("Nota1.svg") || fileName.includes("Nota3.svg");
 
   // Proporzioni fisse basate sulla "Union" di Figma
@@ -63,17 +65,28 @@ const DynamicHint: React.FC<{
   const noteL = isUp ? 0 : (589 - 125);
 
   return (
-    <div className={`absolute pointer-events-none transition-all duration-700 ${isVisible ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'} ${className}`}
+    <div className={`absolute pointer-events-none transition-all duration-700 ${isActive ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'} ${className}`}
          style={{ 
            width: `${(compW / 1920) * 100}%`, 
            aspectRatio: `${compW}/${compH}`,
          }}>
 
       <div className="relative w-full h-full">
+        {/* 0. PALLINO INDIZIO (solo sul pentagramma, prima della nota completa) */}
+        <div
+          className={`absolute z-30 rounded-full border-[clamp(2px,0.25vw,5px)] border-[#002164] bg-[#3373CA] shadow-[0_0_12px_rgba(51,115,202,0.6)] transition-all duration-500 ${isDotVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
+          style={{
+            width: `${(noteW * 0.55 / compW) * 100}%`,
+            height: `${(noteH * 0.55 / compH) * 100}%`,
+            bottom: `${(noteH * 0.225 / compH) * 100}%`,
+            left: `${((noteL + noteW * 0.225) / compW) * 100}%`,
+          }}
+        />
+
         {/* 1. IL BOX (Rectangle 1) */}
         <div 
           ref={innerRef}
-          className="absolute z-20 pointer-events-auto flex items-center justify-center px-[8%] py-[4%] transition-transform duration-500"
+          className={`absolute z-20 pointer-events-auto flex items-center justify-center px-[8%] py-[4%] transition-all duration-500 ${isStructureVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}
           style={{
             backgroundColor: note.color,
             bottom: `${100 - (boxH / compH * 100)}%`, 
@@ -92,7 +105,7 @@ const DynamicHint: React.FC<{
 
         {/* 2. L'ASTA (Rectangle 2) */}
         <div 
-          className="absolute z-10 transition-all duration-500"
+          className={`absolute z-10 transition-all duration-500 ${isStructureVisible ? 'opacity-100' : 'opacity-0'}`}
           style={{
             backgroundColor: note.color,
             bottom: `${(noteH / compH * 100 / 2)}%`,
@@ -103,9 +116,9 @@ const DynamicHint: React.FC<{
           }}
         />
 
-        {/* 3. LA NOTA (Ellipse 6) */}
+        {/* 3. LA NOTA (Ellipse 6) — appare insieme a gambo e box */}
         <div 
-          className="absolute z-30 drop-shadow-xl flex items-center justify-center"
+          className={`absolute z-30 drop-shadow-xl flex items-center justify-center transition-all duration-500 ${isStructureVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75'}`}
           style={{
             width: `${(noteW / compW) * 100}%`, 
             height: `${(noteH / compH) * 100}%`,
@@ -172,6 +185,7 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
   const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
   const [showError, setShowError] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastKeyTimeRef = useRef<number>(0);
 
   // Gestione dell'animazione di errore (si spegne da sola dopo 800ms)
   useEffect(() => {
@@ -215,12 +229,14 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
 
 
   // Mappa delle canzoni per i passi in cui compaiono gli strumenti
-  const audioMap: Record<number, string> = gameData.strumenti.reduce((acc: any, obj: any) => {
-    if (obj.audio) {
-      acc[obj.step] = obj.audio;
-    }
-    return acc;
-  }, {} as Record<number, string>);
+  const audioMap: Record<number, string> = React.useMemo(() => {
+    return gameData.strumenti.reduce((acc: any, obj: any) => {
+      if (obj.audio) {
+        acc[obj.step] = obj.audio;
+      }
+      return acc;
+    }, {} as Record<number, string>);
+  }, [gameData.strumenti]);
 
   // Gestione dell'avanzamento automatico verso la soluzione
   useEffect(() => {
@@ -250,23 +266,44 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
 
   // Gestione dell'audio al cambio di step
   useEffect(() => {
-    // 1. Ferma l'audio precedente in riproduzione, se esiste
-    if (audioRef.current) {
+    // Determiniamo il path dell'audio per lo step corrente
+    let audioPath = '';
+    if (step === 10 && gameData.soluzione?.audio) {
+      audioPath = gameData.soluzione.audio;
+    } else if (audioMap[step]) {
+      audioPath = audioMap[step];
+    }
+
+    const isBackingFromSolution = prevStep === 10 && step === 9;
+    const wentBackward = step < prevStep;
+
+    // Fermiamo l'audio precedente se:
+    // - C'è un nuovo audio da riprodurre
+    // - Stiamo tornando indietro (o siamo tornati a 0)
+    // - Siamo arrivati alla soluzione (step 10) e non c'è un audio di soluzione
+    const shouldStopAudio = 
+      audioPath || 
+      wentBackward || 
+      step === 0 || 
+      (step === 10 && !audioPath);
+
+    if (shouldStopAudio && audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
 
-    // 2. Condizioni per NON far partire l'audio:
-    // - Siamo in fase di avanzamento automatico (isAutoAdvancing)
-    // - Stiamo tornando indietro dalla soluzione (da 10 a 9)
-    const isBackingFromSolution = prevStep === 10 && step === 9;
-
-    if (audioMap[step] && !isAutoAdvancing && !isBackingFromSolution && interactive) {
-      const newAudio = new Audio(assetUrl(audioMap[step]));
-      audioRef.current = newAudio;
-      newAudio.play().catch(error => console.log('Autoplay intercettato dal browser:', error));
+    if (!isAutoAdvancing && !isBackingFromSolution && interactive) {
+      if (audioPath) {
+        const newAudio = new Audio(assetUrl(audioPath));
+        audioRef.current = newAudio;
+        newAudio.play().catch(error => console.log('Autoplay intercettato dal browser:', error));
+      }
     }
-  }, [step, isAutoAdvancing, prevStep, interactive]);
+  }, [step, isAutoAdvancing, prevStep, interactive, gameData.soluzione, audioMap]);
+
+  useEffect(() => {
+    console.log(`[MusicBoard Step Effect] Step changed to: ${step}, interactive: ${interactive}`);
+  }, [step, interactive]);
 
   // Ascolta la pressione dei tasti freccia e comandi speciali
   useEffect(() => {
@@ -275,6 +312,15 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Se stiamo avanzando automaticamente, ignoriamo gli input per evitare conflitti
       if (isAutoAdvancing) return;
+
+      const now = Date.now();
+      if (now - lastKeyTimeRef.current < 250) {
+        console.log(`[MusicBoard KeyDown] Throttled duplicate key: ${e.key}`);
+        return;
+      }
+      lastKeyTimeRef.current = now;
+
+      console.log(`[MusicBoard KeyDown] Key: ${e.key}, current step: ${step}`);
 
       if (e.key === 'ArrowRight') {
         setStep((prev) => {
@@ -365,7 +411,8 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
           note={gameData.indizi[0]}
           fileName="nessuno_musicale/Nota1.svg" 
           altText="Primo Indizio"
-          isVisible={step >= 2 && step < 10} 
+          isDotVisible={false}
+          isStructureVisible={step >= 2 && step < 10}
           className="top-[12.5%] left-[7.13%]"
           stemSide="left"
           compH={465.73}
@@ -377,7 +424,8 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
           note={gameData.indizi[1]}
           fileName="nessuno_musicale/Nota2.svg" 
           altText="Secondo Indizio"
-          isVisible={step >= 4 && step < 10} 
+          isDotVisible={false}
+          isStructureVisible={step >= 4 && step < 10}
           className="top-[-3.77%] left-[11.77%]"
           stemSide="right"
           compH={472.12}
@@ -389,7 +437,8 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
           note={gameData.indizi[2]}
           fileName="nessuno_musicale/Nota3.svg" 
           altText="Terzo Indizio"
-          isVisible={step >= 6 && step < 10} 
+          isDotVisible={false}
+          isStructureVisible={step >= 6 && step < 10}
           className="top-[12.5%] left-[56.66%]"
           stemSide="left"
           compH={465.73}
@@ -401,7 +450,8 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
           note={gameData.indizi[3]}
           fileName="nessuno_musicale/Nota4.svg" 
           altText="Quarto Indizio"
-          isVisible={step >= 8 && step < 10} 
+          isDotVisible={false}
+          isStructureVisible={step >= 8 && step < 10}
           className="top-[-3.77%] left-[61.35%]"
           stemSide="right"
           compH={472.12}

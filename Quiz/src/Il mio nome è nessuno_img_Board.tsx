@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useGameData } from './context/GameDataContext';
 import ScoreAssigner from "./components/ScoreAssigner";
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
@@ -18,6 +18,7 @@ const GameBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX
   const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
   const [showError, setShowError] = useState(false);
   const [pointsAssigned, setPointsAssigned] = useSyncedState(`playstate_${slideId}_points`, false);
+  const lastKeyTimeRef = useRef<number>(0);
 
   const MAX_STEP = 5;
 
@@ -94,6 +95,12 @@ const GameBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isAutoAdvancing) return;
+
+      const now = Date.now();
+      if (now - lastKeyTimeRef.current < 250) {
+        return;
+      }
+      lastKeyTimeRef.current = now;
 
       if (e.key === 'ArrowRight') {
         setStep(prev => Math.min(prev + 1, MAX_STEP));

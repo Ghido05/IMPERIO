@@ -1,47 +1,191 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import SlideCanvas from '../components/SlideCanvas';
-import SlideThumbnail from '../components/SlideThumbnail';
-import ResizableSidebar from '../components/ResizableSidebar';
-import GameSelector from '../components/GameSelector';
-import StructuredJsonEditor from '../components/StructuredJsonEditor';
 import WelcomeScreen from '../components/WelcomeScreen';
-import QuizSetupView from './QuizSetupView';
+import QuizSetupView, { 
+  QuizSetupState, 
+  getDefaultSetupState, 
+  createDefaultGioco1Question, 
+  createDefaultGioco2Question 
+} from './QuizSetupView';
 import PresenterPreviewPanel from '../components/PresenterPreviewPanel';
 import ScoreAssigner from '../components/ScoreAssigner';
 import { ScoreProvider } from '../context/ScoreContext';
 import { cloneDefaultData } from '../lib/defaultGameData';
-import { getGameMeta } from '../lib/gameMeta';
 import { saveRecentProject, type RecentProject } from '../lib/recentProjects';
-import { useResizablePanel } from '../hooks/useResizablePanel';
-import { Slide, SlideType } from '../App';
+import { Slide } from '../App';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import { useSyncedState } from '../hooks/useSyncedState';
 
 type PresenterViewMode = 'setup' | 'welcome' | 'editor';
 
+// Helper function to build slides dynamically from setup configuration
+function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
+  const gioco1Slides = Array.from({ length: 10 }, (_, idx) => {
+    const num = idx + 1;
+    const q = setup.gioco1.questions[num] || createDefaultGioco1Question();
+    if (q.tipo === 'canzone') {
+      const defaultData = cloneDefaultData('music') as any;
+      const mappedData = {
+        ...defaultData,
+        indizi: [
+          { ...defaultData.indizi[0], text: q.canzone.indizi[0] || defaultData.indizi[0].text },
+          { ...defaultData.indizi[1], text: q.canzone.indizi[1] || defaultData.indizi[1].text },
+          { ...defaultData.indizi[2], text: q.canzone.indizi[2] || defaultData.indizi[2].text },
+          { ...defaultData.indizi[3], text: q.canzone.indizi[3] || defaultData.indizi[3].text },
+        ],
+        strumenti: defaultData.strumenti.map((str: any, sIdx: number) => ({
+          ...str,
+          audio: q.canzone.audioFiles[sIdx] || str.audio
+        })),
+        soluzione: {
+          ...defaultData.soluzione,
+          titolo: q.canzone.titolo || defaultData.soluzione.titolo,
+          artista: q.canzone.anno ? `Anno ${q.canzone.anno}` : defaultData.soluzione.artista,
+          anno: q.canzone.anno || defaultData.soluzione.anno,
+          audio: q.canzone.soluzioneAudio || defaultData.soluzione.audio
+        }
+      };
+      return {
+        id: `gioco1_${num}`,
+        type: 'music' as const,
+        data: mappedData
+      };
+    } else {
+      const defaultData = cloneDefaultData('img') as any;
+      const mappedData = {
+        ...defaultData,
+        immagineSegreta: q.immagine.immagineJpg || defaultData.immagineSegreta,
+        indizi: defaultData.indizi.map((ind: any, iIdx: number) => ({
+          ...ind,
+          testo: q.immagine.indizi[iIdx] || ind.testo
+        })),
+        confermaAudio: q.immagine.confermaAudio || defaultData.confermaAudio,
+        soluzione: {
+          ...defaultData.soluzione,
+          titolo: q.immagine.soluzione || defaultData.soluzione.titolo
+        }
+      };
+      return {
+        id: `gioco1_${num}`,
+        type: 'img' as const,
+        data: mappedData
+      };
+    }
+  });
+
+  const gioco2Slides = Array.from({ length: 6 }, (_, idx) => {
+    const num = idx + 1;
+    const q = setup.gioco2.questions[num] || createDefaultGioco2Question();
+    if (q.tipo === 'canzone') {
+      const defaultData = cloneDefaultData('classifica_musicale') as any;
+      const mappedData = {
+        ...defaultData,
+        elementi: defaultData.elementi.map((el: any, i: number) => ({
+          ...el,
+          testo: q.canzone.risposte[i] || el.testo,
+          frase: q.canzone.indizi[i] || el.frase,
+          audio: q.canzone.audioFiles[i] || el.audio
+        })),
+        soluzioneTesto: q.canzone.titolo || defaultData.soluzioneTesto,
+        canzoneFinale: q.canzone.soluzioneAudio || defaultData.canzoneFinale,
+        titolo: q.canzone.titolo || defaultData.titolo
+      };
+      return {
+        id: `gioco2_${num}`,
+        type: 'classifica_musicale' as const,
+        data: mappedData
+      };
+    } else {
+      const defaultData = cloneDefaultData('classifica') as any;
+      const mappedData = {
+        ...defaultData,
+        immagineSegreta: q.immagine.immagineJpg || defaultData.immagineSegreta,
+        audio: q.immagine.soluzioneAudio || defaultData.audio,
+        soluzioneTesto: q.immagine.soluzioneTesto || defaultData.soluzioneTesto,
+        elementi: defaultData.elementi.map((el: any, i: number) => ({
+          ...el,
+          testo: q.immagine.lista10[i] || el.testo
+        }))
+      };
+      return {
+        id: `gioco2_${num}`,
+        type: 'classifica' as const,
+        data: mappedData
+      };
+    }
+  });
+
+  const staticSlides: Slide[] = [
+    {
+      id: 'cruciverba',
+      type: 'cruciverba',
+      data: cloneDefaultData('cruciverba')
+    },
+    {
+      id: 'gioco_frase_tempo',
+      type: 'gioco_frase_tempo',
+      data: cloneDefaultData('gioco_frase_tempo')
+    },
+    {
+      id: 'password_squadre',
+      type: 'password_squadre',
+      data: cloneDefaultData('password_squadre')
+    },
+    {
+      id: 'password_prescelti',
+      type: 'password_prescelti',
+      data: cloneDefaultData('password_prescelti')
+    },
+    {
+      id: 'classifica_generale',
+      type: 'classifica_generale',
+      data: {}
+    }
+  ];
+
+  return [...gioco1Slides, ...gioco2Slides, ...staticSlides];
+}
+
 export default function PresenterView() {
   const [viewMode, setViewMode] = useState<PresenterViewMode>('setup');
   const [presentationName, setPresentationName] = useState('Presentazione senza titolo');
-  const [slides, setSlides] = useState<Slide[]>([{ id: '1', type: 'empty' }]);
-  const [activeSlideId, setActiveSlideId] = useState('1');
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [slides, setSlides] = useState<Slide[]>([]);
+  const [activeSlideId, setActiveSlideId] = useState('');
   const [activeRevealed, setActiveRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${activeSlideId}_revealed`, {});
   const [activePointsAssigned, setActivePointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${activeSlideId}_points`, {});
   const [activeLatestClue, setActiveLatestClue] = useSyncedState<number>(`playstate_${activeSlideId}_latest`, 0);
+  const lastForwardTimeRef = useRef<number>(0);
 
-  const rightPanel = useResizablePanel({
-    initialWidth: 320,
-    minWidth: 260,
-    maxWidth: 520,
-    storageKey: 'imperio_presenter_panel_right',
-    initialCollapsed: true,
-  });
+  // Generate slides when viewMode turns to 'editor'
+  useEffect(() => {
+    if (viewMode === 'editor') {
+      try {
+        const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
+        let setupState: QuizSetupState;
+        if (saved) {
+          setupState = JSON.parse(saved);
+        } else {
+          setupState = getDefaultSetupState();
+        }
+        
+        const generated = buildSlidesFromSetup(setupState);
+        setSlides(generated);
+        if (generated.length > 0) {
+          // Keep active slide if still valid, otherwise reset to first
+          if (!activeSlideId || !generated.some(s => s.id === activeSlideId)) {
+            setActiveSlideId(generated[0].id);
+          }
+        }
+      } catch (e) {
+        console.error('Errore nel caricamento delle impostazioni setup:', e);
+      }
+    }
+  }, [viewMode]);
 
   // Broadcast state changes to other windows
   useEffect(() => {
     const isElectron = (window as any).electron !== undefined;
-    if (isElectron && viewMode === 'editor') {
+    if (isElectron && viewMode === 'editor' && slides.length > 0 && activeSlideId) {
       const activeSlide = slides.find(s => s.id === activeSlideId) || null;
       (window as any).electron.broadcastState({
         slides,
@@ -66,6 +210,13 @@ export default function PresenterView() {
       if (e.metaKey || e.ctrlKey) {
         return;
       }
+
+      // Throttle key events to prevent duplicate forwarding within 250ms
+      const now = Date.now();
+      if (now - lastForwardTimeRef.current < 250) {
+        return;
+      }
+      lastForwardTimeRef.current = now;
 
       const isElectron = (window as any).electron !== undefined;
       if (isElectron && viewMode === 'editor') {
@@ -129,7 +280,7 @@ export default function PresenterView() {
       });
       (window as any)._saveListenerAdded = true;
     }
-  }, [presentationName]);
+  }, [presentationName, slides]);
 
   if (viewMode === 'setup') {
     return <QuizSetupView onStartQuiz={() => setViewMode('editor')} />;
@@ -194,48 +345,170 @@ export default function PresenterView() {
     return undefined;
   };
 
-  const handleGameSelect = (type: SlideType) => {
-    setSlides(
-      slides.map((s) =>
-        s.id === activeSlideId ? { ...s, type, data: cloneDefaultData(type) } : s,
-      ),
-    );
-  };
-
-  const handleSlideDataChange = (newData: unknown) => {
-    setSlides(slides.map((s) => (s.id === activeSlideId ? { ...s, data: newData } : s)));
-  };
-
-  const addSlide = () => {
-    const id = Date.now().toString();
-    setSlides([...slides, { id, type: 'empty' }]);
-    setActiveSlideId(id);
-  };
-
-
-  const deleteSlide = (id: string) => {
-    const newSlides = slides.filter(s => s.id !== id);
-    setSlides(newSlides);
-    
-    if (activeSlideId === id) {
-      const deletedIndex = slides.findIndex(s => s.id === id);
-      if (newSlides.length > 0) {
-        const nextActiveIdx = Math.max(0, deletedIndex - 1);
-        setActiveSlideId(newSlides[nextActiveIdx].id);
-      } else {
-        const newId = Date.now().toString();
-        setSlides([{ id: newId, type: 'empty' }]);
-        setActiveSlideId(newId);
-      }
+  const goToNextSlide = () => {
+    const currentIndex = slides.findIndex(s => s.id === activeSlideId);
+    if (currentIndex !== -1 && currentIndex < slides.length - 1) {
+      setActiveSlideId(slides[currentIndex + 1].id);
     }
   };
 
-  const handleMoveSlide = (fromIndex: number | null, toIndex: number) => {
-    if (fromIndex === null || fromIndex === toIndex) return;
-    const newSlides = [...slides];
-    const [removed] = newSlides.splice(fromIndex, 1);
-    newSlides.splice(toIndex, 0, removed);
-    setSlides(newSlides);
+  const goToPrevSlide = () => {
+    const currentIndex = slides.findIndex(s => s.id === activeSlideId);
+    if (currentIndex !== -1 && currentIndex > 0) {
+      setActiveSlideId(slides[currentIndex - 1].id);
+    }
+  };
+
+  const handleResetPlaystate = () => {
+    if (!activeSlideId) return;
+    if (confirm("Vuoi azzerare lo stato di gioco di questa slide? Tutti gli elementi svelati, punti e timer verranno ripristinati.")) {
+      const isPasswordGame = activeSlideId.includes('password');
+      const defaultValues: Record<string, any> = {
+        step: 0,
+        auto: false,
+        revealed: {},
+        points: {},
+        latest: 0,
+        level: 0,
+        word: 0,
+        revealed_coords: [],
+        index: 0,
+        time: 30.0,
+        running: false,
+        marker: null
+      };
+
+      Object.entries(defaultValues).forEach(([subKey, defaultVal]) => {
+        const key = `playstate_${activeSlideId}_${subKey}`;
+        const stringified = JSON.stringify(defaultVal);
+        localStorage.setItem(key, stringified);
+        
+        window.dispatchEvent(new CustomEvent('local-storage-update', {
+          detail: { key, value: stringified }
+        }));
+        
+        if ((window as any).electron?.broadcastState) {
+          (window as any).electron.broadcastState({
+            localStorageUpdate: { key, value: stringified }
+          });
+        }
+      });
+
+      if (isPasswordGame) {
+        const pwdKeys = [
+          'password_current_manche',
+          'password_current_team',
+          'password_chosen_suggestion',
+          'password_excluded_teams',
+          'password_winners_order',
+          'password_bussolotti_manche',
+          'password_bussolotti_status',
+          'password_active_bussolotti',
+          'password_grid_state'
+        ];
+        pwdKeys.forEach(key => {
+          localStorage.removeItem(key);
+          window.dispatchEvent(new CustomEvent('local-storage-update', {
+            detail: { key, value: null }
+          }));
+          if ((window as any).electron?.broadcastState) {
+            (window as any).electron.broadcastState({
+              localStorageUpdate: { key, value: null }
+            });
+          }
+        });
+      }
+
+      window.dispatchEvent(new StorageEvent('storage'));
+    }
+  };
+
+  const getFriendlyGameTitle = (slide: Slide | undefined) => {
+    if (!slide) return "Nessun gioco selezionato";
+    
+    if (slide.id.startsWith('gioco1_')) {
+      const num = slide.id.replace('gioco1_', '');
+      const typeLabel = slide.type === 'music' ? 'Musica' : 'Immagine';
+      const detail = (slide.data as any)?.soluzione?.titolo || '';
+      return `Box 1 — Domanda ${num} (${typeLabel})${detail ? `: ${detail}` : ''}`;
+    }
+    
+    if (slide.id.startsWith('gioco2_')) {
+      const num = slide.id.replace('gioco2_', '');
+      const typeLabel = slide.type === 'classifica_musicale' ? 'Classifica Mus.' : 'Classifica';
+      const detail = (slide.data as any)?.soluzioneTesto || (slide.data as any)?.titolo || '';
+      return `Box 2 — Domanda ${num} (${typeLabel})${detail ? `: ${detail}` : ''}`;
+    }
+
+    switch (slide.type) {
+      case 'cruciverba':
+        return "Box 3 — Cruciverba";
+      case 'gioco_frase_tempo':
+        return "Box 4 — Frase Tempo";
+      case 'password_squadre':
+        return "Box 5 — Password (Squadre)";
+      case 'password_prescelti':
+        return "Box 5 — Password (Prescelti)";
+      case 'classifica_generale':
+        return "Classifica Generale Finale";
+      default:
+        return slide.type;
+    }
+  };
+
+  const getFriendlyGameDescription = (slide: Slide | undefined) => {
+    if (!slide) return "";
+    if (slide.id.startsWith('gioco1_')) {
+      return slide.type === 'music' 
+        ? "Ascolto strumenti progressivo ed indizi" 
+        : "Scoperta tasselli griglia e indizi visivi";
+    }
+    if (slide.id.startsWith('gioco2_')) {
+      return slide.type === 'classifica_musicale'
+        ? "Rivelazione 7 strumenti per comporre il brano"
+        : "Classifica di 10 elementi ordinati per valore";
+    }
+    switch (slide.type) {
+      case 'cruciverba':
+        return "Incastro parole e definizioni da foglio Excel";
+      case 'gioco_frase_tempo':
+        return "Indovina la frase nascosta entro 30 secondi";
+      case 'password_squadre':
+        return "Sfida a griglia tra squadre con bussolotti finali";
+      case 'password_prescelti':
+        return "Sfida a rotazione tra i prescelti delle squadre";
+      case 'classifica_generale':
+        return "Punteggio complessivo e premiazione squadre";
+      default:
+        return "";
+    }
+  };
+
+  const getDropdownGameLabel = (slide: Slide) => {
+    if (slide.id.startsWith('gioco1_')) {
+      const num = slide.id.replace('gioco1_', '');
+      const detail = (slide.data as any)?.soluzione?.titolo || '';
+      return `B1 Q${num} (${slide.type === 'music' ? 'Musica' : 'Img'})${detail ? ` - ${detail}` : ''}`;
+    }
+    if (slide.id.startsWith('gioco2_')) {
+      const num = slide.id.replace('gioco2_', '');
+      const detail = (slide.data as any)?.soluzioneTesto || (slide.data as any)?.titolo || '';
+      return `B2 Q${num} (${slide.type === 'classifica_musicale' ? 'Class. Mus' : 'Class.'})${detail ? ` - ${detail}` : ''}`;
+    }
+    switch (slide.type) {
+      case 'cruciverba':
+        return "B3 - Cruciverba";
+      case 'gioco_frase_tempo':
+        return "B4 - Frase Tempo";
+      case 'password_squadre':
+        return "B5 - Password Squadre";
+      case 'password_prescelti':
+        return "B5 - Password Prescelti";
+      case 'classifica_generale':
+        return "Classifica Finale";
+      default:
+        return slide.type;
+    }
   };
 
   return (
@@ -271,7 +544,7 @@ export default function PresenterView() {
                 footer={getPreviewFooter()}
               >
                 {activeSlide ? (
-                  <SlideCanvas slide={activeSlide} interactive viewportMode="none" />
+                  <SlideCanvas slide={activeSlide} interactive={false} viewportMode="none" />
                 ) : null}
               </PresenterPreviewPanel>
 
@@ -280,160 +553,82 @@ export default function PresenterView() {
               </PresenterPreviewPanel>
             </div>
 
-             {/* Bottom Area: Timeline like PPT */}
-             <div className="h-48 bg-[#2b2b2b] border-t border-white/10 flex flex-col shrink-0">
-                 <div className="flex items-center px-4 py-2 border-b border-white/10 justify-between">
-                    <span className="text-xs font-semibold text-white/60">Linea del Tempo (Diapositive)</span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => rightPanel.setCollapsed((c) => !c)}
-                        className={`py-1 px-3 text-[11px] font-semibold rounded border transition-colors ${
-                          rightPanel.collapsed
-                            ? 'border-[#d24726] text-[#d24726] bg-[#d24726]/10'
-                            : 'border-white/15 text-white/60 hover:text-white hover:bg-white/10'
-                        }`}
-                      >
-                        {rightPanel.collapsed ? '◀ Proprietà' : 'Proprietà ▶'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={addSlide}
-                        className="py-1 px-3 text-[11px] font-semibold rounded bg-white/10 hover:bg-white/15 border border-white/10"
-                      >
-                        + Aggiungi Diapositiva
-                      </button>
-                    </div>
-                 </div>
-                <div className="flex-1 flex flex-row overflow-x-auto overflow-y-hidden p-3 gap-3">
-                   {slides.map((slide, index) => {
-                     const isDragging = draggedIndex === index;
-                     const isOver = dragOverIndex === index;
-                     const isBefore = draggedIndex !== null && index < draggedIndex;
-
-                     return (
-                       <div 
-                         key={slide.id} 
-                         draggable
-                         onClick={() => setActiveSlideId(slide.id)}
-                         onDragStart={(e) => {
-                           setDraggedIndex(index);
-                           e.dataTransfer.effectAllowed = 'move';
-                           e.currentTarget.style.opacity = '0.4';
-                         }}
-                         onDragEnd={(e) => {
-                           setDraggedIndex(null);
-                           setDragOverIndex(null);
-                           e.currentTarget.style.opacity = '1';
-                         }}
-                         onDragOver={(e) => {
-                           e.preventDefault();
-                           if (draggedIndex !== index) {
-                             setDragOverIndex(index);
-                           }
-                         }}
-                         onDragLeave={() => {
-                           setDragOverIndex(prev => prev === index ? null : prev);
-                         }}
-                         onDrop={(e) => {
-                           e.preventDefault();
-                           if (draggedIndex !== null && draggedIndex !== index) {
-                             handleMoveSlide(draggedIndex, index);
-                           }
-                           setDraggedIndex(null);
-                           setDragOverIndex(null);
-                         }}
-                         className={`h-full flex flex-col items-center justify-between p-2 rounded bg-white/5 border transition-all shrink-0 w-44 relative cursor-grab active:cursor-grabbing ${
-                           activeSlideId === slide.id ? 'border-[#c75a3a]/40 bg-[#c75a3a]/5' : 'border-white/5'
-                         } ${isDragging ? 'opacity-40 border-dashed border-white/20' : ''}`}
-                       >
-                         {/* Slide Thumbnail wrapper to disable pointer events so drag starts on the outer card */}
-                         <div className="w-full flex-1 min-h-0 flex items-center justify-center pointer-events-none">
-                           <SlideThumbnail
-                             slide={slide}
-                             index={index}
-                             isActive={activeSlideId === slide.id}
-                             onClick={() => {}}
-                           />
-                         </div>
-                         
-                         <div className="flex items-center justify-end w-full mt-2 pt-1 border-t border-white/5 shrink-0">
-                           <button
-                             type="button"
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               deleteSlide(slide.id);
-                             }}
-                             className="w-6 h-6 rounded flex items-center justify-center bg-red-950/40 hover:bg-red-900/60 border border-red-800/40 text-red-200 text-[10px] font-bold transition-colors"
-                             title="Elimina diapositiva"
-                           >
-                             🗑
-                           </button>
-                         </div>
-
-                         {/* Drop Insertion Indicator Line */}
-                         {isOver && draggedIndex !== null && (
-                           <div 
-                             className={`absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)] z-50 ${
-                               isBefore ? '-left-2' : '-right-2'
-                             }`}
-                           />
-                         )}
-                       </div>
-                     );
-                   })}
+            {/* Bottom Area: Premium Game Controls */}
+            <div className="h-28 bg-[#1e1e1e] border-t border-white/10 flex flex-col shrink-0">
+              <div className="flex-1 flex items-center justify-between px-6 py-3 gap-6">
+                
+                {/* Left section: Current Game Info */}
+                <div className="flex flex-col justify-center min-w-[250px] max-w-[320px]">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-2.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-full bg-[#d24726]/10 text-[#d24726] border border-[#d24726]/20 animate-pulse">
+                      GIOCO CORRENTE
+                    </span>
+                    <span className="text-[10px] text-white/40 uppercase tracking-widest font-semibold">
+                      ({slides.findIndex(s => s.id === activeSlideId) + 1} di {slides.length})
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold text-white tracking-wide truncate">
+                    {getFriendlyGameTitle(activeSlide)}
+                  </h3>
+                  <p className="text-[10px] text-white/50 truncate">
+                    {getFriendlyGameDescription(activeSlide)}
+                  </p>
                 </div>
-             </div>
-          </main>
 
-          {/* Right Panel: Properties */}
-          {!rightPanel.collapsed && (
-            <ResizableSidebar
-              side="right"
-              width={rightPanel.width}
-              collapsed={false}
-              onToggleCollapse={() => rightPanel.setCollapsed(true)}
-              onResizeStart={rightPanel.onResizeStart}
-              collapseLabel="Mostra proprietà"
-            >
-              <div className="flex items-center justify-between p-3 border-b border-white/10 shrink-0">
-                <h2 className="text-sm font-bold">Proprietà diapositiva</h2>
-                <button
-                  type="button"
-                  onClick={() => rightPanel.setCollapsed(true)}
-                  className="w-7 h-7 rounded hover:bg-white/10 text-white/50 hover:text-white text-sm"
-                  title="Nascondi proprietà"
-                >
-                  ›
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-3 flex flex-col min-h-0">
-                {activeSlide && activeSlide.type !== 'empty' && (
+                {/* Center section: Main Navigation Controls */}
+                <div className="flex items-center gap-4 flex-1 justify-center max-w-[600px]">
                   <button
                     type="button"
-                    onClick={() => handleGameSelect('empty')}
-                    className="mb-4 w-full py-2 px-3 rounded bg-red-950/40 hover:bg-red-900/60 border border-red-800/40 text-red-200 text-xs font-semibold transition-all shrink-0"
+                    onClick={goToPrevSlide}
+                    disabled={slides.findIndex(s => s.id === activeSlideId) === 0}
+                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg border border-white/10 hover:border-white/20 bg-white/5 hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-2 shrink-0 cursor-pointer"
                   >
-                    🔄 Cambia tipo di gioco
+                    ◀ Gioco Prec.
                   </button>
-                )}
-                {activeSlide?.type === 'empty' ? (
-                  <div>
-                    <p className="text-xs text-white/50 mb-3">
-                      Scegli il tipo di gioco per questa diapositiva.
-                    </p>
-                    <GameSelector onSelect={handleGameSelect} compact />
+
+                  <div className="flex-1 min-w-[150px] max-w-[280px]">
+                    <select
+                      value={activeSlideId}
+                      onChange={(e) => setActiveSlideId(e.target.value)}
+                      className="w-full bg-[#121212] border border-white/10 hover:border-white/20 rounded-lg px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-[#d24726] transition-all cursor-pointer"
+                    >
+                      {slides.map((s, idx) => (
+                        <option key={s.id} value={s.id}>
+                          {idx + 1}. {getDropdownGameLabel(s)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                ) : activeSlide ? (
-                  <StructuredJsonEditor
-                    gameType={activeSlide.type}
-                    data={activeSlide.data}
-                    onChange={handleSlideDataChange}
-                  />
-                ) : null}
+
+                  <button
+                    type="button"
+                    onClick={goToNextSlide}
+                    disabled={slides.findIndex(s => s.id === activeSlideId) === slides.length - 1}
+                    className="px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg bg-gradient-to-r from-[#d24726] to-[#e85a38] hover:from-[#e85a38] hover:to-[#f97316] text-white shadow-lg shadow-[#d24726]/10 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-2 shrink-0 cursor-pointer"
+                  >
+                    Gioco Succ. ▶
+                  </button>
+                </div>
+
+                {/* Right section: Control Actions */}
+                <div className="flex items-center gap-3 min-w-[250px] justify-end">
+                  <button
+                    type="button"
+                    onClick={handleResetPlaystate}
+                    className="px-3 py-1.5 text-[11px] font-semibold text-red-400 bg-red-950/20 hover:bg-red-950/40 border border-red-900/30 hover:border-red-800/50 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Azzera lo stato di gioco per ricominciare da capo"
+                  >
+                    🔄 Riavvia
+                  </button>
+                  <div className="h-6 w-px bg-white/10" />
+                  <span className="text-[10px] text-white/30 uppercase tracking-widest font-black">
+                    IMPERIO VII
+                  </span>
+                </div>
+
               </div>
-            </ResizableSidebar>
-          )}
+            </div>
+          </main>
         </div>
       </div>
     </ScoreProvider>

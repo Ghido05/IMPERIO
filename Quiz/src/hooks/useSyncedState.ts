@@ -82,13 +82,15 @@ export function useSyncedState<T>(key: string, initialValue: T): [T, (val: T | (
         ? (newValue as (prev: T) => T)(prev) 
         : newValue;
       
-      const stringified = JSON.stringify(resolvedValue);
-      localStorage.setItem(key, stringified);
-      
-      // Notify other instances in the same window
-      window.dispatchEvent(new CustomEvent('local-storage-update', {
-        detail: { key, value: stringified }
-      }));
+      setTimeout(() => {
+        const stringified = JSON.stringify(resolvedValue);
+        localStorage.setItem(key, stringified);
+        
+        // Notify other instances in the same window
+        window.dispatchEvent(new CustomEvent('local-storage-update', {
+          detail: { key, value: stringified }
+        }));
+      }, 0);
       
       return resolvedValue;
     });

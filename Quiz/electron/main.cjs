@@ -2,6 +2,9 @@ const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+// Disable autoplay gesture requirements
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+
 let presenterWindow;
 let gamesWindow;
 let scoresWindow;

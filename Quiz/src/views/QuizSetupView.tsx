@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { idbNameCache } from '../lib/assetUrl';
 
 // Data types for Box 1 (Gioco 1)
 export interface Gioco1CanzoneData {
@@ -131,6 +132,36 @@ export function getDefaultSetupState(): QuizSetupState {
   };
 }
 
+const formatBase64Info = (val: string | undefined): { label: string; size: string; name: string } | null => {
+  if (!val) return null;
+  
+  if (val.startsWith('idb://')) {
+    const name = idbNameCache.get(val) || 'File locale';
+    return { label: '🎵 Audio', size: 'Pronto', name };
+  }
+  
+  if (val.startsWith('data:')) {
+    const match = val.match(/^data:([^;]+);base64,/);
+    const mimeType = match ? match[1] : '';
+    let label = 'File';
+    if (mimeType.startsWith('image/')) {
+      label = '🖼️ Immagine';
+    } else if (mimeType.startsWith('audio/')) {
+      label = '🎵 Audio';
+    }
+    const sizeInKb = Math.round((val.length * 3) / 4 / 1024);
+    const sizeStr = sizeInKb >= 1024 
+      ? `${(sizeInKb / 1024).toFixed(1)} MB` 
+      : `${sizeInKb} KB`;
+    
+    const first100 = val.substring(0, 100);
+    const name = localStorage.getItem('filename_' + first100) || 'File locale';
+    return { label, size: sizeStr, name };
+  }
+  
+  return null;
+};
+
 interface QuizSetupViewProps {
   onStartQuiz?: () => void;
 }
@@ -189,17 +220,38 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     }
   };
 
-  // Helper for reading uploaded files as base64 data URLs
+  // Helper for reading uploaded files and storing them to IndexedDB
   const handleFileUpload = (
     e: React.ChangeEvent<HTMLInputElement>,
-    onLoad: (result: string) => void
+    onLoad: (resultKey: string) => void
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       if (event.target?.result) {
-        onLoad(event.target.result as string);
+        const base64 = event.target.result as string;
+        const id = 'file_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+        
+        try {
+          const { setLargeFile } = await import('../lib/idbStore');
+          await setLargeFile(id, base64);
+          
+          const { dataURItoBlob } = await import('../lib/idbStore');
+          const blob = dataURItoBlob(base64);
+          const blobUrl = URL.createObjectURL(blob);
+          const { idbBlobUrlCache, idbNameCache } = await import('../lib/assetUrl');
+          idbBlobUrlCache.set(`idb://${id}`, blobUrl);
+          
+          const first100 = base64.substring(0, 100);
+          localStorage.setItem('filename_' + first100, file.name);
+          idbNameCache.set(`idb://${id}`, file.name);
+          
+          onLoad(`idb://${id}`);
+        } catch (err) {
+          console.error("Errore nel salvataggio del file su IndexedDB:", err);
+          showToast("❌ Errore durante il caricamento del file");
+        }
       }
     };
     reader.readAsDataURL(file);
@@ -393,23 +445,50 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                         <span className="text-[11px] font-bold text-slate-400 w-20 shrink-0">
                           Audio {idx + 1}:
                         </span>
-                        <input
-                          type="text"
-                          placeholder="Percorso URL / file o seleziona sfoglia →"
-                          value={currentQ1.canzone.audioFiles[idx] || ''}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            updateQ1((prev) => {
-                              const newAudios = [...prev.canzone.audioFiles];
-                              newAudios[idx] = val;
-                              return {
-                                ...prev,
-                                canzone: { ...prev.canzone, audioFiles: newAudios },
-                              };
-                            });
-                          }}
-                          className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
-                        />
+                        {currentQ1.canzone.audioFiles[idx]?.startsWith('data:') || currentQ1.canzone.audioFiles[idx]?.startsWith('idb://') ? (
+                          <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                            <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
+                              {(() => {
+                                const info = formatBase64Info(currentQ1.canzone.audioFiles[idx]);
+                                return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
+                              })()}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateQ1((prev) => {
+                                  const newAudios = [...prev.canzone.audioFiles];
+                                  newAudios[idx] = '';
+                                  return {
+                                    ...prev,
+                                    canzone: { ...prev.canzone, audioFiles: newAudios },
+                                  };
+                                });
+                              }}
+                              className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
+                            >
+                              Rimuovi
+                            </button>
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="Percorso URL / file o seleziona sfoglia →"
+                            value={currentQ1.canzone.audioFiles[idx] || ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              updateQ1((prev) => {
+                                const newAudios = [...prev.canzone.audioFiles];
+                                newAudios[idx] = val;
+                                return {
+                                  ...prev,
+                                  canzone: { ...prev.canzone, audioFiles: newAudios },
+                                };
+                              });
+                            }}
+                            className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
+                          />
+                        )}
                         <label className="px-3 py-1.5 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
                           📁 Sfoglia
                           <input
@@ -474,18 +553,41 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     Canzone come Soluzione MP3:
                   </label>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-[#141417] p-2.5 rounded-lg border border-white/5">
-                    <input
-                      type="text"
-                      placeholder="Percorso URL / file MP3 soluzione..."
-                      value={currentQ1.canzone.soluzioneAudio}
-                      onChange={(e) =>
-                        updateQ1((prev) => ({
-                          ...prev,
-                          canzone: { ...prev.canzone, soluzioneAudio: e.target.value },
-                        }))
-                      }
-                      className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
-                    />
+                    {currentQ1.canzone.soluzioneAudio?.startsWith('data:') || currentQ1.canzone.soluzioneAudio?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
+                          {(() => {
+                            const info = formatBase64Info(currentQ1.canzone.soluzioneAudio);
+                            return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
+                          })()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateQ1((prev) => ({
+                              ...prev,
+                              canzone: { ...prev.canzone, soluzioneAudio: '' },
+                            }));
+                          }}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Percorso URL / file MP3 soluzione..."
+                        value={currentQ1.canzone.soluzioneAudio}
+                        onChange={(e) =>
+                          updateQ1((prev) => ({
+                            ...prev,
+                            canzone: { ...prev.canzone, soluzioneAudio: e.target.value },
+                          }))
+                        }
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
+                      />
+                    )}
                     <label className="px-3 py-1.5 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
                       📁 Sfoglia MP3
                       <input
@@ -556,18 +658,41 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     Immagine JPG:
                   </label>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-[#141417] p-2.5 rounded-lg border border-white/5">
-                    <input
-                      type="text"
-                      placeholder="Percorso URL / Immagine JPG..."
-                      value={currentQ1.immagine.immagineJpg}
-                      onChange={(e) =>
-                        updateQ1((prev) => ({
-                          ...prev,
-                          immagine: { ...prev.immagine, immagineJpg: e.target.value },
-                        }))
-                      }
-                      className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
-                    />
+                    {currentQ1.immagine.immagineJpg?.startsWith('data:') || currentQ1.immagine.immagineJpg?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
+                          {(() => {
+                            const info = formatBase64Info(currentQ1.immagine.immagineJpg);
+                            return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
+                          })()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateQ1((prev) => ({
+                              ...prev,
+                              immagine: { ...prev.immagine, immagineJpg: '' },
+                            }));
+                          }}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Percorso URL / Immagine JPG..."
+                        value={currentQ1.immagine.immagineJpg}
+                        onChange={(e) =>
+                          updateQ1((prev) => ({
+                            ...prev,
+                            immagine: { ...prev.immagine, immagineJpg: e.target.value },
+                          }))
+                        }
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
+                      />
+                    )}
                     <label className="px-3 py-1.5 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
                       🖼️ Sfoglia JPG
                       <input
@@ -635,18 +760,41 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     Canzone MP3 come Conferma:
                   </label>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-[#141417] p-2.5 rounded-lg border border-white/5">
-                    <input
-                      type="text"
-                      placeholder="Percorso URL / file MP3 di conferma..."
-                      value={currentQ1.immagine.confermaAudio}
-                      onChange={(e) =>
-                        updateQ1((prev) => ({
-                          ...prev,
-                          immagine: { ...prev.immagine, confermaAudio: e.target.value },
-                        }))
-                      }
-                      className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
-                    />
+                    {currentQ1.immagine.confermaAudio?.startsWith('data:') || currentQ1.immagine.confermaAudio?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
+                          {(() => {
+                            const info = formatBase64Info(currentQ1.immagine.confermaAudio);
+                            return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
+                          })()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateQ1((prev) => ({
+                              ...prev,
+                              immagine: { ...prev.immagine, confermaAudio: '' },
+                            }));
+                          }}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Percorso URL / file MP3 di conferma..."
+                        value={currentQ1.immagine.confermaAudio}
+                        onChange={(e) =>
+                          updateQ1((prev) => ({
+                            ...prev,
+                            immagine: { ...prev.immagine, confermaAudio: e.target.value },
+                          }))
+                        }
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
+                      />
+                    )}
                     <label className="px-3 py-1.5 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
                       🎵 Sfoglia MP3
                       <input
@@ -806,20 +954,44 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                           />
                         </div>
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                          <input
-                            type="text"
-                            placeholder="Audio MP3 strumento..."
-                            value={currentQ2.canzone.audioFiles[idx] || ''}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              updateQ2((prev) => {
-                                const newA = [...prev.canzone.audioFiles];
-                                newA[idx] = val;
-                                return { ...prev, canzone: { ...prev.canzone, audioFiles: newA } };
-                              });
-                            }}
-                            className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
-                          />
+                          {currentQ2.canzone.audioFiles[idx]?.startsWith('data:') || currentQ2.canzone.audioFiles[idx]?.startsWith('idb://') ? (
+                            <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                              <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
+                                {(() => {
+                                  const info = formatBase64Info(currentQ2.canzone.audioFiles[idx]);
+                                  return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
+                                })()}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  updateQ2((prev) => {
+                                    const newA = [...prev.canzone.audioFiles];
+                                    newA[idx] = '';
+                                    return { ...prev, canzone: { ...prev.canzone, audioFiles: newA } };
+                                  });
+                                }}
+                                className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
+                              >
+                                Rimuovi
+                              </button>
+                            </div>
+                          ) : (
+                            <input
+                              type="text"
+                              placeholder="Audio MP3 strumento..."
+                              value={currentQ2.canzone.audioFiles[idx] || ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updateQ2((prev) => {
+                                  const newA = [...prev.canzone.audioFiles];
+                                  newA[idx] = val;
+                                  return { ...prev, canzone: { ...prev.canzone, audioFiles: newA } };
+                                });
+                              }}
+                              className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                            />
+                          )}
                           <label className="px-3 py-1 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
                             📁 Audio
                             <input
@@ -849,18 +1021,41 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     Canzone come Soluzione MP3:
                   </label>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-[#141417] p-2.5 rounded-lg border border-white/5">
-                    <input
-                      type="text"
-                      placeholder="Percorso URL / MP3 canzone finale..."
-                      value={currentQ2.canzone.soluzioneAudio}
-                      onChange={(e) =>
-                        updateQ2((prev) => ({
-                          ...prev,
-                          canzone: { ...prev.canzone, soluzioneAudio: e.target.value },
-                        }))
-                      }
-                      className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
-                    />
+                    {currentQ2.canzone.soluzioneAudio?.startsWith('data:') || currentQ2.canzone.soluzioneAudio?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
+                          {(() => {
+                            const info = formatBase64Info(currentQ2.canzone.soluzioneAudio);
+                            return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
+                          })()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateQ2((prev) => ({
+                              ...prev,
+                              canzone: { ...prev.canzone, soluzioneAudio: '' },
+                            }));
+                          }}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Percorso URL / MP3 canzone finale..."
+                        value={currentQ2.canzone.soluzioneAudio}
+                        onChange={(e) =>
+                          updateQ2((prev) => ({
+                            ...prev,
+                            canzone: { ...prev.canzone, soluzioneAudio: e.target.value },
+                          }))
+                        }
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                      />
+                    )}
                     <label className="px-3 py-1.5 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
                       🎵 Sfoglia MP3
                       <input
@@ -964,18 +1159,41 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     Immagine JPG:
                   </label>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-[#141417] p-2.5 rounded-lg border border-white/5">
-                    <input
-                      type="text"
-                      placeholder="Percorso URL / Immagine JPG..."
-                      value={currentQ2.immagine.immagineJpg}
-                      onChange={(e) =>
-                        updateQ2((prev) => ({
-                          ...prev,
-                          immagine: { ...prev.immagine, immagineJpg: e.target.value },
-                        }))
-                      }
-                      className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
-                    />
+                    {currentQ2.immagine.immagineJpg?.startsWith('data:') || currentQ2.immagine.immagineJpg?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
+                          {(() => {
+                            const info = formatBase64Info(currentQ2.immagine.immagineJpg);
+                            return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
+                          })()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateQ2((prev) => ({
+                              ...prev,
+                              immagine: { ...prev.immagine, immagineJpg: '' },
+                            }));
+                          }}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Percorso URL / Immagine JPG..."
+                        value={currentQ2.immagine.immagineJpg}
+                        onChange={(e) =>
+                          updateQ2((prev) => ({
+                            ...prev,
+                            immagine: { ...prev.immagine, immagineJpg: e.target.value },
+                          }))
+                        }
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                      />
+                    )}
                     <label className="px-3 py-1.5 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
                       🖼️ Sfoglia JPG
                       <input
@@ -1010,18 +1228,41 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     Canzone come Soluzione MP3:
                   </label>
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-[#141417] p-2.5 rounded-lg border border-white/5">
-                    <input
-                      type="text"
-                      placeholder="Percorso URL / file MP3 soluzione..."
-                      value={currentQ2.immagine.soluzioneAudio}
-                      onChange={(e) =>
-                        updateQ2((prev) => ({
-                          ...prev,
-                          immagine: { ...prev.immagine, soluzioneAudio: e.target.value },
-                        }))
-                      }
-                      className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
-                    />
+                    {currentQ2.immagine.soluzioneAudio?.startsWith('data:') || currentQ2.immagine.soluzioneAudio?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
+                          {(() => {
+                            const info = formatBase64Info(currentQ2.immagine.soluzioneAudio);
+                            return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
+                          })()}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            updateQ2((prev) => ({
+                              ...prev,
+                              immagine: { ...prev.immagine, soluzioneAudio: '' },
+                            }));
+                          }}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Percorso URL / file MP3 soluzione..."
+                        value={currentQ2.immagine.soluzioneAudio}
+                        onChange={(e) =>
+                          updateQ2((prev) => ({
+                            ...prev,
+                            immagine: { ...prev.immagine, soluzioneAudio: e.target.value },
+                          }))
+                        }
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                      />
+                    )}
                     <label className="px-3 py-1.5 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
                       🎵 Sfoglia MP3
                       <input

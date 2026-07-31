@@ -7,6 +7,7 @@ import QuizSetupView, {
   createDefaultGioco1Question, 
   createDefaultGioco2Question 
 } from './QuizSetupView';
+import SequentialQuizView from './SequentialQuizView';
 import PresenterPreviewPanel from '../components/PresenterPreviewPanel';
 import ScoreAssigner from '../components/ScoreAssigner';
 import { ScoreProvider } from '../context/ScoreContext';
@@ -16,7 +17,7 @@ import { Slide } from '../App';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import { useSyncedState } from '../hooks/useSyncedState';
 
-type PresenterViewMode = 'setup' | 'welcome' | 'editor';
+type PresenterViewMode = 'setup' | 'quiz' | 'welcome' | 'editor';
 
 // Helper function to build slides dynamically from setup configuration
 function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
@@ -283,7 +284,11 @@ export default function PresenterView() {
   }, [presentationName, slides]);
 
   if (viewMode === 'setup') {
-    return <QuizSetupView onStartQuiz={() => setViewMode('editor')} />;
+    return <QuizSetupView onStartQuiz={() => setViewMode('quiz')} />;
+  }
+
+  if (viewMode === 'quiz') {
+    return <SequentialQuizView onGoToSetup={() => setViewMode('setup')} />;
   }
 
   if (viewMode === 'welcome') {

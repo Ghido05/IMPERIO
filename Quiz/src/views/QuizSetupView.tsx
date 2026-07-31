@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { idbNameCache } from '../lib/assetUrl';
+import { saveSetupStateDb, loadSetupStateDb } from '../lib/quizDb';
 
 // Data types for Box 1 (Gioco 1)
 export interface Gioco1CanzoneData {
@@ -51,6 +52,23 @@ export interface BoxGenericSetup {
   note: string;
 }
 
+/** Una parola di squadra + 2 indizi (come Password: round ↔ parola) */
+export interface Gioco3TeamWord {
+  parola: string;
+  indizi: [string, string];
+}
+
+/** Una domanda/manche del Gioco 3 (Password) */
+export interface Gioco3Question {
+  sfondo: string;
+  squadra1: [Gioco3TeamWord, Gioco3TeamWord, Gioco3TeamWord];
+  squadra2: [Gioco3TeamWord, Gioco3TeamWord, Gioco3TeamWord];
+  squadra3: [Gioco3TeamWord, Gioco3TeamWord, Gioco3TeamWord];
+  parolaBomba: string;
+  /** Come password `altre[1..]` — 2 parole nulle */
+  paroleNulle: [string, string];
+}
+
 export interface QuizSetupState {
   gioco1: {
     selectedQuestion: number;
@@ -60,7 +78,10 @@ export interface QuizSetupState {
     selectedQuestion: number;
     questions: Record<number, Gioco2Question>;
   };
-  gioco3: BoxGenericSetup;
+  gioco3: {
+    selectedQuestion: number;
+    questions: Record<number, Gioco3Question>;
+  };
   gioco4: BoxGenericSetup;
   gioco5: BoxGenericSetup;
 }
@@ -106,6 +127,34 @@ export function createDefaultGioco2Question(): Gioco2Question {
   };
 }
 
+function createDefaultGioco3TeamWord(): Gioco3TeamWord {
+  return { parola: '', indizi: ['', ''] };
+}
+
+export function createDefaultGioco3Question(): Gioco3Question {
+  return {
+    sfondo: '',
+    squadra1: [createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord()],
+    squadra2: [createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord()],
+    squadra3: [createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord()],
+    parolaBomba: '',
+    paroleNulle: ['', ''],
+  };
+}
+
+function normalizeGioco3(
+  raw: unknown,
+  def: QuizSetupState['gioco3']
+): QuizSetupState['gioco3'] {
+  if (!raw || typeof raw !== 'object') return def;
+  const data = raw as Partial<QuizSetupState['gioco3']> & BoxGenericSetup;
+  if (!data.questions || typeof data.questions !== 'object') return def;
+  return {
+    selectedQuestion: data.selectedQuestion || 1,
+    questions: { ...def.questions, ...data.questions },
+  };
+}
+
 export function getDefaultSetupState(): QuizSetupState {
   const q1: Record<number, Gioco1Question> = {};
   for (let i = 1; i <= 10; i++) {
@@ -117,6 +166,11 @@ export function getDefaultSetupState(): QuizSetupState {
     q2[i] = createDefaultGioco2Question();
   }
 
+  const q3: Record<number, Gioco3Question> = {};
+  for (let i = 1; i <= 3; i++) {
+    q3[i] = createDefaultGioco3Question();
+  }
+
   return {
     gioco1: {
       selectedQuestion: 1,
@@ -126,7 +180,10 @@ export function getDefaultSetupState(): QuizSetupState {
       selectedQuestion: 1,
       questions: q2,
     },
-    gioco3: { titolo: 'Gioco 3', note: 'Modulo Gioco 3 (in arrivo)' },
+    gioco3: {
+      selectedQuestion: 1,
+      questions: q3,
+    },
     gioco4: { titolo: 'Gioco 4', note: 'Modulo Gioco 4 (in arrivo)' },
     gioco5: { titolo: 'Gioco 5', note: 'Modulo Gioco 5 (in arrivo)' },
   };
@@ -167,32 +224,52 @@ interface QuizSetupViewProps {
 }
 
 export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
-  const [state, setState] = useState<QuizSetupState>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Ensure structure matches defaults
-        const def = getDefaultSetupState();
-        return {
+  const [state, setState] = useState<QuizSetupState>(getDefaultSetupState());
+
+  useEffect(() => {
+    async function loadData() {
+      const fromDb = await loadSetupStateDb();
+      const def = getDefaultSetupState();
+      if (fromDb) {
+        setState({
           gioco1: {
-            selectedQuestion: parsed.gioco1?.selectedQuestion || 1,
-            questions: { ...def.gioco1.questions, ...parsed.gioco1?.questions },
+            selectedQuestion: fromDb.gioco1?.selectedQuestion || 1,
+            questions: { ...def.gioco1.questions, ...fromDb.gioco1?.questions },
           },
           gioco2: {
-            selectedQuestion: parsed.gioco2?.selectedQuestion || 1,
-            questions: { ...def.gioco2.questions, ...parsed.gioco2?.questions },
+            selectedQuestion: fromDb.gioco2?.selectedQuestion || 1,
+            questions: { ...def.gioco2.questions, ...fromDb.gioco2?.questions },
           },
-          gioco3: parsed.gioco3 || def.gioco3,
-          gioco4: parsed.gioco4 || def.gioco4,
-          gioco5: parsed.gioco5 || def.gioco5,
-        };
+          gioco3: normalizeGioco3(fromDb.gioco3, def.gioco3),
+          gioco4: fromDb.gioco4 || def.gioco4,
+          gioco5: fromDb.gioco5 || def.gioco5,
+        });
+      } else {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            setState({
+              gioco1: {
+                selectedQuestion: parsed.gioco1?.selectedQuestion || 1,
+                questions: { ...def.gioco1.questions, ...parsed.gioco1?.questions },
+              },
+              gioco2: {
+                selectedQuestion: parsed.gioco2?.selectedQuestion || 1,
+                questions: { ...def.gioco2.questions, ...parsed.gioco2?.questions },
+              },
+              gioco3: normalizeGioco3(parsed.gioco3, def.gioco3),
+              gioco4: parsed.gioco4 || def.gioco4,
+              gioco5: parsed.gioco5 || def.gioco5,
+            });
+          } catch (e) {
+            console.error('Error loading setup state:', e);
+          }
+        }
       }
-    } catch (e) {
-      console.error('Error loading setup state:', e);
     }
-    return getDefaultSetupState();
-  });
+    loadData();
+  }, []);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -201,19 +278,20 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      // Broadcast if in Electron environment
+      await saveSetupStateDb(state);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        console.warn('LocalStorage limit reached, saved safely to IndexedDB:', e);
+      }
       if ((window as any).electron?.broadcastState) {
         (window as any).electron.broadcastState({
-          localStorageUpdate: {
-            key: STORAGE_KEY,
-            value: JSON.stringify(state),
-          },
+          setupStateUpdate: state,
         });
       }
-      showToast('✅ Configurazioni salvate con successo!');
+      showToast('✅ Configurazioni e MP3 salvati definitivamente!');
     } catch (e) {
       console.error('Failed to save setup:', e);
       showToast('❌ Errore durante il salvataggio dei dati');
@@ -290,6 +368,60 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
       },
     }));
   };
+
+  // Box 3 Question & Data getters/setters
+  const currentQ3Num = state.gioco3?.selectedQuestion || 1;
+  const currentQ3 =
+    state.gioco3?.questions?.[currentQ3Num] || createDefaultGioco3Question();
+
+  const updateQ3 = (updater: (prev: Gioco3Question) => Gioco3Question) => {
+    setState((prev) => {
+      const gioco3 = normalizeGioco3(prev.gioco3, getDefaultSetupState().gioco3);
+      return {
+        ...prev,
+        gioco3: {
+          ...gioco3,
+          questions: {
+            ...gioco3.questions,
+            [currentQ3Num]: updater(gioco3.questions[currentQ3Num] || createDefaultGioco3Question()),
+          },
+        },
+      };
+    });
+  };
+
+  const updateSquadraWord = (
+    squadraKey: 'squadra1' | 'squadra2' | 'squadra3',
+    wordIdx: number,
+    patch: Partial<Gioco3TeamWord>
+  ) => {
+    updateQ3((prev) => {
+      const words = [...prev[squadraKey]] as Gioco3Question[typeof squadraKey];
+      words[wordIdx] = { ...words[wordIdx], ...patch, indizi: patch.indizi ?? words[wordIdx].indizi };
+      return { ...prev, [squadraKey]: words };
+    });
+  };
+
+  const updateSquadraIndizio = (
+    squadraKey: 'squadra1' | 'squadra2' | 'squadra3',
+    wordIdx: number,
+    indizioIdx: 0 | 1,
+    value: string
+  ) => {
+    updateQ3((prev) => {
+      const words = [...prev[squadraKey]] as Gioco3Question[typeof squadraKey];
+      const indizi = [...words[wordIdx].indizi] as [string, string];
+      indizi[indizioIdx] = value;
+      words[wordIdx] = { ...words[wordIdx], indizi };
+      return { ...prev, [squadraKey]: words };
+    });
+  };
+
+  const teamMeta: { key: 'squadra1' | 'squadra2' | 'squadra3'; label: string; accent: string }[] = [
+    { key: 'squadra1', label: 'Squadra 1', accent: 'border-sky-500/40 text-sky-400' },
+    { key: 'squadra2', label: 'Squadra 2', accent: 'border-rose-500/40 text-rose-400' },
+    { key: 'squadra3', label: 'Squadra 3', accent: 'border-amber-500/40 text-amber-400' },
+  ];
 
   return (
     <div className="h-screen w-full bg-[#121214] text-slate-100 font-sans flex flex-col overflow-y-auto selection:bg-[#d24726] selection:text-white">
@@ -1306,31 +1438,210 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
         </div>
 
-        {/* Remaining Boxes: Box 3, Box 4, Box 5 Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-          
-          {/* BOX 3 */}
-          <div className="bg-[#1c1c21] rounded-2xl border border-white/10 p-5 flex flex-col justify-between opacity-80 hover:opacity-100 transition-opacity">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-extrabold flex items-center justify-center text-xs">
-                    3
-                  </span>
-                  <h3 className="text-base font-bold text-white">BOX 3 — Terzo Gioco</h3>
-                </div>
-                <span className="px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  Modulo 3
-                </span>
+        {/* BOX 3 — Password (full width) */}
+        <div className="bg-[#1c1c21] rounded-2xl border border-white/10 p-6 flex flex-col shadow-xl space-y-5">
+          <div className="flex items-center justify-between border-b border-white/10 pb-4">
+            <div className="flex items-center gap-3">
+              <span className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-extrabold flex items-center justify-center text-sm">
+                3
+              </span>
+              <div>
+                <h3 className="text-lg font-bold text-white">BOX 3 — Terzo Gioco</h3>
+                <p className="text-[11px] text-slate-400">Modulo Password</p>
               </div>
-              <p className="text-xs text-slate-400">
-                {state.gioco3.note}
-              </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-white/5 text-[10px] text-slate-500">
-              Box 3 pronto per la configurazione dei giochi successivi.
+            <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              3 Domande
+            </span>
+          </div>
+
+          {/* Question selector 1–3 */}
+          <div className="bg-white/5 p-4 rounded-xl border border-white/5 max-w-xs">
+            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Seleziona Domanda (1 - 3):
+            </label>
+            <select
+              value={currentQ3Num}
+              onChange={(e) =>
+                setState((prev) => {
+                  const gioco3 = normalizeGioco3(prev.gioco3, getDefaultSetupState().gioco3);
+                  return {
+                    ...prev,
+                    gioco3: {
+                      ...gioco3,
+                      selectedQuestion: Number(e.target.value),
+                    },
+                  };
+                })
+              }
+              className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-emerald-500"
+            >
+              {[1, 2, 3].map((n) => (
+                <option key={n} value={n}>
+                  Domanda #{n}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Background image */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 mb-1">
+              Immagine di sfondo:
+            </label>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-[#141417] p-2.5 rounded-lg border border-white/5">
+              {currentQ3.sfondo?.startsWith('data:') || currentQ3.sfondo?.startsWith('idb://') ? (
+                <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                  <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
+                    {(() => {
+                      const info = formatBase64Info(currentQ3.sfondo);
+                      return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
+                    })()}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => updateQ3((prev) => ({ ...prev, sfondo: '' }))}
+                    className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
+                  >
+                    Rimuovi
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Percorso URL / immagine di sfondo..."
+                  value={currentQ3.sfondo}
+                  onChange={(e) => updateQ3((prev) => ({ ...prev, sfondo: e.target.value }))}
+                  className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                />
+              )}
+              <label className="px-3 py-1.5 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                🖼️ Sfoglia
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) =>
+                    handleFileUpload(e, (base64) =>
+                      updateQ3((prev) => ({ ...prev, sfondo: base64 }))
+                    )
+                  }
+                />
+              </label>
             </div>
           </div>
+
+          {/* Team words + 2 indizi each */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {teamMeta.map(({ key, label, accent }) => (
+              <div
+                key={key}
+                className={`rounded-xl border bg-[#141417]/80 p-4 space-y-3 ${accent.split(' ')[0]}`}
+              >
+                <h4 className={`text-xs font-bold uppercase tracking-wider ${accent.split(' ').slice(1).join(' ')}`}>
+                  {label} — 3 parole
+                </h4>
+                {[0, 1, 2].map((wordIdx) => (
+                  <div key={wordIdx} className="space-y-2 bg-black/30 rounded-lg p-3 border border-white/5">
+                    <label className="block text-[10px] font-semibold text-slate-400 uppercase">
+                      Parola {wordIdx + 1}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={`Parola ${wordIdx + 1}...`}
+                      value={currentQ3[key][wordIdx].parola}
+                      onChange={(e) =>
+                        updateSquadraWord(key, wordIdx, { parola: e.target.value })
+                      }
+                      className="w-full bg-[#1c1c21] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                    />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] text-slate-500 mb-0.5">Indizio 1</label>
+                        <input
+                          type="text"
+                          placeholder="Indizio 1..."
+                          value={currentQ3[key][wordIdx].indizi[0]}
+                          onChange={(e) =>
+                            updateSquadraIndizio(key, wordIdx, 0, e.target.value)
+                          }
+                          className="w-full bg-[#1c1c21] border border-white/10 rounded px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-slate-500 mb-0.5">Indizio 2</label>
+                        <input
+                          type="text"
+                          placeholder="Indizio 2..."
+                          value={currentQ3[key][wordIdx].indizi[1]}
+                          onChange={(e) =>
+                            updateSquadraIndizio(key, wordIdx, 1, e.target.value)
+                          }
+                          className="w-full bg-[#1c1c21] border border-white/10 rounded px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+
+          {/* Bomba + nulle */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
+            <div>
+              <label className="block text-xs font-semibold text-red-400 mb-1.5">
+                💣 Parola bomba
+              </label>
+              <input
+                type="text"
+                placeholder="Parola bomba..."
+                value={currentQ3.parolaBomba}
+                onChange={(e) =>
+                  updateQ3((prev) => ({ ...prev, parolaBomba: e.target.value }))
+                }
+                className="w-full bg-[#141417] border border-red-500/30 rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-red-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Parola nulla 1
+              </label>
+              <input
+                type="text"
+                placeholder="Parola nulla 1..."
+                value={currentQ3.paroleNulle[0]}
+                onChange={(e) =>
+                  updateQ3((prev) => ({
+                    ...prev,
+                    paroleNulle: [e.target.value, prev.paroleNulle[1]],
+                  }))
+                }
+                className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Parola nulla 2
+              </label>
+              <input
+                type="text"
+                placeholder="Parola nulla 2..."
+                value={currentQ3.paroleNulle[1]}
+                onChange={(e) =>
+                  updateQ3((prev) => ({
+                    ...prev,
+                    paroleNulle: [prev.paroleNulle[0], e.target.value],
+                  }))
+                }
+                className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Remaining Boxes: Box 4, Box 5 */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
 
           {/* BOX 4 */}
           <div className="bg-[#1c1c21] rounded-2xl border border-white/10 p-5 flex flex-col justify-between opacity-80 hover:opacity-100 transition-opacity">

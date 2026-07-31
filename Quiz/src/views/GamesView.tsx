@@ -37,7 +37,14 @@ export default function GamesView() {
     <ScoreProvider>
       <div className="fixed inset-0 bg-black overflow-hidden">
         {activeSlide ? (
-          <SlideCanvas slide={activeSlide} interactive />
+          <SlideCanvas
+            slide={
+              activeSlide.type === 'password_prescelti'
+                ? { ...activeSlide, type: 'password_squadre' }
+                : activeSlide
+            }
+            interactive
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-white/50 text-2xl font-bold">
             In attesa della presentazione...

@@ -115,6 +115,44 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
       };
     }
   });
+  const defaultPasswordData = cloneDefaultData('password_squadre') as any;
+  const setupManches = [1, 2, 3].map((num) => {
+    const q = setup.gioco3?.questions?.[num];
+    if (!q) return null;
+    return {
+      sfondo: q.sfondo || `/Password/password${num}.png`,
+      squadra1: [q.squadra1[0].parola, q.squadra1[1].parola, q.squadra1[2].parola].map(w => w.toUpperCase()),
+      squadra2: [q.squadra2[0].parola, q.squadra2[1].parola, q.squadra2[2].parola].map(w => w.toUpperCase()),
+      squadra3: [q.squadra3[0].parola, q.squadra3[1].parola, q.squadra3[2].parola].map(w => w.toUpperCase()),
+      altre: [q.parolaBomba, q.paroleNulle[0], q.paroleNulle[1]].map(w => w.toUpperCase()),
+      suggerimenti_turni: [
+        [
+          [q.squadra1[0].indizi[0], q.squadra1[0].indizi[1]],
+          [q.squadra2[0].indizi[0], q.squadra2[0].indizi[1]],
+          [q.squadra3[0].indizi[0], q.squadra3[0].indizi[1]],
+        ],
+        [
+          [q.squadra1[1].indizi[0], q.squadra1[1].indizi[1]],
+          [q.squadra2[1].indizi[0], q.squadra2[1].indizi[1]],
+          [q.squadra3[1].indizi[0], q.squadra3[1].indizi[1]],
+        ],
+        [
+          [q.squadra1[2].indizi[0], q.squadra1[2].indizi[1]],
+          [q.squadra2[2].indizi[0], q.squadra2[2].indizi[1]],
+          [q.squadra3[2].indizi[0], q.squadra3[2].indizi[1]],
+        ]
+      ],
+      bussolotti: defaultPasswordData.manches[num - 1]?.bussolotti || {
+        immagine_premio: "/Icone/premio_bonus.png",
+        posizione_premio_2_posto: 0,
+        posizione_premio_3_posto: 4
+      }
+    };
+  }).filter(Boolean);
+
+  const mappedPasswordData = {
+    manches: setupManches.length > 0 ? setupManches : defaultPasswordData.manches
+  };
 
   const staticSlides: Slide[] = [
     {
@@ -130,12 +168,12 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
     {
       id: 'password_squadre',
       type: 'password_squadre',
-      data: cloneDefaultData('password_squadre')
+      data: mappedPasswordData
     },
     {
       id: 'password_prescelti',
       type: 'password_prescelti',
-      data: cloneDefaultData('password_prescelti')
+      data: mappedPasswordData
     },
     {
       id: 'classifica_generale',
@@ -447,13 +485,13 @@ export default function PresenterView() {
 
     switch (slide.type) {
       case 'cruciverba':
-        return "Box 3 — Cruciverba";
+        return "Box 5 — Cruciverba";
       case 'gioco_frase_tempo':
         return "Box 4 — Frase Tempo";
       case 'password_squadre':
-        return "Box 5 — Password (Squadre)";
+        return "Box 3 — Password (Squadre)";
       case 'password_prescelti':
-        return "Box 5 — Password (Prescelti)";
+        return "Box 3 — Password (Prescelti)";
       case 'classifica_generale':
         return "Classifica Generale Finale";
       default:
@@ -502,13 +540,13 @@ export default function PresenterView() {
     }
     switch (slide.type) {
       case 'cruciverba':
-        return "B3 - Cruciverba";
+        return "B5 - Cruciverba";
       case 'gioco_frase_tempo':
         return "B4 - Frase Tempo";
       case 'password_squadre':
-        return "B5 - Password Squadre";
+        return "B3 - Password Squadre";
       case 'password_prescelti':
-        return "B5 - Password Prescelti";
+        return "B3 - Password Prescelti";
       case 'classifica_generale':
         return "Classifica Finale";
       default:
@@ -549,7 +587,18 @@ export default function PresenterView() {
                 footer={getPreviewFooter()}
               >
                 {activeSlide ? (
-                  <SlideCanvas slide={activeSlide} interactive={false} viewportMode="none" />
+                  <SlideCanvas
+                    slide={
+                      activeSlide.type === 'password_squadre'
+                        ? { ...activeSlide, type: 'password_prescelti' }
+                        : activeSlide
+                    }
+                    interactive={
+                      activeSlide.type === 'password_squadre' ||
+                      activeSlide.type === 'password_prescelti'
+                    }
+                    viewportMode="none"
+                  />
                 ) : null}
               </PresenterPreviewPanel>
 

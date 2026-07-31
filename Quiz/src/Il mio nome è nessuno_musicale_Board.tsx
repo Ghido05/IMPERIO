@@ -186,6 +186,17 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
   const [showError, setShowError] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastKeyTimeRef = useRef<number>(0);
+  const lastPlayedStepRef = useRef<number>(step);
+
+  // Cleanup dell'audio all'unmount del componente
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
 
   // Gestione dell'animazione di errore (si spegne da sola dopo 800ms)
   useEffect(() => {
@@ -266,6 +277,10 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
 
   // Gestione dell'audio al cambio di step
   useEffect(() => {
+    // Controlliamo se lo step è effettivamente cambiato per evitare autoplay al mount
+    const stepChanged = step !== lastPlayedStepRef.current;
+    lastPlayedStepRef.current = step;
+
     // Determiniamo il path dell'audio per lo step corrente
     let audioPath = '';
     if (step === 10 && gameData.soluzione?.audio) {
@@ -292,7 +307,8 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
       audioRef.current.currentTime = 0;
     }
 
-    if (!isAutoAdvancing && !isBackingFromSolution && interactive) {
+    // Riproduciamo l'audio solo se lo step è cambiato e non siamo in modalità automatica o non interattiva
+    if (stepChanged && !isAutoAdvancing && !isBackingFromSolution && interactive) {
       if (audioPath) {
         const newAudio = new Audio(assetUrl(audioPath));
         audioRef.current = newAudio;

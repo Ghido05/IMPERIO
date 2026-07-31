@@ -13,6 +13,7 @@ import {
 } from './QuizSetupView';
 import { loadSetupStateDb } from '../lib/quizDb';
 import { useSyncedState } from '../hooks/useSyncedState';
+import { cloneDefaultData } from '../lib/defaultGameData';
 
 export function getSlideForBoxQuestion(
   setupState: QuizSetupState,
@@ -127,6 +128,56 @@ export function getSlideForBoxQuestion(
       };
       return { id: `box2_q${questionNum}`, type: 'classifica', data };
     }
+  }
+
+  if (boxNum === 3) {
+    const defaultData = cloneDefaultData('password_squadre') as any;
+    const setupManches = [1, 2, 3].map((num) => {
+      const q = setupState.gioco3?.questions?.[num];
+      if (!q) return null;
+      return {
+        sfondo: q.sfondo || `/Password/password${num}.png`,
+        squadra1: [q.squadra1[0].parola, q.squadra1[1].parola, q.squadra1[2].parola].map(w => w.toUpperCase()),
+        squadra2: [q.squadra2[0].parola, q.squadra2[1].parola, q.squadra2[2].parola].map(w => w.toUpperCase()),
+        squadra3: [q.squadra3[0].parola, q.squadra3[1].parola, q.squadra3[2].parola].map(w => w.toUpperCase()),
+        altre: [q.parolaBomba, q.paroleNulle[0], q.paroleNulle[1]].map(w => w.toUpperCase()),
+        suggerimenti_turni: [
+          [
+            [q.squadra1[0].indizi[0], q.squadra1[0].indizi[1]],
+            [q.squadra2[0].indizi[0], q.squadra2[0].indizi[1]],
+            [q.squadra3[0].indizi[0], q.squadra3[0].indizi[1]],
+          ],
+          [
+            [q.squadra1[1].indizi[0], q.squadra1[1].indizi[1]],
+            [q.squadra2[1].indizi[0], q.squadra2[1].indizi[1]],
+            [q.squadra3[1].indizi[0], q.squadra3[1].indizi[1]],
+          ],
+          [
+            [q.squadra1[2].indizi[0], q.squadra1[2].indizi[1]],
+            [q.squadra2[2].indizi[0], q.squadra2[2].indizi[1]],
+            [q.squadra3[2].indizi[0], q.squadra3[2].indizi[1]],
+          ]
+        ],
+        bussolotti: defaultData.manches[num - 1]?.bussolotti || {
+          immagine_premio: "/Icone/premio_bonus.png",
+          posizione_premio_2_posto: 0,
+          posizione_premio_3_posto: 4
+        }
+      };
+    }).filter(Boolean);
+
+    const data = {
+      manches: setupManches.length > 0 ? setupManches : defaultData.manches
+    };
+    return { id: 'password_squadre', type: 'password_squadre', data };
+  }
+
+  if (boxNum === 4) {
+    return { id: 'gioco_frase_tempo', type: 'gioco_frase_tempo', data: cloneDefaultData('gioco_frase_tempo') };
+  }
+
+  if (boxNum === 5) {
+    return { id: 'cruciverba', type: 'cruciverba', data: cloneDefaultData('cruciverba') };
   }
 
   return { id: `box${boxNum}_q${questionNum}`, type: 'empty' };
@@ -315,7 +366,15 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
         {/* Main 16:9 Viewport Area */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 min-h-0 bg-[#0d0d0f]">
           <PresenterPreviewPanel title={`BOX ${activeBox} — Domanda #${activeQuestion}`}>
-            <SlideCanvas slide={activeSlide} interactive viewportMode="none" />
+            <SlideCanvas
+              slide={
+                activeSlide.type === 'password_squadre'
+                  ? { ...activeSlide, type: 'password_prescelti' }
+                  : activeSlide
+              }
+              interactive
+              viewportMode="none"
+            />
           </PresenterPreviewPanel>
 
           <PresenterPreviewPanel title="Punteggi & Classifica Squadre">

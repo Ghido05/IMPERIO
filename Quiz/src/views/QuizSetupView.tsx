@@ -425,13 +425,6 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
   return (
     <div className="h-screen w-full bg-[#121214] text-slate-100 font-sans flex flex-col overflow-y-auto selection:bg-[#d24726] selection:text-white">
-      {/* Toast alert */}
-      {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 bg-[#d24726] text-white px-5 py-3 rounded-lg shadow-xl font-medium flex items-center gap-2 animate-bounce">
-          {toastMessage}
-        </div>
-      )}
-
       {/* Top Navigation Header */}
       <header className="h-16 border-b border-white/10 bg-[#18181b]/80 backdrop-blur px-6 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
@@ -446,7 +439,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="relative flex items-center gap-3">
           {onStartQuiz && (
             <button
               type="button"
@@ -467,6 +460,12 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </svg>
             Salva Impostazioni
           </button>
+
+          {toastMessage && (
+            <div className="absolute top-[calc(100%+8px)] right-0 z-50 bg-[#d24726]/90 backdrop-blur-md text-white px-4 py-2 rounded-lg shadow-lg text-xs font-medium flex items-center gap-2 border border-white/10 whitespace-nowrap animate-pulse">
+              {toastMessage}
+            </div>
+          )}
         </div>
       </header>
 

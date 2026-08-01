@@ -8,6 +8,7 @@ import GiocoFraseTempoBoard from '../Gioco frasetempo_Board';
 import PasswordSquadreBoard from '../Gioco password_squadre_Board';
 import PasswordPresceltiBoard from '../Gioco password_prescelti_Board';
 import ClassificaGeneraleBoard from '../ClassificaGenerale_Board';
+import FinaleSquadreBoard from '../FinaleSquadre_Board';
 
 interface SlideRendererProps {
   type: SlideType;
@@ -27,6 +28,7 @@ export default function SlideRenderer({ type, interactive = true }: SlideRendere
       {type === 'password_squadre' && <PasswordSquadreBoard interactive={interactive} />}
       {type === 'password_prescelti' && <PasswordPresceltiBoard interactive={interactive} />}
       {type === 'classifica_generale' && <ClassificaGeneraleBoard />}
+      {type === 'finale_squadre' && <FinaleSquadreBoard />}
     </>
   );
 }

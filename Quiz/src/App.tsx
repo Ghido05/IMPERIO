@@ -14,7 +14,8 @@ export type SlideType =
   | 'gioco_frase_tempo'
   | 'password_squadre'
   | 'password_prescelti'
-  | 'classifica_generale';
+  | 'classifica_generale'
+  | 'finale_squadre';
 
 export interface Slide {
   id: string;

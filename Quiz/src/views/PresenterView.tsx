@@ -484,8 +484,8 @@ export default function PresenterView() {
     }
 
     switch (slide.type) {
-      case 'cruciverba':
-        return "Box 5 — Cruciverba";
+      case 'finale_squadre':
+        return "Box 5 — Finale Squadre";
       case 'gioco_frase_tempo':
         return "Box 4 — Frase Tempo";
       case 'password_squadre':
@@ -512,8 +512,8 @@ export default function PresenterView() {
         : "Classifica di 10 elementi ordinati per valore";
     }
     switch (slide.type) {
-      case 'cruciverba':
-        return "Incastro parole e definizioni da foglio Excel";
+      case 'finale_squadre':
+        return "Finale a squadre con dado, eliminazioni e domande";
       case 'gioco_frase_tempo':
         return "Indovina la frase nascosta entro 30 secondi";
       case 'password_squadre':
@@ -539,8 +539,8 @@ export default function PresenterView() {
       return `B2 Q${num} (${slide.type === 'classifica_musicale' ? 'Class. Mus' : 'Class.'})${detail ? ` - ${detail}` : ''}`;
     }
     switch (slide.type) {
-      case 'cruciverba':
-        return "B5 - Cruciverba";
+      case 'finale_squadre':
+        return "B5 - Finale Squadre";
       case 'gioco_frase_tempo':
         return "B4 - Frase Tempo";
       case 'password_squadre':

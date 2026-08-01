@@ -177,7 +177,7 @@ export function getSlideForBoxQuestion(
   }
 
   if (boxNum === 5) {
-    return { id: 'cruciverba', type: 'cruciverba', data: cloneDefaultData('cruciverba') };
+    return { id: 'finale_squadre', type: 'finale_squadre', data: { title: 'Finale Squadre', subtitle: 'Box 5' } };
   }
 
   return { id: `box${boxNum}_q${questionNum}`, type: 'empty' };

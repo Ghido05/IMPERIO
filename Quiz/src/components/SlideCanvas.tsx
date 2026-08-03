@@ -1,10 +1,10 @@
+import { useState, useEffect, type CSSProperties } from 'react';
 import { GameDataProvider } from '../context/GameDataContext';
 import type { Slide } from '../App';
 import { cloneDefaultData } from '../lib/defaultGameData';
 import SlideRenderer from './SlideRenderer';
 import StageViewport from './StageViewport';
 import { STAGE_H, STAGE_W, type StageMode } from '../hooks/useStageBox';
-import type { CSSProperties } from 'react';
 
 interface SlideCanvasProps {
   slide: Slide;
@@ -24,6 +24,16 @@ export default function SlideCanvas({
   thumbWidth = 128,
   viewportMode = 'fit',
 }: SlideCanvasProps) {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const handleLoaded = () => {
+      setTick(t => t + 1);
+    };
+    window.addEventListener('idb-file-loaded', handleLoaded);
+    return () => window.removeEventListener('idb-file-loaded', handleLoaded);
+  }, []);
+
   if (slide.type === 'empty') {
     if (mode === 'thumbnail') {
       const h = (thumbWidth * 9) / 16;
@@ -46,7 +56,7 @@ export default function SlideCanvas({
   }
 
   const data = {
-    ...(slide.data ?? cloneDefaultData(slide.type)),
+    ...((slide.data as any) ?? cloneDefaultData(slide.type)),
     slideId: slide.id,
   };
 

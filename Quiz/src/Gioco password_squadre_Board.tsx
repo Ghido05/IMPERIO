@@ -154,76 +154,61 @@ const BussolottiOverlay: React.FC<{
   );
 };
 
-const PasswordBoard: React.FC = () => {
+const PasswordBoard: React.FC<{ interactive?: boolean }> = () => {
   const gameDataRaw = useGameData();
   if (!gameDataRaw) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
-  const [grid, setGrid] = useState<WordItem[]>([]);
-  const [currentTeam, setCurrentTeam] = useState<number>(1);
-  const [currentManche, setCurrentManche] = useState<number>(0);
-  const [chosenSuggestion, setChosenSuggestion] = useState<string>("");
-  const [gameOver] = useState<string | null>(null);
-  const [excludedTeams, setExcludedTeams] = useState<number[]>([]);
-  const [winnersOrder, setWinnersOrder] = useState<number[]>([]);
-  
-  // Stato Bussolotti
-  const [bussolottiStatus, setBussolottiStatus] = useState<Record<RankType, BussolottiStatus>>({
-    1: 'pending', 2: 'pending', 3: 'pending'
+  const [currentManche, setCurrentManche] = useState<number>(() => {
+    const stored = localStorage.getItem('password_current_manche');
+    return stored ? parseInt(stored) : 0;
   });
-  const [activeBussolottiRank, setActiveBussolottiRank] = useState<RankType | null>(null);
+  const [currentTeam, setCurrentTeam] = useState<number>(() => {
+    const stored = localStorage.getItem('password_current_team');
+    return stored ? parseInt(stored) : 1;
+  });
+  const [chosenSuggestion, setChosenSuggestion] = useState<string>(() => {
+    const stored = localStorage.getItem('password_chosen_suggestion');
+    return stored || "";
+  });
+  const [excludedTeams, setExcludedTeams] = useState<number[]>(() => {
+    const stored = localStorage.getItem('password_excluded_teams');
+    try {
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [winnersOrder, setWinnersOrder] = useState<number[]>(() => {
+    const stored = localStorage.getItem('password_winners_order');
+    try {
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [bussolottiStatus, setBussolottiStatus] = useState<Record<RankType, BussolottiStatus>>(() => {
+    const stored = localStorage.getItem('password_bussolotti_status');
+    try {
+      return stored ? JSON.parse(stored) : { 1: 'pending', 2: 'pending', 3: 'pending' };
+    } catch {
+      return { 1: 'pending', 2: 'pending', 3: 'pending' };
+    }
+  });
+  const [activeBussolottiRank, setActiveBussolottiRank] = useState<RankType | null>(() => {
+    const stored = localStorage.getItem('password_active_bussolotti');
+    try {
+      return stored && stored !== "null" ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [grid, setGrid] = useState<WordItem[]>([]);
+  const [gameOver] = useState<string | null>(null);
 
   const manches = gameDataRaw.manches;
   const gameData = manches[currentManche] || manches[0];
 
   useEffect(() => {
-    // Carica stato iniziale completo
-    const storedManche = localStorage.getItem('password_current_manche');
-    if (storedManche) setCurrentManche(parseInt(storedManche));
-
-    const storedTeam = localStorage.getItem('password_current_team');
-    if (storedTeam) setCurrentTeam(parseInt(storedTeam));
-    
-    const storedSugg = localStorage.getItem('password_chosen_suggestion');
-    if (storedSugg) setChosenSuggestion(storedSugg);
-
-    const storedExcluded = localStorage.getItem('password_excluded_teams');
-    if (storedExcluded) setExcludedTeams(JSON.parse(storedExcluded));
-
-    const storedWinners = localStorage.getItem('password_winners_order');
-    if (storedWinners) setWinnersOrder(JSON.parse(storedWinners));
-
-    const currentM = storedManche ? parseInt(storedManche) : 0;
-    const storedBussolottiManche = localStorage.getItem('password_bussolotti_manche');
-    
-    if (storedBussolottiManche !== currentM.toString()) {
-      const initialBussolotti = { 1: 'pending' as BussolottiStatus, 2: 'pending' as BussolottiStatus, 3: 'pending' as BussolottiStatus };
-      setBussolottiStatus(initialBussolotti);
-      setActiveBussolottiRank(null);
-      localStorage.setItem('password_bussolotti_status', JSON.stringify(initialBussolotti));
-      localStorage.setItem('password_active_bussolotti', JSON.stringify(null));
-      localStorage.setItem('password_bussolotti_manche', currentM.toString());
-    } else {
-      const storedBussolotti = localStorage.getItem('password_bussolotti_status');
-      if (storedBussolotti) setBussolottiStatus(JSON.parse(storedBussolotti));
-      const storedActiveBussolotti = localStorage.getItem('password_active_bussolotti');
-      if (storedActiveBussolotti && storedActiveBussolotti !== "null") setActiveBussolottiRank(JSON.parse(storedActiveBussolotti));
-    }
-
-    const allWords: WordItem[] = [
-      ...gameData.squadra1.map((w: string) => ({ word: w.toUpperCase(), type: 'team1' as WordType, guessed: false })),
-      ...gameData.squadra2.map((w: string) => ({ word: w.toUpperCase(), type: 'team2' as WordType, guessed: false })),
-      ...gameData.squadra3.map((w: string) => ({ word: w.toUpperCase(), type: 'team3' as WordType, guessed: false })),
-      ...gameData.altre.map((w: string, i: number) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType, guessed: false }))
-    ];
-    const storedGrid = localStorage.getItem('password_grid_state');
-    if (storedGrid) {
-      setGrid(JSON.parse(storedGrid));
-    } else {
-      const shuffled = [...allWords].sort(() => Math.random() - 0.5);
-      setGrid(shuffled);
-      localStorage.setItem('password_grid_state', JSON.stringify(shuffled));
-    }
-    
     const handleStorage = () => {
       const manche = localStorage.getItem('password_current_manche');
       const team = localStorage.getItem('password_current_team');
@@ -232,8 +217,11 @@ const PasswordBoard: React.FC = () => {
       const excluded = localStorage.getItem('password_excluded_teams');
       const winners = localStorage.getItem('password_winners_order');
 
+      const isMancheFalsy = !manche || manche === "null" || manche === "undefined";
+      const isGridFalsy = !gridState || gridState === "null" || gridState === "undefined";
+
       // Se non c'è stato salvato, resetta tutto
-      if (!manche && !gridState) {
+      if (isMancheFalsy && isGridFalsy) {
         setCurrentManche(0);
         setCurrentTeam(1);
         setChosenSuggestion("");
@@ -241,25 +229,91 @@ const PasswordBoard: React.FC = () => {
         setWinnersOrder([]);
         setBussolottiStatus({ 1: 'pending', 2: 'pending', 3: 'pending' });
         setActiveBussolottiRank(null);
-        window.location.reload();
+        
+        const m0 = manches[0] || gameData;
+        if (m0) {
+          const allWords: WordItem[] = [
+            ...m0.squadra1.map((w: string) => ({ word: w.toUpperCase(), type: 'team1' as WordType, guessed: false })),
+            ...m0.squadra2.map((w: string) => ({ word: w.toUpperCase(), type: 'team2' as WordType, guessed: false })),
+            ...m0.squadra3.map((w: string) => ({ word: w.toUpperCase(), type: 'team3' as WordType, guessed: false })),
+            ...m0.altre.map((w: string, i: number) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType, guessed: false }))
+          ];
+          const shuffled = [...allWords].sort(() => Math.random() - 0.5);
+          setGrid(shuffled);
+        }
         return;
       }
 
-      if (manche) setCurrentManche(parseInt(manche));
-      if (team) setCurrentTeam(parseInt(team));
-      if (sugg) setChosenSuggestion(sugg);
-      if (gridState) setGrid(JSON.parse(gridState));
-      if (excluded) setExcludedTeams(JSON.parse(excluded));
-      if (winners) setWinnersOrder(JSON.parse(winners));
+      if (manche && manche !== "null") setCurrentManche(parseInt(manche));
+      if (team && team !== "null") setCurrentTeam(parseInt(team));
+      if (sugg && sugg !== "null") setChosenSuggestion(sugg);
+      if (gridState && gridState !== "null") {
+        try {
+          setGrid(JSON.parse(gridState));
+        } catch {}
+      }
+      if (excluded && excluded !== "null") {
+        try {
+          setExcludedTeams(JSON.parse(excluded));
+        } catch {}
+      }
+      if (winners && winners !== "null") {
+        try {
+          setWinnersOrder(JSON.parse(winners));
+        } catch {}
+      }
       
       const bStatus = localStorage.getItem('password_bussolotti_status');
-      if (bStatus) setBussolottiStatus(JSON.parse(bStatus));
+      if (bStatus && bStatus !== "null") {
+        try {
+          setBussolottiStatus(JSON.parse(bStatus));
+        } catch {}
+      }
       const bActive = localStorage.getItem('password_active_bussolotti');
-      if (bActive !== null && bActive !== "null") setActiveBussolottiRank(JSON.parse(bActive));
+      if (bActive !== null && bActive !== "null") {
+        try {
+          setActiveBussolottiRank(JSON.parse(bActive));
+        } catch {}
+      }
     };
 
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
+  }, []);
+
+  useEffect(() => {
+    // Gestione Bussolotti per Manche
+    const storedBussolottiManche = localStorage.getItem('password_bussolotti_manche');
+    if (storedBussolottiManche !== currentManche.toString()) {
+      const initialBussolotti = { 1: 'pending' as BussolottiStatus, 2: 'pending' as BussolottiStatus, 3: 'pending' as BussolottiStatus };
+      setBussolottiStatus(initialBussolotti);
+      setActiveBussolottiRank(null);
+      localStorage.setItem('password_bussolotti_status', JSON.stringify(initialBussolotti));
+      localStorage.setItem('password_active_bussolotti', JSON.stringify(null));
+      localStorage.setItem('password_bussolotti_manche', currentManche.toString());
+    }
+
+    // Inizializzazione Griglia Parole
+    const allWords: WordItem[] = [
+      ...gameData.squadra1.map((w: string) => ({ word: w.toUpperCase(), type: 'team1' as WordType, guessed: false })),
+      ...gameData.squadra2.map((w: string) => ({ word: w.toUpperCase(), type: 'team2' as WordType, guessed: false })),
+      ...gameData.squadra3.map((w: string) => ({ word: w.toUpperCase(), type: 'team3' as WordType, guessed: false })),
+      ...gameData.altre.map((w: string, i: number) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType, guessed: false }))
+    ];
+    const storedGrid = localStorage.getItem('password_grid_state');
+    if (storedGrid) {
+      try {
+        setGrid(JSON.parse(storedGrid));
+      } catch {
+        const shuffled = [...allWords].sort(() => Math.random() - 0.5);
+        setGrid(shuffled);
+        localStorage.setItem('password_grid_state', JSON.stringify(shuffled));
+      }
+    } else {
+      const shuffled = [...allWords].sort(() => Math.random() - 0.5);
+      setGrid(shuffled);
+      localStorage.setItem('password_grid_state', JSON.stringify(shuffled));
+    }
   }, [currentManche, gameData]);
 
   const handleWordClick = (index: number) => {

@@ -5,9 +5,9 @@ import { useScores } from './context/ScoreContext';
 type TeamId = 1 | 2 | 3;
 type DiceFace = 'right' | 'left' | 'both' | 'self';
 
-const STORAGE_KEY = 'imperio_game5_finale_state';
+const STORAGE_KEY = 'playstate_game5_finale_state';
 const QUESTION_NUMBERS = Array.from({ length: 15 }, (_, i) => i + 1);
-const DICE_FACES: DiceFace[] = ['right', 'left', 'both', 'self', 'right', 'left'];
+const DICE_FACES: DiceFace[] = ['right', 'left', 'both', 'self'];
 
 const TEAM_META: Record<TeamId, { name: string; color: string; accent: string }> = {
   1: { name: 'Squadra 1', color: '#ff6b6b', accent: 'rgba(255,107,107,0.35)' },
@@ -145,26 +145,49 @@ function TeamPanel({
 
 function Dice3D({
   rolling,
-  face,
+  targetFace,
   onRoll,
 }: {
   rolling: boolean;
-  face: DiceFace | null;
+  targetFace: DiceFace | null;
   onRoll: () => void;
 }) {
-  const preview = rolling ? DICE_FACES[Math.floor(Date.now() / 120) % DICE_FACES.length] : face;
-  const label = preview ? preview.replace(/^\w/, (c) => c.toUpperCase()) : 'Tira il dado';
-  const cubeRotation = rolling
-    ? '[transform:rotateX(-24deg)_rotateY(380deg)_rotateZ(12deg)]'
-    : preview === 'left'
-      ? '[transform:rotateX(-18deg)_rotateY(-88deg)_rotateZ(10deg)]'
-      : preview === 'right'
-        ? '[transform:rotateX(-18deg)_rotateY(92deg)_rotateZ(-8deg)]'
-        : preview === 'both'
-          ? '[transform:rotateX(-18deg)_rotateY(18deg)_rotateZ(0deg)]'
-          : preview === 'self'
-            ? '[transform:rotateX(-18deg)_rotateY(182deg)_rotateZ(0deg)]'
-            : '[transform:rotateX(-18deg)_rotateY(22deg)_rotateZ(-6deg)]';
+  const [rollCount, setRollCount] = useState(0);
+  const [rotation, setRotation] = useState({ x: -18, y: 22, z: -6 });
+
+  const faceRotations = useMemo(() => ({
+    right: { x: -18, y: 18, z: 0 },
+    left: { x: -18, y: 182, z: 0 },
+    both: { x: -18, y: 272, z: 10 },
+    self: { x: -18, y: 92, z: -8 }
+  }), []);
+
+  useEffect(() => {
+    if (rolling && targetFace) {
+      const nextCount = rollCount + 1;
+      setRollCount(nextCount);
+      const rot = faceRotations[targetFace];
+      if (rot) {
+        // La rotazione cumulativa finale viene calcolata ed impostata SUBITO all'inizio del lancio.
+        // In questo modo compie un unico movimento fluido di 1200ms fino a fermarsi.
+        setRotation({
+          x: rot.x + 360 * 2 * nextCount,
+          y: rot.y + 360 * 3 * nextCount,
+          z: rot.z + 360 * 1 * nextCount
+        });
+      }
+    } else if (!rolling && targetFace) {
+      // Se non sta girando ma c'è una faccia target impostata, posiziona il dado
+      const rot = faceRotations[targetFace];
+      if (rot) {
+        setRotation({
+          x: rot.x + 360 * 2 * rollCount,
+          y: rot.y + 360 * 3 * rollCount,
+          z: rot.z + 360 * 1 * rollCount
+        });
+      }
+    }
+  }, [rolling, targetFace, faceRotations]);
 
   const faceTexts: Record<DiceFace, string> = {
     right: 'DESTRA',
@@ -176,6 +199,7 @@ function Dice3D({
   return (
     <div className="relative w-full max-w-[420px] h-[260px] perspective-[1400px]">
       <button
+        type="button"
         onClick={onRoll}
         className="relative w-full h-full rounded-[2rem] border border-white/15 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.14),_rgba(255,255,255,0.04)_32%,_rgba(0,0,0,0.32)_100%)] shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-xl overflow-hidden"
       >
@@ -187,18 +211,23 @@ function Dice3D({
         <div className="absolute inset-[18px] rounded-[1.4rem] border border-white/10 bg-black/10">
           <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_0%,rgba(255,255,255,0.10)_45%,transparent_55%)] opacity-70" />
           <div className="absolute left-1/2 top-1/2 w-[160px] h-[160px] -translate-x-1/2 -translate-y-[56%] [perspective:1400px]">
-            <div className={`relative w-full h-full transition-transform duration-1000 [transform-style:preserve-3d] ${cubeRotation}`}>
+            <div 
+              className="relative w-full h-full transition-transform duration-[1200ms] ease-out [transform-style:preserve-3d]"
+              style={{
+                transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) rotateZ(${rotation.z}deg)`
+              }}
+            >
               <div className="absolute inset-0 rounded-[26px] border border-white/35 bg-[linear-gradient(135deg,#ffffff,#e7eef9_45%,#9fb4d6)] shadow-[inset_0_0_30px_rgba(255,255,255,0.55),0_18px_40px_rgba(0,0,0,0.35)] [transform:translateZ(80px)]">
                 <span className="absolute inset-0 flex items-center justify-center text-4xl font-black text-slate-900">{faceTexts.right}</span>
               </div>
               <div className="absolute inset-0 rounded-[26px] border border-white/28 bg-[linear-gradient(135deg,#e7eef9,#c7d5eb_48%,#8093b4)] shadow-[inset_0_0_30px_rgba(255,255,255,0.35),0_18px_40px_rgba(0,0,0,0.25)] [transform:rotateY(180deg)_translateZ(80px)]">
-                <span className="absolute inset-0 flex items-center justify-center text-4xl font-black text-slate-900 rotate-180">{faceTexts.left}</span>
+                <span className="absolute inset-0 flex items-center justify-center text-4xl font-black text-slate-900">{faceTexts.left}</span>
               </div>
               <div className="absolute inset-0 rounded-[26px] border border-white/24 bg-[linear-gradient(135deg,#ffffff,#d7e6fb_44%,#94add5)] shadow-[inset_0_0_30px_rgba(255,255,255,0.35),0_18px_40px_rgba(0,0,0,0.25)] [transform:rotateY(90deg)_translateZ(80px)]">
-                <span className="absolute inset-0 flex items-center justify-center text-3xl font-black text-slate-900 -rotate-90">{faceTexts.both}</span>
+                <span className="absolute inset-0 flex items-center justify-center text-3xl font-black text-slate-900">{faceTexts.both}</span>
               </div>
               <div className="absolute inset-0 rounded-[26px] border border-white/24 bg-[linear-gradient(135deg,#dbe9ff,#b2c7e9_50%,#7f96ba)] shadow-[inset_0_0_30px_rgba(255,255,255,0.28),0_18px_40px_rgba(0,0,0,0.25)] [transform:rotateY(-90deg)_translateZ(80px)]">
-                <span className="absolute inset-0 flex items-center justify-center text-3xl font-black text-slate-900 rotate-90">{faceTexts.self}</span>
+                <span className="absolute inset-0 flex items-center justify-center text-3xl font-black text-slate-900">{faceTexts.self}</span>
               </div>
               <div className="absolute inset-0 rounded-[26px] border border-white/22 bg-[linear-gradient(135deg,#ffffff,#dfe9f8_48%,#a6b8d8)] shadow-[inset_0_0_26px_rgba(255,255,255,0.25),0_18px_40px_rgba(0,0,0,0.24)] [transform:rotateX(90deg)_translateZ(80px)]" />
               <div className="absolute inset-0 rounded-[26px] border border-black/15 bg-[linear-gradient(135deg,#6d7f9e,#3a4960)] shadow-[inset_0_0_24px_rgba(255,255,255,0.12),0_18px_40px_rgba(0,0,0,0.28)] [transform:rotateX(-90deg)_translateZ(80px)]" />
@@ -217,8 +246,9 @@ function Dice3D({
 export default function FinaleSquadre_Board() {
   const gameData = useGameData() as { title?: string; subtitle?: string } | null;
   const { scores, bonuses, setScore, toggleBonus } = useScores();
-  const [activeTeam, setActiveTeam] = useState<TeamId>(3);
+  const [activeTeam, setActiveTeam] = useState<TeamId>(1);
   const [selectedDieFace, setSelectedDieFace] = useState<DiceFace | null>(null);
+  const [dieTargetFace, setDieTargetFace] = useState<DiceFace | null>(null);
   const [targetTeam, setTargetTeam] = useState<TeamId | null>(null);
   const [eliminatedQuestions, setEliminatedQuestions] = useState<number[]>([]);
   const [rolling, setRolling] = useState(false);
@@ -233,6 +263,7 @@ export default function FinaleSquadre_Board() {
       const parsed = JSON.parse(raw);
       if (parsed.activeTeam === 1 || parsed.activeTeam === 2 || parsed.activeTeam === 3) setActiveTeam(parsed.activeTeam);
       if (parsed.selectedDieFace === 'right' || parsed.selectedDieFace === 'left' || parsed.selectedDieFace === 'both' || parsed.selectedDieFace === 'self') setSelectedDieFace(parsed.selectedDieFace);
+      if (parsed.dieTargetFace === 'right' || parsed.dieTargetFace === 'left' || parsed.dieTargetFace === 'both' || parsed.dieTargetFace === 'self') setDieTargetFace(parsed.dieTargetFace);
       if (parsed.targetTeam === 1 || parsed.targetTeam === 2 || parsed.targetTeam === 3 || parsed.targetTeam === null) setTargetTeam(parsed.targetTeam);
       if (Array.isArray(parsed.eliminatedQuestions)) setEliminatedQuestions(parsed.eliminatedQuestions);
       if (parsed.eliminatedMembers) setEliminatedMembers(parsed.eliminatedMembers);
@@ -240,17 +271,20 @@ export default function FinaleSquadre_Board() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ activeTeam, selectedDieFace, targetTeam, eliminatedQuestions, eliminatedMembers }));
-  }, [activeTeam, selectedDieFace, targetTeam, eliminatedQuestions, eliminatedMembers]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ activeTeam, selectedDieFace, dieTargetFace, targetTeam, eliminatedQuestions, eliminatedMembers }));
+  }, [activeTeam, selectedDieFace, dieTargetFace, targetTeam, eliminatedQuestions, eliminatedMembers]);
 
   const rollDice = () => {
+    if (rolling) return;
     setRolling(true);
+    setSelectedDieFace(null);
+    const next = DICE_FACES[Math.floor(Math.random() * DICE_FACES.length)];
+    setDieTargetFace(next);
+    setTargetTeam(null);
     setTimeout(() => {
-      const next = DICE_FACES[Math.floor(Math.random() * DICE_FACES.length)];
       setSelectedDieFace(next);
-      setTargetTeam(null);
       setRolling(false);
-    }, 900);
+    }, 1200);
   };
 
   const commitTarget = (teamId: TeamId) => {
@@ -325,7 +359,7 @@ export default function FinaleSquadre_Board() {
           </div>
 
           <div className="flex flex-wrap gap-3 justify-end">
-            {[3, 2, 1].map((t) => (
+            {[1, 2, 3].map((t) => (
               <button
                 key={t}
                 onClick={() => setActiveTeam(t as TeamId)}
@@ -356,7 +390,7 @@ export default function FinaleSquadre_Board() {
           </div>
 
           <div className="flex flex-col gap-4 min-h-0">
-            <Dice3D rolling={rolling} face={selectedDieFace} onRoll={rollDice} />
+            <Dice3D rolling={rolling} targetFace={dieTargetFace} onRoll={rollDice} />
 
             <div className="rounded-[2rem] border border-white/10 bg-black/18 p-4 backdrop-blur-xl">
               <div className="text-xs uppercase tracking-[0.35em] text-white/45 mb-3">Selezione bersaglio</div>

@@ -196,6 +196,7 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
   const [activeRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
   const [activePointsAssigned, setActivePointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
   const [activeLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
+  const [maximizedPanel, setMaximizedPanel] = useState<'none' | 'left' | 'right'>('none');
 
   // Load configuration from IndexedDB & LocalStorage on mount
   useEffect(() => {
@@ -364,22 +365,34 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
         </div>
 
         {/* Main 16:9 Viewport Area */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 min-h-0 bg-[#0d0d0f]">
-          <PresenterPreviewPanel title={`BOX ${activeBox} — Domanda #${activeQuestion}`}>
-            <SlideCanvas
-              slide={
-                activeSlide.type === 'password_squadre'
-                  ? { ...activeSlide, type: 'password_prescelti' }
-                  : activeSlide
-              }
-              interactive
-              viewportMode="none"
-            />
-          </PresenterPreviewPanel>
+        <div className={`flex-1 gap-4 p-4 min-h-0 bg-[#0d0d0f] ${maximizedPanel === 'none' ? 'grid grid-cols-1 lg:grid-cols-2' : 'flex'}`}>
+          {(maximizedPanel === 'none' || maximizedPanel === 'left') && (
+            <PresenterPreviewPanel
+              title={`BOX ${activeBox} — Domanda #${activeQuestion}`}
+              onToggleMaximize={() => setMaximizedPanel(maximizedPanel === 'left' ? 'none' : 'left')}
+              isMaximized={maximizedPanel === 'left'}
+            >
+              <SlideCanvas
+                slide={
+                  activeSlide.type === 'password_squadre'
+                    ? { ...activeSlide, type: 'password_prescelti' }
+                    : activeSlide
+                }
+                interactive
+                viewportMode="none"
+              />
+            </PresenterPreviewPanel>
+          )}
 
-          <PresenterPreviewPanel title="Punteggi & Classifica Squadre">
-            <ClassificaGenerale_Board />
-          </PresenterPreviewPanel>
+          {(maximizedPanel === 'none' || maximizedPanel === 'right') && (
+            <PresenterPreviewPanel
+              title="Punteggi & Classifica Squadre"
+              onToggleMaximize={() => setMaximizedPanel(maximizedPanel === 'right' ? 'none' : 'right')}
+              isMaximized={maximizedPanel === 'right'}
+            >
+              <ClassificaGenerale_Board />
+            </PresenterPreviewPanel>
+          )}
         </div>
       </div>
     </ScoreProvider>

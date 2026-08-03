@@ -17,33 +17,40 @@ const teamColors = {
   neutral: 'bg-gray-600 border-gray-400'
 };
 
-const PasswordPresceltiBoard: React.FC = () => {
+const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = () => {
   const gameDataRaw = useGameData();
   if (!gameDataRaw) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
+  const [currentManche, setCurrentManche] = useState<number>(() => {
+    const stored = localStorage.getItem('password_current_manche');
+    return stored ? parseInt(stored) : 0;
+  });
+  const [currentTeam, setCurrentTeam] = useState<number>(() => {
+    const stored = localStorage.getItem('password_current_team');
+    return stored ? parseInt(stored) : 1;
+  });
+  const [currentRound, setCurrentRound] = useState<number>(() => {
+    const stored = localStorage.getItem('password_current_round');
+    return stored ? parseInt(stored) : 1;
+  });
+  const [excludedTeams, setExcludedTeams] = useState<number[]>(() => {
+    const stored = localStorage.getItem('password_excluded_teams');
+    try {
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [chosenSuggestion, setChosenSuggestion] = useState<string>(() => {
+    const stored = localStorage.getItem('password_chosen_suggestion');
+    return stored || "";
+  });
   const [grid, setGrid] = useState<WordItem[]>([]);
-  const [currentTeam, setCurrentTeam] = useState<number>(1);
-  const [currentRound, setCurrentRound] = useState<number>(1);
-  const [currentManche, setCurrentManche] = useState<number>(0);
-  const [chosenSuggestion, setChosenSuggestion] = useState<string>("");
-  const [excludedTeams, setExcludedTeams] = useState<number[]>([]);
 
   const manches = gameDataRaw.manches;
   const gameData = manches[currentManche] || manches[0];
 
   useEffect(() => {
-    const storedManche = localStorage.getItem('password_current_manche');
-    if (storedManche) setCurrentManche(parseInt(storedManche));
-
-    const storedTeam = localStorage.getItem('password_current_team');
-    if (storedTeam) setCurrentTeam(parseInt(storedTeam));
-
-    const storedRound = localStorage.getItem('password_current_round');
-    if (storedRound) setCurrentRound(parseInt(storedRound));
-
-    const storedExcluded = localStorage.getItem('password_excluded_teams');
-    if (storedExcluded) setExcludedTeams(JSON.parse(storedExcluded));
-
     const handleStorage = () => {
       const manche = localStorage.getItem('password_current_manche');
       if (manche) setCurrentManche(parseInt(manche));
@@ -55,10 +62,18 @@ const PasswordPresceltiBoard: React.FC = () => {
       if (round) setCurrentRound(parseInt(round));
 
       const excluded = localStorage.getItem('password_excluded_teams');
-      if (excluded) setExcludedTeams(JSON.parse(excluded));
+      if (excluded) {
+        try {
+          setExcludedTeams(JSON.parse(excluded));
+        } catch {}
+      }
 
       const storedGrid = localStorage.getItem('password_grid_state');
-      if (storedGrid) setGrid(JSON.parse(storedGrid));
+      if (storedGrid) {
+        try {
+          setGrid(JSON.parse(storedGrid));
+        } catch {}
+      }
 
       const sugg = localStorage.getItem('password_chosen_suggestion');
       if (sugg) setChosenSuggestion(sugg);
@@ -73,22 +88,30 @@ const PasswordPresceltiBoard: React.FC = () => {
     const initializeGrid = () => {
       const storedGrid = localStorage.getItem('password_grid_state');
       if (storedGrid) {
-        setGrid(JSON.parse(storedGrid));
+        try {
+          setGrid(JSON.parse(storedGrid));
+        } catch {
+          generateNewGrid();
+        }
       } else {
-        const allWords: WordItem[] = [
-          ...gameData.squadra1.map((w: string) => ({ word: w.toUpperCase(), type: 'team1' as WordType })),
-          ...gameData.squadra2.map((w: string) => ({ word: w.toUpperCase(), type: 'team2' as WordType })),
-          ...gameData.squadra3.map((w: string) => ({ word: w.toUpperCase(), type: 'team3' as WordType })),
-          ...gameData.altre.map((w: string, i: number) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType }))
-        ];
-        const sorted = [...allWords].sort((a, b) => a.word.localeCompare(b.word));
-        setGrid(sorted);
-        localStorage.setItem('password_grid_state', JSON.stringify(sorted));
+        generateNewGrid();
       }
     };
 
+    const generateNewGrid = () => {
+      const allWords: WordItem[] = [
+        ...gameData.squadra1.map((w: string) => ({ word: w.toUpperCase(), type: 'team1' as WordType })),
+        ...gameData.squadra2.map((w: string) => ({ word: w.toUpperCase(), type: 'team2' as WordType })),
+        ...gameData.squadra3.map((w: string) => ({ word: w.toUpperCase(), type: 'team3' as WordType })),
+        ...gameData.altre.map((w: string, i: number) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType }))
+      ];
+      const sorted = [...allWords].sort((a, b) => a.word.localeCompare(b.word));
+      setGrid(sorted);
+      localStorage.setItem('password_grid_state', JSON.stringify(sorted));
+    };
+
     initializeGrid();
-  }, [currentManche]);
+  }, [currentManche, gameData]);
 
   const selectSuggestion = (sugg: string) => {
     setChosenSuggestion(sugg);
@@ -131,13 +154,15 @@ const PasswordPresceltiBoard: React.FC = () => {
             setCurrentRound(1);
             setCurrentTeam(nextSeq[0]);
             setExcludedTeams([]);
+            setChosenSuggestion("");
+            setGrid([]);
             localStorage.setItem('password_current_manche', nextM.toString());
             localStorage.setItem('password_current_round', "1");
             localStorage.setItem('password_current_team', nextSeq[0].toString());
             localStorage.setItem('password_excluded_teams', JSON.stringify([]));
             localStorage.removeItem('password_grid_state');
             localStorage.removeItem('password_chosen_suggestion');
-            window.location.reload();
+            window.dispatchEvent(new Event('storage'));
             return;
           }
         } else {
@@ -191,9 +216,6 @@ const PasswordPresceltiBoard: React.FC = () => {
         if (currentManche > 0) {
           if (confirm("Tornare alla manche precedente?")) {
             const prevM = currentManche - 1;
-            setCurrentManche(prevM);
-            setCurrentRound(3);
-            
             const prevSeq = getTurnSequence(prevM);
             let lastTeam = prevSeq[2];
             for (let i = prevSeq.length - 1; i >= 0; i--) {
@@ -203,11 +225,18 @@ const PasswordPresceltiBoard: React.FC = () => {
               }
             }
             
+            setCurrentManche(prevM);
+            setCurrentRound(3);
             setCurrentTeam(lastTeam);
+            setChosenSuggestion("");
+            setGrid([]);
+            
             localStorage.setItem('password_current_manche', prevM.toString());
             localStorage.setItem('password_current_round', "3");
             localStorage.setItem('password_current_team', lastTeam.toString());
-            window.location.reload();
+            localStorage.removeItem('password_grid_state');
+            localStorage.removeItem('password_chosen_suggestion');
+            window.dispatchEvent(new Event('storage'));
             return;
           }
         } else {
@@ -240,8 +269,42 @@ const PasswordPresceltiBoard: React.FC = () => {
 
   const resetGame = () => {
     if (!confirm("Sei sicuro di voler resettare l'intero gioco (tutte le manche)?")) return;
-    localStorage.clear();
-    window.location.reload();
+    
+    const keysToRemove = [
+      'password_current_manche',
+      'password_current_round',
+      'password_current_team',
+      'password_excluded_teams',
+      'password_grid_state',
+      'password_chosen_suggestion',
+      'password_winners_order',
+      'password_bussolotti_status',
+      'password_active_bussolotti',
+      'password_bussolotti_manche'
+    ];
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+    
+    setCurrentManche(0);
+    setCurrentRound(1);
+    const firstSeq = getTurnSequence(0);
+    setCurrentTeam(firstSeq[0]);
+    setExcludedTeams([]);
+    setChosenSuggestion("");
+    
+    const m0 = manches[0] || gameData;
+    if (m0) {
+      const allWords: WordItem[] = [
+        ...m0.squadra1.map((w: string) => ({ word: w.toUpperCase(), type: 'team1' as WordType })),
+        ...m0.squadra2.map((w: string) => ({ word: w.toUpperCase(), type: 'team2' as WordType })),
+        ...m0.squadra3.map((w: string) => ({ word: w.toUpperCase(), type: 'team3' as WordType })),
+        ...m0.altre.map((w: string, i: number) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType }))
+      ];
+      const sorted = [...allWords].sort((a, b) => a.word.localeCompare(b.word));
+      setGrid(sorted);
+      localStorage.setItem('password_grid_state', JSON.stringify(sorted));
+    }
+    
+    window.dispatchEvent(new Event('storage'));
   };
 
   const currentPair = gameData.suggerimenti_turni[currentRound - 1]?.[currentTeam - 1] || [];

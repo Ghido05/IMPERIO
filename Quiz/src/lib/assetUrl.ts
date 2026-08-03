@@ -1,4 +1,4 @@
-import { dataURItoBlob } from './idbStore';
+import { dataURItoBlob, getLargeFile } from './idbStore';
 
 export const idbBlobUrlCache = new Map<string, string>();
 export const idbNameCache = new Map<string, string>();
@@ -48,7 +48,32 @@ export function assetUrl(path: string | undefined | null): string {
   if (!path) return '';
   let trimmed = path.trim();
   if (trimmed.startsWith('idb://')) {
-    return idbBlobUrlCache.get(trimmed) || '';
+    const cached = idbBlobUrlCache.get(trimmed);
+    if (cached) return cached;
+
+    // Caricamento lazy e asincrono da IndexedDB
+    const key = trimmed.replace('idb://', '');
+    if (!(window as any)[`loading_${trimmed}`]) {
+      (window as any)[`loading_${trimmed}`] = true;
+      getLargeFile(key).then((val) => {
+        if (val && val.startsWith('data:')) {
+          const blob = dataURItoBlob(val);
+          const blobUrl = URL.createObjectURL(blob);
+          idbBlobUrlCache.set(trimmed, blobUrl);
+          
+          const first100 = val.substring(0, 100);
+          const name = localStorage.getItem('filename_' + first100) || 'File locale';
+          idbNameCache.set(trimmed, name);
+          
+          window.dispatchEvent(new CustomEvent('idb-file-loaded', { detail: { path: trimmed } }));
+        }
+      }).catch(err => {
+        console.error("Errore nel caricamento lazy da IndexedDB per la chiave:", key, err);
+      }).finally(() => {
+        delete (window as any)[`loading_${trimmed}`];
+      });
+    }
+    return '';
   }
   if (trimmed.startsWith('data:')) {
     trimmed = trimmed.replace(/\s+/g, '');

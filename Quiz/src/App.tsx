@@ -34,6 +34,7 @@ function App() {
 
     const electron = (window as any).electron;
     const originalSetItem = Storage.prototype.setItem;
+    const originalRemoveItem = Storage.prototype.removeItem;
 
     // Override setItem to broadcast modifications for password and general game playstates
     Storage.prototype.setItem = function (key: string, value: string) {
@@ -45,12 +46,26 @@ function App() {
       }
     };
 
+    // Override removeItem to broadcast deletions for password and general game playstates
+    Storage.prototype.removeItem = function (key: string) {
+      originalRemoveItem.call(this, key);
+      if (key.startsWith('password_') || key.startsWith('playstate_')) {
+        electron.broadcastState({
+          localStorageUpdate: { key, value: null }
+        });
+      }
+    };
+
     // Receive modifications from other windows and trigger local storage listeners
-    const handleStateUpdate = (state: any) => {
+    const handleStateUpdate = async (state: any) => {
       if (state && state.localStorageUpdate) {
         const { key, value } = state.localStorageUpdate;
         if (key.startsWith('password_') || key.startsWith('playstate_')) {
-          originalSetItem.call(localStorage, key, value);
+          if (value === null || value === undefined) {
+            originalRemoveItem.call(localStorage, key);
+          } else {
+            originalSetItem.call(localStorage, key, value);
+          }
           const event = new StorageEvent('storage', {
             key,
             newValue: value,
@@ -59,12 +74,36 @@ function App() {
           window.dispatchEvent(event);
         }
       }
+
+      if (state && state.newIndexedDBFile) {
+        const { id, fileName, base64 } = state.newIndexedDBFile;
+        try {
+          const { getLargeFile, dataURItoBlob } = await import('./lib/idbStore');
+          const { idbBlobUrlCache, idbNameCache } = await import('./lib/assetUrl');
+          
+          let val = base64;
+          if (!val) {
+            val = await getLargeFile(id);
+          }
+          if (val && val.startsWith('data:')) {
+            const blob = dataURItoBlob(val);
+            const blobUrl = URL.createObjectURL(blob);
+            idbBlobUrlCache.set(`idb://${id}`, blobUrl);
+            idbNameCache.set(`idb://${id}`, fileName || 'File locale');
+            
+            window.dispatchEvent(new CustomEvent('idb-file-loaded', { detail: { path: `idb://${id}` } }));
+          }
+        } catch (err) {
+          console.error("Errore nel caricamento asincrono del file IPC:", err);
+        }
+      }
     };
 
     const unsubscribe = electron.onStateUpdate(handleStateUpdate);
 
     return () => {
       Storage.prototype.setItem = originalSetItem;
+      Storage.prototype.removeItem = originalRemoveItem;
       unsubscribe();
     };
   }, []);

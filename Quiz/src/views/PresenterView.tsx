@@ -194,6 +194,7 @@ export default function PresenterView() {
   const [activePointsAssigned, setActivePointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${activeSlideId}_points`, {});
   const [activeLatestClue, setActiveLatestClue] = useSyncedState<number>(`playstate_${activeSlideId}_latest`, 0);
   const lastForwardTimeRef = useRef<number>(0);
+  const [maximizedPanel, setMaximizedPanel] = useState<'none' | 'left' | 'right'>('none');
 
   // Generate slides when viewMode turns to 'editor'
   useEffect(() => {
@@ -581,30 +582,40 @@ export default function PresenterView() {
         <div className="flex flex-1 min-h-0 relative">
           <main className="flex-1 flex flex-col min-w-0 bg-[#404040]">
             {/* Top Area: Previews */}
-            <div className="flex-1 grid grid-cols-2 gap-4 p-4 overflow-hidden min-h-0">
-              <PresenterPreviewPanel
-                title="Anteprima Gioco"
-                footer={getPreviewFooter()}
-              >
-                {activeSlide ? (
-                  <SlideCanvas
-                    slide={
-                      activeSlide.type === 'password_squadre'
-                        ? { ...activeSlide, type: 'password_prescelti' }
-                        : activeSlide
-                    }
-                    interactive={
-                      activeSlide.type === 'password_squadre' ||
-                      activeSlide.type === 'password_prescelti'
-                    }
-                    viewportMode="none"
-                  />
-                ) : null}
-              </PresenterPreviewPanel>
+            <div className={`flex-1 gap-4 p-4 overflow-hidden min-h-0 ${maximizedPanel === 'none' ? 'grid grid-cols-2' : 'flex'}`}>
+              {(maximizedPanel === 'none' || maximizedPanel === 'left') && (
+                <PresenterPreviewPanel
+                  title="Anteprima Gioco"
+                  footer={getPreviewFooter()}
+                  onToggleMaximize={() => setMaximizedPanel(maximizedPanel === 'left' ? 'none' : 'left')}
+                  isMaximized={maximizedPanel === 'left'}
+                >
+                  {activeSlide ? (
+                    <SlideCanvas
+                      slide={
+                        activeSlide.type === 'password_squadre'
+                          ? { ...activeSlide, type: 'password_prescelti' }
+                          : activeSlide
+                      }
+                      interactive={
+                        activeSlide.type === 'password_squadre' ||
+                        activeSlide.type === 'password_prescelti'
+                      }
+                      viewportMode="none"
+                    />
+                  ) : null}
+                </PresenterPreviewPanel>
+              )}
 
-              <PresenterPreviewPanel title="Punteggi">
-                <ClassificaGenerale_Board />
-              </PresenterPreviewPanel>
+              {(maximizedPanel === 'none' || maximizedPanel === 'right') && (
+                <PresenterPreviewPanel
+                  title="Punteggi"
+                  onToggleMaximize={() => setMaximizedPanel(maximizedPanel === 'right' ? 'none' : 'right')}
+                  isMaximized={maximizedPanel === 'right'}
+                >
+                  <ClassificaGenerale_Board />
+                </PresenterPreviewPanel>
+              )}
             </div>
 
             {/* Bottom Area: Premium Game Controls */}

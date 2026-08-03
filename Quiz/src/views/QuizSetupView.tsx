@@ -325,6 +325,13 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           localStorage.setItem('filename_' + first100, file.name);
           idbNameCache.set(`idb://${id}`, file.name);
           
+          const isElectron = (window as any).electron !== undefined;
+          if (isElectron) {
+            (window as any).electron.broadcastState({
+              newIndexedDBFile: { id, fileName: file.name, base64 }
+            });
+          }
+          
           onLoad(`idb://${id}`);
         } catch (err) {
           console.error("Errore nel salvataggio del file su IndexedDB:", err);

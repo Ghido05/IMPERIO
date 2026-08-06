@@ -173,7 +173,11 @@ export function getSlideForBoxQuestion(
   }
 
   if (boxNum === 4) {
-    return { id: 'gioco_frase_tempo', type: 'gioco_frase_tempo', data: cloneDefaultData('gioco_frase_tempo') };
+    const defaultData = cloneDefaultData('gioco_frase_tempo') as any;
+    const frasi = (setupState.gioco4?.frasi && setupState.gioco4.frasi.length > 0)
+      ? setupState.gioco4.frasi
+      : defaultData.frasi;
+    return { id: 'gioco_frase_tempo', type: 'gioco_frase_tempo', data: { ...defaultData, frasi } };
   }
 
   if (boxNum === 5) {

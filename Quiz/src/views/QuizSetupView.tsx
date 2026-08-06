@@ -69,6 +69,12 @@ export interface Gioco3Question {
   paroleNulle: [string, string];
 }
 
+export interface Gioco4Setup {
+  titolo?: string;
+  note?: string;
+  frasi: string[];
+}
+
 export interface QuizSetupState {
   gioco1: {
     selectedQuestion: number;
@@ -82,7 +88,7 @@ export interface QuizSetupState {
     selectedQuestion: number;
     questions: Record<number, Gioco3Question>;
   };
-  gioco4: BoxGenericSetup;
+  gioco4: Gioco4Setup;
   gioco5: BoxGenericSetup;
 }
 
@@ -155,6 +161,23 @@ function normalizeGioco3(
   };
 }
 
+const DEFAULT_FRASI_TEMPO = [
+  "IL MATTINO HA L'ORO IN BOCCA",
+  "CHI CERCA TROVA",
+  "A BUON INTENDITORE POCHE PAROLE",
+  "IL GATTO MIAGOLA, IL CANE NO"
+];
+
+function normalizeGioco4(raw: any, def: Gioco4Setup): Gioco4Setup {
+  if (!raw) return def;
+  const frasi = Array.isArray(raw.frasi) && raw.frasi.length > 0 ? raw.frasi : def.frasi;
+  return {
+    titolo: raw.titolo || def.titolo,
+    note: raw.note || def.note,
+    frasi,
+  };
+}
+
 export function getDefaultSetupState(): QuizSetupState {
   const q1: Record<number, Gioco1Question> = {};
   for (let i = 1; i <= 10; i++) {
@@ -184,7 +207,11 @@ export function getDefaultSetupState(): QuizSetupState {
       selectedQuestion: 1,
       questions: q3,
     },
-    gioco4: { titolo: 'Gioco 4', note: 'Modulo Gioco 4 (in arrivo)' },
+    gioco4: {
+      titolo: 'Frase Tempo',
+      note: 'Inserisci le frasi da indovinare per il gioco Frase Tempo',
+      frasi: [...DEFAULT_FRASI_TEMPO],
+    },
     gioco5: { titolo: 'Gioco 5', note: 'Modulo Gioco 5 (in arrivo)' },
   };
 }
@@ -241,7 +268,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             questions: { ...def.gioco2.questions, ...fromDb.gioco2?.questions },
           },
           gioco3: normalizeGioco3(fromDb.gioco3, def.gioco3),
-          gioco4: fromDb.gioco4 || def.gioco4,
+          gioco4: normalizeGioco4(fromDb.gioco4, def.gioco4),
           gioco5: fromDb.gioco5 || def.gioco5,
         });
       } else {
@@ -259,7 +286,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 questions: { ...def.gioco2.questions, ...parsed.gioco2?.questions },
               },
               gioco3: normalizeGioco3(parsed.gioco3, def.gioco3),
-              gioco4: parsed.gioco4 || def.gioco4,
+              gioco4: normalizeGioco4(parsed.gioco4, def.gioco4),
               gioco5: parsed.gioco5 || def.gioco5,
             });
           } catch (e) {
@@ -276,6 +303,40 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  const handleGioco4FraseChange = (idx: number, val: string) => {
+    setState(prev => {
+      const newFrasi = [...(prev.gioco4?.frasi || [])];
+      newFrasi[idx] = val;
+      return {
+        ...prev,
+        gioco4: {
+          ...prev.gioco4,
+          frasi: newFrasi,
+        },
+      };
+    });
+  };
+
+  const handleAddGioco4Frase = () => {
+    setState(prev => ({
+      ...prev,
+      gioco4: {
+        ...prev.gioco4,
+        frasi: [...(prev.gioco4?.frasi || []), ''],
+      },
+    }));
+  };
+
+  const handleRemoveGioco4Frase = (idx: number) => {
+    setState(prev => ({
+      ...prev,
+      gioco4: {
+        ...prev.gioco4,
+        frasi: (prev.gioco4?.frasi || []).filter((_, i) => i !== idx),
+      },
+    }));
   };
 
   const handleSave = async () => {
@@ -1646,55 +1707,76 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           </div>
         </div>
 
-        {/* Remaining Boxes: Box 4, Box 5 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-
-          {/* BOX 4 */}
-          <div className="bg-[#1c1c21] rounded-2xl border border-white/10 p-5 flex flex-col justify-between opacity-80 hover:opacity-100 transition-opacity">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-7 h-7 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-400 font-extrabold flex items-center justify-center text-xs">
-                    4
-                  </span>
-                  <h3 className="text-base font-bold text-white">BOX 4 — Quarto Gioco</h3>
-                </div>
-                <span className="px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                  Modulo 4
+        {/* BOX 4 — Frase Tempo (Full Width, BOX 5 rimosso dal setup) */}
+        <div className="pt-4">
+          <div className="bg-[#1c1c21] rounded-2xl border border-white/10 p-6 flex flex-col gap-5 shadow-lg">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-lg bg-cyan-500/20 border border-cyan-500/40 text-cyan-400 font-extrabold flex items-center justify-center text-sm shadow-inner">
+                  4
                 </span>
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    BOX 4 — Frase Tempo
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Inserisci e modifica le frasi misteriose da indovinare entro i 30 secondi.
+                  </p>
+                </div>
               </div>
-              <p className="text-xs text-slate-400">
-                {state.gioco4.note}
-              </p>
+              <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                Frase Tempo
+              </span>
             </div>
-            <div className="mt-4 pt-3 border-t border-white/5 text-[10px] text-slate-500">
-              Box 4 pronto per la configurazione dei giochi successivi.
+
+            {/* Lista delle frasi */}
+            <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+              {(state.gioco4?.frasi || []).map((frase, idx) => (
+                <div key={idx} className="flex items-center gap-3 bg-[#141417] p-3 rounded-xl border border-white/10 hover:border-cyan-500/30 transition-colors">
+                  <span className="text-xs font-semibold text-cyan-400/80 w-16 shrink-0">
+                    Frase {idx + 1}:
+                  </span>
+                  <input
+                    type="text"
+                    value={frase}
+                    onChange={(e) => handleGioco4FraseChange(idx, e.target.value)}
+                    placeholder={`Inserisci la frase ${idx + 1}...`}
+                    className="flex-1 bg-black/40 border border-white/15 rounded-lg px-3 py-2 text-xs text-white uppercase placeholder:normal-case placeholder:text-white/30 focus:outline-none focus:border-cyan-500 transition-colors"
+                  />
+                  {(state.gioco4?.frasi?.length || 0) > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveGioco4Frase(idx)}
+                      className="p-2 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 border border-red-500/20 transition-colors shrink-0"
+                      title="Elimina frase"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Pulsanti azione */}
+            <div className="flex items-center justify-between pt-2 border-t border-white/10">
+              <button
+                type="button"
+                onClick={handleAddGioco4Frase}
+                className="px-4 py-2 text-xs font-bold rounded-lg bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-300 border border-cyan-500/30 transition-all flex items-center gap-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Aggiungi Frase
+              </button>
+
+              <span className="text-[11px] text-slate-400">
+                Totale: <strong className="text-white">{state.gioco4?.frasi?.length || 0}</strong> frasi salvate
+              </span>
             </div>
           </div>
-
-          {/* BOX 5 */}
-          <div className="bg-[#1c1c21] rounded-2xl border border-white/10 p-5 flex flex-col justify-between opacity-80 hover:opacity-100 transition-opacity">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                <div className="flex items-center gap-2.5">
-                  <span className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 font-extrabold flex items-center justify-center text-xs">
-                    5
-                  </span>
-                  <h3 className="text-base font-bold text-white">BOX 5 — Quinto Gioco</h3>
-                </div>
-                <span className="px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                  Modulo 5
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">
-                {state.gioco5.note}
-              </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-white/5 text-[10px] text-slate-500">
-              Box 5 pronto per la configurazione dei giochi successivi.
-            </div>
-          </div>
-
         </div>
 
       </main>

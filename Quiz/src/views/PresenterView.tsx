@@ -163,7 +163,12 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
     {
       id: 'gioco_frase_tempo',
       type: 'gioco_frase_tempo',
-      data: cloneDefaultData('gioco_frase_tempo')
+      data: {
+        ...(cloneDefaultData('gioco_frase_tempo') as any),
+        frasi: (setup.gioco4?.frasi && setup.gioco4.frasi.length > 0)
+          ? setup.gioco4.frasi
+          : (cloneDefaultData('gioco_frase_tempo') as any).frasi
+      }
     },
     {
       id: 'password_squadre',

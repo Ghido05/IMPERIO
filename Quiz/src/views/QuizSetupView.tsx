@@ -26,6 +26,7 @@ export interface Gioco1Question {
 
 // Data types for Box 2 (Gioco 2)
 export interface Gioco2CanzoneData {
+  domanda: string;      // domanda mostrata nella forma viola sopra la lista
   audioFiles: string[]; // 7 mp3 files for instruments
   risposte: string[];   // 7 answers list
   indizi: string[];     // clues / text list
@@ -35,6 +36,7 @@ export interface Gioco2CanzoneData {
 }
 
 export interface Gioco2ImmagineData {
+  domanda: string;      // domanda mostrata nella forma viola sopra la lista
   lista10: string[];     // 10 answers/clues list
   immagineJpg: string;   // jpg image
   soluzioneAudio: string; // solution mp3
@@ -117,6 +119,7 @@ export function createDefaultGioco2Question(): Gioco2Question {
   return {
     tipo: 'canzone',
     canzone: {
+      domanda: '',
       audioFiles: ['', '', '', '', '', '', ''],
       risposte: ['', '', '', '', '', '', ''],
       indizi: ['', '', '', '', '', '', ''],
@@ -125,6 +128,7 @@ export function createDefaultGioco2Question(): Gioco2Question {
       info: '',
     },
     immagine: {
+      domanda: '',
       lista10: ['', '', '', '', '', '', '', '', '', ''],
       immagineJpg: '',
       soluzioneAudio: '',
@@ -1109,6 +1113,25 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   <span>🎵 Setup Modalità Canzone (7 Strumenti / Risposte)</span>
                 </div>
 
+                {/* Domanda mostrata nella forma viola sopra la lista */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Domanda della lista:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Es. Quale strumento senti?"
+                    value={currentQ2.canzone.domanda || ''}
+                    onChange={(e) =>
+                      updateQ2((prev) => ({
+                        ...prev,
+                        canzone: { ...prev.canzone, domanda: e.target.value },
+                      }))
+                    }
+                    className="w-full bg-[#141417] border border-white/10 rounded px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
                 {/* 7 Instrument Audio Files + 7 Answers + 7 Clues */}
                 <div className="space-y-3">
                   <label className="block text-xs font-semibold text-slate-300">
@@ -1317,6 +1340,25 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               <div className="space-y-4 pt-2">
                 <div className="flex items-center gap-2 text-xs font-bold text-cyan-400 uppercase tracking-wider">
                   <span>🖼️ Setup Modalità Immagine (Lista di 10)</span>
+                </div>
+
+                {/* Domanda mostrata nella forma viola sopra la lista */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Domanda della lista:
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Es. In quale ordine sono classificati?"
+                    value={currentQ2.immagine.domanda || ''}
+                    onChange={(e) =>
+                      updateQ2((prev) => ({
+                        ...prev,
+                        immagine: { ...prev.immagine, domanda: e.target.value },
+                      }))
+                    }
+                    className="w-full bg-[#141417] border border-white/10 rounded px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                  />
                 </div>
 
                 {/* Lista dei 10 */}

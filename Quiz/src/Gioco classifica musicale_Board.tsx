@@ -308,7 +308,7 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
             borderRadius: "clamp(30px, 6.5vw, 124px)"
           }}
         >
-          <h1 className={`text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,42px)] text-center leading-none transition-all duration-1000 ${showTitle ? 'opacity-100 scale-100 blur-none' : 'opacity-0 scale-90 blur-[10px]'}`}>
+          <h1 className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,42px)] text-center leading-none">
             {gameData.titolo}
           </h1>
         </div>

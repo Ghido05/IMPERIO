@@ -81,6 +81,7 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
       const defaultData = cloneDefaultData('classifica_musicale') as any;
       const mappedData = {
         ...defaultData,
+        titolo: q.canzone.domanda || q.canzone.titolo || defaultData.titolo,
         elementi: defaultData.elementi.map((el: any, i: number) => ({
           ...el,
           testo: q.canzone.risposte[i] || el.testo,
@@ -88,8 +89,7 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
           audio: q.canzone.audioFiles[i] || el.audio
         })),
         soluzioneTesto: q.canzone.titolo || defaultData.soluzioneTesto,
-        canzoneFinale: q.canzone.soluzioneAudio || defaultData.canzoneFinale,
-        titolo: q.canzone.titolo || defaultData.titolo
+        canzoneFinale: q.canzone.soluzioneAudio || defaultData.canzoneFinale
       };
       return {
         id: `gioco2_${num}`,
@@ -100,6 +100,7 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
       const defaultData = cloneDefaultData('classifica') as any;
       const mappedData = {
         ...defaultData,
+        titolo: q.immagine.domanda || q.immagine.soluzioneTesto || defaultData.titolo,
         immagineSegreta: q.immagine.immagineJpg || defaultData.immagineSegreta,
         audio: q.immagine.soluzioneAudio || defaultData.audio,
         soluzioneTesto: q.immagine.soluzioneTesto || defaultData.soluzioneTesto,

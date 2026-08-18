@@ -102,7 +102,7 @@ export function getSlideForBoxQuestion(
     const q2 = setupState.gioco2?.questions?.[questionNum] || createDefaultGioco2Question();
     if (q2.tipo === 'canzone') {
       const data = {
-        titolo: q2.canzone.titolo || 'Classifica Musicale',
+        titolo: q2.canzone.domanda || q2.canzone.titolo || 'Classifica Musicale',
         sfondo: '',
         immagineSegreta: '',
         soluzioneTesto: q2.canzone.info ? `${q2.canzone.titolo} - ${q2.canzone.info}` : q2.canzone.titolo || 'Soluzione',
@@ -117,7 +117,7 @@ export function getSlideForBoxQuestion(
       return { id: `box2_q${questionNum}`, type: 'classifica_musicale', data };
     } else {
       const data = {
-        titolo: q2.immagine.soluzioneTesto || 'Classifica Immagine',
+        titolo: q2.immagine.domanda || q2.immagine.soluzioneTesto || 'Classifica Immagine',
         sfondo: '',
         immagineSegreta: q2.immagine.immagineJpg || '',
         audio: q2.immagine.soluzioneAudio || '',

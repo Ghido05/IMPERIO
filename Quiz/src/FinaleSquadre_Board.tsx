@@ -5,7 +5,7 @@ import { useScores } from './context/ScoreContext';
 type TeamId = 1 | 2 | 3;
 type DiceFace = 'right' | 'left' | 'both' | 'self';
 
-const STORAGE_KEY = 'playstate_game5_finale_state';
+const STORAGE_KEY = 'playstate_game5_finale_state_v3';
 const QUESTION_NUMBERS = Array.from({ length: 15 }, (_, i) => i + 1);
 const DICE_FACES: DiceFace[] = ['right', 'left', 'both', 'self'];
 
@@ -87,9 +87,9 @@ function TeamPanel({
   const meta = TEAM_META[teamId];
   const displayed = Array.from({ length: 6 }, (_, i) => i < members);
   const rows = [
-    { indices: [0] },
-    { indices: [1, 2] },
     { indices: [3, 4, 5] },
+    { indices: [1, 2] },
+    { indices: [0] },
   ];
 
   return (
@@ -114,7 +114,7 @@ function TeamPanel({
                 key={index}
                 index={index}
                 active={activeTeam === teamId}
-                removed={!displayed[index]}
+                removed={!displayed[index] || index >= remaining}
                 color={meta.color}
                 onRemove={() => onEliminate(teamId)}
               />
@@ -246,7 +246,7 @@ function Dice3D({
 export default function FinaleSquadre_Board() {
   const gameData = useGameData() as { title?: string; subtitle?: string } | null;
   const { scores, bonuses, setScore, toggleBonus } = useScores();
-  const [activeTeam, setActiveTeam] = useState<TeamId>(1);
+  const [activeTeam, setActiveTeam] = useState<TeamId>(3);
   const [selectedDieFace, setSelectedDieFace] = useState<DiceFace | null>(null);
   const [dieTargetFace, setDieTargetFace] = useState<DiceFace | null>(null);
   const [targetTeam, setTargetTeam] = useState<TeamId | null>(null);

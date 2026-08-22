@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
+import { useScores } from './context/ScoreContext';
+import ScoreAssigner from './components/ScoreAssigner';
 
 // ============================================================================
 // Layout esportato da Figma e reso Responsivo con Navigazione a Frecce e Audio
@@ -178,6 +180,8 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
   const gameData = useGameData();
   const slideId = gameData.slideId ?? 'sandbox';
 
+  const { addScore } = useScores();
+
   // Stato per tenere traccia dello step attuale (da 0 a 10)
   // 0 = vuoto, 1-9 = Strumenti e Indizi, 10 = Soluzione
   const [step, setStep] = useSyncedState(`playstate_${slideId}_step`, 0);
@@ -187,6 +191,34 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastKeyTimeRef = useRef<number>(0);
   const lastPlayedStepRef = useRef<number>(step);
+
+  const [assignedTeam, setAssignedTeam] = useSyncedState<number | null>(`playstate_${slideId}_assigned_team`, null);
+  const [lockedStep, setLockedStep] = useSyncedState<number | null>(`playstate_${slideId}_locked_step`, null);
+
+  const getPointsForStep = (currentStep: number) => {
+    if (currentStep <= 0) return 5000;
+    if (currentStep >= 10) return 0;
+    const group = Math.floor((currentStep - 1) / 2);
+    return Math.max(1000, 5000 - group * 1000);
+  };
+
+  const handleAssignPoints = (teamNum: number) => {
+    setAssignedTeam(teamNum);
+    if (lockedStep === null) {
+      setLockedStep(step);
+    }
+  };
+
+  const handleResetPoints = () => {
+    if (assignedTeam !== null) {
+      const pts = getPointsForStep(lockedStep ?? step);
+      addScore(assignedTeam - 1, -pts);
+      setAssignedTeam(null);
+      setLockedStep(null);
+    }
+  };
+
+  const displayedPoints = lockedStep !== null ? getPointsForStep(lockedStep) : getPointsForStep(step);
 
   // Cleanup dell'audio all'unmount del componente
   useEffect(() => {
@@ -292,12 +324,9 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
     const isBackingFromSolution = prevStep === 10 && step === 9;
     const wentBackward = step < prevStep;
 
-    // Fermiamo l'audio precedente se:
-    // - C'è un nuovo audio da riprodurre
-    // - Stiamo tornando indietro (o siamo tornati a 0)
-    // - Siamo arrivati alla soluzione (step 10) e non c'è un audio di soluzione
+    // Fermiamo l'audio precedente se lo step è effettivamente cambiato ed è presente un nuovo audio, o se stiamo tornando indietro
     const shouldStopAudio = 
-      audioPath || 
+      (stepChanged && audioPath) || 
       wentBackward || 
       step === 0 || 
       (step === 10 && !audioPath);
@@ -307,8 +336,11 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
       audioRef.current.currentTime = 0;
     }
 
-    // Riproduciamo l'audio solo se lo step è cambiato e non siamo in modalità automatica o non interattiva
-    if (stepChanged && !isAutoAdvancing && !isBackingFromSolution && interactive) {
+    // Riproduciamo l'audio solo se lo step è cambiato e non siamo in modalità automatica (tranne che per la soluzione), e non stiamo tornando indietro
+    const isSolutionStep = step === 10;
+    const shouldPlay = stepChanged && (!isAutoAdvancing || isSolutionStep) && !isBackingFromSolution && interactive;
+
+    if (shouldPlay) {
       if (audioPath) {
         const newAudio = new Audio(assetUrl(audioPath));
         audioRef.current = newAudio;
@@ -350,14 +382,22 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
         setStep((prev) => {
           if (prev > 0) {
             setPrevStep(prev);
-            return prev - 1;
+            const next = prev - 1;
+            if (next === 0) {
+              setLockedStep(null);
+              setAssignedTeam(null);
+            }
+            return next;
           }
           return prev;
         });
       } else if (e.key === 'Enter' || e.key.toLowerCase() === 's') {
-        // Avvia la sequenza di rivelazione rapida fino alla fine
+        // Avvia la sequenza di rivelazione rapida fino alla fine e congela il punteggio
         if (step < 10) {
           setIsAutoAdvancing(true);
+          if (lockedStep === null) {
+            setLockedStep(step);
+          }
         }
       } else if (e.key.toLowerCase() === 'e' || e.key.toLowerCase() === 'x') {
         // Attiva l'effetto di errore
@@ -367,7 +407,7 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [step, isAutoAdvancing]);
+  }, [step, isAutoAdvancing, lockedStep, setLockedStep, setAssignedTeam]);
 
   return (
     <div 
@@ -476,6 +516,55 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
 
         {/* Soluzione Finale */}
         <Solution isVisible={step === 10} />
+
+        {/* Box dei Punteggi Centrale Sotto il Pentagramma */}
+        {(step < 10 || lockedStep !== null) && (
+          <div className="absolute bottom-[-24%] left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-3">
+            <div className={`px-8 py-3 rounded-2xl backdrop-blur-md flex flex-col items-center min-w-[280px] transition-all duration-500 border ${
+              lockedStep !== null 
+                ? 'bg-amber-950/80 border-amber-400 shadow-[0_0_40px_rgba(251,191,36,0.6)] animate-pulse'
+                : 'bg-black/85 border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.8)]'
+            }`}>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/50 mb-1">
+                {lockedStep !== null ? 'Punteggio Bloccato' : 'Valore Risposta'}
+              </span>
+              <span className={`text-3xl font-black tabular-nums transition-colors duration-500 ${
+                lockedStep !== null ? 'text-amber-300 drop-shadow-[0_0_15px_rgba(251,191,36,0.9)]' : 'text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.4)]'
+              }`}>
+                {displayedPoints.toLocaleString()} pt
+              </span>
+            </div>
+
+            {/* Assegnatore di Punteggio per il Relatore */}
+            {interactive && (
+              <div className="mt-1">
+                {assignedTeam === null ? (
+                  <ScoreAssigner
+                    points={displayedPoints}
+                    onAssigned={handleAssignPoints}
+                  />
+                ) : (
+                  <div className="flex items-center gap-3 bg-white/10 border border-white/10 px-4 py-1.5 rounded-full text-xs font-bold">
+                    <span className="text-emerald-400">✓ Assegnati a Squadra {assignedTeam}</span>
+                    <button 
+                      onClick={handleResetPoints}
+                      className="text-white/40 hover:text-red-400 transition-colors uppercase tracking-wider text-[10px]"
+                    >
+                      Annulla
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Mostra chi ha indovinato sullo schermo pubblico */}
+            {!interactive && assignedTeam !== null && (
+              <div className="bg-emerald-500/20 border border-emerald-500/30 px-6 py-2 rounded-full text-xs font-bold text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)] animate-pulse">
+                ✓ RISPOSTA ESATTA: SQUADRA {assignedTeam} (+{displayedPoints.toLocaleString()} pt)
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
 

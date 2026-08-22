@@ -4,6 +4,97 @@ import { CompactScoreAssigner } from "./components/ScoreAssigner";
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 
+interface SolutionProps {
+  isVisible: boolean;
+  interactive: boolean;
+  pointsAssigned: Record<number, number>;
+  setPointsAssigned: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+}
+
+// Componente per la Soluzione Finale
+const Solution: React.FC<SolutionProps> = ({ isVisible, interactive, pointsAssigned, setPointsAssigned }) => {
+  const gameData = useGameData();
+  if (!gameData) return null;
+
+  return (
+    <div 
+      className={`absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md transition-all duration-1000 ${
+        isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
+      }`}
+    >
+      <div className="relative group flex flex-col items-center">
+        {/* Bagliore retrostante purple-blue */}
+        <div className="absolute -inset-10 bg-gradient-to-r from-[#792ba6] to-blue-600 rounded-full blur-3xl opacity-30 group-hover:opacity-50 transition duration-1000" />
+        
+        <div 
+          className="relative text-center space-y-6 px-12 py-10 border-[#0f2d54] bg-[#792ba6]/90 backdrop-blur-2xl shadow-[0_0_50px_rgba(121,43,166,0.6)] overflow-hidden w-[40vw] max-w-[90%]"
+          style={{ 
+            borderWidth: "clamp(4px, 0.5208vw, 10px)",
+            borderRadius: "clamp(6px, 0.5208vw, 12px)"
+          }}
+        >
+          {/* Effetto luce che scorre */}
+          <div className="absolute top-0 -left-[100%] w-[200%] h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 group-hover:left-[100%] transition-all duration-1000 ease-in-out" />
+
+          <div>
+            <span className="text-[clamp(12px,1.2vw,22px)] font-black tracking-[0.2em] text-[#00ff00] drop-shadow-md">
+              SOLUZIONE FINALE
+            </span>
+          </div>
+
+          <h2 className="text-[clamp(24px,3vw,56px)] font-black text-white tracking-tight leading-tight animate-zoom-in drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
+            {(gameData as any).soluzioneTesto}
+          </h2>
+          
+          <div className="h-[2px] w-24 bg-gradient-to-r from-[#00ff00] to-yellow-400 mx-auto rounded-full" />
+
+          {/* Assegnazione dei punti */}
+          <div className="flex flex-col items-center justify-center pt-2">
+            {!pointsAssigned[100] ? (
+              interactive && (
+                <div className="flex flex-col items-center gap-2 animate-zoom-in">
+                  <span className="text-white/80 font-black text-[clamp(10px,0.9vw,16px)] uppercase tracking-wider">
+                    Assegna Punti (5.000 pt)
+                  </span>
+                  <CompactScoreAssigner 
+                    points={5000}
+                    onAssigned={(teamNum) => setPointsAssigned(prev => ({ ...prev, 100: teamNum }))}
+                  />
+                </div>
+              )
+            ) : (
+              <div className="flex flex-col items-center gap-2 animate-zoom-in">
+                <span className="text-white/80 font-black text-[clamp(10px,0.9vw,16px)] uppercase tracking-wider">
+                  Punti Assegnati a:
+                </span>
+                <div className="flex items-center gap-3">
+                  <div className={`w-[clamp(28px,2vw,40px)] h-[clamp(28px,2vw,40px)] rounded-full font-black text-white text-[clamp(12px,1.2vw,20px)] flex items-center justify-center border-2 border-white/50 shadow-lg ${
+                    pointsAssigned[100] === 1 ? 'bg-red-600 shadow-red-600/50' : pointsAssigned[100] === 2 ? 'bg-blue-600 shadow-blue-600/50' : 'bg-green-600 shadow-green-600/50'
+                  }`}>
+                    {pointsAssigned[100]}
+                  </div>
+                  {interactive && (
+                    <button
+                      onClick={() => setPointsAssigned(prev => {
+                        const copy = { ...prev };
+                        delete copy[100];
+                        return copy;
+                      })}
+                      className="bg-white/10 hover:bg-white/20 border border-white/20 text-white hover:text-red-400 px-3 py-1 rounded-xl text-[clamp(10px,0.8vw,14px)] uppercase font-bold tracking-wider transition-all"
+                    >
+                      Annulla
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX.Element => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
@@ -279,11 +370,11 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
         
         {/* Riquadro sinistro (Frasi da svelare) */}
         <div
-          className="absolute left-[5.026%] top-[7.87%] w-[35.794%] h-[63.611%] border-[#8e3600] bg-black/40 backdrop-blur-md overflow-hidden flex-shrink-0 p-4"
+          className="absolute left-[5.026%] top-[29.907%] w-[35.794%] h-[65.315%] border-[#8e3600] bg-black/40 backdrop-blur-md overflow-hidden flex-shrink-0 p-4"
           style={{ borderWidth: "clamp(6px, 1.0417vw, 20px)" }}
         >
           <div className="w-full h-full flex flex-col justify-around gap-2">
-            {gameData.elementi.map((el: any) => {
+            {[...gameData.elementi].reverse().map((el: any) => {
               const isRevealed = !!revealed[el.posizione];
               return (
                 <div 
@@ -300,9 +391,9 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
           </div>
         </div>
 
-        {/* Pill superiore destra (Titolo) */}
+        {/* Pill superiore centrale (Titolo) */}
         <div
-          className={`absolute left-[48.438%] top-[7.87%] w-[42.5%] h-[14.444%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-1000 ${showTitle ? 'shadow-[0_0_40px_rgba(121,43,166,0.6)]' : ''}`}
+          className={`absolute left-[28.75%] top-[7.87%] w-[42.5%] h-[14.444%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-1000 ${showTitle ? 'shadow-[0_0_40px_rgba(121,43,166,0.6)]' : ''}`}
           style={{
             borderWidth: "clamp(4px, 0.5208vw, 10px)",
             borderRadius: "clamp(30px, 6.5vw, 124px)"
@@ -389,43 +480,13 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
           </React.Fragment>
         ))}
 
-        {/* Pill inferiore sinistra (Box di completamento o categoria) */}
-        <div
-          className={`absolute left-[5.052%] top-[80%] w-[35.781%] h-[15.222%] bg-[#792ba6] border-[#0f2d54] flex flex-col items-center justify-center px-[2%] transition-all duration-700 ${
-            showSolution ? 'scale-105 shadow-[0_0_50px_rgba(121,43,166,0.6)]' : ''
-          }`}
-          style={{
-            borderWidth: "clamp(4px, 0.5208vw, 10px)",
-            borderRadius: "clamp(30px, 6.5vw, 124px)"
-          }}
-        >
-          {!showSolution ? (
-             <p className="text-white font-black uppercase tracking-tight text-[clamp(14px,1.8vw,36px)] text-center leading-none">
-               Gioco Indizi
-             </p>
-          ) : (
-             <div className="animate-zoom-in flex flex-col items-center">
-               <p className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,30px)] text-center leading-tight mb-2">
-                 {(gameData as any).soluzioneTesto}
-               </p>
-                {!pointsAssigned[100] ? (
-                  <CompactScoreAssigner 
-                     points={5000}
-                     onAssigned={(teamNum) => setPointsAssigned(prev => ({ ...prev, 100: teamNum }))}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-green-400 font-black text-xs uppercase">Punti Assegnati a:</span>
-                    <div className={`w-6 h-6 rounded-full font-black text-white text-[10px] flex items-center justify-center border border-white/40 ${
-                      pointsAssigned[100] === 1 ? 'bg-red-600' : pointsAssigned[100] === 2 ? 'bg-blue-600' : 'bg-green-600'
-                    }`}>
-                      {pointsAssigned[100]}
-                    </div>
-                  </div>
-                )}
-             </div>
-          )}
-        </div>
+        {/* Solution Overlay */}
+        <Solution 
+          isVisible={showSolution} 
+          interactive={interactive}
+          pointsAssigned={pointsAssigned}
+          setPointsAssigned={setPointsAssigned}
+        />
       </div>
     </div>
   );

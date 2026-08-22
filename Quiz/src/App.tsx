@@ -27,6 +27,30 @@ function App() {
   const [mode, setMode] = useState<string | null>(null);
   const [isSandbox, setIsSandbox] = useState(false);
 
+  // Reset game states and scores at session startup, preserving setup configuration
+  useEffect(() => {
+    const hasReset = sessionStorage.getItem('imperio_session_reset_done');
+    if (!hasReset) {
+      sessionStorage.setItem('imperio_session_reset_done', 'true');
+      
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          if (
+            key.startsWith('playstate_') || 
+            key.startsWith('password_') || 
+            key === 'imperio_quiz_scores'
+          ) {
+            keysToRemove.push(key);
+          }
+        }
+      }
+      keysToRemove.forEach(key => localStorage.removeItem(key));
+      console.log('Stati dei giochi e punteggi resettati per la nuova sessione.');
+    }
+  }, []);
+
   // Sync localStorage changes across Electron windows (specifically for the password board)
   useEffect(() => {
     const isElectron = (window as any).electron !== undefined;

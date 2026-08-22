@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import SlideCanvas from '../components/SlideCanvas';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import PresenterPreviewPanel from '../components/PresenterPreviewPanel';
-import ScoreAssigner from '../components/ScoreAssigner';
 import { ScoreProvider } from '../context/ScoreContext';
-import { Slide } from '../App';
+import type { Slide } from '../App';
 import {
-  QuizSetupState,
   getDefaultSetupState,
   createDefaultGioco1Question,
   createDefaultGioco2Question,
 } from './QuizSetupView';
+import type { QuizSetupState } from './QuizSetupView';
 import { loadSetupStateDb } from '../lib/quizDb';
 import { useSyncedState } from '../hooks/useSyncedState';
 import { cloneDefaultData } from '../lib/defaultGameData';
@@ -196,10 +195,7 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
   const [activeBox, setActiveBox] = useState<number>(1);
   const [activeQuestion, setActiveQuestion] = useState<number>(1);
 
-  const slideId = `box${activeBox}_q${activeQuestion}`;
-  const [activeRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
-  const [activePointsAssigned, setActivePointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
-  const [activeLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
+  const [activePhraseIndex, setActivePhraseIndex] = useSyncedState<number>(`playstate_gioco_frase_tempo_index`, 0);
   const [maximizedPanel, setMaximizedPanel] = useState<'none' | 'left' | 'right'>('none');
 
   // Load configuration from IndexedDB & LocalStorage on mount
@@ -330,23 +326,47 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
         {/* Question Selector Sub-Header */}
         <div className="h-12 bg-[#1c1c21] border-b border-white/10 px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-white/50">Seleziona Domanda:</span>
-            <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-              {Array.from({ length: maxQuestionsForBox }, (_, i) => i + 1).map((qNum) => (
-                <button
-                  key={qNum}
-                  type="button"
-                  onClick={() => setActiveQuestion(qNum)}
-                  className={`w-7 h-7 text-xs font-bold rounded-md flex items-center justify-center transition-all ${
-                    activeQuestion === qNum
-                      ? 'bg-amber-500 text-black shadow'
-                      : 'bg-white/5 hover:bg-white/10 text-white/70 border border-white/5'
-                  }`}
-                >
-                  #{qNum}
-                </button>
-              ))}
-            </div>
+            {activeBox === 4 ? (
+              <>
+                <span className="text-xs font-semibold text-white/50">Seleziona Frase:</span>
+                <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                  {(setupState.gioco4?.frasi ?? []).map((_, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setActivePhraseIndex(idx)}
+                      className={`w-7 h-7 text-xs font-bold rounded-md flex items-center justify-center transition-all ${
+                        activePhraseIndex === idx
+                          ? 'bg-amber-500 text-black shadow'
+                          : 'bg-white/5 hover:bg-white/10 text-white/70 border border-white/5'
+                      }`}
+                    >
+                      #{idx + 1}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="text-xs font-semibold text-white/50">Seleziona Domanda:</span>
+                <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                  {Array.from({ length: maxQuestionsForBox }, (_, i) => i + 1).map((qNum) => (
+                    <button
+                      key={qNum}
+                      type="button"
+                      onClick={() => setActiveQuestion(qNum)}
+                      className={`w-7 h-7 text-xs font-bold rounded-md flex items-center justify-center transition-all ${
+                        activeQuestion === qNum
+                          ? 'bg-amber-500 text-black shadow'
+                          : 'bg-white/5 hover:bg-white/10 text-white/70 border border-white/5'
+                      }`}
+                    >
+                      #{qNum}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2">

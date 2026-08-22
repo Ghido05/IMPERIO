@@ -2,18 +2,18 @@ import { useState, useEffect, useRef } from 'react';
 import SlideCanvas from '../components/SlideCanvas';
 import WelcomeScreen from '../components/WelcomeScreen';
 import QuizSetupView, { 
-  QuizSetupState, 
   getDefaultSetupState, 
   createDefaultGioco1Question, 
   createDefaultGioco2Question 
 } from './QuizSetupView';
+import type { QuizSetupState } from './QuizSetupView';
 import SequentialQuizView from './SequentialQuizView';
 import PresenterPreviewPanel from '../components/PresenterPreviewPanel';
 import ScoreAssigner from '../components/ScoreAssigner';
 import { ScoreProvider } from '../context/ScoreContext';
 import { cloneDefaultData } from '../lib/defaultGameData';
 import { saveRecentProject, type RecentProject } from '../lib/recentProjects';
-import { Slide } from '../App';
+import type { Slide } from '../App';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import { useSyncedState } from '../hooks/useSyncedState';
 
@@ -196,9 +196,8 @@ export default function PresenterView() {
   const [presentationName, setPresentationName] = useState('Presentazione senza titolo');
   const [slides, setSlides] = useState<Slide[]>([]);
   const [activeSlideId, setActiveSlideId] = useState('');
-  const [activeRevealed, setActiveRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${activeSlideId}_revealed`, {});
   const [activePointsAssigned, setActivePointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${activeSlideId}_points`, {});
-  const [activeLatestClue, setActiveLatestClue] = useSyncedState<number>(`playstate_${activeSlideId}_latest`, 0);
+  const [activeLatestClue] = useSyncedState<number>(`playstate_${activeSlideId}_latest`, 0);
   const lastForwardTimeRef = useRef<number>(0);
   const [maximizedPanel, setMaximizedPanel] = useState<'none' | 'left' | 'right'>('none');
 
@@ -605,7 +604,8 @@ export default function PresenterView() {
                       }
                       interactive={
                         activeSlide.type === 'password_squadre' ||
-                        activeSlide.type === 'password_prescelti'
+                        activeSlide.type === 'password_prescelti' ||
+                        activeSlide.type === 'finale_squadre'
                       }
                       viewportMode="none"
                     />

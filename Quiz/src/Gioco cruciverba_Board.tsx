@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useGameData } from './context/GameDataContext';
-import { CompactScoreAssigner } from "./components/ScoreAssigner";
-import { assetUrl, assetUrlCss } from './lib/assetUrl';
+import { assetUrl } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 
 type Direction = 'H' | 'V';

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useGameData } from './context/GameDataContext';
-import { CompactScoreAssigner } from "./components/ScoreAssigner";
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 
@@ -11,7 +10,7 @@ const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): Rea
   const slideId = gameData.slideId ?? 'sandbox';
 
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
-  const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
+  const [pointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
   const [, setLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
   const [showError, setShowError] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);

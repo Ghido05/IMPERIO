@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { idbNameCache } from '../lib/assetUrl';
 import { saveSetupStateDb, loadSetupStateDb } from '../lib/quizDb';
+import { createDefaultFraseTempoItem, isPhraseLetterToken, normalizeFraseTempoItem, parsePhraseTokens, type FraseTempoItem } from '../lib/fraseTempoUtils';
 
 // Data types for Box 1 (Gioco 1)
 export interface Gioco1CanzoneData {
@@ -74,7 +75,7 @@ export interface Gioco3Question {
 export interface Gioco4Setup {
   titolo?: string;
   note?: string;
-  frasi: string[];
+  frasi: FraseTempoItem[];
 }
 
 export interface QuizSetupState {
@@ -174,7 +175,9 @@ const DEFAULT_FRASI_TEMPO = [
 
 function normalizeGioco4(raw: any, def: Gioco4Setup): Gioco4Setup {
   if (!raw) return def;
-  const frasi = Array.isArray(raw.frasi) && raw.frasi.length > 0 ? raw.frasi : def.frasi;
+  const frasi = Array.isArray(raw.frasi) && raw.frasi.length > 0
+    ? raw.frasi.map(normalizeFraseTempoItem)
+    : def.frasi;
   return {
     titolo: raw.titolo || def.titolo,
     note: raw.note || def.note,
@@ -214,7 +217,7 @@ export function getDefaultSetupState(): QuizSetupState {
     gioco4: {
       titolo: 'Frase Tempo',
       note: 'Inserisci le frasi da indovinare per il gioco Frase Tempo',
-      frasi: [...DEFAULT_FRASI_TEMPO],
+      frasi: DEFAULT_FRASI_TEMPO.map((testo) => createDefaultFraseTempoItem(testo)),
     },
     gioco5: { titolo: 'Gioco 5', note: 'Modulo Gioco 5 (in arrivo)' },
   };
@@ -312,7 +315,9 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
   const handleGioco4FraseChange = (idx: number, val: string) => {
     setState(prev => {
       const newFrasi = [...(prev.gioco4?.frasi || [])];
-      newFrasi[idx] = val;
+      const current = normalizeFraseTempoItem(newFrasi[idx] || '');
+      // Cambiando la frase, le posizioni selezionate non sono più affidabili.
+      newFrasi[idx] = { ...current, testo: val, lettereVisibili: [] };
       return {
         ...prev,
         gioco4: {
@@ -328,9 +333,28 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
       ...prev,
       gioco4: {
         ...prev.gioco4,
-        frasi: [...(prev.gioco4?.frasi || []), ''],
+        frasi: [...(prev.gioco4?.frasi || []), createDefaultFraseTempoItem()],
       },
     }));
+  };
+
+  const handleGioco4BackgroundChange = (idx: number, sfondo: string) => {
+    setState(prev => {
+      const frasi = [...(prev.gioco4?.frasi || [])];
+      frasi[idx] = { ...normalizeFraseTempoItem(frasi[idx] || ''), sfondo };
+      return { ...prev, gioco4: { ...prev.gioco4, frasi } };
+    });
+  };
+
+  const toggleGioco4VisibleLetter = (idx: number, tokenIndex: number) => {
+    setState(prev => {
+      const frasi = [...(prev.gioco4?.frasi || [])];
+      const item = normalizeFraseTempoItem(frasi[idx] || '');
+      const visible = new Set(item.lettereVisibili || []);
+      if (visible.has(tokenIndex)) visible.delete(tokenIndex); else visible.add(tokenIndex);
+      frasi[idx] = { ...item, lettereVisibili: [...visible].sort((a, b) => a - b) };
+      return { ...prev, gioco4: { ...prev.gioco4, frasi } };
+    });
   };
 
   const handleRemoveGioco4Frase = (idx: number) => {
@@ -1773,14 +1797,18 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
             {/* Lista delle frasi */}
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
-              {(state.gioco4?.frasi || []).map((frase, idx) => (
-                <div key={idx} className="flex items-center gap-3 bg-[#141417] p-3 rounded-xl border border-white/10 hover:border-cyan-500/30 transition-colors">
+              {(state.gioco4?.frasi || []).map((rawFrase, idx) => {
+                const frase = normalizeFraseTempoItem(rawFrase);
+                const tokens = parsePhraseTokens(frase.testo);
+                return (
+                <div key={idx} className="bg-[#141417] p-3 rounded-xl border border-white/10 hover:border-cyan-500/30 transition-colors space-y-3">
+                  <div className="flex items-center gap-3">
                   <span className="text-xs font-semibold text-cyan-400/80 w-16 shrink-0">
                     Frase {idx + 1}:
                   </span>
                   <input
                     type="text"
-                    value={frase}
+                    value={frase.testo}
                     onChange={(e) => handleGioco4FraseChange(idx, e.target.value)}
                     placeholder={`Inserisci la frase ${idx + 1}...`}
                     className="flex-1 bg-black/40 border border-white/15 rounded-lg px-3 py-2 text-xs text-white uppercase placeholder:normal-case placeholder:text-white/30 focus:outline-none focus:border-cyan-500 transition-colors"
@@ -1797,8 +1825,51 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                       </svg>
                     </button>
                   )}
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-0 md:pl-[76px]">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">Sfondo della frase</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={frase.sfondo || ''}
+                          onChange={(e) => handleGioco4BackgroundChange(idx, e.target.value)}
+                          placeholder="URL o percorso immagine..."
+                          className="min-w-0 flex-1 bg-black/40 border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500"
+                        />
+                        <label className="px-2.5 py-2 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0">
+                          🖼️ Sfoglia
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleFileUpload(e, (base64) => handleGioco4BackgroundChange(idx, base64))}
+                          />
+                        </label>
+                      </div>
+                      {frase.sfondo && <p className="text-[10px] text-emerald-400 mt-1 truncate">Immagine caricata</p>}
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">Lettere già visibili</label>
+                      <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto">
+                        {tokens.map((token, tokenIndex) => token.trim() && isPhraseLetterToken(token) ? (
+                          <button
+                            key={tokenIndex}
+                            type="button"
+                            title={`Posizione ${tokenIndex + 1}`}
+                            onClick={() => toggleGioco4VisibleLetter(idx, tokenIndex)}
+                            className={`w-7 h-7 rounded border text-xs font-black transition-colors ${frase.lettereVisibili?.includes(tokenIndex) ? 'bg-cyan-400 border-cyan-200 text-black' : 'bg-black/40 border-white/15 text-white/60 hover:border-cyan-400/60'}`}
+                          >
+                            {token[0]}
+                          </button>
+                        ) : null)}
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-1">Clicca le singole lettere da mostrare all’avvio.</p>
+                    </div>
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Pulsanti azione */}

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { useSyncedState } from './hooks/useSyncedState';
+import { assetUrl } from './lib/assetUrl';
+import { getPhraseLetter, isPhraseLetterToken, normalizeFraseTempoItem, parsePhraseTokens } from './lib/fraseTempoUtils';
 
 const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive = true }) => {
   const phrasesData = useGameData();
@@ -10,7 +12,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
   const [index] = useSyncedState(`playstate_${slideId}_index`, 0);
 
   // Phrase list from configuration or defaults
-  const phraseList = phrasesData.frasi ?? [];
+  const phraseList = (phrasesData.frasi ?? []).map(normalizeFraseTempoItem);
+  const phrase = normalizeFraseTempoItem(phraseList[index % Math.max(phraseList.length, 1)] || '');
 
   // Construct a unique prefix for this specific phrase index to preserve state individually
   const phrasePrefix = `playstate_${slideId}_p${index}`;
@@ -19,41 +22,112 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
   const [tokens, setTokens] = useSyncedState<string[]>(`${phrasePrefix}_tokens`, []);
   const [revealed, setRevealed] = useSyncedState<boolean>(`${phrasePrefix}_revealed`, false);
   const [auctionValue, setAuctionValue] = useSyncedState<number>(`${phrasePrefix}_auction_value`, 10);
+  const [auctionLocked, setAuctionLocked] = useSyncedState<boolean>(`${phrasePrefix}_auction_locked`, false);
+  const [letterCounter, setLetterCounter] = useSyncedState<number>(`${phrasePrefix}_letter_counter`, 10);
   const [calledLetters, setCalledLetters] = useSyncedState<string[]>(`${phrasePrefix}_called_letters`, []);
+  const [wrongLetter, setWrongLetter] = useSyncedState<string | null>(`${phrasePrefix}_wrong_letter`, null);
+  const [guessTimerEndAt, setGuessTimerEndAt] = useSyncedState<number>(`${phrasePrefix}_guess_timer_end`, 0);
 
   // Local states
   const [targetTokens, setTargetTokens] = useState<string[]>([]);
   const [strikeActive, setStrikeActive] = useState(false);
-  const prevAuctionValue = useRef(auctionValue);
+  const [timerDisplay, setTimerDisplay] = useState(0);
+  const prevLetterCounter = useRef(letterCounter);
+  const prevTimerDisplay = useRef(0);
+  const gongPlayedFor = useRef<number | null>(null);
+  const [assetRefresh, setAssetRefresh] = useState(0);
 
-  // Trigger gavel strike animation when auction value changes
   useEffect(() => {
-    if (auctionValue !== prevAuctionValue.current) {
-      prevAuctionValue.current = auctionValue;
+    const refresh = () => setAssetRefresh((value) => value + 1);
+    window.addEventListener('idb-file-loaded', refresh);
+    return () => window.removeEventListener('idb-file-loaded', refresh);
+  }, []);
+
+  const playTone = useCallback((frequency: number, duration: number, type: OscillatorType, volume: number, endFrequency?: number) => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+      if (endFrequency) osc.frequency.exponentialRampToValueAtTime(endFrequency, ctx.currentTime + duration);
+      gain.gain.setValueAtTime(volume, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + duration);
+      setTimeout(() => ctx.close(), duration * 1000 + 100);
+    } catch { /* Audio non disponibile */ }
+  }, []);
+
+  const playHammerSound = useCallback(() => {
+    playTone(145, 0.18, 'triangle', 0.3, 65);
+    setTimeout(() => playTone(75, 0.28, 'sine', 0.22, 42), 35);
+  }, [playTone]);
+
+  const playGongSound = useCallback(() => {
+    [220, 277, 330, 440].forEach((frequency, i) => {
+      setTimeout(() => playTone(frequency, 2.2, 'sine', 0.16 / (i + 1)), i * 12);
+    });
+  }, [playTone]);
+
+  // Trigger gavel strike animation when letter counter changes after lock
+  useEffect(() => {
+    if (auctionLocked && letterCounter < prevLetterCounter.current) {
+      prevLetterCounter.current = letterCounter;
       setStrikeActive(true);
+      playHammerSound();
       const timer = setTimeout(() => setStrikeActive(false), 350);
       return () => clearTimeout(timer);
     }
-  }, [auctionValue]);
+    prevLetterCounter.current = letterCounter;
+  }, [letterCounter, auctionLocked, playHammerSound]);
+
+  const playErrorSound = useCallback(() => playTone(220, 0.4, 'square', 0.28, 90), [playTone]);
+
+  // Nasconde la lettera sbagliata dopo 3 secondi
+  useEffect(() => {
+    if (!wrongLetter) return;
+    const timer = setTimeout(() => setWrongLetter(null), 3000);
+    return () => clearTimeout(timer);
+  }, [wrongLetter, setWrongLetter]);
+
+  // Avvia il cronometro da 10s quando il contatore lettere arriva a 0
+  useEffect(() => {
+    if (auctionLocked && letterCounter === 0 && guessTimerEndAt === 0) {
+      setGuessTimerEndAt(Date.now() + 10000);
+    }
+  }, [auctionLocked, letterCounter, guessTimerEndAt, setGuessTimerEndAt]);
+
+  // Aggiorna il display del cronometro circolare
+  useEffect(() => {
+    if (!guessTimerEndAt) {
+      setTimerDisplay(0);
+      return;
+    }
+    const tick = () => {
+      setTimerDisplay(Math.max(0, (guessTimerEndAt - Date.now()) / 1000));
+    };
+    tick();
+    const id = setInterval(tick, 50);
+    return () => clearInterval(id);
+  }, [guessTimerEndAt]);
+
+  useEffect(() => {
+    if (guessTimerEndAt > 0 && prevTimerDisplay.current > 0 && timerDisplay <= 0 && gongPlayedFor.current !== guessTimerEndAt) {
+      gongPlayedFor.current = guessTimerEndAt;
+      playGongSound();
+    }
+    prevTimerDisplay.current = timerDisplay;
+  }, [timerDisplay, guessTimerEndAt, playGongSound]);
 
   const initGame = useCallback((idx: number) => {
     if (phraseList.length === 0) {
       setTargetTokens([]);
       return;
     }
-    const frase = phraseList[idx % phraseList.length].toUpperCase();
-    const targets: string[] = [];
-    let i = 0;
-    while (i < frase.length) {
-      const c = frase[i];
-      if (i + 1 < frase.length && frase[i + 1] === "'") {
-        targets.push(c + "'");
-        i += 2;
-      } else {
-        targets.push(c);
-        i += 1;
-      }
-    }
+    const configuredPhrase = phraseList[idx % phraseList.length];
+    const targets = parsePhraseTokens(configuredPhrase.testo);
     setTargetTokens(targets);
 
     // If tokens for this phrase are not yet initialized in localStorage, set them up
@@ -67,9 +141,15 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
         }
       } catch (e) {}
     }
-    const initialTokens = targets.map(t => (/[A-Z]/.test(t[0]) ? '_' : t));
+    const visible = new Set(configuredPhrase.lettereVisibili || []);
+    const initialTokens = targets.map((t, tokenIndex) => (isPhraseLetterToken(t) ? (visible.has(tokenIndex) ? t : '_') : t));
     localStorage.setItem(`${phrasePrefix}_tokens`, JSON.stringify(initialTokens));
     localStorage.setItem(`${phrasePrefix}_called_letters`, JSON.stringify([]));
+    localStorage.setItem(`${phrasePrefix}_auction_value`, '10');
+    localStorage.setItem(`${phrasePrefix}_auction_locked`, 'false');
+    localStorage.setItem(`${phrasePrefix}_letter_counter`, '10');
+    localStorage.setItem(`${phrasePrefix}_wrong_letter`, 'null');
+    localStorage.setItem(`${phrasePrefix}_guess_timer_end`, '0');
 
     window.dispatchEvent(new StorageEvent('storage', {
       key: `${phrasePrefix}_tokens`,
@@ -87,6 +167,25 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
     initGame(index);
   }, [index, initGame]);
 
+  const processLetter = useCallback((key: string) => {
+    if (revealed || calledLetters.includes(key)) return;
+
+    const letterInPhrase = targetTokens.some(t => isPhraseLetterToken(t) && getPhraseLetter(t) === key);
+
+    setCalledLetters(prev => [...prev, key]);
+
+    if (auctionLocked) {
+      setLetterCounter(prev => Math.max(0, prev - 1));
+    }
+
+    if (letterInPhrase) {
+      setTokens(prev => prev.map((t, i) => (isPhraseLetterToken(targetTokens[i]) && getPhraseLetter(targetTokens[i]) === key ? targetTokens[i] : t)));
+    } else {
+      setWrongLetter(key);
+      playErrorSound();
+    }
+  }, [revealed, calledLetters, targetTokens, auctionLocked, setCalledLetters, setLetterCounter, setTokens, setWrongLetter, playErrorSound]);
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (
       document.activeElement?.tagName === 'INPUT' ||
@@ -97,63 +196,54 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
 
     if (e.metaKey || e.ctrlKey) return;
 
-    // S / Enter to show solution
-    if (e.key === 'Enter' || e.key.toUpperCase() === 'S') {
-      setRevealed(true);
-      setTokens([...targetTokens]);
-      return;
-    }
-
     // Backspace / Delete to clear/reset tokens
     if (e.key === 'Backspace' || e.key === 'Delete') {
-      const initialTokens = targetTokens.map(t => (/[A-Z]/.test(t[0]) ? '_' : t));
+      const visible = new Set(phrase.lettereVisibili || []);
+      const initialTokens = targetTokens.map((t, tokenIndex) => (isPhraseLetterToken(t) ? (visible.has(tokenIndex) ? t : '_') : t));
       setTokens(initialTokens);
       setCalledLetters([]);
       setAuctionValue(10);
+      setAuctionLocked(false);
+      setLetterCounter(10);
+      setRevealed(false);
+      setWrongLetter(null);
+      setGuessTimerEndAt(0);
       return;
     }
 
-    // Keyboard numbers and arrows for manual movement
-    if (e.key === '0') {
-      setAuctionValue(10);
-      return;
-    }
-    if (/[1-9]/.test(e.key)) {
-      setAuctionValue(parseInt(e.key));
-      return;
-    }
-    if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
-      setAuctionValue(prev => Math.max(1, prev - 1));
-      return;
-    }
-    if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
-      setAuctionValue(prev => Math.min(10, prev + 1));
-      return;
+    // Keyboard numbers and arrows for manual bid movement (solo durante l'asta)
+    if (!auctionLocked) {
+      if (e.key === '0') {
+        setAuctionValue(10);
+        return;
+      }
+      if (/[1-9]/.test(e.key)) {
+        setAuctionValue(parseInt(e.key));
+        return;
+      }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+        setAuctionValue(prev => Math.max(1, prev - 1));
+        return;
+      }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+        setAuctionValue(prev => Math.min(10, prev + 1));
+        return;
+      }
     }
 
     // Guessed letter
     if (!revealed) {
       const key = e.key.toUpperCase();
       if (key.length === 1 && /[A-Z]/.test(key)) {
-        // If this letter was already called, do nothing
-        if (calledLetters.includes(key)) return;
-
-        // Add to called letters
-        setCalledLetters(prev => [...prev, key]);
-
-        // Consonant check: B, C, D, F, G, H, J, K, L, M, N, P, Q, R, S, T, V, W, X, Y, Z
-        const isCons = /[B-DF-HJ-NP-TV-Z]/.test(key);
-
-        // If it's a consonant, decrement auction value by 1 (even if it's incorrect)
-        if (isCons) {
-          setAuctionValue(prev => Math.max(1, prev - 1));
-        }
-
-        // Reveal the character in the phrase if it exists
-        setTokens(prev => prev.map((t, i) => (targetTokens[i][0] === key ? targetTokens[i] : t)));
+        processLetter(key);
       }
     }
-  }, [targetTokens, revealed, tokens, calledLetters, setTokens, setCalledLetters, setAuctionValue, setRevealed]);
+  }, [targetTokens, phrase.lettereVisibili, revealed, auctionLocked, processLetter, setTokens, setCalledLetters, setLetterCounter, setAuctionValue, setAuctionLocked, setRevealed, setWrongLetter, setGuessTimerEndAt]);
+
+  const revealSolution = useCallback(() => {
+    setRevealed(true);
+    setTokens([...targetTokens]);
+  }, [targetTokens, setRevealed, setTokens]);
 
   useEffect(() => {
     if (!interactive) return;
@@ -176,9 +266,14 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
   if (currentWord.length > 0) words.push(currentWord);
 
   const auctionSteps = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+  const timerRadius = 54;
+  const timerCircumference = 2 * Math.PI * timerRadius;
+  const timerProgress = guessTimerEndAt > 0 ? timerDisplay / 10 : 0;
+  const timerStrokeOffset = timerCircumference * (1 - timerProgress);
+  const showGuessTimer = auctionLocked && letterCounter === 0 && guessTimerEndAt > 0 && timerDisplay > 0;
 
   return (
-    <div className="relative w-full min-h-screen bg-black text-white flex items-center justify-center overflow-hidden select-none">
+    <div data-asset-refresh={assetRefresh} className="relative w-full min-h-screen bg-black text-white flex items-center justify-center overflow-hidden select-none" style={{ backgroundImage: phrase.sfondo ? `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.72)), url("${assetUrl(phrase.sfondo)}")` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
       {/* Visual gavel style sheets */}
       <style>{`
         @keyframes gavel-strike {
@@ -199,7 +294,37 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
         .animate-ring-expand {
           animation: ring-expand 0.35s ease-out;
         }
+        @keyframes counter-pop {
+          0% { transform: scale(1); }
+          40% { transform: scale(1.12); }
+          100% { transform: scale(1); }
+        }
+        .animate-counter-pop {
+          animation: counter-pop 0.35s ease-out;
+        }
+        @keyframes wrong-letter-shake {
+          0%, 100% { transform: scale(1) rotate(0deg); }
+          20% { transform: scale(1.08) rotate(-4deg); }
+          40% { transform: scale(1.08) rotate(4deg); }
+          60% { transform: scale(1.05) rotate(-2deg); }
+          80% { transform: scale(1.05) rotate(2deg); }
+        }
+        .animate-wrong-letter {
+          animation: wrong-letter-shake 0.5s ease-out;
+        }
       `}</style>
+
+      {/* Lettera sbagliata — overlay con suono errore */}
+      {wrongLetter && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="animate-wrong-letter relative w-[120px] h-[120px] rounded-2xl border-4 border-red-500 bg-red-950/90 shadow-[0_0_40px_rgba(239,68,68,0.6)] flex items-center justify-center">
+            <span className="text-6xl font-black text-red-200 select-none">{wrongLetter}</span>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-[85%] h-1.5 bg-red-500 rounded-full rotate-[-35deg] shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Frame 16:9 viewport wrapper */}
       <div className="relative w-full max-w-[1920px] aspect-[16/9] flex flex-col items-center justify-center px-10 py-6">
@@ -238,54 +363,73 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
           ))}
         </div>
 
-        {/* Called Letters list */}
-        {calledLetters.length > 0 && (
-          <div className="flex items-center gap-2 mb-4 animate-fade-in bg-zinc-900/60 border border-white/5 px-4 py-1.5 rounded-full text-xs">
-            <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px]">Lettere Chiamate:</span>
-            <div className="flex gap-1.5">
-              {calledLetters.map((l) => {
-                const isCons = /[B-DF-HJ-NP-TV-Z]/.test(l);
-                return (
-                  <span 
-                    key={l} 
-                    className={`w-5 h-5 flex items-center justify-center rounded font-black text-[10px] select-none
-                      ${isCons ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`}
-                  >
-                    {l}
-                  </span>
-                );
-              })}
+        {/* Called Letters list + reveal button */}
+        <div className="flex items-center justify-center gap-4 mb-4 flex-wrap">
+          {calledLetters.length > 0 && (
+            <div className="flex items-center gap-2 animate-fade-in bg-zinc-900/60 border border-white/5 px-4 py-1.5 rounded-full text-xs">
+              <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px]">Lettere Chiamate:</span>
+              <div className="flex gap-1.5">
+                {calledLetters.map((l) => {
+                  const isCons = /[B-DF-HJ-NP-TV-Z]/.test(l);
+                  return (
+                    <span
+                      key={l}
+                      className={`w-5 h-5 flex items-center justify-center rounded font-black text-[10px] select-none
+                        ${isCons ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`}
+                    >
+                      {l}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          )}
+          {interactive && !revealed && (
+            <button
+              type="button"
+              onClick={revealSolution}
+              className="px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider bg-red-600/20 border border-red-500/40 text-red-300 hover:bg-red-600/35 hover:text-white transition-all shadow-lg hover:shadow-red-900/30"
+            >
+              Scopri soluzione
+            </button>
+          )}
+        </div>
 
         {/* Descending Auction Bar */}
         <div className="w-[90%] max-w-[1200px] mb-6">
           <div className="grid grid-cols-10 gap-2.5 w-full">
             {auctionSteps.map((step) => {
               const isActive = auctionValue === step;
+              const isWinningBid = auctionLocked && isActive;
               return (
                 <button
                   key={step}
-                  disabled={!interactive}
+                  disabled={!interactive || auctionLocked}
                   onClick={() => {
-                    if (interactive) {
-                      setAuctionValue(step);
-                    }
+                    if (!interactive || auctionLocked) return;
+                    setAuctionValue(step);
+                    setLetterCounter(step);
+                    setAuctionLocked(true);
                   }}
                   className={`relative py-3 rounded-xl border flex flex-col items-center justify-center transition-all duration-300 select-none
-                    ${isActive
-                      ? 'bg-gradient-to-b from-amber-400 to-yellow-500 border-yellow-300 ring-4 ring-yellow-400/50 text-black scale-110 z-10 shadow-[0_0_20px_rgba(234,179,8,0.7)]'
-                      : 'bg-zinc-900/80 border-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                    ${isWinningBid
+                      ? 'bg-gradient-to-b from-emerald-400 to-green-500 border-green-300 ring-4 ring-green-400/50 text-black scale-110 z-10 shadow-[0_0_20px_rgba(34,197,94,0.7)]'
+                      : isActive
+                        ? 'bg-gradient-to-b from-amber-400 to-yellow-500 border-yellow-300 ring-4 ring-yellow-400/50 text-black scale-110 z-10 shadow-[0_0_20px_rgba(234,179,8,0.7)]'
+                        : auctionLocked
+                          ? 'bg-zinc-950/60 border-zinc-800/60 text-zinc-600 cursor-not-allowed opacity-50'
+                          : 'bg-zinc-900/80 border-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white hover:bg-zinc-800'
                     }`}
                 >
                   <span className="text-2xl font-black">{step}</span>
-                  <span className={`text-[10px] font-black ${isActive ? 'text-black/80' : 'text-zinc-500'}`}>
-                    {step} pt
-                  </span>
-                  {isActive && (
+                  {isActive && !auctionLocked && (
                     <span className="absolute -top-3 text-[9px] font-black bg-black text-amber-400 px-2 py-0.5 rounded-full uppercase tracking-wider border border-amber-400 animate-pulse">
                       OFFERTA
+                    </span>
+                  )}
+                  {isWinningBid && (
+                    <span className="absolute -top-3 text-[9px] font-black bg-black text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-wider border border-emerald-400">
+                      AGGIUDICATA
                     </span>
                   )}
                 </button>
@@ -294,52 +438,100 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
           </div>
         </div>
 
-        {/* Interactive Auction Dashboard Panel */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-[90%] max-w-[1000px] bg-zinc-950/80 border border-white/10 rounded-2xl p-8 shadow-2xl backdrop-blur-md items-center">
-          
-          {/* Column 1: Auction Motifs Info */}
-          <div className="flex flex-col gap-5 justify-center pr-4 border-r border-white/5">
-            <div className="flex items-center gap-4">
-              <div className="p-2.5 bg-indigo-950/50 rounded-lg border border-indigo-500/30">
-                <svg className="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                </svg>
-              </div>
-              <div className="text-left">
-                <h3 className="text-sm font-black uppercase text-indigo-400 tracking-wider">Asta a Ribasso</h3>
-                <p className="text-xs text-white/50 leading-tight">Chiamata dell'offerta attiva da 10 a 1.</p>
-              </div>
-            </div>
+        {/* Auction Dashboard Panel */}
+        <div className="flex flex-col items-center w-[90%] max-w-[1000px] bg-zinc-950/80 border border-white/10 rounded-2xl p-8 shadow-2xl backdrop-blur-md">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-10 w-full">
 
-            <div className="flex items-center gap-4">
-              <div className="p-2.5 bg-emerald-950/50 rounded-lg border border-emerald-500/30">
-                <svg className="w-6 h-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="text-left">
-                <h3 className="text-sm font-black uppercase text-emerald-400 tracking-wider">Chiamata Lettere</h3>
-                <p className="text-xs text-white/50 leading-tight">Ogni consonante chiamata (giusta o sbagliata) riduce l'asta di 1.</p>
-              </div>
-            </div>
+            {/* Letter counter — appare dopo l'aggiudicazione */}
+            {auctionLocked && (
+              <div className="flex flex-col items-center animate-fade-in">
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-3">
+                  Lettere rimanenti
+                </span>
+                <div className="relative">
+                  {/* Alfabeto decorativo sullo sfondo */}
+                  <div className="absolute inset-0 flex flex-wrap justify-center gap-1 opacity-[0.12] pointer-events-none select-none p-2">
+                    {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((l) => (
+                      <span key={l} className="text-[11px] font-black text-indigo-300 w-4 text-center">{l}</span>
+                    ))}
+                  </div>
+                  {/* Casella stile tile da gioco di lettere */}
+                  <div
+                    key={letterCounter}
+                    className={`relative w-[140px] h-[140px] rounded-2xl border-4 flex flex-col items-center justify-center shadow-2xl animate-counter-pop
+                      ${letterCounter === 0
+                        ? 'bg-gradient-to-b from-zinc-800 to-zinc-950 border-zinc-600 text-zinc-500'
+                        : 'bg-gradient-to-b from-indigo-600 to-blue-950 border-indigo-300 text-white shadow-indigo-950/60'
+                      }`}
+                  >
+                    {/* Angoli decorativi tipo mattonella Scrabble */}
+                    <span className="absolute top-2 left-2.5 text-[10px] font-black text-indigo-200/40">A</span>
+                    <span className="absolute top-2 right-2.5 text-[10px] font-black text-indigo-200/40">B</span>
+                    <span className="absolute bottom-2 left-2.5 text-[10px] font-black text-indigo-200/40">C</span>
+                    <span className="absolute bottom-2 right-2.5 text-[10px] font-black text-indigo-200/40">Z</span>
+                    <span className="text-[72px] font-black leading-none drop-shadow-lg tabular-nums">
+                      {letterCounter}
+                    </span>
+                  </div>
+                  {/* Tacche lettere rimanenti */}
+                  <div className="flex justify-center gap-1 mt-3 flex-wrap max-w-[160px]">
+                    {Array.from({ length: auctionValue }).map((_, i) => (
+                      <div
+                        key={i}
+                        className={`w-3 h-3 rounded-sm border transition-all duration-300
+                          ${i < letterCounter
+                            ? 'bg-indigo-400 border-indigo-300 shadow-[0_0_6px_rgba(129,140,248,0.5)]'
+                            : 'bg-zinc-800 border-zinc-700 opacity-40'
+                          }`}
+                      />
+                    ))}
+                  </div>
 
-            <div className="flex items-center gap-4">
-              <div className="p-2.5 bg-amber-950/50 rounded-lg border border-amber-500/30">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-6 h-6 text-amber-400">
-                  <line x1="12" y1="14" x2="12" y2="22" strokeLinecap="round" />
-                  <circle cx="12" cy="8" r="6" fill="#1e1b4b" stroke="#d97706" />
-                  <path d="M12 5.5v5M9.5 8h5" strokeLinecap="round" />
-                </svg>
+                  {/* Cronometro rotondo da 10s quando il contatore arriva a 0 */}
+                  {showGuessTimer && (
+                    <div className="flex flex-col items-center mt-6 animate-fade-in">
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400 mb-3">
+                        Tempo per indovinare
+                      </span>
+                      <div className="relative w-[140px] h-[140px]">
+                        <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                          <circle
+                            cx="60"
+                            cy="60"
+                            r={timerRadius}
+                            fill="none"
+                            stroke="rgb(39 39 42)"
+                            strokeWidth="8"
+                          />
+                          <circle
+                            cx="60"
+                            cy="60"
+                            r={timerRadius}
+                            fill="none"
+                            stroke="rgb(239 68 68)"
+                            strokeWidth="8"
+                            strokeLinecap="round"
+                            strokeDasharray={timerCircumference}
+                            strokeDashoffset={timerStrokeOffset}
+                            className="transition-[stroke-dashoffset] duration-100 ease-linear"
+                            style={{ filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.6))' }}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-4xl font-black text-red-400 tabular-nums leading-none">
+                            {Math.ceil(timerDisplay)}
+                          </span>
+                          <span className="text-[9px] font-black uppercase tracking-wider text-red-400/60 mt-1">sec</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="text-left">
-                <h3 className="text-sm font-black uppercase text-amber-400 tracking-wider">Offerta Attiva</h3>
-                <p className="text-xs text-white/50 leading-tight">Muoviti premendo 0-9 o le frecce della tastiera.</p>
-              </div>
-            </div>
-          </div>
+            )}
 
-          {/* Column 2: Animated Auction Gavel (Strikes downwards, pivot on the left) */}
-          <div className="flex flex-col items-center justify-center py-4 relative">
+            {/* Animated Auction Gavel */}
+            <div className="flex flex-col items-center justify-center py-4 relative">
             <svg width="220" height="150" viewBox="0 0 200 150" className="overflow-visible select-none pointer-events-none">
               {/* 3D Sound Block / Base (Flipped 180° to the right) */}
               {/* Bottom wood base depth */}
@@ -394,10 +586,16 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
               </g>
             </svg>
             
-            {/* Active Bid Display */}
-            <div className="absolute bottom-[-15px] bg-yellow-400/10 border border-yellow-400/30 px-4 py-1 rounded-full animate-pulse text-[11px] font-black uppercase text-yellow-400 tracking-wider">
-              Offerta Corrente: {auctionValue}
+            {/* Status badge */}
+            <div className={`absolute bottom-[-15px] px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border whitespace-nowrap
+              ${auctionLocked
+                ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-400'
+                : 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400 animate-pulse'
+              }`}
+            >
+              {auctionLocked ? `Aggiudicata a ${auctionValue} — chiama le lettere` : `Offerta corrente: ${auctionValue}`}
             </div>
+          </div>
           </div>
         </div>
 

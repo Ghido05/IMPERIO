@@ -3,6 +3,7 @@ import { useGameData } from './context/GameDataContext';
 import { CompactScoreAssigner } from "./components/ScoreAssigner";
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
+import { useScores } from './context/ScoreContext';
 
 interface SolutionProps {
   isVisible: boolean;
@@ -100,6 +101,12 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
   const slideId = gameData.slideId ?? 'sandbox';
+
+  const { scores, addScore } = useScores();
+  const questionNum = React.useMemo(() => {
+    const match = slideId.match(/q(\d+)/);
+    return match ? parseInt(match[1], 10) : 1;
+  }, [slideId]);
 
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
   const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
@@ -245,29 +252,73 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
       // Se stiamo auto-avanzando blocchiamo i numeri, ma permettiamo le altre funzioni
       if (isAutoAdvancing && e.key >= '1' && e.key <= '7') return;
 
+      const getBox2StarterIdx = (): number => {
+        const saved = localStorage.getItem('playstate_box2_starter_idx');
+        if (saved !== null) {
+          return parseInt(saved, 10);
+        }
+        let lowestIdx = 0;
+        for (let i = 1; i < scores.length; i++) {
+          if (Number(scores[i]) < Number(scores[lowestIdx])) {
+            lowestIdx = i;
+          }
+        }
+        localStorage.setItem('playstate_box2_starter_idx', lowestIdx.toString());
+        return lowestIdx;
+      };
+
+      const questionStarterIdx = (getBox2StarterIdx() + (questionNum - 1)) % 3;
+
+      const getCluePoints = (clueNum: number) => {
+        if (clueNum >= 1 && clueNum <= 4) return 1000;
+        if (clueNum === 5 || clueNum === 6) return 2000;
+        if (clueNum === 7) return 3000;
+        return 0;
+      };
+
+      const getActiveTeamIdx = (currentRevealedCount: number): number => {
+        const savedActive = localStorage.getItem('playstate_box2_active_team_idx');
+        if (savedActive !== null) {
+          return parseInt(savedActive, 10);
+        }
+        return (questionStarterIdx + currentRevealedCount) % 3;
+      };
+
       const key = e.key;
       if (key >= '1' && key <= '7') {
         const numKey = Number(key);
-        // Quando i numeri vengono premuti manualmente, riavviamo da capo tutti gli stems
-        isPlayingStemsRef.current = true;
-        Object.values(audiosRef.current).forEach(a => {
-          a.currentTime = 0;
-          const p = a.play();
-          if (p !== undefined) p.catch(err => console.log("Errore riproduzione stem:", err));
-        });
-        setRevealed(prev => ({ ...prev, [numKey]: true }));
-        setLatestClue(numKey);
+        if (!revealed[numKey]) {
+          const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
+          const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
+          addScore(targetTeamIdx, getCluePoints(numKey));
+
+          // Quando i numeri vengono premuti manualmente, riavviamo da capo tutti gli stems
+          isPlayingStemsRef.current = true;
+          Object.values(audiosRef.current).forEach(a => {
+            a.currentTime = 0;
+            const p = a.play();
+            if (p !== undefined) p.catch(err => console.log("Errore riproduzione stem:", err));
+          });
+          setRevealed(prev => ({ ...prev, [numKey]: true }));
+          setLatestClue(numKey);
+        }
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
         const allRevealed = Array.from({ length: 7 }, (_, i) => i + 1).every(i => revealed[i]);
         
         // Se non tutto è svelato, avvia auto-svelamento (che alla fine mostrerà la soluzione)
         if (!allRevealed) {
           if (!isAutoAdvancing) {
+            const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
+            const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
+            addScore(targetTeamIdx, 5000);
             setIsAutoAdvancing(true);
           }
         } else {
           // Se tutto è GIA' svelato (manualmente), premendo S mostra la soluzione e fa il crossfade
           if (!showSolution) {
+            const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
+            const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
+            addScore(targetTeamIdx, 5000);
             setShowSolution(true);
             
             if (finalAudioRef.current && !isFadingOutRef.current) {
@@ -321,7 +372,7 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
     if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAutoAdvancing, revealed, interactive]);
+  }, [isAutoAdvancing, interactive, scores, revealed, questionNum, addScore, showSolution]);
 
   const rankingMarkers = [
     { value: 7, top: "34.070%" }, // Giallo (1 indizio)

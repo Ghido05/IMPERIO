@@ -24,10 +24,12 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
   const gioco1Slides = Array.from({ length: 10 }, (_, idx) => {
     const num = idx + 1;
     const q = setup.gioco1.questions[num] || createDefaultGioco1Question();
+    const sf = q.sfondo || setup.gioco1.sfondoGenerale || '';
     if (q.tipo === 'canzone') {
       const defaultData = cloneDefaultData('music') as any;
       const mappedData = {
         ...defaultData,
+        sfondo: sf,
         indizi: [
           { ...defaultData.indizi[0], text: q.canzone.indizi[0] || defaultData.indizi[0].text },
           { ...defaultData.indizi[1], text: q.canzone.indizi[1] || defaultData.indizi[1].text },
@@ -55,6 +57,7 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
       const defaultData = cloneDefaultData('img') as any;
       const mappedData = {
         ...defaultData,
+        sfondo: sf,
         immagineSegreta: q.immagine.immagineJpg || defaultData.immagineSegreta,
         indizi: defaultData.indizi.map((ind: any, iIdx: number) => ({
           ...ind,
@@ -77,10 +80,12 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
   const gioco2Slides = Array.from({ length: 6 }, (_, idx) => {
     const num = idx + 1;
     const q = setup.gioco2.questions[num] || createDefaultGioco2Question();
+    const sf = q.sfondo || setup.gioco2.sfondoGenerale || '';
     if (q.tipo === 'canzone') {
       const defaultData = cloneDefaultData('classifica_musicale') as any;
       const mappedData = {
         ...defaultData,
+        sfondo: sf,
         titolo: q.canzone.domanda || q.canzone.titolo || defaultData.titolo,
         elementi: defaultData.elementi.map((el: any, i: number) => ({
           ...el,
@@ -100,6 +105,7 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
       const defaultData = cloneDefaultData('classifica') as any;
       const mappedData = {
         ...defaultData,
+        sfondo: sf,
         titolo: q.immagine.domanda || q.immagine.soluzioneTesto || defaultData.titolo,
         immagineSegreta: q.immagine.immagineJpg || defaultData.immagineSegreta,
         audio: q.immagine.soluzioneAudio || defaultData.audio,
@@ -121,7 +127,7 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
     const q = setup.gioco3?.questions?.[num];
     if (!q) return null;
     return {
-      sfondo: q.sfondo || `/Password/password${num}.png`,
+      sfondo: q.sfondo || setup.gioco3.sfondoGenerale || `/Password/password${num}.png`,
       squadra1: [q.squadra1[0].parola, q.squadra1[1].parola, q.squadra1[2].parola].map(w => w.toUpperCase()),
       squadra2: [q.squadra2[0].parola, q.squadra2[1].parola, q.squadra2[2].parola].map(w => w.toUpperCase()),
       squadra3: [q.squadra3[0].parola, q.squadra3[1].parola, q.squadra3[2].parola].map(w => w.toUpperCase()),
@@ -167,8 +173,14 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
       data: {
         ...(cloneDefaultData('gioco_frase_tempo') as any),
         frasi: (setup.gioco4?.frasi && setup.gioco4.frasi.length > 0)
-          ? setup.gioco4.frasi
-          : (cloneDefaultData('gioco_frase_tempo') as any).frasi
+          ? setup.gioco4.frasi.map(frase => ({
+              ...frase,
+              sfondo: frase.sfondo || setup.gioco4.sfondoGenerale || ''
+            }))
+          : (cloneDefaultData('gioco_frase_tempo') as any).frasi.map((frase: any) => ({
+              ...frase,
+              sfondo: frase.sfondo || setup.gioco4.sfondoGenerale || ''
+            }))
       }
     },
     {

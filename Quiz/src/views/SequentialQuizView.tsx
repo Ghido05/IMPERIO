@@ -21,6 +21,7 @@ export function getSlideForBoxQuestion(
 ): Slide {
   if (boxNum === 1) {
     const q1 = setupState.gioco1?.questions?.[questionNum] || createDefaultGioco1Question();
+    const sf = q1.sfondo || setupState.gioco1?.sfondoGenerale || '';
     if (q1.tipo === 'canzone') {
       const data = {
         indizi: [
@@ -72,12 +73,12 @@ export function getSlideForBoxQuestion(
           anno: q1.canzone.anno || '',
           audio: q1.canzone.soluzioneAudio || '',
         },
-        sfondo: '',
+        sfondo: sf,
       };
       return { id: `box1_q${questionNum}`, type: 'music', data };
     } else {
       const data = {
-        sfondo: '',
+        sfondo: sf,
         immagineSegreta: q1.immagine.immagineJpg || '',
         audio: q1.immagine.confermaAudio || '',
         indizi: [
@@ -99,10 +100,11 @@ export function getSlideForBoxQuestion(
 
   if (boxNum === 2) {
     const q2 = setupState.gioco2?.questions?.[questionNum] || createDefaultGioco2Question();
+    const sf = q2.sfondo || setupState.gioco2?.sfondoGenerale || '';
     if (q2.tipo === 'canzone') {
       const data = {
         titolo: q2.canzone.domanda || q2.canzone.titolo || 'Classifica Musicale',
-        sfondo: '',
+        sfondo: sf,
         immagineSegreta: '',
         soluzioneTesto: q2.canzone.info ? `${q2.canzone.titolo} - ${q2.canzone.info}` : q2.canzone.titolo || 'Soluzione',
         canzoneFinale: q2.canzone.soluzioneAudio || '',
@@ -117,7 +119,7 @@ export function getSlideForBoxQuestion(
     } else {
       const data = {
         titolo: q2.immagine.domanda || q2.immagine.soluzioneTesto || 'Classifica Immagine',
-        sfondo: '',
+        sfondo: sf,
         immagineSegreta: q2.immagine.immagineJpg || '',
         audio: q2.immagine.soluzioneAudio || '',
         elementi: (q2.immagine.lista10 || []).map((txt, i) => ({
@@ -135,7 +137,7 @@ export function getSlideForBoxQuestion(
       const q = setupState.gioco3?.questions?.[num];
       if (!q) return null;
       return {
-        sfondo: q.sfondo || `/Password/password${num}.png`,
+        sfondo: q.sfondo || setupState.gioco3?.sfondoGenerale || `/Password/password${num}.png`,
         squadra1: [q.squadra1[0].parola, q.squadra1[1].parola, q.squadra1[2].parola].map(w => w.toUpperCase()),
         squadra2: [q.squadra2[0].parola, q.squadra2[1].parola, q.squadra2[2].parola].map(w => w.toUpperCase()),
         squadra3: [q.squadra3[0].parola, q.squadra3[1].parola, q.squadra3[2].parola].map(w => w.toUpperCase()),
@@ -174,8 +176,14 @@ export function getSlideForBoxQuestion(
   if (boxNum === 4) {
     const defaultData = cloneDefaultData('gioco_frase_tempo') as any;
     const frasi = (setupState.gioco4?.frasi && setupState.gioco4.frasi.length > 0)
-      ? setupState.gioco4.frasi
-      : defaultData.frasi;
+      ? setupState.gioco4.frasi.map(frase => ({
+          ...frase,
+          sfondo: frase.sfondo || setupState.gioco4.sfondoGenerale || ''
+        }))
+      : defaultData.frasi.map((frase: any) => ({
+          ...frase,
+          sfondo: frase.sfondo || setupState.gioco4.sfondoGenerale || ''
+        }));
     return { id: 'gioco_frase_tempo', type: 'gioco_frase_tempo', data: { ...defaultData, frasi } };
   }
 
@@ -197,6 +205,19 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
 
   const [activePhraseIndex, setActivePhraseIndex] = useSyncedState<number>(`playstate_gioco_frase_tempo_index`, 0);
   const [maximizedPanel, setMaximizedPanel] = useState<'none' | 'left' | 'right'>('none');
+
+  useEffect(() => {
+    localStorage.setItem('playstate_active_box', activeBox.toString());
+    localStorage.setItem('playstate_active_question', activeQuestion.toString());
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'playstate_active_box',
+      newValue: activeBox.toString()
+    }));
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'playstate_active_question',
+      newValue: activeQuestion.toString()
+    }));
+  }, [activeBox, activeQuestion]);
 
   // Load configuration from IndexedDB & LocalStorage on mount
   useEffect(() => {

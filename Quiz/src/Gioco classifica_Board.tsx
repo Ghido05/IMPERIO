@@ -2,12 +2,19 @@ import React, { useState, useEffect } from "react";
 import { useGameData } from './context/GameDataContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
+import { useScores } from './context/ScoreContext';
 
 const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX.Element => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
   const slideId = gameData.slideId ?? 'sandbox';
+
+  const { scores, addScore } = useScores();
+  const questionNum = React.useMemo(() => {
+    const match = slideId.match(/q(\d+)/);
+    return match ? parseInt(match[1], 10) : 1;
+  }, [slideId]);
 
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
   const [pointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
@@ -36,6 +43,14 @@ const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): Rea
 
   // Controlla se tutti gli indizi da 1 a 10 sono stati svelati
   const isGameComplete = Array.from({ length: 10 }, (_, i) => i + 1).every(i => revealed[i]);
+
+  // Avvia l'audio in automatico al completamento del gioco (quando tutti i 10 elementi sono svelati)
+  useEffect(() => {
+    if (isGameComplete && audioRef.current && interactive) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(err => console.error("Auto play solution audio error:", err));
+    }
+  }, [isGameComplete, interactive]);
 
   // Generiamo l'ordine di rivelazione dei tasselli per l'immagine
   const totalTiles = (gameData.griglia?.colonne || 10) * (gameData.griglia?.righe || 10);
@@ -137,16 +152,65 @@ const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): Rea
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isAutoAdvancing) return;
 
+      const getBox2StarterIdx = (): number => {
+        const saved = localStorage.getItem('playstate_box2_starter_idx');
+        if (saved !== null) {
+          return parseInt(saved, 10);
+        }
+        let lowestIdx = 0;
+        for (let i = 1; i < scores.length; i++) {
+          if (Number(scores[i]) < Number(scores[lowestIdx])) {
+            lowestIdx = i;
+          }
+        }
+        localStorage.setItem('playstate_box2_starter_idx', lowestIdx.toString());
+        return lowestIdx;
+      };
+
+      const questionStarterIdx = (getBox2StarterIdx() + (questionNum - 1)) % 3;
+
+      const getCluePoints = (clueNum: number) => {
+        if (clueNum >= 1 && clueNum <= 5) return 1000;
+        if (clueNum >= 6 && clueNum <= 8) return 2000;
+        if (clueNum >= 9 && clueNum <= 10) return 3000;
+        return 0;
+      };
+
+      const getActiveTeamIdx = (currentRevealedCount: number): number => {
+        const savedActive = localStorage.getItem('playstate_box2_active_team_idx');
+        if (savedActive !== null) {
+          return parseInt(savedActive, 10);
+        }
+        return (questionStarterIdx + currentRevealedCount) % 3;
+      };
+
       const key = e.key;
       if (key >= '1' && key <= '9') {
         const num = Number(key);
-        setRevealed(prev => ({ ...prev, [num]: true }));
-        setLatestClue(num);
+        if (!revealed[num]) {
+          const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
+          const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
+          addScore(targetTeamIdx, getCluePoints(num));
+
+          setRevealed(prev => ({ ...prev, [num]: true }));
+          setLatestClue(num);
+        }
       } else if (key === '0') {
-        setRevealed(prev => ({ ...prev, 10: true }));
-        setLatestClue(10);
+        if (!revealed[10]) {
+          const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
+          const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
+          addScore(targetTeamIdx, getCluePoints(10));
+
+          setRevealed(prev => ({ ...prev, 10: true }));
+          setLatestClue(10);
+        }
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
-        setIsAutoAdvancing(true);
+        if (!isAutoAdvancing && !isGameComplete) {
+          const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
+          const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
+          addScore(targetTeamIdx, 5000);
+          setIsAutoAdvancing(true);
+        }
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
         setShowError(true);
       } else if (key.toLowerCase() === 't') {
@@ -165,7 +229,7 @@ const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): Rea
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAutoAdvancing, interactive]);
+  }, [isAutoAdvancing, interactive, scores, revealed, questionNum, addScore]);
 
   const rankingMarkers = [
     { value: 10, top: "31.389%" },

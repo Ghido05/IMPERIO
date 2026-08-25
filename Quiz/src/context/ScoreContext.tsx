@@ -14,12 +14,40 @@ const ScoreContext = createContext<ScoreContextType | undefined>(undefined);
 const STORAGE_KEY = 'imperio_quiz_scores';
 
 export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [scores, setScores] = useState<number[]>([0, 0, 0]);
-  const [bonuses, setBonuses] = useState<boolean[][]>([
-    [false, false, false],
-    [false, false, false],
-    [false, false, false]
-  ]);
+  const [scores, setScores] = useState<number[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.scores) return parsed.scores;
+      } catch (e) {
+        console.error("Failed to parse saved scores", e);
+      }
+    }
+    return [0, 0, 0];
+  });
+  const [bonuses, setBonuses] = useState<boolean[][]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.bonuses) {
+          return parsed.bonuses.map((row: boolean[]) => {
+            if (row.length > 3) return row.slice(0, 3);
+            if (row.length < 3) return [...row, ...Array(3 - row.length).fill(false)];
+            return row;
+          });
+        }
+      } catch (e) {
+        console.error("Failed to parse saved bonuses", e);
+      }
+    }
+    return [
+      [false, false, false],
+      [false, false, false],
+      [false, false, false]
+    ];
+  });
 
   // Load from localStorage on init and listen for changes from other windows
   useEffect(() => {

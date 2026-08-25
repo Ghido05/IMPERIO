@@ -23,6 +23,7 @@ export interface Gioco1Question {
   tipo: 'canzone' | 'immagine';
   canzone: Gioco1CanzoneData;
   immagine: Gioco1ImmagineData;
+  sfondo?: string;
 }
 
 // Data types for Box 2 (Gioco 2)
@@ -48,11 +49,18 @@ export interface Gioco2Question {
   tipo: 'canzone' | 'immagine';
   canzone: Gioco2CanzoneData;
   immagine: Gioco2ImmagineData;
+  sfondo?: string;
 }
 
 export interface BoxGenericSetup {
   titolo: string;
   note: string;
+}
+
+export interface PunteggiSetup {
+  sfondo?: string;
+  nomiSquadre: string[];
+  iconeBonus?: string[];
 }
 
 /** Una parola di squadra + 2 indizi (come Password: round ↔ parola) */
@@ -76,23 +84,28 @@ export interface Gioco4Setup {
   titolo?: string;
   note?: string;
   frasi: FraseTempoItem[];
+  sfondoGenerale?: string;
 }
 
 export interface QuizSetupState {
   gioco1: {
     selectedQuestion: number;
     questions: Record<number, Gioco1Question>;
+    sfondoGenerale?: string;
   };
   gioco2: {
     selectedQuestion: number;
     questions: Record<number, Gioco2Question>;
+    sfondoGenerale?: string;
   };
   gioco3: {
     selectedQuestion: number;
     questions: Record<number, Gioco3Question>;
+    sfondoGenerale?: string;
   };
   gioco4: Gioco4Setup;
   gioco5: BoxGenericSetup;
+  punteggi?: PunteggiSetup;
 }
 
 const STORAGE_KEY = 'imperio_quiz_setup_config_v1';
@@ -113,6 +126,7 @@ export function createDefaultGioco1Question(): Gioco1Question {
       confermaAudio: '',
       soluzione: '',
     },
+    sfondo: '',
   };
 }
 
@@ -135,6 +149,7 @@ export function createDefaultGioco2Question(): Gioco2Question {
       soluzioneAudio: '',
       soluzioneTesto: '',
     },
+    sfondo: '',
   };
 }
 
@@ -158,11 +173,11 @@ function normalizeGioco3(
   def: QuizSetupState['gioco3']
 ): QuizSetupState['gioco3'] {
   if (!raw || typeof raw !== 'object') return def;
-  const data = raw as Partial<QuizSetupState['gioco3']> & BoxGenericSetup;
-  if (!data.questions || typeof data.questions !== 'object') return def;
+  const data = raw as any;
   return {
     selectedQuestion: data.selectedQuestion || 1,
-    questions: { ...def.questions, ...data.questions },
+    questions: data.questions ? { ...def.questions, ...data.questions } : def.questions,
+    sfondoGenerale: data.sfondoGenerale || '',
   };
 }
 
@@ -182,6 +197,20 @@ function normalizeGioco4(raw: any, def: Gioco4Setup): Gioco4Setup {
     titolo: raw.titolo || def.titolo,
     note: raw.note || def.note,
     frasi,
+    sfondoGenerale: raw.sfondoGenerale || '',
+  };
+}
+
+function normalizePunteggi(raw: any, def: PunteggiSetup): PunteggiSetup {
+  if (!raw) return def;
+  return {
+    sfondo: raw.sfondo || '',
+    nomiSquadre: Array.isArray(raw.nomiSquadre) && raw.nomiSquadre.length === 3
+      ? raw.nomiSquadre
+      : def.nomiSquadre,
+    iconeBonus: Array.isArray(raw.iconeBonus) && raw.iconeBonus.length === 3
+      ? raw.iconeBonus
+      : (raw.iconaBonus ? [raw.iconaBonus, raw.iconaBonus, raw.iconaBonus] : def.iconeBonus),
   };
 }
 
@@ -205,21 +234,30 @@ export function getDefaultSetupState(): QuizSetupState {
     gioco1: {
       selectedQuestion: 1,
       questions: q1,
+      sfondoGenerale: '',
     },
     gioco2: {
       selectedQuestion: 1,
       questions: q2,
+      sfondoGenerale: '',
     },
     gioco3: {
       selectedQuestion: 1,
       questions: q3,
+      sfondoGenerale: '',
     },
     gioco4: {
       titolo: 'Frase Tempo',
       note: 'Inserisci le frasi da indovinare per il gioco Frase Tempo',
       frasi: DEFAULT_FRASI_TEMPO.map((testo) => createDefaultFraseTempoItem(testo)),
+      sfondoGenerale: '',
     },
     gioco5: { titolo: 'Gioco 5', note: 'Modulo Gioco 5 (in arrivo)' },
+    punteggi: {
+      sfondo: '',
+      nomiSquadre: ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'],
+      iconeBonus: ['', '', ''],
+    },
   };
 }
 
@@ -269,14 +307,17 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           gioco1: {
             selectedQuestion: fromDb.gioco1?.selectedQuestion || 1,
             questions: { ...def.gioco1.questions, ...fromDb.gioco1?.questions },
+            sfondoGenerale: fromDb.gioco1?.sfondoGenerale || '',
           },
           gioco2: {
             selectedQuestion: fromDb.gioco2?.selectedQuestion || 1,
             questions: { ...def.gioco2.questions, ...fromDb.gioco2?.questions },
+            sfondoGenerale: fromDb.gioco2?.sfondoGenerale || '',
           },
           gioco3: normalizeGioco3(fromDb.gioco3, def.gioco3),
           gioco4: normalizeGioco4(fromDb.gioco4, def.gioco4),
           gioco5: fromDb.gioco5 || def.gioco5,
+          punteggi: normalizePunteggi(fromDb.punteggi, def.punteggi!),
         });
       } else {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -287,14 +328,17 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               gioco1: {
                 selectedQuestion: parsed.gioco1?.selectedQuestion || 1,
                 questions: { ...def.gioco1.questions, ...parsed.gioco1?.questions },
+                sfondoGenerale: parsed.gioco1?.sfondoGenerale || '',
               },
               gioco2: {
                 selectedQuestion: parsed.gioco2?.selectedQuestion || 1,
                 questions: { ...def.gioco2.questions, ...parsed.gioco2?.questions },
+                sfondoGenerale: parsed.gioco2?.sfondoGenerale || '',
               },
               gioco3: normalizeGioco3(parsed.gioco3, def.gioco3),
               gioco4: normalizeGioco4(parsed.gioco4, def.gioco4),
               gioco5: parsed.gioco5 || def.gioco5,
+              punteggi: normalizePunteggi(parsed.punteggi, def.punteggi!),
             });
           } catch (e) {
             console.error('Error loading setup state:', e);
@@ -365,6 +409,34 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
         frasi: (prev.gioco4?.frasi || []).filter((_, i) => i !== idx),
       },
     }));
+  };
+
+  const handleResetSession = () => {
+    if (confirm("Sei sicuro di voler azzerare tutti gli stati interattivi dei giochi (step svelati, timer, parole indovinate) e tutti i punteggi delle squadre? I contenuti del setup (canzoni, immagini, definizioni) non verranno persi.")) {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          if (
+            key.startsWith('playstate_') || 
+            key.startsWith('password_') || 
+            key === 'imperio_quiz_scores'
+          ) {
+            keysToRemove.push(key);
+          }
+        }
+      }
+      keysToRemove.forEach(key => {
+        localStorage.removeItem(key);
+        window.dispatchEvent(new StorageEvent('storage', { key, newValue: null }));
+        if ((window as any).electron?.broadcastState) {
+          (window as any).electron.broadcastState({
+            localStorageUpdate: { key, value: null }
+          });
+        }
+      });
+      showToast('🔄 Stati dei giochi e punteggi azzerati!');
+    }
   };
 
   const handleSave = async () => {
@@ -546,6 +618,8 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </button>
           )}
 
+
+
           <button
             type="button"
             onClick={handleSave}
@@ -651,6 +725,112 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   <option value="canzone">🎵 Canzone</option>
                   <option value="immagine">🖼️ Immagine</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Sezione Sfondi Box 1 */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
+              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🖼️ Gestione Sfondo</span>
+                <span className="text-[10px] text-slate-500 font-normal normal-case">(Generale o specifico per Domanda #{currentQ1Num})</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Sfondo Generale */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    Sfondo Generale Box 1:
+                  </label>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.gioco1.sfondoGenerale?.startsWith('data:') || state.gioco1.sfondoGenerale?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[100px]">
+                          {formatBase64Info(state.gioco1.sfondoGenerale)?.name || 'Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState((prev) => ({ ...prev, gioco1: { ...prev.gioco1, sfondoGenerale: '' } }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="URL sfondo generale..."
+                        value={state.gioco1.sfondoGenerale || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState((prev) => ({
+                            ...prev,
+                            gioco1: { ...prev.gioco1, sfondoGenerale: val }
+                          }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
+                      />
+                    )}
+                    <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🖼️ Sfoglia
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState((prev) => ({ ...prev, gioco1: { ...prev.gioco1, sfondoGenerale: base64 } }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Sfondo Specifico Domanda */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    Sfondo Specifico Domanda #{currentQ1Num}:
+                  </label>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {currentQ1.sfondo?.startsWith('data:') || currentQ1.sfondo?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[100px]">
+                          {formatBase64Info(currentQ1.sfondo)?.name || 'Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateQ1((prev) => ({ ...prev, sfondo: '' }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Vuoto (usa generale)..."
+                        value={currentQ1.sfondo || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          updateQ1((prev) => ({ ...prev, sfondo: val }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
+                      />
+                    )}
+                    <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🖼️ Sfoglia
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            updateQ1((prev) => ({ ...prev, sfondo: base64 }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1127,6 +1307,112 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   <option value="canzone">🎵 Canzone</option>
                   <option value="immagine">🖼️ Immagine</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Sezione Sfondi Box 2 */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
+              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🖼️ Gestione Sfondo</span>
+                <span className="text-[10px] text-slate-500 font-normal normal-case">(Generale o specifico per Domanda #{currentQ2Num})</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Sfondo Generale */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    Sfondo Generale Box 2:
+                  </label>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.gioco2.sfondoGenerale?.startsWith('data:') || state.gioco2.sfondoGenerale?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[100px]">
+                          {formatBase64Info(state.gioco2.sfondoGenerale)?.name || 'Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState((prev) => ({ ...prev, gioco2: { ...prev.gioco2, sfondoGenerale: '' } }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="URL sfondo generale..."
+                        value={state.gioco2.sfondoGenerale || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState((prev) => ({
+                            ...prev,
+                            gioco2: { ...prev.gioco2, sfondoGenerale: val }
+                          }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                      />
+                    )}
+                    <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🖼️ Sfoglia
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState((prev) => ({ ...prev, gioco2: { ...prev.gioco2, sfondoGenerale: base64 } }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Sfondo Specifico Domanda */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    Sfondo Specifico Domanda #{currentQ2Num}:
+                  </label>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {currentQ2.sfondo?.startsWith('data:') || currentQ2.sfondo?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[100px]">
+                          {formatBase64Info(currentQ2.sfondo)?.name || 'Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => updateQ2((prev) => ({ ...prev, sfondo: '' }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Vuoto (usa generale)..."
+                        value={currentQ2.sfondo || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          updateQ2((prev) => ({ ...prev, sfondo: val }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                      />
+                    )}
+                    <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🖼️ Sfoglia
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            updateQ2((prev) => ({ ...prev, sfondo: base64 }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1617,50 +1903,109 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </select>
           </div>
 
-          {/* Background image */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">
-              Immagine di sfondo:
-            </label>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-[#141417] p-2.5 rounded-lg border border-white/5">
-              {currentQ3.sfondo?.startsWith('data:') || currentQ3.sfondo?.startsWith('idb://') ? (
-                <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
-                  <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
-                    {(() => {
-                      const info = formatBase64Info(currentQ3.sfondo);
-                      return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
-                    })()}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => updateQ3((prev) => ({ ...prev, sfondo: '' }))}
-                    className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
-                  >
-                    Rimuovi
-                  </button>
+          {/* Sezione Sfondi Box 3 */}
+          <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
+            <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span>🖼️ Gestione Sfondo</span>
+              <span className="text-[10px] text-slate-500 font-normal normal-case">(Generale o specifico per Domanda #{currentQ3Num})</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Sfondo Generale */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                  Sfondo Generale Box 3:
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco3.sfondoGenerale?.startsWith('data:') || state.gioco3.sfondoGenerale?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[100px]">
+                        {formatBase64Info(state.gioco3.sfondoGenerale)?.name || 'Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState((prev) => ({ ...prev, gioco3: { ...prev.gioco3, sfondoGenerale: '' } }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="URL sfondo generale..."
+                      value={state.gioco3.sfondoGenerale || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState((prev) => ({
+                          ...prev,
+                          gioco3: { ...prev.gioco3, sfondoGenerale: val }
+                        }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                    />
+                  )}
+                  <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🖼️ Sfoglia
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState((prev) => ({ ...prev, gioco3: { ...prev.gioco3, sfondoGenerale: base64 } }))
+                        )
+                      }
+                    />
+                  </label>
                 </div>
-              ) : (
-                <input
-                  type="text"
-                  placeholder="Percorso URL / immagine di sfondo..."
-                  value={currentQ3.sfondo}
-                  onChange={(e) => updateQ3((prev) => ({ ...prev, sfondo: e.target.value }))}
-                  className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
-                />
-              )}
-              <label className="px-3 py-1.5 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                🖼️ Sfoglia
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) =>
-                    handleFileUpload(e, (base64) =>
-                      updateQ3((prev) => ({ ...prev, sfondo: base64 }))
-                    )
-                  }
-                />
-              </label>
+              </div>
+
+              {/* Sfondo Specifico Domanda */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                  Sfondo Specifico Domanda #{currentQ3Num}:
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {currentQ3.sfondo?.startsWith('data:') || currentQ3.sfondo?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[100px]">
+                        {formatBase64Info(currentQ3.sfondo)?.name || 'Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateQ3((prev) => ({ ...prev, sfondo: '' }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Vuoto (usa default / generale)..."
+                      value={currentQ3.sfondo || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateQ3((prev) => ({ ...prev, sfondo: val }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                    />
+                  )}
+                  <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🖼️ Sfoglia
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          updateQ3((prev) => ({ ...prev, sfondo: base64 }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1795,6 +2140,60 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               </span>
             </div>
 
+            {/* Sfondo Generale Box 4 */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
+              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🖼️ Sfondo Generale Box 4</span>
+                <span className="text-[10px] text-slate-500 font-normal normal-case">(Utilizzato come default per tutte le frasi)</span>
+              </div>
+              <div className="flex items-center gap-3 bg-[#141417] p-2.5 rounded-lg border border-white/5">
+                {state.gioco4.sfondoGenerale?.startsWith('data:') || state.gioco4.sfondoGenerale?.startsWith('idb://') ? (
+                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                    <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
+                      {(() => {
+                        const info = formatBase64Info(state.gioco4.sfondoGenerale);
+                        return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
+                      })()}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setState((prev) => ({ ...prev, gioco4: { ...prev.gioco4, sfondoGenerale: '' } }))}
+                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
+                    >
+                      Rimuovi
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Percorso URL / immagine di sfondo generale per tutte le frasi..."
+                    value={state.gioco4.sfondoGenerale || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setState((prev) => ({
+                        ...prev,
+                        gioco4: { ...prev.gioco4, sfondoGenerale: val }
+                      }));
+                    }}
+                    className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500"
+                  />
+                )}
+                <label className="px-3 py-1.5 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                  🖼️ Sfoglia
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileUpload(e, (base64) =>
+                        setState((prev) => ({ ...prev, gioco4: { ...prev.gioco4, sfondoGenerale: base64 } }))
+                      )
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+
             {/* Lista delle frasi */}
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
               {(state.gioco4?.frasi || []).map((rawFrase, idx) => {
@@ -1892,12 +2291,233 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           </div>
         </div>
 
+        {/* BOX PUNTEGGI — Impostazioni dei Punteggi */}
+        <div className="pt-4">
+          <div className="bg-[#1c1c21] rounded-2xl border border-white/10 p-6 flex flex-col gap-5 shadow-lg">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 font-extrabold flex items-center justify-center text-sm shadow-inner">
+                  🏆
+                </span>
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    IMPOSTAZIONI PUNTEGGI — Tabellone e Classifica
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Configura l'aspetto estetico, i nomi delle tre squadre e l'icona per i bonus.
+                  </p>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                Punteggi
+              </span>
+            </div>
+
+            {/* Sfondo Classifica */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
+              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🖼️ Sfondo Classifica</span>
+                <span className="text-[10px] text-slate-500 font-normal normal-case">(Immagine per il tabellone generale dei punti)</span>
+              </div>
+              <div className="flex items-center gap-3 bg-[#141417] p-2.5 rounded-lg border border-white/5">
+                {state.punteggi?.sfondo?.startsWith('data:') || state.punteggi?.sfondo?.startsWith('idb://') ? (
+                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                    <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
+                      {(() => {
+                        const info = formatBase64Info(state.punteggi.sfondo);
+                        return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
+                      })()}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setState((prev) => ({
+                        ...prev,
+                        punteggi: { ...(prev.punteggi || { nomiSquadre: ['', '', ''] }), sfondo: '' }
+                      }))}
+                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
+                    >
+                      Rimuovi
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Percorso URL / immagine di sfondo per il tabellone dei punteggi..."
+                    value={state.punteggi?.sfondo || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setState((prev) => ({
+                        ...prev,
+                        punteggi: { ...(prev.punteggi || { nomiSquadre: ['', '', ''] }), sfondo: val }
+                      }));
+                    }}
+                    className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500"
+                  />
+                )}
+                <label className="px-3 py-1.5 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                  🖼️ Sfoglia
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileUpload(e, (base64) =>
+                        setState((prev) => ({
+                          ...prev,
+                          punteggi: { ...(prev.punteggi || { nomiSquadre: ['', '', ''] }), sfondo: base64 }
+                        }))
+                      )
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+
+            {/* Nomi delle Squadre */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
+              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                👥 Nomi delle Squadre
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[0, 1, 2].map((idx) => {
+                  const colors = [
+                    { border: 'focus:border-red-500', label: 'Squadra 1 (Rossa)', placeholder: 'SQUADRA 1' },
+                    { border: 'focus:border-blue-500', label: 'Squadra 2 (Blu)', placeholder: 'SQUADRA 2' },
+                    { border: 'focus:border-green-500', label: 'Squadra 3 (Verde)', placeholder: 'SQUADRA 3' }
+                  ];
+                  return (
+                    <div key={idx} className="flex flex-col gap-1.5">
+                      <label className="text-[11px] font-medium text-slate-400">{colors[idx].label}</label>
+                      <input
+                        type="text"
+                        placeholder={colors[idx].placeholder}
+                        value={state.punteggi?.nomiSquadre?.[idx] || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState((prev) => {
+                            const current = prev.punteggi || { nomiSquadre: ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'] };
+                            const updatedNames = [...(current.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'])];
+                            updatedNames[idx] = val;
+                            return {
+                              ...prev,
+                              punteggi: { ...current, nomiSquadre: updatedNames }
+                            };
+                          });
+                        }}
+                        className={`bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none ${colors[idx].border} transition-colors`}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Icone dei Bonus */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
+              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🎁 Icone dei Bonus</span>
+                <span className="text-[10px] text-slate-500 font-normal normal-case">(Configura 3 icone diverse per i 3 bonus delle squadre)</span>
+              </div>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {[0, 1, 2].map((idx) => {
+                  const bonusIcon = state.punteggi?.iconeBonus?.[idx] || '';
+                  const bonusLabel = `Bonus ${idx + 1}`;
+                  return (
+                    <div key={idx} className="bg-[#141417] p-3 rounded-lg border border-white/5 space-y-2">
+                      <div className="text-[11px] font-medium text-slate-400">{bonusLabel}</div>
+                      <div className="flex items-center gap-2">
+                        {bonusIcon.startsWith('data:') || bonusIcon.startsWith('idb://') ? (
+                          <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                            <span className="text-emerald-400 font-medium truncate max-w-[120px]">
+                              {(() => {
+                                const info = formatBase64Info(bonusIcon);
+                                return info ? info.name : 'File caricato';
+                              })()}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setState((prev) => {
+                                const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: ['', '', ''] };
+                                const updatedIcons = [...(current.iconeBonus || ['', '', ''])];
+                                updatedIcons[idx] = '';
+                                return {
+                                  ...prev,
+                                  punteggi: { ...current, iconeBonus: updatedIcons }
+                                };
+                              })}
+                              className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-1 text-[10px] bg-transparent border-0"
+                            >
+                              Rimuovi
+                            </button>
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="URL icona..."
+                            value={bonusIcon}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setState((prev) => {
+                                const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: ['', '', ''] };
+                                const updatedIcons = [...(current.iconeBonus || ['', '', ''])];
+                                updatedIcons[idx] = val;
+                                return {
+                                  ...prev,
+                                  punteggi: { ...current, iconeBonus: updatedIcons }
+                                };
+                              });
+                            }}
+                            className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500"
+                          />
+                        )}
+                        <label className="px-2.5 py-1.5 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                          🖼️
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) =>
+                              handleFileUpload(e, (base64) =>
+                                setState((prev) => {
+                                  const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: ['', '', ''] };
+                                  const updatedIcons = [...(current.iconeBonus || ['', '', ''])];
+                                  updatedIcons[idx] = base64;
+                                  return {
+                                    ...prev,
+                                    punteggi: { ...current, iconeBonus: updatedIcons }
+                                  };
+                                })
+                              )
+                            }
+                          />
+                        </label>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+          </div>
+        </div>
+
       </main>
 
       {/* Bottom Save Action Footer */}
       <footer className="border-t border-white/10 bg-[#18181b] p-4 flex items-center justify-between max-w-7xl w-full mx-auto mt-8 rounded-t-xl">
-        <div className="text-xs text-slate-400">
-          Tutti i file caricati e le impostazioni vengono salvati in modo permanente.
+        <div className="text-xs text-slate-400 flex flex-col sm:flex-row sm:items-center gap-3">
+          <span>Tutti i file caricati e le impostazioni vengono salvati in modo permanente.</span>
+          <button
+            type="button"
+            onClick={handleResetSession}
+            className="px-3 py-1.5 text-[10px] font-semibold rounded-lg bg-red-950/40 hover:bg-red-950/60 text-red-400 border border-red-900/40 hover:border-red-800/60 transition-all flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+            title="Azzera lo stato di avanzamento e i punteggi dei giochi per ricominciare da capo"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18V5" />
+            </svg>
+            Resetta Partita
+          </button>
         </div>
         <button
           type="button"

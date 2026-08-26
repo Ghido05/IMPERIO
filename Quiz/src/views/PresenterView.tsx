@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import SlideCanvas from '../components/SlideCanvas';
 import WelcomeScreen from '../components/WelcomeScreen';
+import { triggerFadeOutBroadcast } from '../lib/audioTracker';
 import QuizSetupView, { 
   getDefaultSetupState, 
   createDefaultGioco1Question, 
@@ -94,6 +95,11 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
           audio: q.canzone.audioFiles[i] || el.audio
         })),
         soluzioneTesto: q.canzone.titolo || defaultData.soluzioneTesto,
+        soluzione: {
+          titolo: q.canzone.titolo || defaultData.soluzione?.titolo || defaultData.soluzioneTesto || 'Soluzione',
+          artista: q.canzone.artista || '',
+          anno: q.canzone.info || '',
+        },
         canzoneFinale: q.canzone.soluzioneAudio || defaultData.canzoneFinale
       };
       return {
@@ -149,11 +155,42 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
           [q.squadra3[2].indizi[0], q.squadra3[2].indizi[1]],
         ]
       ],
-      bussolotti: defaultPasswordData.manches[num - 1]?.bussolotti || {
-        immagine_premio: "/Icone/premio_bonus.png",
-        posizione_premio_2_posto: 0,
-        posizione_premio_3_posto: 4
-      }
+      bussolotti: (() => {
+        const oldB = defaultPasswordData.manches[num - 1]?.bussolotti || {
+          immagine_premio: "/Icone/premio_bonus.png",
+          posizione_premio_2_posto: 0,
+          posizione_premio_3_posto: 4
+        };
+
+        const immagine_premio = q.bussolotti?.immagine_premio || oldB.immagine_premio || "/Icone/premio_bonus.png";
+        
+        let schede_2_posto = q.bussolotti?.schede_2_posto;
+        if (!schede_2_posto) {
+          schede_2_posto = ['vuoto', 'vuoto', 'vuoto'];
+          const pos2 = oldB.posizione_premio_2_posto ?? 0;
+          schede_2_posto[pos2] = 'bonus';
+        }
+
+        let schede_3_posto = q.bussolotti?.schede_3_posto;
+        if (!schede_3_posto) {
+          schede_3_posto = ['vuoto', 'vuoto', 'vuoto', 'vuoto', 'bonus'];
+          const pos3 = oldB.posizione_premio_3_posto ?? 4;
+          schede_3_posto[pos3] = 'bonus';
+        }
+
+        const immagine_premio_squadra1 = q.bussolotti?.immagine_premio_squadra1 || oldB.immagine_premio_squadra1 || '';
+        const immagine_premio_squadra2 = q.bussolotti?.immagine_premio_squadra2 || oldB.immagine_premio_squadra2 || '';
+        const immagine_premio_squadra3 = q.bussolotti?.immagine_premio_squadra3 || oldB.immagine_premio_squadra3 || '';
+
+        return {
+          immagine_premio,
+          immagine_premio_squadra1,
+          immagine_premio_squadra2,
+          immagine_premio_squadra3,
+          schede_2_posto,
+          schede_3_posto
+        };
+      })()
     };
   }).filter(Boolean);
 
@@ -205,6 +242,7 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
 
 export default function PresenterView() {
   const [viewMode, setViewMode] = useState<PresenterViewMode>('setup');
+  const [showLegend, setShowLegend] = useState(false);
   const [presentationName, setPresentationName] = useState('Presentazione senza titolo');
   const [slides, setSlides] = useState<Slide[]>([]);
   const [activeSlideId, setActiveSlideId] = useState('');
@@ -697,6 +735,23 @@ export default function PresenterView() {
                 <div className="flex items-center gap-3 min-w-[250px] justify-end">
                   <button
                     type="button"
+                    onClick={triggerFadeOutBroadcast}
+                    className="px-3 py-1.5 text-[11px] font-semibold text-amber-400 bg-amber-950/20 hover:bg-amber-950/40 border border-amber-900/30 hover:border-amber-800/50 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Sfuma gradualmente tutte le tracce audio attive e interrompile"
+                  >
+                    🎵 Sfuma Audio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowLegend(true)}
+                    className="px-3 py-1.5 text-[11px] font-semibold text-blue-400 bg-blue-950/20 hover:bg-blue-950/40 border border-blue-900/30 hover:border-blue-800/50 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                    title="Mostra la legenda delle scorciatoie da tastiera"
+                  >
+                    ⌨️ Legenda Tasti
+                  </button>
+                  <div className="h-6 w-px bg-white/10" />
+                  <button
+                    type="button"
                     onClick={handleResetPlaystate}
                     className="px-3 py-1.5 text-[11px] font-semibold text-red-400 bg-red-950/20 hover:bg-red-950/40 border border-red-900/30 hover:border-red-800/50 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
                     title="Azzera lo stato di gioco per ricominciare da capo"
@@ -714,6 +769,143 @@ export default function PresenterView() {
           </main>
         </div>
       </div>
+      {showLegend && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#1e1e24] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <header className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#282830]">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⌨️</span>
+                <h2 className="text-lg font-bold text-white tracking-wide">Legenda Tasti Rapidi e Scorciatoie</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLegend(false)}
+                className="text-white/60 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-all text-sm font-semibold cursor-pointer"
+              >
+                Chiudi ✕
+              </button>
+            </header>
+            
+            <div className="p-6 overflow-y-auto space-y-6 text-sm text-white/80">
+              <p className="text-xs text-white/50 border-b border-white/5 pb-2">
+                Le scorciatoie da tastiera vengono catturate nella schermata del Relatore (purché non si stia digitando in un campo di testo) e inoltrate automaticamente allo Schermo Pubblico.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Gruppo 1: Comandi Generali */}
+                <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                  <h3 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-1.5">
+                    ⚙️ Controlli Generali (Tutti i Giochi)
+                  </h3>
+                  <ul className="space-y-2.5">
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Mostra Soluzione / Auto-svelamento</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">S</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Mostra Soluzione / Salta Step</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">Invio</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Segnala Errore (Effetto Scossa)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">E</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Segnala Errore (Alternativo)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">X</kbd>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Gruppo 2: Box 1 (Musica & Immagine) */}
+                <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                  <h3 className="text-xs font-black uppercase text-blue-400 tracking-wider flex items-center gap-1.5">
+                    🎵 Box 1 — Musica & Immagine
+                  </h3>
+                  <ul className="space-y-2.5">
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Avanza step (rivela indizio/strumento/tassello)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">▶ Freccia Destra</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Regredisci step (nascondi/annulla)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">◀ Freccia Sinistra</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Riproduci/Pausa audio di sottofondo (Immagine)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">M</kbd>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Gruppo 3: Box 2 (Classifica & Classifica Musicale) */}
+                <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                  <h3 className="text-xs font-black uppercase text-green-400 tracking-wider flex items-center gap-1.5">
+                    📊 Box 2 — Classifiche
+                  </h3>
+                  <ul className="space-y-2.5">
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Rivela indizio specifico (1 a 9) e assegna punti</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">1 - 9</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Rivela indizio 10 e assegna punti</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">0</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Mostra/Nascondi Titolo o Argomento</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">T</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Play/Pause audio (Classifica) o Riavvia stems (Musicale)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">M</kbd>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Gruppo 4: Altri moduli */}
+                <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                  <h3 className="text-xs font-black uppercase text-purple-400 tracking-wider flex items-center gap-1.5">
+                    🧩 Cruciverba & Frase Tempo & Password
+                  </h3>
+                  <ul className="space-y-2.5">
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Inserisci caratteri (Verifica lettera o parola)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">A - Z</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Cancella lettere / Resetta manche (Frase Tempo)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">Canc / Backspace</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Imposta valore offerta asta (Frase Tempo - durante asta)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">0 - 9</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Regola offerta asta (Frase Tempo - durante asta)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">▲▼ / ◀▶ Frecce</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Seleziona bussolotto (Password Squadre)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">1 - 3</kbd>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <footer className="px-6 py-4 border-t border-white/10 bg-[#19191e] flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowLegend(false)}
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg transition-all cursor-pointer shadow-lg shadow-blue-500/10"
+              >
+                Ho Capito
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </ScoreProvider>
   );
 }

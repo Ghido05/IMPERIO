@@ -34,6 +34,7 @@ export interface Gioco2CanzoneData {
   indizi: string[];     // clues / text list
   soluzioneAudio: string; // solution mp3
   titolo: string;       // title
+  artista: string;      // artist
   info: string;         // info details
 }
 
@@ -72,12 +73,21 @@ export interface Gioco3TeamWord {
 /** Una domanda/manche del Gioco 3 (Password) */
 export interface Gioco3Question {
   sfondo: string;
+  musicaIntro?: string;
   squadra1: [Gioco3TeamWord, Gioco3TeamWord, Gioco3TeamWord];
   squadra2: [Gioco3TeamWord, Gioco3TeamWord, Gioco3TeamWord];
   squadra3: [Gioco3TeamWord, Gioco3TeamWord, Gioco3TeamWord];
   parolaBomba: string;
   /** Come password `altre[1..]` — 2 parole nulle */
   paroleNulle: [string, string];
+  bussolotti?: {
+    immagine_premio: string;
+    immagine_premio_squadra1?: string;
+    immagine_premio_squadra2?: string;
+    immagine_premio_squadra3?: string;
+    schede_2_posto: ('bonus' | 'vuoto' | '2000')[];
+    schede_3_posto: ('bonus' | 'vuoto' | '2000' | '1000')[];
+  };
 }
 
 export interface Gioco4Setup {
@@ -140,6 +150,7 @@ export function createDefaultGioco2Question(): Gioco2Question {
       indizi: ['', '', '', '', '', '', ''],
       soluzioneAudio: '',
       titolo: '',
+      artista: '',
       info: '',
     },
     immagine: {
@@ -160,11 +171,17 @@ function createDefaultGioco3TeamWord(): Gioco3TeamWord {
 export function createDefaultGioco3Question(): Gioco3Question {
   return {
     sfondo: '',
+    musicaIntro: '',
     squadra1: [createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord()],
     squadra2: [createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord()],
     squadra3: [createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord()],
     parolaBomba: '',
     paroleNulle: ['', ''],
+    bussolotti: {
+      immagine_premio: '/Icone/premio_bonus.png',
+      schede_2_posto: ['bonus', 'vuoto', 'vuoto'],
+      schede_3_posto: ['vuoto', 'vuoto', 'vuoto', 'vuoto', 'bonus'],
+    }
   };
 }
 
@@ -203,14 +220,21 @@ function normalizeGioco4(raw: any, def: Gioco4Setup): Gioco4Setup {
 
 function normalizePunteggi(raw: any, def: PunteggiSetup): PunteggiSetup {
   if (!raw) return def;
+  let rawIcons = Array.isArray(raw.iconeBonus)
+    ? raw.iconeBonus
+    : (raw.iconaBonus ? [raw.iconaBonus, raw.iconaBonus, raw.iconaBonus] : def.iconeBonus || []);
+  
+  const iconeBonus = [...rawIcons];
+  while (iconeBonus.length < 9) {
+    iconeBonus.push('');
+  }
+
   return {
     sfondo: raw.sfondo || '',
     nomiSquadre: Array.isArray(raw.nomiSquadre) && raw.nomiSquadre.length === 3
       ? raw.nomiSquadre
       : def.nomiSquadre,
-    iconeBonus: Array.isArray(raw.iconeBonus) && raw.iconeBonus.length === 3
-      ? raw.iconeBonus
-      : (raw.iconaBonus ? [raw.iconaBonus, raw.iconaBonus, raw.iconaBonus] : def.iconeBonus),
+    iconeBonus,
   };
 }
 
@@ -256,7 +280,7 @@ export function getDefaultSetupState(): QuizSetupState {
     punteggi: {
       sfondo: '',
       nomiSquadre: ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'],
-      iconeBonus: ['', '', ''],
+      iconeBonus: ['', '', '', '', '', '', '', '', ''],
     },
   };
 }
@@ -300,50 +324,59 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
   useEffect(() => {
     async function loadData() {
-      const fromDb = await loadSetupStateDb();
       const def = getDefaultSetupState();
-      if (fromDb) {
-        setState({
-          gioco1: {
-            selectedQuestion: fromDb.gioco1?.selectedQuestion || 1,
-            questions: { ...def.gioco1.questions, ...fromDb.gioco1?.questions },
-            sfondoGenerale: fromDb.gioco1?.sfondoGenerale || '',
-          },
-          gioco2: {
-            selectedQuestion: fromDb.gioco2?.selectedQuestion || 1,
-            questions: { ...def.gioco2.questions, ...fromDb.gioco2?.questions },
-            sfondoGenerale: fromDb.gioco2?.sfondoGenerale || '',
-          },
-          gioco3: normalizeGioco3(fromDb.gioco3, def.gioco3),
-          gioco4: normalizeGioco4(fromDb.gioco4, def.gioco4),
-          gioco5: fromDb.gioco5 || def.gioco5,
-          punteggi: normalizePunteggi(fromDb.punteggi, def.punteggi!),
-        });
-      } else {
+      let loadedState: any = null;
+
+      const isElectron = (window as any).electron !== undefined;
+      if (isElectron) {
+        try {
+          const fromSharedFile = await (window as any).electron.readSetupFile();
+          if (fromSharedFile) {
+            loadedState = fromSharedFile;
+            console.log("[Setup] Caricato con successo dal file JSON condiviso.");
+          }
+        } catch (err) {
+          console.warn("[Setup] Impossibile leggere il file setup condiviso:", err);
+        }
+      }
+
+      if (!loadedState) {
+        const fromDb = await loadSetupStateDb();
+        if (fromDb) {
+          loadedState = fromDb;
+          console.log("[Setup] Caricato da IndexedDB locale.");
+        }
+      }
+
+      if (!loadedState) {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           try {
-            const parsed = JSON.parse(saved);
-            setState({
-              gioco1: {
-                selectedQuestion: parsed.gioco1?.selectedQuestion || 1,
-                questions: { ...def.gioco1.questions, ...parsed.gioco1?.questions },
-                sfondoGenerale: parsed.gioco1?.sfondoGenerale || '',
-              },
-              gioco2: {
-                selectedQuestion: parsed.gioco2?.selectedQuestion || 1,
-                questions: { ...def.gioco2.questions, ...parsed.gioco2?.questions },
-                sfondoGenerale: parsed.gioco2?.sfondoGenerale || '',
-              },
-              gioco3: normalizeGioco3(parsed.gioco3, def.gioco3),
-              gioco4: normalizeGioco4(parsed.gioco4, def.gioco4),
-              gioco5: parsed.gioco5 || def.gioco5,
-              punteggi: normalizePunteggi(parsed.punteggi, def.punteggi!),
-            });
+            loadedState = JSON.parse(saved);
+            console.log("[Setup] Caricato da LocalStorage locale.");
           } catch (e) {
-            console.error('Error loading setup state:', e);
+            console.error('[Setup] Error parsing LocalStorage setup state:', e);
           }
         }
+      }
+
+      if (loadedState) {
+        setState({
+          gioco1: {
+            selectedQuestion: loadedState.gioco1?.selectedQuestion || 1,
+            questions: { ...def.gioco1.questions, ...loadedState.gioco1?.questions },
+            sfondoGenerale: loadedState.gioco1?.sfondoGenerale || '',
+          },
+          gioco2: {
+            selectedQuestion: loadedState.gioco2?.selectedQuestion || 1,
+            questions: { ...def.gioco2.questions, ...loadedState.gioco2?.questions },
+            sfondoGenerale: loadedState.gioco2?.sfondoGenerale || '',
+          },
+          gioco3: normalizeGioco3(loadedState.gioco3, def.gioco3),
+          gioco4: normalizeGioco4(loadedState.gioco4, def.gioco4),
+          gioco5: loadedState.gioco5 || def.gioco5,
+          punteggi: normalizePunteggi(loadedState.punteggi, def.punteggi!),
+        });
       }
     }
     loadData();
@@ -447,12 +480,23 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
       } catch (e) {
         console.warn('LocalStorage limit reached, saved safely to IndexedDB:', e);
       }
+      
+      const isElectron = (window as any).electron !== undefined;
+      if (isElectron) {
+        try {
+          await (window as any).electron.writeSetupFile(state);
+          console.log("[Setup] Salvato con successo nel file JSON condiviso.");
+        } catch (err) {
+          console.error("[Setup] Errore nel salvataggio su file condiviso:", err);
+        }
+      }
+
       if ((window as any).electron?.broadcastState) {
         (window as any).electron.broadcastState({
           setupStateUpdate: state,
         });
       }
-      showToast('✅ Configurazioni e MP3 salvati definitivamente!');
+      showToast('✅ Configurazioni salvate e sincronizzate nel file di progetto!');
     } catch (e) {
       console.error('Failed to save setup:', e);
       showToast('❌ Errore durante il salvataggio dei dati');
@@ -537,10 +581,16 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     }));
   };
 
-  // Box 3 Question & Data getters/setters
   const currentQ3Num = state.gioco3?.selectedQuestion || 1;
-  const currentQ3 =
-    state.gioco3?.questions?.[currentQ3Num] || createDefaultGioco3Question();
+  const rawQ3 = state.gioco3?.questions?.[currentQ3Num] || createDefaultGioco3Question();
+  const currentQ3: Gioco3Question = {
+    ...createDefaultGioco3Question(),
+    ...rawQ3,
+    bussolotti: {
+      ...createDefaultGioco3Question().bussolotti!,
+      ...(rawQ3.bussolotti || {})
+    }
+  };
 
   const updateQ3 = (updater: (prev: Gioco3Question) => Gioco3Question) => {
     setState((prev) => {
@@ -1608,19 +1658,37 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 </div>
 
                 {/* Title & Info */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1">
                       Titolo:
                     </label>
                     <input
                       type="text"
-                      placeholder="Es. Modà - Come un Pittore"
+                      placeholder="Es. Come un Pittore"
                       value={currentQ2.canzone.titolo}
                       onChange={(e) =>
                         updateQ2((prev) => ({
                           ...prev,
                           canzone: { ...prev.canzone, titolo: e.target.value },
+                        }))
+                      }
+                      className="w-full bg-[#141417] border border-white/10 rounded px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Artista:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Es. Modà"
+                      value={currentQ2.canzone.artista || ''}
+                      onChange={(e) =>
+                        updateQ2((prev) => ({
+                          ...prev,
+                          canzone: { ...prev.canzone, artista: e.target.value },
                         }))
                       }
                       className="w-full bg-[#141417] border border-white/10 rounded px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
@@ -1903,67 +1971,17 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </select>
           </div>
 
-          {/* Sezione Sfondi Box 3 */}
+          {/* Sezione Sfondi e Musica Intro Box 3 */}
           <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
             <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <span>🖼️ Gestione Sfondo</span>
-              <span className="text-[10px] text-slate-500 font-normal normal-case">(Generale o specifico per Domanda #{currentQ3Num})</span>
+              <span>🖼️ Gestione Sfondo & 🎵 Musica Intro</span>
+              <span className="text-[10px] text-slate-500 font-normal normal-case">(specifici per la Manche #{currentQ3Num})</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* Sfondo Generale */}
+              {/* Sfondo Specifico Manche */}
               <div>
                 <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                  Sfondo Generale Box 3:
-                </label>
-                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
-                  {state.gioco3.sfondoGenerale?.startsWith('data:') || state.gioco3.sfondoGenerale?.startsWith('idb://') ? (
-                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
-                      <span className="text-emerald-400 font-medium truncate max-w-[100px]">
-                        {formatBase64Info(state.gioco3.sfondoGenerale)?.name || 'Caricato'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setState((prev) => ({ ...prev, gioco3: { ...prev.gioco3, sfondoGenerale: '' } }))}
-                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
-                      >
-                        Rimuovi
-                      </button>
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="URL sfondo generale..."
-                      value={state.gioco3.sfondoGenerale || ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setState((prev) => ({
-                          ...prev,
-                          gioco3: { ...prev.gioco3, sfondoGenerale: val }
-                        }));
-                      }}
-                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
-                    />
-                  )}
-                  <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                    🖼️ Sfoglia
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) =>
-                        handleFileUpload(e, (base64) =>
-                          setState((prev) => ({ ...prev, gioco3: { ...prev.gioco3, sfondoGenerale: base64 } }))
-                        )
-                      }
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* Sfondo Specifico Domanda */}
-              <div>
-                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
-                  Sfondo Specifico Domanda #{currentQ3Num}:
+                  Sfondo Manche #{currentQ3Num}:
                 </label>
                 <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
                   {currentQ3.sfondo?.startsWith('data:') || currentQ3.sfondo?.startsWith('idb://') ? (
@@ -1982,7 +2000,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   ) : (
                     <input
                       type="text"
-                      placeholder="Vuoto (usa default / generale)..."
+                      placeholder="URL sfondo manche..."
                       value={currentQ3.sfondo || ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -2004,6 +2022,296 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                       }
                     />
                   </label>
+                </div>
+              </div>
+
+              {/* Musica Intro Specifico Manche */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                  Musica d'Intro Manche #{currentQ3Num}:
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {currentQ3.musicaIntro?.startsWith('data:') || currentQ3.musicaIntro?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[100px]">
+                        {formatBase64Info(currentQ3.musicaIntro)?.name || 'Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateQ3((prev) => ({ ...prev, musicaIntro: '' }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="URL / File audio intro..."
+                      value={currentQ3.musicaIntro || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateQ3((prev) => ({ ...prev, musicaIntro: val }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                    />
+                  )}
+                  <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    📁 Sfoglia MP3
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          updateQ3((prev) => ({ ...prev, musicaIntro: base64 }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-4">
+            <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span>🎁 Configurazione Bussolotti Bonus (Manche #{currentQ3Num})</span>
+            </div>
+
+            {/* Immagini Bonus per Squadra */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Immagine S1 */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                  Bonus Squadra 1 (Rosso):
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {currentQ3.bussolotti?.immagine_premio_squadra1?.startsWith('data:') || currentQ3.bussolotti?.immagine_premio_squadra1?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[100px]">
+                        {formatBase64Info(currentQ3.bussolotti.immagine_premio_squadra1)?.name || 'Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateQ3((prev) => ({
+                          ...prev,
+                          bussolotti: { ...prev.bussolotti!, immagine_premio_squadra1: '/Icone/premio_bonus_s1.png' }
+                        }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Ripristina
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Immagine bonus S1..."
+                      value={currentQ3.bussolotti?.immagine_premio_squadra1 || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateQ3((prev) => ({
+                          ...prev,
+                          bussolotti: { ...prev.bussolotti!, immagine_premio_squadra1: val }
+                        }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                    />
+                  )}
+                  <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🖼️ Sfoglia
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          updateQ3((prev) => ({
+                            ...prev,
+                            bussolotti: { ...prev.bussolotti!, immagine_premio_squadra1: base64 }
+                          }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Immagine S2 */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                  Bonus Squadra 2 (Blu):
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {currentQ3.bussolotti?.immagine_premio_squadra2?.startsWith('data:') || currentQ3.bussolotti?.immagine_premio_squadra2?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[100px]">
+                        {formatBase64Info(currentQ3.bussolotti.immagine_premio_squadra2)?.name || 'Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateQ3((prev) => ({
+                          ...prev,
+                          bussolotti: { ...prev.bussolotti!, immagine_premio_squadra2: '/Icone/premio_bonus_s2.png' }
+                        }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Ripristina
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Immagine bonus S2..."
+                      value={currentQ3.bussolotti?.immagine_premio_squadra2 || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateQ3((prev) => ({
+                          ...prev,
+                          bussolotti: { ...prev.bussolotti!, immagine_premio_squadra2: val }
+                        }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                    />
+                  )}
+                  <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🖼️ Sfoglia
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          updateQ3((prev) => ({
+                            ...prev,
+                            bussolotti: { ...prev.bussolotti!, immagine_premio_squadra2: base64 }
+                          }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Immagine S3 */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                  Bonus Squadra 3 (Verde):
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {currentQ3.bussolotti?.immagine_premio_squadra3?.startsWith('data:') || currentQ3.bussolotti?.immagine_premio_squadra3?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[100px]">
+                        {formatBase64Info(currentQ3.bussolotti.immagine_premio_squadra3)?.name || 'Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateQ3((prev) => ({
+                          ...prev,
+                          bussolotti: { ...prev.bussolotti!, immagine_premio_squadra3: '/Icone/premio_bonus_s3.png' }
+                        }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Ripristina
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Immagine bonus S3..."
+                      value={currentQ3.bussolotti?.immagine_premio_squadra3 || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateQ3((prev) => ({
+                          ...prev,
+                          bussolotti: { ...prev.bussolotti!, immagine_premio_squadra3: val }
+                        }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                    />
+                  )}
+                  <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🖼️ Sfoglia
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          updateQ3((prev) => ({
+                            ...prev,
+                            bussolotti: { ...prev.bussolotti!, immagine_premio_squadra3: base64 }
+                          }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Contenuto Schede */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-white/5">
+              {/* Schede 2° Posto (3 schede) */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                  Contenuto Schede 2° Posto (3 schede):
+                </label>
+                <div className="flex gap-2">
+                  {[0, 1, 2].map((idx) => (
+                    <select
+                      key={idx}
+                      value={currentQ3.bussolotti?.schede_2_posto?.[idx] || 'vuoto'}
+                      onChange={(e) => {
+                        const val = e.target.value as any;
+                        updateQ3((prev) => {
+                          const newSchede = [...(prev.bussolotti?.schede_2_posto || ['bonus', 'vuoto', 'vuoto'])];
+                          newSchede[idx] = val;
+                          return {
+                            ...prev,
+                            bussolotti: { ...prev.bussolotti!, schede_2_posto: newSchede as any }
+                          };
+                        });
+                      }}
+                      className="flex-1 bg-[#141417] border border-white/15 rounded px-1.5 py-1 text-[11px] text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="bonus">🎁 Bonus</option>
+                      <option value="vuoto">❌ Vuoto</option>
+                      <option value="2000">💎 2000p</option>
+                    </select>
+                  ))}
+                </div>
+              </div>
+
+              {/* Schede 3° Posto (5 schede) */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                  Contenuto Schede 3° Posto (5 schede):
+                </label>
+                <div className="flex gap-1.5">
+                  {[0, 1, 2, 3, 4].map((idx) => (
+                    <select
+                      key={idx}
+                      value={currentQ3.bussolotti?.schede_3_posto?.[idx] || 'vuoto'}
+                      onChange={(e) => {
+                        const val = e.target.value as any;
+                        updateQ3((prev) => {
+                          const newSchede = [...(prev.bussolotti?.schede_3_posto || ['vuoto', 'vuoto', 'vuoto', 'vuoto', 'bonus'])];
+                          newSchede[idx] = val;
+                          return {
+                            ...prev,
+                            bussolotti: { ...prev.bussolotti!, schede_3_posto: newSchede as any }
+                          };
+                        });
+                      }}
+                      className="flex-1 bg-[#141417] border border-white/15 rounded px-1 py-1 text-[10px] text-white focus:outline-none focus:border-emerald-500"
+                    >
+                      <option value="bonus">🎁 Bonus</option>
+                      <option value="vuoto">❌ Vuoto</option>
+                      <option value="2000">💎 2000p</option>
+                      <option value="1000">🪙 1000p</option>
+                    </select>
+                  ))}
                 </div>
               </div>
             </div>
@@ -2413,84 +2721,103 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </div>
 
             {/* Icone dei Bonus */}
-            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
-              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <span>🎁 Icone dei Bonus</span>
-                <span className="text-[10px] text-slate-500 font-normal normal-case">(Configura 3 icone diverse per i 3 bonus delle squadre)</span>
+            <div className="bg-white/5 p-5 rounded-xl border border-white/5 space-y-4">
+              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex flex-col gap-1">
+                <span className="flex items-center gap-1.5">🎁 Icone dei Bonus per Squadra</span>
+                <span className="text-[10px] text-slate-500 font-normal normal-case">(Configura fino a 3 icone diverse per i bonus di ciascuna squadra)</span>
               </div>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {[0, 1, 2].map((idx) => {
-                  const bonusIcon = state.punteggi?.iconeBonus?.[idx] || '';
-                  const bonusLabel = `Bonus ${idx + 1}`;
+              
+              <div className="space-y-6">
+                {[0, 1, 2].map((teamIdx) => {
+                  const teamName = state.punteggi?.nomiSquadre?.[teamIdx] || `SQUADRA ${teamIdx + 1}`;
+                  const teamColorLabel = teamIdx === 0 ? '(Rosso)' : teamIdx === 1 ? '(Blu)' : '(Verde)';
+                  const teamColorClass = teamIdx === 0 ? 'bg-red-500' : teamIdx === 1 ? 'bg-blue-500' : 'bg-green-500';
+                  
                   return (
-                    <div key={idx} className="bg-[#141417] p-3 rounded-lg border border-white/5 space-y-2">
-                      <div className="text-[11px] font-medium text-slate-400">{bonusLabel}</div>
-                      <div className="flex items-center gap-2">
-                        {bonusIcon.startsWith('data:') || bonusIcon.startsWith('idb://') ? (
-                          <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
-                            <span className="text-emerald-400 font-medium truncate max-w-[120px]">
-                              {(() => {
-                                const info = formatBase64Info(bonusIcon);
-                                return info ? info.name : 'File caricato';
-                              })()}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setState((prev) => {
-                                const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: ['', '', ''] };
-                                const updatedIcons = [...(current.iconeBonus || ['', '', ''])];
-                                updatedIcons[idx] = '';
-                                return {
-                                  ...prev,
-                                  punteggi: { ...current, iconeBonus: updatedIcons }
-                                };
-                              })}
-                              className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-1 text-[10px] bg-transparent border-0"
-                            >
-                              Rimuovi
-                            </button>
-                          </div>
-                        ) : (
-                          <input
-                            type="text"
-                            placeholder="URL icona..."
-                            value={bonusIcon}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setState((prev) => {
-                                const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: ['', '', ''] };
-                                const updatedIcons = [...(current.iconeBonus || ['', '', ''])];
-                                updatedIcons[idx] = val;
-                                return {
-                                  ...prev,
-                                  punteggi: { ...current, iconeBonus: updatedIcons }
-                                };
-                              });
-                            }}
-                            className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500"
-                          />
-                        )}
-                        <label className="px-2.5 py-1.5 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                          🖼️
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) =>
-                              handleFileUpload(e, (base64) =>
-                                setState((prev) => {
-                                  const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: ['', '', ''] };
-                                  const updatedIcons = [...(current.iconeBonus || ['', '', ''])];
-                                  updatedIcons[idx] = base64;
-                                  return {
-                                    ...prev,
-                                    punteggi: { ...current, iconeBonus: updatedIcons }
-                                  };
-                                })
-                              )
-                            }
-                          />
-                        </label>
+                    <div key={teamIdx} className="space-y-2 border-t border-white/5 pt-4 first:border-t-0 first:pt-0">
+                      <div className="text-xs font-bold flex items-center gap-2">
+                        <span className={`w-2.5 h-2.5 rounded-full ${teamColorClass}`} />
+                        <span className="text-slate-200 uppercase tracking-wide">{teamName} {teamColorLabel}</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                        {[0, 1, 2].map((bonusSlotIdx) => {
+                          const idx = teamIdx * 3 + bonusSlotIdx;
+                          const bonusIcon = state.punteggi?.iconeBonus?.[idx] || '';
+                          const bonusLabel = `Slot ${bonusSlotIdx + 1}`;
+                          return (
+                            <div key={bonusSlotIdx} className="bg-[#141417] p-3 rounded-lg border border-white/5 space-y-2">
+                              <div className="text-[11px] font-medium text-slate-400">{bonusLabel}</div>
+                              <div className="flex items-center gap-2">
+                                {bonusIcon.startsWith('data:') || bonusIcon.startsWith('idb://') ? (
+                                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                                    <span className="text-emerald-400 font-medium truncate max-w-[120px]">
+                                      {(() => {
+                                        const info = formatBase64Info(bonusIcon);
+                                        return info ? info.name : 'File caricato';
+                                      })()}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setState((prev) => {
+                                        const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: Array(9).fill('') };
+                                        const updatedIcons = [...(current.iconeBonus || Array(9).fill(''))];
+                                        updatedIcons[idx] = '';
+                                        return {
+                                          ...prev,
+                                          punteggi: { ...current, iconeBonus: updatedIcons }
+                                        };
+                                      })}
+                                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-1 text-[10px] bg-transparent border-0"
+                                    >
+                                      Rimuovi
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <input
+                                    type="text"
+                                    placeholder="URL icona..."
+                                    value={bonusIcon}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setState((prev) => {
+                                        const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: Array(9).fill('') };
+                                        const updatedIcons = [...(current.iconeBonus || Array(9).fill(''))];
+                                        updatedIcons[idx] = val;
+                                        return {
+                                          ...prev,
+                                          punteggi: { ...current, iconeBonus: updatedIcons }
+                                        };
+                                      });
+                                    }}
+                                    className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500"
+                                  />
+                                )}
+                                <label className="px-2.5 py-1.5 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                                  🖼️
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) =>
+                                      handleFileUpload(e, (base64) =>
+                                        setState((prev) => {
+                                          const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: Array(9).fill('') };
+                                          const updatedIcons = [...(current.iconeBonus || Array(9).fill(''))];
+                                          updatedIcons[idx] = base64;
+                                          return {
+                                            ...prev,
+                                            punteggi: { ...current, iconeBonus: updatedIcons }
+                                          };
+                                        })
+                                      )
+                                    }
+                                  />
+                                </label>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );

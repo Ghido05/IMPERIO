@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electron', {
   saveFile: (data) => ipcRenderer.invoke('dialog:saveFile', data),
   openFile: () => ipcRenderer.invoke('dialog:openFile'),
+  readSetupFile: () => ipcRenderer.invoke('read-setup-file'),
+  writeSetupFile: (data) => ipcRenderer.invoke('write-setup-file', data),
   onFileOpened: (callback) => {
     const subscription = (_event, data) => callback(data);
     ipcRenderer.on('file-opened', subscription);

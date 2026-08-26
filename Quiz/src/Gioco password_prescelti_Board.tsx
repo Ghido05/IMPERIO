@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useGameData } from './context/GameDataContext';
+import { useSyncedState } from './hooks/useSyncedState';
+import { assetUrl } from './lib/assetUrl';
+import { BussolottiOverlay } from './Gioco password_squadre_Board';
 
 type WordType = 'team1' | 'team2' | 'team3' | 'bomb' | 'neutral';
+type RankType = 1 | 2 | 3;
+type BussolottiStatus = 'pending' | 'active' | 'done';
 
 interface WordItem {
   word: string;
@@ -17,7 +22,7 @@ const teamColors = {
   neutral: 'bg-gray-600 border-gray-400'
 };
 
-const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = () => {
+const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) => {
   const gameDataRaw = useGameData();
   if (!gameDataRaw) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -50,38 +55,218 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = () => {
   const manches = gameDataRaw.manches;
   const gameData = manches[currentManche] || manches[0];
 
+  const [audioPlaying, setAudioPlaying] = useSyncedState<boolean>('playstate_password_squadre_audio_playing', false);
+  const [bussolottiStatus, setBussolottiStatus] = useState<Record<RankType, BussolottiStatus>>(() => {
+    const stored = localStorage.getItem('password_bussolotti_status');
+    try {
+      return stored ? JSON.parse(stored) : { 1: 'pending', 2: 'pending', 3: 'pending' };
+    } catch {
+      return { 1: 'pending', 2: 'pending', 3: 'pending' };
+    }
+  });
+  const [activeBussolottiRank, setActiveBussolottiRank] = useState<RankType | null>(() => {
+    const stored = localStorage.getItem('password_active_bussolotti');
+    try {
+      return stored && stored !== "null" ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [winnersOrder, setWinnersOrder] = useState<number[]>(() => {
+    const stored = localStorage.getItem('password_winners_order');
+    try {
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const getTeamForRank = (rank: RankType): number | null => {
+    if (rank === 3 && excludedTeams.length > 0) return excludedTeams[0];
+    if (rank === 1) return winnersOrder[0] || null;
+    if (rank === 2) return winnersOrder[1] || null;
+    if (rank === 3) return winnersOrder[2] || null;
+    return null;
+  };
+
+  const handleBussolottiComplete = () => {
+    if (activeBussolottiRank) {
+      const slideId = gameDataRaw.slideId ?? 'sandbox';
+      const newStatus = { ...bussolottiStatus, [activeBussolottiRank]: 'done' as BussolottiStatus };
+      setBussolottiStatus(newStatus);
+      setActiveBussolottiRank(null);
+      localStorage.setItem('password_bussolotti_status', JSON.stringify(newStatus));
+      localStorage.setItem('password_active_bussolotti', JSON.stringify(null));
+      localStorage.removeItem(`playstate_${slideId}_bussolotti_${activeBussolottiRank}_selected_idx`);
+      localStorage.removeItem(`playstate_${slideId}_bussolotti_${activeBussolottiRank}_show_all`);
+    }
+  };
+
+  const musicaIntro = (gameData as any).musicaIntro;
+
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  const shouldPlayAudio = React.useMemo(() => {
+    if (!interactive) return false;
+    const mode = new URLSearchParams(window.location.search).get('mode');
+    const isSandbox = new URLSearchParams(window.location.search).get('sandbox') === 'true';
+    return mode === 'games' || isSandbox || !mode;
+  }, [interactive]);
+
+  useEffect(() => {
+    setAudioPlaying(false);
+  }, [currentManche]);
+
+  useEffect(() => {
+    if (!shouldPlayAudio) return;
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    if (musicaIntro) {
+      audioRef.current = new Audio(assetUrl(musicaIntro));
+      audioRef.current.loop = true;
+      if (audioPlaying) {
+        audioRef.current.play().catch(err => console.error("Error playing intro music:", err));
+      }
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, [musicaIntro, currentManche, shouldPlayAudio]);
+
+  useEffect(() => {
+    if (!shouldPlayAudio || !audioRef.current) return;
+
+    if (audioPlaying) {
+      audioRef.current.play().catch(err => {
+        console.error("Error playing intro music:", err);
+        setAudioPlaying(false);
+      });
+    } else {
+      audioRef.current.pause();
+    }
+  }, [audioPlaying, shouldPlayAudio]);
+
+  useEffect(() => {
+    if (!interactive) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
+        return;
+      }
+      if (e.key.toLowerCase() === 'm') {
+        if (musicaIntro) {
+          setAudioPlaying(prev => !prev);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [interactive, musicaIntro]);
+
   useEffect(() => {
     const handleStorage = () => {
       const manche = localStorage.getItem('password_current_manche');
-      if (manche) setCurrentManche(parseInt(manche));
+      if (manche && manche !== "null") {
+        setCurrentManche(parseInt(manche));
+      } else {
+        setCurrentManche(0);
+      }
 
       const team = localStorage.getItem('password_current_team');
-      if (team) setCurrentTeam(parseInt(team));
+      if (team && team !== "null") {
+        setCurrentTeam(parseInt(team));
+      } else {
+        setCurrentTeam(1);
+      }
       
       const round = localStorage.getItem('password_current_round');
-      if (round) setCurrentRound(parseInt(round));
+      if (round && round !== "null") {
+        setCurrentRound(parseInt(round));
+      } else {
+        setCurrentRound(1);
+      }
 
       const excluded = localStorage.getItem('password_excluded_teams');
-      if (excluded) {
+      if (excluded && excluded !== "null") {
         try {
           setExcludedTeams(JSON.parse(excluded));
         } catch {}
+      } else {
+        setExcludedTeams([]);
       }
 
       const storedGrid = localStorage.getItem('password_grid_state');
-      if (storedGrid) {
+      if (storedGrid && storedGrid !== "null") {
         try {
           setGrid(JSON.parse(storedGrid));
         } catch {}
+      } else {
+        setGrid([]);
       }
 
       const sugg = localStorage.getItem('password_chosen_suggestion');
-      if (sugg) setChosenSuggestion(sugg);
+      if (sugg && sugg !== "null") {
+        setChosenSuggestion(sugg);
+      } else {
+        setChosenSuggestion("");
+      }
+
+      const winners = localStorage.getItem('password_winners_order');
+      if (winners && winners !== "null") {
+        try {
+          setWinnersOrder(JSON.parse(winners));
+        } catch {}
+      } else {
+        setWinnersOrder([]);
+      }
+
+      const bStatus = localStorage.getItem('password_bussolotti_status');
+      if (bStatus && bStatus !== "null") {
+        try {
+          setBussolottiStatus(JSON.parse(bStatus));
+        } catch {}
+      } else {
+        setBussolottiStatus({ 1: 'pending', 2: 'pending', 3: 'pending' });
+      }
+
+      const bActive = localStorage.getItem('password_active_bussolotti');
+      if (bActive !== null && bActive !== "null") {
+        try {
+          setActiveBussolottiRank(JSON.parse(bActive));
+        } catch {}
+      } else {
+        setActiveBussolottiRank(null);
+      }
     };
 
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
+
+  useEffect(() => {
+    // Gestione Bussolotti per Manche
+    const storedBussolottiManche = localStorage.getItem('password_bussolotti_manche');
+    if (storedBussolottiManche !== currentManche.toString()) {
+      const initialBussolotti = { 1: 'pending' as BussolottiStatus, 2: 'pending' as BussolottiStatus, 3: 'pending' as BussolottiStatus };
+      setBussolottiStatus(initialBussolotti);
+      setActiveBussolottiRank(null);
+      localStorage.setItem('password_bussolotti_status', JSON.stringify(initialBussolotti));
+      localStorage.setItem('password_active_bussolotti', JSON.stringify(null));
+      localStorage.setItem('password_bussolotti_manche', currentManche.toString());
+    }
+  }, [currentManche]);
 
   useEffect(() => {
     // Inizializza la griglia basandosi sulla manche attuale
@@ -160,8 +345,13 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = () => {
             localStorage.setItem('password_current_round', "1");
             localStorage.setItem('password_current_team', nextSeq[0].toString());
             localStorage.setItem('password_excluded_teams', JSON.stringify([]));
+            localStorage.setItem('password_winners_order', JSON.stringify([]));
             localStorage.removeItem('password_grid_state');
             localStorage.removeItem('password_chosen_suggestion');
+            localStorage.removeItem('password_bussolotti_status');
+            localStorage.removeItem('password_active_bussolotti');
+            localStorage.removeItem('playstate_password_bussolotti_selected_idx');
+            localStorage.removeItem('playstate_password_bussolotti_show_all');
             window.dispatchEvent(new Event('storage'));
             return;
           }
@@ -234,8 +424,14 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = () => {
             localStorage.setItem('password_current_manche', prevM.toString());
             localStorage.setItem('password_current_round', "3");
             localStorage.setItem('password_current_team', lastTeam.toString());
+            localStorage.setItem('password_excluded_teams', JSON.stringify([]));
+            localStorage.setItem('password_winners_order', JSON.stringify([]));
             localStorage.removeItem('password_grid_state');
             localStorage.removeItem('password_chosen_suggestion');
+            localStorage.removeItem('password_bussolotti_status');
+            localStorage.removeItem('password_active_bussolotti');
+            localStorage.removeItem('playstate_password_bussolotti_selected_idx');
+            localStorage.removeItem('playstate_password_bussolotti_show_all');
             window.dispatchEvent(new Event('storage'));
             return;
           }
@@ -280,7 +476,9 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = () => {
       'password_winners_order',
       'password_bussolotti_status',
       'password_active_bussolotti',
-      'password_bussolotti_manche'
+      'password_bussolotti_manche',
+      'playstate_password_bussolotti_selected_idx',
+      'playstate_password_bussolotti_show_all'
     ];
     keysToRemove.forEach(k => localStorage.removeItem(k));
     
@@ -320,7 +518,22 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = () => {
           <h1 className="text-4xl font-bold text-yellow-500">
             VISTA PRESCELTI / CONDUTTORE
           </h1>
-          <p className="text-slate-400 font-bold">MANCHE {currentManche + 1} di {manches.length}</p>
+          <div className="flex items-center gap-4">
+            <p className="text-slate-400 font-bold">MANCHE {currentManche + 1} di {manches.length}</p>
+            {(gameData as any).musicaIntro && (
+              <button
+                type="button"
+                onClick={() => setAudioPlaying(prev => !prev)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                  audioPlaying 
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse' 
+                    : 'bg-slate-700 hover:bg-slate-650 text-slate-350 border border-slate-600'
+                }`}
+              >
+                {audioPlaying ? '🔊 Stop Intro' : '🎵 Play Intro'}
+              </button>
+            )}
+          </div>
         </div>
         <button 
           onClick={resetGame}
@@ -422,6 +635,16 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = () => {
           ))}
         </div>
       </div>
+
+      {activeBussolottiRank !== null && getTeamForRank(activeBussolottiRank) && (
+        <BussolottiOverlay 
+          key={`bussolotti-${activeBussolottiRank}-${currentManche}`}
+          rank={activeBussolottiRank} 
+          teamNum={getTeamForRank(activeBussolottiRank)!} 
+          bussolottiConfig={gameData.bussolotti}
+          onComplete={handleBussolottiComplete} 
+        />
+      )}
     </div>
   );
 };

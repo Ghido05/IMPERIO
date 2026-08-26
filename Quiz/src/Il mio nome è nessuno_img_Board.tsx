@@ -19,6 +19,9 @@ const GameBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX
   const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
   const [showError, setShowError] = useState(false);
   const lastKeyTimeRef = useRef<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastPlayedStepRef = useRef<number>(step);
+  const [assetRefresh, setAssetRefresh] = useState(0);
 
   const { addScore } = useScores();
   const [assignedTeam, setAssignedTeam] = useSyncedState<number | null>(`playstate_${slideId}_assigned_team`, null);
@@ -118,6 +121,75 @@ const GameBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX
     return () => clearTimeout(timer);
   }, [step, isAutoAdvancing]);
 
+  // Ascolta il caricamento asincrono di IndexedDB
+  useEffect(() => {
+    const refresh = () => setAssetRefresh((value) => value + 1);
+    window.addEventListener('idb-file-loaded', refresh);
+    return () => window.removeEventListener('idb-file-loaded', refresh);
+  }, []);
+
+  // Inizializza l'audio se presente nel JSON
+  useEffect(() => {
+    if (!interactive) return;
+    const audioPath = gameData.audio || (gameData as any).confermaAudio;
+    if (audioPath) {
+      const resolvedUrl = assetUrl(audioPath);
+      if (resolvedUrl) {
+        if (audioRef.current) {
+          if (audioRef.current.src !== resolvedUrl) {
+            audioRef.current.pause();
+            audioRef.current = new Audio(resolvedUrl);
+          }
+        } else {
+          audioRef.current = new Audio(resolvedUrl);
+        }
+      }
+    }
+  }, [gameData.audio, (gameData as any).confermaAudio, interactive, assetRefresh]);
+
+  // Gestione dell'audio al cambio di step (riproduzione a step 9)
+  useEffect(() => {
+    if (!interactive) return;
+
+    const stepChanged = step !== lastPlayedStepRef.current;
+    lastPlayedStepRef.current = step;
+
+    // Se andiamo indietro o azzeriamo lo step, fermiamo l'audio
+    if (step < 9 && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+
+    // Se raggiungiamo lo step finale (soluzione) e lo step è cambiato, riproduciamo la traccia
+    if (step === 9 && stepChanged) {
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(error => console.log('Autoplay soluzione intercettato dal browser:', error));
+      } else {
+        // Se non è pronto (caricamento asincrono IDB), proviamo a risolverlo e avviarlo al volo
+        const audioPath = gameData.audio || (gameData as any).confermaAudio;
+        if (audioPath) {
+          const resolvedUrl = assetUrl(audioPath);
+          if (resolvedUrl) {
+            const newAudio = new Audio(resolvedUrl);
+            audioRef.current = newAudio;
+            newAudio.play().catch(error => console.log('Autoplay soluzione intercettato dal browser:', error));
+          }
+        }
+      }
+    }
+  }, [step, interactive, gameData.audio, (gameData as any).confermaAudio]);
+
+  // Cleanup dell'audio all'unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
   // Input da tastiera
   useEffect(() => {
     if (!interactive) return;
@@ -151,12 +223,30 @@ const GameBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX
         }
       } else if (e.key.toLowerCase() === 'e' || e.key.toLowerCase() === 'x') {
         setShowError(true);
+      } else if (e.key.toLowerCase() === 'm') {
+        if (audioRef.current) {
+          if (audioRef.current.paused) {
+            audioRef.current.play().catch(err => console.error("Audio play error:", err));
+          } else {
+            audioRef.current.pause();
+          }
+        } else {
+          const audioPath = gameData.audio || (gameData as any).confermaAudio;
+          if (audioPath) {
+            const resolvedUrl = assetUrl(audioPath);
+            if (resolvedUrl) {
+              const newAudio = new Audio(resolvedUrl);
+              audioRef.current = newAudio;
+              newAudio.play().catch(err => console.error("Audio play error:", err));
+            }
+          }
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAutoAdvancing, step, interactive, lockedStep, setLockedStep, setAssignedTeam]);
+  }, [isAutoAdvancing, step, interactive, lockedStep, setLockedStep, setAssignedTeam, gameData.audio, (gameData as any).confermaAudio]);
 
   // Calcola se un tassello deve essere visibile o coperto
   const isTileRevealed = (tileIndex: number) => {

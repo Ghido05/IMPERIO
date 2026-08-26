@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { useScores } from './context/ScoreContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
+import { useSyncedState } from './hooks/useSyncedState';
 
 type WordType = 'team1' | 'team2' | 'team3' | 'bomb' | 'neutral';
 type RankType = 1 | 2 | 3;
@@ -14,10 +15,13 @@ interface WordItem {
   guessedBy?: number;
 }
 
-interface BussolottiConfig {
+export interface BussolottiConfig {
   immagine_premio: string;
-  posizione_premio_2_posto: number;
-  posizione_premio_3_posto: number;
+  immagine_premio_squadra1?: string;
+  immagine_premio_squadra2?: string;
+  immagine_premio_squadra3?: string;
+  schede_2_posto?: ('bonus' | 'vuoto' | '2000')[];
+  schede_3_posto?: ('bonus' | 'vuoto' | '2000' | '1000')[];
 }
 
 const teamColors = {
@@ -28,28 +32,72 @@ const teamColors = {
   neutral: 'bg-gray-400'
 };
 
-const BussolottiOverlay: React.FC<{
+export const BussolottiOverlay: React.FC<{
   rank: RankType;
   teamNum: number;
   bussolottiConfig: BussolottiConfig;
   onComplete: () => void;
 }> = ({ rank, teamNum, bussolottiConfig, onComplete }) => {
+  const gameData = useGameData();
+  const slideId = gameData?.slideId ?? 'sandbox';
   const count = rank === 1 ? 1 : rank === 2 ? 3 : 5;
-  const [winningIndex] = useState(() => {
-    if (rank === 1) return 0;
-    if (rank === 2) return bussolottiConfig.posizione_premio_2_posto;
-    return bussolottiConfig.posizione_premio_3_posto;
-  });
-  
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [showAll, setShowAll] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useSyncedState<number | null>(`playstate_${slideId}_bussolotti_${rank}_selected_idx`, null);
+  const [showAll, setShowAll] = useSyncedState<boolean>(`playstate_${slideId}_bussolotti_${rank}_show_all`, false);
 
+  const { toggleBonus, bonuses, addScore } = useScores();
+
+  const [, setTick] = useState(0);
   useEffect(() => {
+    const handleLoaded = () => setTick(t => t + 1);
+    window.addEventListener('idb-file-loaded', handleLoaded);
+    return () => window.removeEventListener('idb-file-loaded', handleLoaded);
+  }, []);
+
+  const getImmaginePremio = () => {
+    if (teamNum === 1) return bussolottiConfig.immagine_premio_squadra1 || bussolottiConfig.immagine_premio || '/Icone/premio_bonus.png';
+    if (teamNum === 2) return bussolottiConfig.immagine_premio_squadra2 || bussolottiConfig.immagine_premio || '/Icone/premio_bonus.png';
+    return bussolottiConfig.immagine_premio_squadra3 || bussolottiConfig.immagine_premio || '/Icone/premio_bonus.png';
+  };
+
+  const getCardInfo = (i: number) => {
     if (rank === 1) {
-      const t = setTimeout(() => setSelectedIndex(0), 1000);
-      return () => clearTimeout(t);
+      return { type: 'bonus_4000' as const, label: 'BONUS + 4000' };
     }
-  }, [rank]);
+    if (rank === 2) {
+      const cards = bussolottiConfig.schede_2_posto || ['bonus', 'vuoto', 'vuoto'];
+      const type = cards[i] || 'vuoto';
+      return { type, label: type === 'bonus' ? 'BONUS' : type === '2000' ? '+2000 PUNTI' : 'VUOTO' };
+    }
+    // rank === 3
+    const cards = bussolottiConfig.schede_3_posto || ['vuoto', 'vuoto', 'vuoto', 'vuoto', 'bonus'];
+    const type = cards[i] || 'vuoto';
+    return { type, label: type === 'bonus' ? 'BONUS' : type === '2000' ? '+2000 PUNTI' : type === '1000' ? '+1000 PUNTI' : 'VUOTO' };
+  };
+
+  const handleOpen = (i: number) => {
+    if (selectedIndex !== null) return; // Solo una scelta consentita
+    setSelectedIndex(i);
+    
+    const teamIdx = teamNum - 1;
+    const card = getCardInfo(i);
+
+    if (card.type === 'bonus_4000') {
+      const nextBonusIdx = bonuses[teamIdx].findIndex(b => !b);
+      if (nextBonusIdx !== -1) {
+        toggleBonus(teamIdx, nextBonusIdx);
+      }
+      addScore(teamIdx, 4000);
+    } else if (card.type === 'bonus') {
+      const nextBonusIdx = bonuses[teamIdx].findIndex(b => !b);
+      if (nextBonusIdx !== -1) {
+        toggleBonus(teamIdx, nextBonusIdx);
+      }
+    } else if (card.type === '2000') {
+      addScore(teamIdx, 2000);
+    } else if (card.type === '1000') {
+      addScore(teamIdx, 1000);
+    }
+  };
 
   useEffect(() => {
     if (selectedIndex !== null && rank !== 1 && !showAll) {
@@ -59,23 +107,6 @@ const BussolottiOverlay: React.FC<{
       return () => clearTimeout(t);
     }
   }, [selectedIndex, rank, showAll]);
-
-  const { toggleBonus, bonuses } = useScores();
-
-  const handleOpen = (i: number) => {
-    if (selectedIndex !== null) return; // Solo una scelta consentita
-    setSelectedIndex(i);
-    
-    // Se è il vincitore, attiva il bonus
-    if (i === winningIndex) {
-      const teamIdx = teamNum - 1;
-      // Attiviamo il primo bonus non ancora attivo
-      const nextBonusIdx = bonuses[teamIdx].findIndex(b => !b);
-      if (nextBonusIdx !== -1) {
-        toggleBonus(teamIdx, nextBonusIdx);
-      }
-    }
-  };
 
   const teamName = `SQUADRA ${teamNum}`;
   const teamColor = teamNum === 1 ? 'text-red-500' : teamNum === 2 ? 'text-blue-500' : 'text-green-500';
@@ -91,48 +122,67 @@ const BussolottiOverlay: React.FC<{
         {Array.from({ length: count }).map((_, i) => {
           const isSelected = i === selectedIndex;
           const isOpened = isSelected || showAll;
-          const isWinner = i === winningIndex;
+          const card = getCardInfo(i);
+          const isWinningChoice = isSelected && card.type !== 'vuoto';
           
-          const isWinningChoice = isWinner && isSelected;
+          const borderClass = isWinningChoice
+            ? 'border-green-400 shadow-[0_0_50px_rgba(74,222,128,0.8)] bg-green-900/20' 
+            : card.type !== 'vuoto' && showAll
+              ? 'border-green-400/50 shadow-[0_0_30px_rgba(74,222,128,0.3)] bg-green-900/10'
+              : 'border-white/40 shadow-[0_0_50px_rgba(255,255,255,0.1)]';
 
           return (
             <div 
               key={i}
-              onClick={() => { if (rank !== 1 && selectedIndex === null) handleOpen(i); }}
-              className={`relative w-48 h-64 ${rank !== 1 && selectedIndex === null ? 'cursor-pointer hover:scale-105 active:scale-95' : ''} transition-all duration-500`}
+              onClick={() => { if (selectedIndex === null) handleOpen(i); }}
+              className={`relative w-48 h-64 ${selectedIndex === null ? 'cursor-pointer hover:scale-105 active:scale-95' : ''} transition-all duration-500`}
               style={{ perspective: "1000px" }}
             >
-              <div className={`relative w-full h-full transition-all duration-700 preserve-3d ${isOpened ? '[transform:rotateY(180deg)]' : ''}`}>
+              <div className={`relative w-full h-full transition-all duration-700 [transform-style:preserve-3d] ${isOpened ? '[transform:rotateY(180deg)]' : ''}`}>
                 
                 {/* PARTE FRONTALE */}
-                <div className="absolute inset-0 backface-hidden bg-gradient-to-b from-gray-700 to-gray-900 border-4 border-white/20 rounded-2xl flex flex-col items-center justify-center shadow-2xl">
+                <div className="absolute inset-0 [backface-visibility:hidden] [webkit-backface-visibility:hidden] bg-gradient-to-b from-gray-700 to-gray-900 border-4 border-white/20 rounded-2xl flex flex-col items-center justify-center shadow-2xl">
                   <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center border-2 border-white/10 mb-4">
                     <span className="text-6xl font-black text-white/20 italic">{i + 1}</span>
                   </div>
                 </div>
 
                 {/* PARTE POSTERIORE */}
-                <div className={`absolute inset-0 backface-hidden [transform:rotateY(180deg)] bg-gray-800 border-4 rounded-2xl flex items-center justify-center overflow-hidden transition-all duration-500
-                  ${isWinningChoice ? 'border-green-400 shadow-[0_0_50px_rgba(74,222,128,0.8)] bg-green-900/20' : 'border-white/40 shadow-[0_0_50px_rgba(255,255,255,0.1)]'}
+                <div className={`absolute inset-0 [backface-visibility:hidden] [webkit-backface-visibility:hidden] [transform:rotateY(180deg)] bg-gray-800 border-4 rounded-2xl flex items-center justify-center overflow-hidden transition-all duration-500
+                  ${borderClass}
                   ${!isSelected && showAll ? 'opacity-40 grayscale' : ''}
                 `}>
-                  {isWinner ? (
-                    <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-green-500/10">
+                  {card.type === 'bonus' || card.type === 'bonus_4000' ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-green-500/10 relative">
                        <img 
-                        src={assetUrl(bussolottiConfig.immagine_premio)} 
-                        alt="PREMIO" 
-                        className={`w-full h-full object-contain ${isWinningChoice ? 'animate-pulse' : 'animate-in zoom-in duration-300'}`}
-                        onError={(e) => {
-                            (e.target as HTMLImageElement).src = "https://placehold.co/400x600/22c55e/white?text=BONUS";
-                        }}
+                         src={assetUrl(getImmaginePremio())} 
+                         alt="PREMIO" 
+                         className={`w-full h-[80%] object-contain ${isSelected ? 'animate-pulse' : 'animate-in zoom-in duration-300'}`}
+                         onError={(e) => {
+                             const color = teamNum === 1 ? 'dc2626' : teamNum === 2 ? '2563eb' : '16a34a';
+                             (e.target as HTMLImageElement).src = `https://placehold.co/400x600/${color}/white?text=BONUS`;
+                          }}
                        />
+                       {card.type === 'bonus_4000' && (
+                         <div className="absolute bottom-2 bg-yellow-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)]">
+                           +4000 PUNTI
+                         </div>
+                       )}
+                    </div>
+                  ) : card.type === '2000' || card.type === '1000' ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-yellow-500/10">
+                      <span className="text-6xl mb-2">🏆</span>
+                      <span className="text-3xl font-black text-yellow-400 drop-shadow-md tracking-tight">
+                        {card.type === '2000' ? '+2000' : '+1000'}
+                      </span>
+                      <span className="text-xs text-slate-350 font-bold uppercase tracking-wider mt-1">Punti</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center opacity-30">
                       <svg className="w-20 h-20 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l18 18" />
                       </svg>
-                      <span className="text-white font-bold mt-2 uppercase tracking-tighter">VUOTO</span>
+                      <span className="text-white font-bold mt-2 uppercase tracking-tighter text-sm">VUOTO</span>
                     </div>
                   )}
                 </div>
@@ -154,7 +204,9 @@ const BussolottiOverlay: React.FC<{
   );
 };
 
-const PasswordBoard: React.FC<{ interactive?: boolean }> = () => {
+// Dummy line to match bounds
+
+const PasswordBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) => {
   const gameDataRaw = useGameData();
   if (!gameDataRaw) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -208,6 +260,80 @@ const PasswordBoard: React.FC<{ interactive?: boolean }> = () => {
   const manches = gameDataRaw.manches;
   const gameData = manches[currentManche] || manches[0];
 
+  const [audioPlaying, setAudioPlaying] = useSyncedState<boolean>('playstate_password_squadre_audio_playing', false);
+  const musicaIntro = (gameData as any).musicaIntro;
+
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  const shouldPlayAudio = React.useMemo(() => {
+    if (!interactive) return false;
+    const mode = new URLSearchParams(window.location.search).get('mode');
+    const isSandbox = new URLSearchParams(window.location.search).get('sandbox') === 'true';
+    return mode === 'games' || isSandbox || !mode;
+  }, [interactive]);
+
+  useEffect(() => {
+    setAudioPlaying(false);
+  }, [currentManche]);
+
+  useEffect(() => {
+    if (!shouldPlayAudio) return;
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+
+    if (musicaIntro) {
+      audioRef.current = new Audio(assetUrl(musicaIntro));
+      audioRef.current.loop = true;
+      if (audioPlaying) {
+        audioRef.current.play().catch(err => console.error("Error playing intro music:", err));
+      }
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, [musicaIntro, currentManche, shouldPlayAudio]);
+
+  useEffect(() => {
+    if (!shouldPlayAudio || !audioRef.current) return;
+
+    if (audioPlaying) {
+      audioRef.current.play().catch(err => {
+        console.error("Error playing intro music:", err);
+        setAudioPlaying(false);
+      });
+    } else {
+      audioRef.current.pause();
+    }
+  }, [audioPlaying, shouldPlayAudio]);
+
+  useEffect(() => {
+    if (!interactive) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
+        return;
+      }
+      if (e.key.toLowerCase() === 'm') {
+        if (musicaIntro) {
+          setAudioPlaying(prev => !prev);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [interactive, musicaIntro]);
+
   useEffect(() => {
     const handleStorage = () => {
       const manche = localStorage.getItem('password_current_manche');
@@ -256,11 +382,15 @@ const PasswordBoard: React.FC<{ interactive?: boolean }> = () => {
         try {
           setExcludedTeams(JSON.parse(excluded));
         } catch {}
+      } else {
+        setExcludedTeams([]);
       }
       if (winners && winners !== "null") {
         try {
           setWinnersOrder(JSON.parse(winners));
         } catch {}
+      } else {
+        setWinnersOrder([]);
       }
       
       const bStatus = localStorage.getItem('password_bussolotti_status');
@@ -268,12 +398,16 @@ const PasswordBoard: React.FC<{ interactive?: boolean }> = () => {
         try {
           setBussolottiStatus(JSON.parse(bStatus));
         } catch {}
+      } else {
+        setBussolottiStatus({ 1: 'pending', 2: 'pending', 3: 'pending' });
       }
       const bActive = localStorage.getItem('password_active_bussolotti');
       if (bActive !== null && bActive !== "null") {
         try {
           setActiveBussolottiRank(JSON.parse(bActive));
         } catch {}
+      } else {
+        setActiveBussolottiRank(null);
       }
     };
 
@@ -429,11 +563,14 @@ const PasswordBoard: React.FC<{ interactive?: boolean }> = () => {
 
   const handleBussolottiComplete = () => {
     if (activeBussolottiRank) {
+      const slideId = gameDataRaw?.slideId ?? 'sandbox';
       const newStatus = { ...bussolottiStatus, [activeBussolottiRank]: 'done' as BussolottiStatus };
       setBussolottiStatus(newStatus);
       setActiveBussolottiRank(null);
       localStorage.setItem('password_bussolotti_status', JSON.stringify(newStatus));
       localStorage.setItem('password_active_bussolotti', JSON.stringify(null));
+      localStorage.removeItem(`playstate_${slideId}_bussolotti_${activeBussolottiRank}_selected_idx`);
+      localStorage.removeItem(`playstate_${slideId}_bussolotti_${activeBussolottiRank}_show_all`);
     }
   };
 
@@ -464,6 +601,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean }> = () => {
       
       {activeBussolottiRank !== null && getTeamForRank(activeBussolottiRank) && (
         <BussolottiOverlay 
+          key={`bussolotti-${activeBussolottiRank}-${currentManche}`}
           rank={activeBussolottiRank} 
           teamNum={getTeamForRank(activeBussolottiRank)!} 
           bussolottiConfig={gameData.bussolotti}

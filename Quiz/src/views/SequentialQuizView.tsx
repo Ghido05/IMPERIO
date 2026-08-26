@@ -13,6 +13,7 @@ import type { QuizSetupState } from './QuizSetupView';
 import { loadSetupStateDb } from '../lib/quizDb';
 import { useSyncedState } from '../hooks/useSyncedState';
 import { cloneDefaultData } from '../lib/defaultGameData';
+import { triggerFadeOutBroadcast } from '../lib/audioTracker';
 
 export function getSlideForBoxQuestion(
   setupState: QuizSetupState,
@@ -106,7 +107,12 @@ export function getSlideForBoxQuestion(
         titolo: q2.canzone.domanda || q2.canzone.titolo || 'Classifica Musicale',
         sfondo: sf,
         immagineSegreta: '',
-        soluzioneTesto: q2.canzone.info ? `${q2.canzone.titolo} - ${q2.canzone.info}` : q2.canzone.titolo || 'Soluzione',
+        soluzioneTesto: q2.canzone.titolo || 'Soluzione',
+        soluzione: {
+          titolo: q2.canzone.titolo || 'Soluzione',
+          artista: q2.canzone.artista || '',
+          anno: q2.canzone.info || '',
+        },
         canzoneFinale: q2.canzone.soluzioneAudio || '',
         elementi: [0, 1, 2, 3, 4, 5, 6].map((i) => ({
           posizione: i + 1,
@@ -137,7 +143,8 @@ export function getSlideForBoxQuestion(
       const q = setupState.gioco3?.questions?.[num];
       if (!q) return null;
       return {
-        sfondo: q.sfondo || setupState.gioco3?.sfondoGenerale || `/Password/password${num}.png`,
+        sfondo: q.sfondo || `/Password/password${num}.png`,
+        musicaIntro: q.musicaIntro || '',
         squadra1: [q.squadra1[0].parola, q.squadra1[1].parola, q.squadra1[2].parola].map(w => w.toUpperCase()),
         squadra2: [q.squadra2[0].parola, q.squadra2[1].parola, q.squadra2[2].parola].map(w => w.toUpperCase()),
         squadra3: [q.squadra3[0].parola, q.squadra3[1].parola, q.squadra3[2].parola].map(w => w.toUpperCase()),
@@ -159,11 +166,42 @@ export function getSlideForBoxQuestion(
             [q.squadra3[2].indizi[0], q.squadra3[2].indizi[1]],
           ]
         ],
-        bussolotti: defaultData.manches[num - 1]?.bussolotti || {
-          immagine_premio: "/Icone/premio_bonus.png",
-          posizione_premio_2_posto: 0,
-          posizione_premio_3_posto: 4
-        }
+        bussolotti: (() => {
+          const oldB = defaultData.manches[num - 1]?.bussolotti || {
+            immagine_premio: "/Icone/premio_bonus.png",
+            posizione_premio_2_posto: 0,
+            posizione_premio_3_posto: 4
+          };
+
+          const immagine_premio = q.bussolotti?.immagine_premio || oldB.immagine_premio || "/Icone/premio_bonus.png";
+          
+          let schede_2_posto = q.bussolotti?.schede_2_posto;
+          if (!schede_2_posto) {
+            schede_2_posto = ['vuoto', 'vuoto', 'vuoto'];
+            const pos2 = oldB.posizione_premio_2_posto ?? 0;
+            schede_2_posto[pos2] = 'bonus';
+          }
+
+          let schede_3_posto = q.bussolotti?.schede_3_posto;
+          if (!schede_3_posto) {
+            schede_3_posto = ['vuoto', 'vuoto', 'vuoto', 'vuoto', 'bonus'];
+            const pos3 = oldB.posizione_premio_3_posto ?? 4;
+            schede_3_posto[pos3] = 'bonus';
+          }
+
+          const immagine_premio_squadra1 = q.bussolotti?.immagine_premio_squadra1 || oldB.immagine_premio_squadra1 || '';
+          const immagine_premio_squadra2 = q.bussolotti?.immagine_premio_squadra2 || oldB.immagine_premio_squadra2 || '';
+          const immagine_premio_squadra3 = q.bussolotti?.immagine_premio_squadra3 || oldB.immagine_premio_squadra3 || '';
+
+          return {
+            immagine_premio,
+            immagine_premio_squadra1,
+            immagine_premio_squadra2,
+            immagine_premio_squadra3,
+            schede_2_posto,
+            schede_3_posto
+          };
+        })()
       };
     }).filter(Boolean);
 
@@ -200,11 +238,91 @@ interface SequentialQuizViewProps {
 
 export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewProps) {
   const [setupState, setSetupState] = useState<QuizSetupState>(getDefaultSetupState());
+  const [showLegend, setShowLegend] = useState(false);
   const [activeBox, setActiveBox] = useState<number>(1);
   const [activeQuestion, setActiveQuestion] = useState<number>(1);
 
   const [activePhraseIndex, setActivePhraseIndex] = useSyncedState<number>(`playstate_gioco_frase_tempo_index`, 0);
   const [maximizedPanel, setMaximizedPanel] = useState<'none' | 'left' | 'right'>('none');
+
+  const [, setPasswordManche] = useState<number>(() => {
+    const stored = localStorage.getItem('password_current_manche');
+    return stored ? parseInt(stored) : 0;
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const stored = localStorage.getItem('password_current_manche');
+      if (stored !== null) {
+        const mancheVal = parseInt(stored);
+        setPasswordManche(mancheVal);
+        if (activeBox === 3 && activeQuestion !== mancheVal + 1) {
+          setActiveQuestion(mancheVal + 1);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('local-storage-update', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('local-storage-update', handleStorageChange);
+    };
+  }, [activeBox, activeQuestion]);
+
+  // Sincronizza activeQuestion -> password_current_manche quando si cliccano i quadratini nel BOX 3
+  useEffect(() => {
+    if (activeBox === 3) {
+      const targetManche = activeQuestion - 1;
+      const stored = localStorage.getItem('password_current_manche');
+      const currentStoredManche = stored ? parseInt(stored) : 0;
+      if (currentStoredManche !== targetManche) {
+        handlePasswordMancheSelect(targetManche);
+      }
+    }
+  }, [activeBox, activeQuestion]);
+
+  const handlePasswordMancheSelect = (mancheIndex: number) => {
+    setPasswordManche(mancheIndex);
+    
+    // Reset di tutte le chiavi dello stato di gioco per la manche precedente
+    localStorage.removeItem('password_grid_state');
+    localStorage.removeItem('password_chosen_suggestion');
+    localStorage.setItem('password_current_team', '1');
+    localStorage.setItem('password_excluded_teams', JSON.stringify([]));
+    localStorage.setItem('password_winners_order', JSON.stringify([]));
+    localStorage.removeItem('password_bussolotti_status');
+    localStorage.removeItem('password_active_bussolotti');
+    localStorage.setItem('password_current_manche', mancheIndex.toString());
+
+    // Dispatch degli eventi per aggiornare la finestra corrente
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new CustomEvent('local-storage-update', {
+      detail: { key: 'password_current_manche', value: mancheIndex.toString() }
+    }));
+
+    // Broadcast per le altre finestre (Electron)
+    if ((window as any).electron?.broadcastState) {
+      (window as any).electron.broadcastState({
+        localStorageUpdate: { key: 'password_current_manche', value: mancheIndex.toString() }
+      });
+      // Spediamo anche il reset degli altri campi alle altre finestre
+      const resetKeys = [
+        'password_grid_state',
+        'password_chosen_suggestion',
+        'password_current_team',
+        'password_excluded_teams',
+        'password_winners_order',
+        'password_bussolotti_status',
+        'password_active_bussolotti'
+      ];
+      resetKeys.forEach(k => {
+        const val = localStorage.getItem(k);
+        (window as any).electron.broadcastState({
+          localStorageUpdate: { key: k, value: val }
+        });
+      });
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem('playstate_active_box', activeBox.toString());
@@ -237,6 +355,30 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
       }
     }
     loadData();
+
+    // Listen for storage changes to reload setup
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'imperio_quiz_setup_config_v1') {
+        loadData();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    // Listen for custom broadcast updates (Electron)
+    const isElectron = (window as any).electron !== undefined;
+    let unsubscribe: (() => void) | undefined;
+    if (isElectron) {
+      unsubscribe = (window as any).electron.onStateUpdate((state: any) => {
+        if (state && state.setupStateUpdate) {
+          setSetupState(state.setupStateUpdate);
+        }
+      });
+    }
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const activeSlide = getSlideForBoxQuestion(setupState, activeBox, activeQuestion);
@@ -281,7 +423,7 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const maxQuestionsForBox = activeBox === 1 ? 10 : activeBox === 2 ? 6 : 1;
+  const maxQuestionsForBox = activeBox === 1 ? 10 : activeBox === 2 ? 6 : activeBox === 3 ? 3 : 1;
 
   const handleNext = () => {
     if (activeQuestion < maxQuestionsForBox) {
@@ -297,7 +439,7 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
       setActiveQuestion(activeQuestion - 1);
     } else if (activeBox > 1) {
       const prevBox = activeBox - 1;
-      const prevMax = prevBox === 1 ? 10 : prevBox === 2 ? 6 : 1;
+      const prevMax = prevBox === 1 ? 10 : prevBox === 2 ? 6 : prevBox === 3 ? 3 : 1;
       setActiveBox(prevBox);
       setActiveQuestion(prevMax);
     }
@@ -320,6 +462,23 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
             <h1 className="text-sm font-bold text-white tracking-wide">
               IMPERIO — Vista Sequenziale Squadre
             </h1>
+            <div className="h-4 w-px bg-white/15" />
+            <button
+              type="button"
+              onClick={triggerFadeOutBroadcast}
+              className="px-2.5 py-1 text-[11px] font-semibold text-amber-400 bg-amber-950/20 hover:bg-amber-950/40 border border-amber-900/30 hover:border-amber-800/50 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+              title="Sfuma gradualmente tutte le tracce audio attive"
+            >
+              🎵 Sfuma Audio
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowLegend(true)}
+              className="px-2.5 py-1 text-[11px] font-semibold text-blue-400 bg-blue-950/20 hover:bg-blue-950/40 border border-blue-900/30 hover:border-blue-800/50 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+              title="Legenda dei tasti rapidi"
+            >
+              ⌨️ Legenda
+            </button>
           </div>
 
           {/* Active Box Selector */}
@@ -440,6 +599,143 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
           )}
         </div>
       </div>
+      {showLegend && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#1e1e24] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <header className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#282830]">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">⌨️</span>
+                <h2 className="text-lg font-bold text-white tracking-wide">Legenda Tasti Rapidi e Scorciatoie</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLegend(false)}
+                className="text-white/60 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-all text-sm font-semibold cursor-pointer"
+              >
+                Chiudi ✕
+              </button>
+            </header>
+            
+            <div className="p-6 overflow-y-auto space-y-6 text-sm text-white/80">
+              <p className="text-xs text-white/50 border-b border-white/5 pb-2">
+                Le scorciatoie da tastiera vengono catturate nella schermata del Relatore (purché non si stia digitando in un campo di testo) e inoltrate automaticamente allo Schermo Pubblico.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Gruppo 1: Comandi Generali */}
+                <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                  <h3 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-1.5">
+                    ⚙️ Controlli Generali (Tutti i Giochi)
+                  </h3>
+                  <ul className="space-y-2.5">
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Mostra Soluzione / Auto-svelamento</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">S</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Mostra Soluzione / Salta Step</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">Invio</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Segnala Errore (Effetto Scossa)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">E</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Segnala Errore (Alternativo)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">X</kbd>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Gruppo 2: Box 1 (Musica & Immagine) */}
+                <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                  <h3 className="text-xs font-black uppercase text-blue-400 tracking-wider flex items-center gap-1.5">
+                    🎵 Box 1 — Musica & Immagine
+                  </h3>
+                  <ul className="space-y-2.5">
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Avanza step (rivela indizio/strumento/tassello)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">▶ Freccia Destra</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Regredisci step (nascondi/annulla)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">◀ Freccia Sinistra</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Riproduci/Pausa audio di sottofondo (Immagine)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">M</kbd>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Gruppo 3: Box 2 (Classifica & Classifica Musicale) */}
+                <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                  <h3 className="text-xs font-black uppercase text-green-400 tracking-wider flex items-center gap-1.5">
+                    📊 Box 2 — Classifiche
+                  </h3>
+                  <ul className="space-y-2.5">
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Rivela indizio specifico (1 a 9) e assegna punti</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">1 - 9</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Rivela indizio 10 e assegna punti</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">0</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Mostra/Nascondi Titolo o Argomento</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">T</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Play/Pause audio (Classifica) o Riavvia stems (Musicale)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">M</kbd>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Gruppo 4: Altri moduli */}
+                <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                  <h3 className="text-xs font-black uppercase text-purple-400 tracking-wider flex items-center gap-1.5">
+                    🧩 Cruciverba & Frase Tempo & Password
+                  </h3>
+                  <ul className="space-y-2.5">
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Inserisci caratteri (Verifica lettera o parola)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">A - Z</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Cancella lettere / Resetta manche (Frase Tempo)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">Canc / Backspace</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Imposta valore offerta asta (Frase Tempo - durante asta)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">0 - 9</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Regola offerta asta (Frase Tempo - durante asta)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">▲▼ / ◀▶ Frecce</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Seleziona bussolotto (Password Squadre)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">1 - 3</kbd>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            
+            <footer className="px-6 py-4 border-t border-white/10 bg-[#19191e] flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowLegend(false)}
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg transition-all cursor-pointer shadow-lg shadow-blue-500/10"
+              >
+                Ho Capito
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </ScoreProvider>
   );
 }

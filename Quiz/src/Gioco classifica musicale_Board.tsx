@@ -1,21 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { useGameData } from './context/GameDataContext';
-import { CompactScoreAssigner } from "./components/ScoreAssigner";
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
 
 interface SolutionProps {
   isVisible: boolean;
-  interactive: boolean;
-  pointsAssigned: Record<number, number>;
-  setPointsAssigned: React.Dispatch<React.SetStateAction<Record<number, number>>>;
 }
 
-// Componente per la Soluzione Finale
-const Solution: React.FC<SolutionProps> = ({ isVisible, interactive, pointsAssigned, setPointsAssigned }) => {
+// Componente per la Soluzione Finale (senza assegnazione punti e intestazioni superflue, con spazio per artista/dettagli)
+const Solution: React.FC<SolutionProps> = ({ isVisible }) => {
   const gameData = useGameData();
   if (!gameData) return null;
+
+  const soluzioneTitolo = (gameData as any).soluzione?.titolo || gameData.soluzioneTesto || 'Soluzione';
+  const soluzioneArtista = (gameData as any).soluzione?.artista || '';
+  const soluzioneAnno = (gameData as any).soluzione?.anno || '';
 
   return (
     <div 
@@ -37,59 +37,18 @@ const Solution: React.FC<SolutionProps> = ({ isVisible, interactive, pointsAssig
           {/* Effetto luce che scorre */}
           <div className="absolute top-0 -left-[100%] w-[200%] h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 group-hover:left-[100%] transition-all duration-1000 ease-in-out" />
 
-          <div>
-            <span className="text-[clamp(12px,1.2vw,22px)] font-black tracking-[0.2em] text-[#00ff00] drop-shadow-md">
-              SOLUZIONE FINALE
-            </span>
-          </div>
-
           <h2 className="text-[clamp(24px,3vw,56px)] font-black text-white tracking-tight leading-tight animate-zoom-in drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
-            {(gameData as any).soluzioneTesto}
+            {soluzioneTitolo}
           </h2>
-          
-          <div className="h-[2px] w-24 bg-gradient-to-r from-[#00ff00] to-yellow-400 mx-auto rounded-full" />
 
-          {/* Assegnazione dei punti */}
-          <div className="flex flex-col items-center justify-center pt-2">
-            {!pointsAssigned[100] ? (
-              interactive && (
-                <div className="flex flex-col items-center gap-2 animate-zoom-in">
-                  <span className="text-white/80 font-black text-[clamp(10px,0.9vw,16px)] uppercase tracking-wider">
-                    Assegna Punti (5.000 pt)
-                  </span>
-                  <CompactScoreAssigner 
-                    points={5000}
-                    onAssigned={(teamNum) => setPointsAssigned(prev => ({ ...prev, 100: teamNum }))}
-                  />
-                </div>
-              )
-            ) : (
-              <div className="flex flex-col items-center gap-2 animate-zoom-in">
-                <span className="text-white/80 font-black text-[clamp(10px,0.9vw,16px)] uppercase tracking-wider">
-                  Punti Assegnati a:
-                </span>
-                <div className="flex items-center gap-3">
-                  <div className={`w-[clamp(28px,2vw,40px)] h-[clamp(28px,2vw,40px)] rounded-full font-black text-white text-[clamp(12px,1.2vw,20px)] flex items-center justify-center border-2 border-white/50 shadow-lg ${
-                    pointsAssigned[100] === 1 ? 'bg-red-600 shadow-red-600/50' : pointsAssigned[100] === 2 ? 'bg-blue-600 shadow-blue-600/50' : 'bg-green-600 shadow-green-600/50'
-                  }`}>
-                    {pointsAssigned[100]}
-                  </div>
-                  {interactive && (
-                    <button
-                      onClick={() => setPointsAssigned(prev => {
-                        const copy = { ...prev };
-                        delete copy[100];
-                        return copy;
-                      })}
-                      className="bg-white/10 hover:bg-white/20 border border-white/20 text-white hover:text-red-400 px-3 py-1 rounded-xl text-[clamp(10px,0.8vw,14px)] uppercase font-bold tracking-wider transition-all"
-                    >
-                      Annulla
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          {(soluzioneArtista || soluzioneAnno) && (
+            <>
+              <div className="h-[2px] w-24 bg-gradient-to-r from-[#00ff00] to-yellow-400 mx-auto rounded-full" />
+              <p className="text-[clamp(14px,1.2vw,24px)] font-light text-white/70 tracking-[0.2em] uppercase animate-fade-up">
+                {soluzioneArtista}{soluzioneArtista && soluzioneAnno ? ' - ' : ''}{soluzioneAnno}
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -109,7 +68,7 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
   }, [slideId]);
 
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
-  const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
+  const [pointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
   const [, setLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
   const [showError, setShowError] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
@@ -534,9 +493,6 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
         {/* Solution Overlay */}
         <Solution 
           isVisible={showSolution} 
-          interactive={interactive}
-          pointsAssigned={pointsAssigned}
-          setPointsAssigned={setPointsAssigned}
         />
       </div>
     </div>

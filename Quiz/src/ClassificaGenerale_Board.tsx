@@ -227,7 +227,7 @@ const ClassificaGenerale_Board: React.FC = () => {
                   `}
                 >
                   <img
-                    src={setup?.iconeBonus?.[bonusIdx] ? assetUrl(setup.iconeBonus[bonusIdx]) : assetUrl(`Icone/nessuno_musicale/${bonusIdx === 0 ? 'Primo' : bonusIdx === 1 ? 'Secondo' : 'Terzo'} indizio.svg`)}
+                    src={setup?.iconeBonus?.[i * 3 + bonusIdx] ? assetUrl(setup.iconeBonus[i * 3 + bonusIdx]) : assetUrl(`Icone/nessuno_musicale/${bonusIdx === 0 ? 'Primo' : bonusIdx === 1 ? 'Secondo' : 'Terzo'} indizio.svg`)}
                     alt="Bonus"
                     className="w-10 h-10 object-contain"
                     onError={(e) => {

@@ -205,6 +205,50 @@ ipcMain.handle('dialog:saveFile', async (event, data) => {
   return { success: false, canceled: true };
 });
 
+ipcMain.handle('read-setup-file', async () => {
+  const devPath = path.join(__dirname, '../src/data/quiz_setup_config.json');
+  const prodPath = path.join(app.getPath('userData'), 'quiz_setup_config.json');
+  
+  if (fs.existsSync(devPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(devPath, 'utf-8'));
+    } catch (e) {
+      console.error("Errore lettura dev setup file:", e);
+    }
+  }
+  if (fs.existsSync(prodPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(prodPath, 'utf-8'));
+    } catch (e) {
+      console.error("Errore lettura prod setup file:", e);
+    }
+  }
+  return null;
+});
+
+ipcMain.handle('write-setup-file', async (event, data) => {
+  const devDir = path.join(__dirname, '../src/data');
+  const devPath = path.join(devDir, 'quiz_setup_config.json');
+  const prodPath = path.join(app.getPath('userData'), 'quiz_setup_config.json');
+  
+  let success = false;
+  if (fs.existsSync(devDir)) {
+    try {
+      fs.writeFileSync(devPath, JSON.stringify(data, null, 2), 'utf-8');
+      success = true;
+    } catch (e) {
+      console.error("Errore scrittura dev setup file:", e);
+    }
+  }
+  try {
+    fs.writeFileSync(prodPath, JSON.stringify(data, null, 2), 'utf-8');
+    success = true;
+  } catch (e) {
+    console.error("Errore scrittura prod setup file:", e);
+  }
+  return { success };
+});
+
 // IPC Handler for State Synchronization
 ipcMain.on('broadcast-state', (event, state) => {
   // Broadcast state to all windows except the sender

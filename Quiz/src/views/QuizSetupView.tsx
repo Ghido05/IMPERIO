@@ -720,8 +720,8 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   1
                 </span>
                 <div>
-                  <h3 className="text-lg font-bold text-white">BOX 1 — Primo Gioco</h3>
-                  <p className="text-[11px] text-slate-400">Modulo "Il mio nome è nessuno"</p>
+                  <h3 className="text-lg font-bold text-white">GIOCO 1 - Il mio nome è nessuno</h3>
+                  <p className="text-[11px] text-slate-400">Modulo 10 domande</p>
                 </div>
               </div>
               <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded bg-[#d24726]/10 text-[#d24726] border border-[#d24726]/20">
@@ -1302,8 +1302,8 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   2
                 </span>
                 <div>
-                  <h3 className="text-lg font-bold text-white">BOX 2 — Secondo Gioco</h3>
-                  <p className="text-[11px] text-slate-400">Modulo Classifica & Classifica Musicale</p>
+                  <h3 className="text-lg font-bold text-white">GIOCO 2 - nome gioco</h3>
+                  <p className="text-[11px] text-slate-400">Modulo 6 domande</p>
                 </div>
               </div>
               <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
@@ -2436,10 +2436,10 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 </span>
                 <div>
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    BOX 4 — Frase Tempo
+                    GIOCO 4 - Asta
                   </h3>
                   <p className="text-xs text-slate-400">
-                    Inserisci e modifica le frasi misteriose da indovinare entro i 30 secondi.
+                    Inserisci e modifica le frasi misteriose da indovinare.
                   </p>
                 </div>
               </div>

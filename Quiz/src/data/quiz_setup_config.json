@@ -332,13 +332,13 @@
         "tipo": "canzone",
         "canzone": {
           "audioFiles": [
-            "idb://file_1787741154347_i57nmxf",
-            "idb://file_1787741042135_xdmriza",
-            "idb://file_1787741055678_fv0zn25",
-            "idb://file_1787741072243_9y84vmp",
-            "idb://file_1787741082057_u9l9ab4",
-            "idb://file_1787741088913_4uinrg3",
-            "idb://file_1787741092238_jv3q8le"
+            "idb://file_1787847803370_obswvwr",
+            "idb://file_1787847816780_0h78npr",
+            "idb://file_1787847821462_7oviqpe",
+            "idb://file_1787847826817_dl9huhd",
+            "idb://file_1787847831697_tt7iuqm",
+            "idb://file_1787847836652_fathjwq",
+            "idb://file_1787847840934_e65hgp6"
           ],
           "risposte": [
             "REPUBBLICA DEMOCRATICA DEL CONGO",
@@ -358,10 +358,11 @@
             "",
             ""
           ],
-          "soluzioneAudio": "",
-          "titolo": "Siamo uguali ",
-          "info": "Lorenzo Fragola - anno",
-          "domanda": "Nazioni con più lettere nel nome corrente in Italiano"
+          "soluzioneAudio": "idb://file_1787848005441_d68c9yh",
+          "titolo": "Ossessione",
+          "info": "2026",
+          "domanda": "Nazioni con più lettere nel nome corrente in Italiano",
+          "artista": "Samurai Jay"
         },
         "immagine": {
           "lista10": [

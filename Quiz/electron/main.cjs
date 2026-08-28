@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, Menu, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -264,6 +264,38 @@ ipcMain.on('broadcast-state', (event, state) => {
 });
 
 app.whenReady().then(() => {
+  // Configura i permessi per la Web Serial API sulla sessione di default
+  session.defaultSession.on('select-serial-port', (event, portList, webContents, callback) => {
+    event.preventDefault();
+    if (portList && portList.length > 0) {
+      // Cerca una porta ESP32/serial tipica o ripiega sulla prima
+      const espPort = portList.find(device => 
+        device.portName.includes('usbserial') || 
+        device.portName.includes('usbmodem') || 
+        device.portName.includes('ttyUSB') || 
+        device.portName.includes('COM')
+      ) || portList[0];
+      console.log(`Porta seriale auto-selezionata in Electron: ${espPort.portName} (${espPort.portId})`);
+      callback(espPort.portId);
+    } else {
+      callback(''); // Nessuna porta trovata
+    }
+  });
+
+  session.defaultSession.setPermissionCheckHandler((webContents, permission, requestingOrigin, details) => {
+    if (permission === 'serial') {
+      return true;
+    }
+    return false;
+  });
+
+  session.defaultSession.setDevicePermissionHandler((details) => {
+    if (details.deviceType === 'serial') {
+      return true;
+    }
+    return false;
+  });
+
   createWindows();
 
   app.on('activate', () => {

@@ -14,6 +14,7 @@ import { loadSetupStateDb } from '../lib/quizDb';
 import { useSyncedState } from '../hooks/useSyncedState';
 import { cloneDefaultData } from '../lib/defaultGameData';
 import { triggerFadeOutBroadcast } from '../lib/audioTracker';
+import WebSerialManager from '../components/WebSerialManager';
 
 export function getSlideForBoxQuestion(
   setupState: QuizSetupState,
@@ -479,6 +480,8 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
             >
               ⌨️ Legenda
             </button>
+            <div className="h-4 w-px bg-white/15" />
+            <WebSerialManager activeSlideId={activeSlide.id} activeSlideType={activeSlide.type} />
           </div>
 
           {/* Active Box Selector */}

@@ -193,6 +193,7 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
   const lastPlayedStepRef = useRef<number>(step);
 
   const [assignedTeam, setAssignedTeam] = useSyncedState<number | null>(`playstate_${slideId}_assigned_team`, null);
+  const [bookedTeam, setBookedTeam] = useSyncedState<number | null>(`playstate_${slideId}_booked_team`, null);
   const [lockedStep, setLockedStep] = useSyncedState<number | null>(`playstate_${slideId}_locked_step`, null);
 
   const getPointsForStep = (currentStep: number) => {
@@ -207,6 +208,7 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
     if (lockedStep === null) {
       setLockedStep(step);
     }
+    setBookedTeam(null); // Consolidate the booking into official point assignment
   };
 
   const handleResetPoints = () => {
@@ -214,8 +216,9 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
       const pts = getPointsForStep(lockedStep ?? step);
       addScore(assignedTeam - 1, -pts);
       setAssignedTeam(null);
-      setLockedStep(null);
     }
+    setLockedStep(null);
+    setBookedTeam(null); // Clear booking flag
   };
 
   const displayedPoints = lockedStep !== null ? getPointsForStep(lockedStep) : getPointsForStep(step);
@@ -402,12 +405,14 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
       } else if (e.key.toLowerCase() === 'e' || e.key.toLowerCase() === 'x') {
         // Attiva l'effetto di errore
         setShowError(true);
+        setBookedTeam(null);
+        setLockedStep(null);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [step, isAutoAdvancing, lockedStep, setLockedStep, setAssignedTeam]);
+  }, [step, isAutoAdvancing, lockedStep, setLockedStep, setAssignedTeam, setBookedTeam]);
 
   return (
     <div 
@@ -537,7 +542,13 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
 
             {/* Assegnatore di Punteggio per il Relatore */}
             {interactive && (
-              <div className="mt-1">
+              <div className="mt-1 flex flex-col items-center gap-1.5">
+                {bookedTeam !== null && assignedTeam === null && (
+                  <span className="text-amber-400 font-black text-[11px] animate-pulse uppercase tracking-wider mb-1">
+                    ⚡ SQUADRA {bookedTeam} PRENOTATA!
+                  </span>
+                )}
+
                 {assignedTeam === null ? (
                   <ScoreAssigner
                     points={displayedPoints}
@@ -561,6 +572,13 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
             {!interactive && assignedTeam !== null && (
               <div className="bg-emerald-500/20 border border-emerald-500/30 px-6 py-2 rounded-full text-xs font-bold text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)] animate-pulse">
                 ✓ RISPOSTA ESATTA: SQUADRA {assignedTeam} (+{displayedPoints.toLocaleString()} pt)
+              </div>
+            )}
+
+            {/* Mostra la prenotazione in corso sullo schermo pubblico */}
+            {!interactive && bookedTeam !== null && assignedTeam === null && (
+              <div className="bg-amber-500/20 border border-amber-500/30 px-6 py-1.5 rounded-full text-xs font-bold text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse">
+                ⚡ IN PRENOTAZIONE: SQUADRA {bookedTeam}
               </div>
             )}
           </div>

@@ -56,6 +56,9 @@ const ClassificaGenerale_Board: React.FC = () => {
   const [box2StarterIdx, setBox2StarterIdx] = useSyncedState<number | null>('playstate_box2_starter_idx', null);
   const [box2ActiveTeamIdx, setBox2ActiveTeamIdx] = useSyncedState<number | null>('playstate_box2_active_team_idx', null);
 
+  const activeSlideId = activeBox === 1 ? `box1_q${activeQuestion}` : '';
+  const [bookedTeamVal] = useSyncedState<number | null>(`playstate_${activeSlideId}_booked_team`, null);
+
 
   React.useEffect(() => {
     async function loadData() {
@@ -183,7 +186,9 @@ const ClassificaGenerale_Board: React.FC = () => {
 
       <div className="flex-1 grid grid-cols-3 gap-10 min-h-0 px-4">
         {teamConfigs.map((team, i) => {
-          const isBlinking = activeBox === 2 && blinkingTeamIdx === i;
+          const isBlinking = 
+            (activeBox === 2 && blinkingTeamIdx === i) ||
+            (activeBox === 1 && bookedTeamVal !== null && (bookedTeamVal - 1) === i);
           return (
             <div key={i} className="grid grid-rows-[auto_auto_240px_auto] h-full min-h-0 content-between">
               <div 

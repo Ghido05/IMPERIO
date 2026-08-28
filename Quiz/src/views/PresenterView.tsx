@@ -17,6 +17,7 @@ import { saveRecentProject, type RecentProject } from '../lib/recentProjects';
 import type { Slide } from '../App';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import { useSyncedState } from '../hooks/useSyncedState';
+import WebSerialManager from '../components/WebSerialManager';
 
 type PresenterViewMode = 'setup' | 'quiz' | 'welcome' | 'editor';
 
@@ -629,6 +630,7 @@ export default function PresenterView() {
             ← Home
           </button>
           <span className="text-sm font-medium truncate flex-1">{presentationName}</span>
+          <WebSerialManager activeSlideId={activeSlideId} activeSlideType={activeSlide?.type || ''} />
           <span className="text-[10px] text-white/40 uppercase tracking-wider hidden sm:inline">
             Modellazione Relatore
           </span>

@@ -890,30 +890,45 @@
       {
         "testo": "IL MATTINO HA L'ORO IN BOCCa",
         "sfondo": "",
-        "lettereVisibili": []
+        "lettereVisibili": [],
+        "indizio": "",
+        "bonus": "",
+        "punti": 1000
       },
       {
         "testo": "CHI CERCA TROVA",
         "sfondo": "",
-        "lettereVisibili": []
+        "lettereVisibili": [],
+        "indizio": "",
+        "bonus": "",
+        "punti": 1000
       },
       {
         "testo": "A BUON INTENDITORE POCHE PAROLE",
         "sfondo": "",
-        "lettereVisibili": []
+        "lettereVisibili": [],
+        "indizio": "",
+        "bonus": "",
+        "punti": 1000
       },
       {
         "testo": "IL GATTO MIAGOLA, IL CANE NO",
         "sfondo": "",
-        "lettereVisibili": []
+        "lettereVisibili": [],
+        "indizio": "",
+        "bonus": "",
+        "punti": 1000
       },
       {
         "testo": "NON Ce N'è PER NESSUNO, la libertà",
         "sfondo": "",
-        "lettereVisibili": []
+        "lettereVisibili": [],
+        "indizio": "",
+        "bonus": "",
+        "punti": 1000
       }
     ],
-    "sfondoGenerale": ""
+    "sfondoGenerale": "idb://file_1787998485668_pi6lj90"
   },
   "gioco5": {
     "titolo": "Gioco 5",

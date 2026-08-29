@@ -3,6 +3,29 @@ import { useGameData } from './context/GameDataContext';
 import { useSyncedState } from './hooks/useSyncedState';
 import { assetUrl } from './lib/assetUrl';
 import { getPhraseLetter, isPhraseLetterToken, normalizeFraseTempoItem, parsePhraseTokens } from './lib/fraseTempoUtils';
+import { useScores } from './context/ScoreContext';
+
+const findBonusSlotIndex = (slideBonus: string, setupIcons: string[] | undefined): number => {
+  if (!slideBonus || !setupIcons) return 0;
+  
+  const getFilename = (path: string) => {
+    if (!path) return '';
+    const parts = path.split('/');
+    return parts[parts.length - 1].toLowerCase();
+  };
+  
+  const slideBonusFile = getFilename(slideBonus);
+  
+  for (let b = 0; b < 3; b++) {
+    for (let i = 0; i < 3; i++) {
+      const iconPath = setupIcons[i * 3 + b];
+      if (iconPath && getFilename(iconPath) === slideBonusFile) {
+        return b;
+      }
+    }
+  }
+  return 0;
+};
 
 const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive = true }) => {
   const phrasesData = useGameData();
@@ -27,6 +50,55 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
   const [calledLetters, setCalledLetters] = useSyncedState<string[]>(`${phrasePrefix}_called_letters`, []);
   const [wrongLetter, setWrongLetter] = useSyncedState<string | null>(`${phrasePrefix}_wrong_letter`, null);
   const [guessTimerEndAt, setGuessTimerEndAt] = useSyncedState<number>(`${phrasePrefix}_guess_timer_end`, 0);
+
+  // New Synced States for steps, winning team selection and score tracking
+  const [step, setStep] = useSyncedState<number>(`${phrasePrefix}_step`, 0);
+  const [winningTeamIndex, setWinningTeamIndex] = useSyncedState<number | null>(`${phrasePrefix}_winning_team`, null);
+  const [scoreAwarded, setScoreAwarded] = useSyncedState<boolean>(`${phrasePrefix}_score_awarded`, false);
+
+  // Scores context
+  const { bonuses, addScore, toggleBonus } = useScores();
+
+  // Load general setup config for team names and bonus icons
+  const [setupState, setSetupState] = useState<any>(null);
+  const loadSetup = useCallback(() => {
+    const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
+    if (saved) {
+      try {
+        setSetupState(JSON.parse(saved));
+      } catch (e) {
+        console.error('Error parsing setup state:', e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSetup();
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'imperio_quiz_setup_config_v1') {
+        loadSetup();
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [loadSetup]);
+
+  const teamNames: string[] = setupState?.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
+
+  const isPresenter = typeof window !== 'undefined' && 
+    (new URLSearchParams(window.location.search).get('mode') !== 'games' && 
+     new URLSearchParams(window.location.search).get('mode') !== 'scores');
+
+  // Award scores and handle bonus duplicate rules (awards 4000 extra points instead)
+  const awardPointsAndBonus = useCallback((t: number, points: number) => {
+    addScore(t, points);
+    const b = findBonusSlotIndex(phrase.bonus || '', setupState?.punteggi?.iconeBonus);
+    if (bonuses[t]?.[b]) {
+      addScore(t, 4000);
+    } else {
+      toggleBonus(t, b);
+    }
+  }, [phrase.bonus, setupState?.punteggi?.iconeBonus, bonuses, addScore, toggleBonus]);
 
   // Local states
   const [targetTokens, setTargetTokens] = useState<string[]>([]);
@@ -150,6 +222,9 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
     localStorage.setItem(`${phrasePrefix}_letter_counter`, '10');
     localStorage.setItem(`${phrasePrefix}_wrong_letter`, 'null');
     localStorage.setItem(`${phrasePrefix}_guess_timer_end`, '0');
+    localStorage.setItem(`${phrasePrefix}_step`, '0');
+    localStorage.setItem(`${phrasePrefix}_winning_team`, 'null');
+    localStorage.setItem(`${phrasePrefix}_score_awarded`, 'false');
 
     window.dispatchEvent(new StorageEvent('storage', {
       key: `${phrasePrefix}_tokens`,
@@ -159,6 +234,21 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
     window.dispatchEvent(new StorageEvent('storage', {
       key: `${phrasePrefix}_called_letters`,
       newValue: JSON.stringify([]),
+      storageArea: localStorage
+    }));
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: `${phrasePrefix}_step`,
+      newValue: '0',
+      storageArea: localStorage
+    }));
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: `${phrasePrefix}_winning_team`,
+      newValue: null,
+      storageArea: localStorage
+    }));
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: `${phrasePrefix}_score_awarded`,
+      newValue: 'false',
       storageArea: localStorage
     }));
   }, [phraseList, slideId]);
@@ -186,6 +276,35 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
     }
   }, [revealed, calledLetters, targetTokens, auctionLocked, setCalledLetters, setLetterCounter, setTokens, setWrongLetter, playErrorSound]);
 
+  const handleCorrectGuess = useCallback(() => {
+    if (revealed) return;
+    setRevealed(true);
+    setTokens([...targetTokens]);
+    setStep(7);
+
+    // Award scores
+    if (winningTeamIndex !== null && !scoreAwarded) {
+      awardPointsAndBonus(winningTeamIndex, phrase.punti ?? 1000);
+      setScoreAwarded(true);
+    }
+  }, [revealed, targetTokens, winningTeamIndex, scoreAwarded, phrase.punti, awardPointsAndBonus, setStep, setTokens, setRevealed]);
+
+  const handleWrongGuess = useCallback(() => {
+    if (revealed) return;
+    setRevealed(true);
+    setTokens([...targetTokens]);
+    setStep(7);
+
+    // Award scores to other two teams
+    if (winningTeamIndex !== null && !scoreAwarded) {
+      const otherTeams = [0, 1, 2].filter(idx => idx !== winningTeamIndex);
+      otherTeams.forEach(t => {
+        awardPointsAndBonus(t, phrase.punti ?? 1000);
+      });
+      setScoreAwarded(true);
+    }
+  }, [revealed, targetTokens, winningTeamIndex, scoreAwarded, phrase.punti, awardPointsAndBonus, setStep, setTokens, setRevealed]);
+
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (
       document.activeElement?.tagName === 'INPUT' ||
@@ -208,11 +327,28 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
       setRevealed(false);
       setWrongLetter(null);
       setGuessTimerEndAt(0);
+      setStep(0);
+      setWinningTeamIndex(null);
+      setScoreAwarded(false);
       return;
     }
 
-    // Keyboard numbers and arrows for manual bid movement (solo durante l'asta)
-    if (!auctionLocked) {
+    // Arrow navigation for steps
+    if (e.key === 'ArrowRight') {
+      if (step < 4) {
+        setStep(prev => prev + 1);
+        return;
+      }
+    }
+    if (e.key === 'ArrowLeft') {
+      if (step > 0 && step <= 4 && !auctionLocked) {
+        setStep(prev => prev - 1);
+        return;
+      }
+    }
+
+    // Keyboard numbers and arrows for manual bid movement (solo durante l'asta - Step 4)
+    if (step === 4 && !auctionLocked) {
       if (e.key === '0') {
         setAuctionValue(10);
         return;
@@ -221,29 +357,45 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
         setAuctionValue(parseInt(e.key));
         return;
       }
-      if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+      if (e.key === 'ArrowDown') {
         setAuctionValue(prev => Math.max(1, prev - 1));
         return;
       }
-      if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+      if (e.key === 'ArrowUp') {
         setAuctionValue(prev => Math.min(10, prev + 1));
+        return;
+      }
+      if (e.key === 'Enter') {
+        setAuctionLocked(true);
+        setLetterCounter(auctionValue);
+        setStep(5);
         return;
       }
     }
 
-    // Guessed letter
-    if (!revealed) {
+    // Scoring controls (Step 5, 6, 7)
+    if (auctionLocked && winningTeamIndex !== null) {
+      // S or Enter for correct guess
+      if (e.key.toUpperCase() === 'S' || e.key === 'Enter') {
+        handleCorrectGuess();
+        return;
+      }
+
+      // X or E for wrong guess
+      if (e.key.toUpperCase() === 'X' || e.key.toUpperCase() === 'E') {
+        handleWrongGuess();
+        return;
+      }
+    }
+
+    // Guessed letter (only in Step 6)
+    if (step === 6 && !revealed) {
       const key = e.key.toUpperCase();
       if (key.length === 1 && /[A-Z]/.test(key)) {
         processLetter(key);
       }
     }
-  }, [targetTokens, phrase.lettereVisibili, revealed, auctionLocked, processLetter, setTokens, setCalledLetters, setLetterCounter, setAuctionValue, setAuctionLocked, setRevealed, setWrongLetter, setGuessTimerEndAt]);
-
-  const revealSolution = useCallback(() => {
-    setRevealed(true);
-    setTokens([...targetTokens]);
-  }, [targetTokens, setRevealed, setTokens]);
+  }, [targetTokens, phrase.lettereVisibili, revealed, auctionLocked, step, auctionValue, winningTeamIndex, processLetter, setTokens, setCalledLetters, setLetterCounter, setAuctionValue, setAuctionLocked, setRevealed, setWrongLetter, setGuessTimerEndAt, setStep, setWinningTeamIndex, setScoreAwarded, handleCorrectGuess, handleWrongGuess]);
 
   useEffect(() => {
     if (!interactive) return;
@@ -271,6 +423,9 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
   const timerProgress = guessTimerEndAt > 0 ? timerDisplay / 10 : 0;
   const timerStrokeOffset = timerCircumference * (1 - timerProgress);
   const showGuessTimer = auctionLocked && letterCounter === 0 && guessTimerEndAt > 0 && timerDisplay > 0;
+
+  const showContent = step >= 1;
+  const showPhraseAndAuction = step >= 4;
 
   return (
     <div data-asset-refresh={assetRefresh} className="relative w-full min-h-screen bg-black text-white flex items-center justify-center overflow-hidden select-none" style={{ backgroundImage: phrase.sfondo ? `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.72)), url("${assetUrl(phrase.sfondo)}")` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
@@ -312,6 +467,13 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
         .animate-wrong-letter {
           animation: wrong-letter-shake 0.5s ease-out;
         }
+        @keyframes team-blink {
+          0%, 100% { opacity: 1; transform: scale(1.05); }
+          50% { opacity: 0.4; transform: scale(0.98); }
+        }
+        .animate-team-blink {
+          animation: team-blink 0.8s ease-in-out infinite;
+        }
       `}</style>
 
       {/* Lettera sbagliata — overlay con suono errore */}
@@ -326,11 +488,44 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
         </div>
       )}
 
+      {/* Team selection modal overlay for Step 5 (Presenter/Relatore only) */}
+      {isPresenter && step === 5 && winningTeamIndex === null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md">
+          <div className="bg-zinc-900 border-2 border-amber-500 rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl animate-zoom-in">
+            <h2 className="text-2xl font-black text-yellow-400 uppercase tracking-wide mb-6">
+              Aggiudicazione Asta
+            </h2>
+            <p className="text-sm text-slate-300 mb-6">
+              Seleziona la squadra che si è aggiudicata l'asta a <strong className="text-white">{auctionValue} lettere</strong>:
+            </p>
+            <div className="grid grid-cols-1 gap-4">
+              {teamNames.map((name, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => {
+                    setWinningTeamIndex(idx);
+                    setStep(6);
+                  }}
+                  className={`py-4 rounded-xl text-lg font-black text-white uppercase tracking-wider border shadow-lg transition-all transform hover:scale-105 active:scale-95 cursor-pointer
+                    ${idx === 0 ? 'bg-red-700 hover:bg-red-650 border-red-500 hover:shadow-red-600/30' : ''}
+                    ${idx === 1 ? 'bg-blue-700 hover:bg-blue-650 border-blue-500 hover:shadow-blue-600/30' : ''}
+                    ${idx === 2 ? 'bg-emerald-700 hover:bg-emerald-650 border-emerald-500 hover:shadow-emerald-600/30' : ''}
+                  `}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Frame 16:9 viewport wrapper */}
-      <div className="relative w-full max-w-[1920px] aspect-[16/9] flex flex-col items-center justify-center px-10 py-6">
+      <div className={`relative w-full max-w-[1920px] aspect-[16/9] flex flex-col items-center justify-center px-10 py-6 transition-all duration-1000 ${showContent ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         
         {/* Header Title Banner */}
-        <div className="text-center mb-[2%]">
+        <div className="text-center mb-[1%]">
           <span className="px-4 py-1 text-xs font-black bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full tracking-widest uppercase mb-2 inline-block">
             BOX 4 — ASTA A RIBASSO
           </span>
@@ -339,8 +534,21 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
           </h1>
         </div>
 
+        {/* Flashing Team Name Banner if winningTeamIndex !== null */}
+        {winningTeamIndex !== null && (
+          <div className="text-center mb-4 animate-team-blink">
+            <span className={`px-6 py-2 rounded-xl text-lg font-black uppercase tracking-wider text-white border shadow-lg
+              ${winningTeamIndex === 0 ? 'bg-red-600 border-red-400 shadow-red-900/50' : ''}
+              ${winningTeamIndex === 1 ? 'bg-blue-600 border-blue-400 shadow-blue-900/50' : ''}
+              ${winningTeamIndex === 2 ? 'bg-emerald-600 border-emerald-400 shadow-emerald-900/50' : ''}
+            `}>
+              ASTA AGGIUDICATA A: {teamNames[winningTeamIndex]}
+            </span>
+          </div>
+        )}
+
         {/* Phrase Display Grid */}
-        <div className="flex flex-wrap justify-center gap-x-[1.2%] gap-y-[1.2vw] max-w-[95%] px-6 mb-[2%] min-h-[140px] items-center">
+        <div className={`flex flex-wrap justify-center gap-x-[1.2%] gap-y-[1.2vw] max-w-[95%] px-6 mb-[2%] min-h-[140px] items-center transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none mb-0'}`}>
           {words.map((word, wIdx) => (
             <div key={wIdx} className="flex gap-[0.2vw]">
               {word.map((t, tIdx) => (
@@ -363,8 +571,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
           ))}
         </div>
 
-        {/* Called Letters list + reveal button */}
-        <div className="flex items-center justify-center gap-4 mb-4 flex-wrap">
+        {/* Called Letters list + reveal/error buttons */}
+        <div className={`flex items-center justify-center gap-4 mb-4 flex-wrap transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden pointer-events-none'}`}>
           {calledLetters.length > 0 && (
             <div className="flex items-center gap-2 animate-fade-in bg-zinc-900/60 border border-white/5 px-4 py-1.5 rounded-full text-xs">
               <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px]">Lettere Chiamate:</span>
@@ -385,33 +593,45 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
             </div>
           )}
           {interactive && !revealed && (
-            <button
-              type="button"
-              onClick={revealSolution}
-              className="px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider bg-red-600/20 border border-red-500/40 text-red-300 hover:bg-red-600/35 hover:text-white transition-all shadow-lg hover:shadow-red-900/30"
-            >
-              Scopri soluzione
-            </button>
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={handleCorrectGuess}
+                className="px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/35 hover:text-white transition-all shadow-lg hover:shadow-emerald-900/30 cursor-pointer"
+              >
+                Scopri soluzione (Vittoria)
+              </button>
+              {winningTeamIndex !== null && (
+                <button
+                  type="button"
+                  onClick={handleWrongGuess}
+                  className="px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider bg-red-600/20 border border-red-500/40 text-red-300 hover:bg-red-600/35 hover:text-white transition-all shadow-lg hover:shadow-red-900/30 cursor-pointer"
+                >
+                  Errore (X)
+                </button>
+              )}
+            </div>
           )}
         </div>
 
         {/* Descending Auction Bar */}
-        <div className="w-[90%] max-w-[1200px] mb-6">
+        <div className={`w-[90%] max-w-[1200px] mb-6 transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none'}`}>
           <div className="grid grid-cols-10 gap-2.5 w-full">
-            {auctionSteps.map((step) => {
-              const isActive = auctionValue === step;
+            {auctionSteps.map((stepNum) => {
+              const isActive = auctionValue === stepNum;
               const isWinningBid = auctionLocked && isActive;
               return (
                 <button
-                  key={step}
+                  key={stepNum}
                   disabled={!interactive || auctionLocked}
                   onClick={() => {
                     if (!interactive || auctionLocked) return;
-                    setAuctionValue(step);
-                    setLetterCounter(step);
+                    setAuctionValue(stepNum);
+                    setLetterCounter(stepNum);
                     setAuctionLocked(true);
+                    setStep(5);
                   }}
-                  className={`relative py-3 rounded-xl border flex flex-col items-center justify-center transition-all duration-300 select-none
+                  className={`relative py-3 rounded-xl border flex flex-col items-center justify-center transition-all duration-300 select-none cursor-pointer
                     ${isWinningBid
                       ? 'bg-gradient-to-b from-emerald-400 to-green-500 border-green-300 ring-4 ring-green-400/50 text-black scale-110 z-10 shadow-[0_0_20px_rgba(34,197,94,0.7)]'
                       : isActive
@@ -421,7 +641,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
                           : 'bg-zinc-900/80 border-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white hover:bg-zinc-800'
                     }`}
                 >
-                  <span className="text-2xl font-black">{step}</span>
+                  <span className="text-2xl font-black">{stepNum}</span>
                   {isActive && !auctionLocked && (
                     <span className="absolute -top-3 text-[9px] font-black bg-black text-amber-400 px-2 py-0.5 rounded-full uppercase tracking-wider border border-amber-400 animate-pulse">
                       OFFERTA
@@ -439,7 +659,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
         </div>
 
         {/* Auction Dashboard Panel */}
-        <div className="flex flex-col items-center w-[90%] max-w-[1000px] bg-zinc-950/80 border border-white/10 rounded-2xl p-8 shadow-2xl backdrop-blur-md">
+        <div className={`flex flex-col items-center w-[90%] max-w-[1000px] bg-zinc-950/80 border border-white/10 rounded-2xl p-8 shadow-2xl backdrop-blur-md transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100 scale-100 mb-6' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none p-0 border-0'}`}>
           <div className="flex flex-col md:flex-row items-center justify-center gap-10 w-full">
 
             {/* Letter counter — appare dopo l'aggiudicazione */}
@@ -532,72 +752,100 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
 
             {/* Animated Auction Gavel */}
             <div className="flex flex-col items-center justify-center py-4 relative">
-            <svg width="220" height="150" viewBox="0 0 200 150" className="overflow-visible select-none pointer-events-none">
-              {/* 3D Sound Block / Base (Flipped 180° to the right) */}
-              {/* Bottom wood base depth */}
-              <ellipse cx="125" cy="128" rx="40" ry="12" fill="#3d1a03" />
-              <rect x="85" y="120" width="80" height="8" fill="#3d1a03" />
-              {/* Top face of base */}
-              <ellipse cx="125" cy="120" rx="40" ry="12" fill="#78350f" stroke="#fbbf24" strokeWidth="2.5" />
-              
-              {/* Shockwave ripple ring */}
-              {strikeActive && (
-                <ellipse 
-                  cx="125" 
-                  cy="120" 
-                  rx="40" 
-                  ry="12" 
-                  fill="none" 
-                  stroke="#fbbf24" 
-                  strokeWidth="3.5" 
-                  className="animate-ring-expand" 
-                  style={{ transformOrigin: '125px 120px' }} 
-                />
-              )}
-
-              {/* Martelletto (Gavel) - Rotated 180° horizontally (pivot on the left: 35px 100px) */}
-              <g 
-                className={strikeActive ? "animate-gavel-strike" : ""} 
-                style={{ 
-                  transformOrigin: "35px 100px", 
-                  transform: strikeActive ? "rotate(0deg)" : "rotate(-35deg)",
-                  transition: "transform 0.12s ease-out"
-                }}
-              >
-                {/* Wooden handle */}
-                <line x1="35" y1="100" x2="125" y2="100" stroke="#92400e" strokeWidth="7" strokeLinecap="round" />
-                {/* Leather Grip */}
-                <line x1="35" y1="100" x2="65" y2="100" stroke="#451a03" strokeWidth="9" strokeLinecap="round" />
+              <svg width="220" height="150" viewBox="0 0 200 150" className="overflow-visible select-none pointer-events-none">
+                {/* 3D Sound Block / Base */}
+                <ellipse cx="125" cy="128" rx="40" ry="12" fill="#3d1a03" />
+                <rect x="85" y="120" width="80" height="8" fill="#3d1a03" />
+                {/* Top face of base */}
+                <ellipse cx="125" cy="120" rx="40" ry="12" fill="#78350f" stroke="#fbbf24" strokeWidth="2.5" />
                 
-                {/* Joint accent pin */}
-                <circle cx="125" cy="100" r="4.5" fill="#fbbf24" />
+                {/* Shockwave ripple ring */}
+                {strikeActive && (
+                  <ellipse 
+                    cx="125" 
+                    cy="120" 
+                    rx="40" 
+                    ry="12" 
+                    fill="none" 
+                    stroke="#fbbf24" 
+                    strokeWidth="3.5" 
+                    className="animate-ring-expand" 
+                    style={{ transformOrigin: '125px 120px' }} 
+                  />
+                )}
 
-                {/* Gavel Head (Vertical Barrel on the right) */}
-                <g transform="translate(125, 100)">
-                  {/* Cylinder head body */}
-                  <rect x="-10" y="-20" width="20" height="40" rx="3" fill="#78350f" stroke="#fbbf24" strokeWidth="1.5" />
-                  {/* Top barrel face */}
-                  <ellipse cx="0" cy="-20" rx="10" ry="3.5" fill="#451a03" stroke="#fbbf24" strokeWidth="1" />
-                  {/* Bottom barrel face */}
-                  <ellipse cx="0" cy="20" rx="10" ry="3.5" fill="#78350f" stroke="#fbbf24" strokeWidth="1" />
-                  {/* Decorative Gold band */}
-                  <rect x="-10" y="-3" width="20" height="6" fill="#fbbf24" />
+                {/* Martelletto (Gavel) */}
+                <g 
+                  className={strikeActive ? "animate-gavel-strike" : ""} 
+                  style={{ 
+                    transformOrigin: "35px 100px", 
+                    transform: strikeActive ? "rotate(0deg)" : "rotate(-35deg)",
+                    transition: "transform 0.12s ease-out"
+                  }}
+                >
+                  {/* Wooden handle */}
+                  <line x1="35" y1="100" x2="125" y2="100" stroke="#92400e" strokeWidth="7" strokeLinecap="round" />
+                  {/* Leather Grip */}
+                  <line x1="35" y1="100" x2="65" y2="100" stroke="#451a03" strokeWidth="9" strokeLinecap="round" />
+                  
+                  {/* Joint accent pin */}
+                  <circle cx="125" cy="100" r="4.5" fill="#fbbf24" />
+
+                  {/* Gavel Head (Vertical Barrel) */}
+                  <g transform="translate(125, 100)">
+                    {/* Cylinder head body */}
+                    <rect x="-10" y="-20" width="20" height="40" rx="3" fill="#78350f" stroke="#fbbf24" strokeWidth="1.5" />
+                    {/* Top barrel face */}
+                    <ellipse cx="0" cy="-20" rx="10" ry="3.5" fill="#451a03" stroke="#fbbf24" strokeWidth="1" />
+                    {/* Bottom barrel face */}
+                    <ellipse cx="0" cy="20" rx="10" ry="3.5" fill="#78350f" stroke="#fbbf24" strokeWidth="1" />
+                    {/* Decorative Gold band */}
+                    <rect x="-10" y="-3" width="20" height="6" fill="#fbbf24" />
+                  </g>
                 </g>
-              </g>
-            </svg>
-            
-            {/* Status badge */}
-            <div className={`absolute bottom-[-15px] px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border whitespace-nowrap
-              ${auctionLocked
-                ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-400'
-                : 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400 animate-pulse'
-              }`}
-            >
-              {auctionLocked ? `Aggiudicata a ${auctionValue} — chiama le lettere` : `Offerta corrente: ${auctionValue}`}
+              </svg>
+              
+              {/* Status badge */}
+              <div className={`absolute bottom-[-15px] px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border whitespace-nowrap
+                ${auctionLocked
+                  ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-400'
+                  : 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400 animate-pulse'
+                }`}
+              >
+                {auctionLocked ? `Aggiudicata a ${auctionValue} — chiama le lettere` : `Offerta corrente: ${auctionValue}`}
+              </div>
             </div>
           </div>
-          </div>
         </div>
+
+        {/* Clue Box, Bonus, Points container (visible if step >= 1) */}
+        {step >= 1 && (
+          <div className="flex flex-col items-center gap-4 mt-2">
+            {/* Clue Box */}
+            <div className="bg-zinc-950/90 border-2 border-amber-500/50 rounded-2xl px-8 py-4 shadow-2xl backdrop-blur-md text-center max-w-[800px] animate-fade-in">
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-500 mb-1 block">
+                INDIZIO MISTERIOSO
+              </span>
+              <p className="text-[clamp(18px,2vw,36px)] font-bold text-white tracking-wide leading-snug">
+                {phrase.indizio || 'Nessun indizio inserito'}
+              </p>
+            </div>
+
+            {/* Bonus & Points (visible in step 2, dissolve/hide in step 3+) */}
+            <div className={`flex items-center justify-center gap-6 transition-all duration-1000 ${step === 2 ? 'opacity-100 scale-100 mt-2' : 'opacity-0 scale-95 h-0 overflow-hidden pointer-events-none'}`}>
+              {phrase.bonus && (
+                <div className="bg-zinc-950/80 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg w-28">
+                  <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-2">BONUS</span>
+                  <img src={assetUrl(phrase.bonus)} alt="Bonus" className="w-16 h-16 object-contain" />
+                </div>
+              )}
+              <div className="bg-zinc-950/80 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg min-w-[120px]">
+                <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-2">PUNTI</span>
+                <span className="text-3xl font-black text-white tabular-nums">{phrase.punti ?? 1000}</span>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

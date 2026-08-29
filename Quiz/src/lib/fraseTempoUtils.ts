@@ -2,6 +2,9 @@ export interface FraseTempoItem {
   testo: string;
   sfondo?: string;
   lettereVisibili?: number[];
+  indizio?: string;
+  bonus?: string;
+  punti?: number;
 }
 
 /** Restituisce la vocale/lettera base di un token, ignorando gli accenti. */
@@ -34,12 +37,15 @@ export function parsePhraseTokens(frase: string): string[] {
 
 export function normalizeFraseTempoItem(raw: string | FraseTempoItem): FraseTempoItem {
   if (typeof raw === 'string') {
-    return { testo: raw, sfondo: '', lettereVisibili: [] };
+    return { testo: raw, sfondo: '', lettereVisibili: [], indizio: '', bonus: '', punti: 1000 };
   }
   return {
     testo: raw.testo ?? '',
     sfondo: raw.sfondo ?? '',
     lettereVisibili: Array.isArray(raw.lettereVisibili) ? raw.lettereVisibili : [],
+    indizio: raw.indizio ?? '',
+    bonus: raw.bonus ?? '',
+    punti: typeof raw.punti === 'number' ? raw.punti : 1000,
   };
 }
 

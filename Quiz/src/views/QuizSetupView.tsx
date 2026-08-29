@@ -423,6 +423,30 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     });
   };
 
+  const handleGioco4IndizioChange = (idx: number, indizio: string) => {
+    setState(prev => {
+      const frasi = [...(prev.gioco4?.frasi || [])];
+      frasi[idx] = { ...normalizeFraseTempoItem(frasi[idx] || ''), indizio };
+      return { ...prev, gioco4: { ...prev.gioco4, frasi } };
+    });
+  };
+
+  const handleGioco4BonusChange = (idx: number, bonus: string) => {
+    setState(prev => {
+      const frasi = [...(prev.gioco4?.frasi || [])];
+      frasi[idx] = { ...normalizeFraseTempoItem(frasi[idx] || ''), bonus };
+      return { ...prev, gioco4: { ...prev.gioco4, frasi } };
+    });
+  };
+
+  const handleGioco4PuntiChange = (idx: number, punti: number) => {
+    setState(prev => {
+      const frasi = [...(prev.gioco4?.frasi || [])];
+      frasi[idx] = { ...normalizeFraseTempoItem(frasi[idx] || ''), punti };
+      return { ...prev, gioco4: { ...prev.gioco4, frasi } };
+    });
+  };
+
   const toggleGioco4VisibleLetter = (idx: number, tokenIndex: number) => {
     setState(prev => {
       const frasi = [...(prev.gioco4?.frasi || [])];
@@ -2537,24 +2561,40 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-400 mb-1">Sfondo della frase</label>
                       <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={frase.sfondo || ''}
-                          onChange={(e) => handleGioco4BackgroundChange(idx, e.target.value)}
-                          placeholder="URL o percorso immagine..."
-                          className="min-w-0 flex-1 bg-black/40 border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500"
-                        />
-                        <label className="px-2.5 py-2 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0">
-                          🖼️ Sfoglia
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => handleFileUpload(e, (base64) => handleGioco4BackgroundChange(idx, base64))}
-                          />
-                        </label>
+                        {frase.sfondo?.startsWith('data:') || frase.sfondo?.startsWith('idb://') ? (
+                          <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                            <span className="text-emerald-400 font-medium truncate max-w-[150px]">
+                              {formatBase64Info(frase.sfondo)?.name || 'Caricato'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleGioco4BackgroundChange(idx, '')}
+                              className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[10px] bg-transparent border-0"
+                            >
+                              Rimuovi
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <input
+                              type="text"
+                              value={frase.sfondo || ''}
+                              onChange={(e) => handleGioco4BackgroundChange(idx, e.target.value)}
+                              placeholder="URL o percorso immagine..."
+                              className="min-w-0 flex-1 bg-black/40 border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500"
+                            />
+                            <label className="px-2.5 py-2 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0">
+                              🖼️ Sfoglia
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => handleFileUpload(e, (base64) => handleGioco4BackgroundChange(idx, base64))}
+                              />
+                            </label>
+                          </>
+                        )}
                       </div>
-                      {frase.sfondo && <p className="text-[10px] text-emerald-400 mt-1 truncate">Immagine caricata</p>}
                     </div>
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-400 mb-1">Lettere già visibili</label>
@@ -2572,6 +2612,67 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                         ) : null)}
                       </div>
                       <p className="text-[10px] text-slate-500 mt-1">Clicca le singole lettere da mostrare all’avvio.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pl-0 md:pl-[76px] pt-2 border-t border-white/5">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">Frase Indizio</label>
+                      <input
+                        type="text"
+                        value={frase.indizio || ''}
+                        onChange={(e) => handleGioco4IndizioChange(idx, e.target.value)}
+                        placeholder="Es: Ha a che fare col mattino..."
+                        className="w-full bg-black/40 border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500 transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">Bonus Associato (immagine)</label>
+                      <div className="flex gap-2">
+                        {frase.bonus?.startsWith('data:') || frase.bonus?.startsWith('idb://') ? (
+                          <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                            <span className="text-emerald-400 font-medium truncate max-w-[150px]">
+                              {formatBase64Info(frase.bonus)?.name || 'Caricato'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleGioco4BonusChange(idx, '')}
+                              className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[10px] bg-transparent border-0"
+                            >
+                              Rimuovi
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <input
+                              type="text"
+                              value={frase.bonus || ''}
+                              onChange={(e) => handleGioco4BonusChange(idx, e.target.value)}
+                              placeholder="URL o percorso immagine..."
+                              className="min-w-0 flex-1 bg-black/40 border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500 transition-colors"
+                            />
+                            <label className="px-2.5 py-2 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0">
+                              🖼️ Sfoglia
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => handleFileUpload(e, (base64) => handleGioco4BonusChange(idx, base64))}
+                              />
+                            </label>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">Punti in palio</label>
+                      <input
+                        type="number"
+                        value={frase.punti ?? 1000}
+                        onChange={(e) => handleGioco4PuntiChange(idx, parseInt(e.target.value) || 0)}
+                        placeholder="Es: 5000"
+                        className="w-full bg-black/40 border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                      />
                     </div>
                   </div>
                 </div>

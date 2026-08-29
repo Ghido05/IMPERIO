@@ -13,6 +13,7 @@ import PresenterPreviewPanel from '../components/PresenterPreviewPanel';
 import ScoreAssigner from '../components/ScoreAssigner';
 import { ScoreProvider } from '../context/ScoreContext';
 import { cloneDefaultData } from '../lib/defaultGameData';
+import { normalizeFraseTempoItem } from '../lib/fraseTempoUtils';
 import { saveRecentProject, type RecentProject } from '../lib/recentProjects';
 import type { Slide } from '../App';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
@@ -211,14 +212,20 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
       data: {
         ...(cloneDefaultData('gioco_frase_tempo') as any),
         frasi: (setup.gioco4?.frasi && setup.gioco4.frasi.length > 0)
-          ? setup.gioco4.frasi.map(frase => ({
-              ...frase,
-              sfondo: frase.sfondo || setup.gioco4.sfondoGenerale || ''
-            }))
-          : (cloneDefaultData('gioco_frase_tempo') as any).frasi.map((frase: any) => ({
-              ...frase,
-              sfondo: frase.sfondo || setup.gioco4.sfondoGenerale || ''
-            }))
+          ? setup.gioco4.frasi.map(frase => {
+              const item = normalizeFraseTempoItem(frase);
+              return {
+                ...item,
+                sfondo: item.sfondo || setup.gioco4.sfondoGenerale || ''
+              };
+            })
+          : (cloneDefaultData('gioco_frase_tempo') as any).frasi.map((frase: any) => {
+              const item = normalizeFraseTempoItem(frase);
+              return {
+                ...item,
+                sfondo: item.sfondo || setup.gioco4.sfondoGenerale || ''
+              };
+            })
       }
     },
     {

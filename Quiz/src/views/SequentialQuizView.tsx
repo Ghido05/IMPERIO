@@ -4,6 +4,7 @@ import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import PresenterPreviewPanel from '../components/PresenterPreviewPanel';
 import { ScoreProvider } from '../context/ScoreContext';
 import type { Slide } from '../App';
+import { normalizeFraseTempoItem } from '../lib/fraseTempoUtils';
 import {
   getDefaultSetupState,
   createDefaultGioco1Question,
@@ -215,14 +216,20 @@ export function getSlideForBoxQuestion(
   if (boxNum === 4) {
     const defaultData = cloneDefaultData('gioco_frase_tempo') as any;
     const frasi = (setupState.gioco4?.frasi && setupState.gioco4.frasi.length > 0)
-      ? setupState.gioco4.frasi.map(frase => ({
-          ...frase,
-          sfondo: frase.sfondo || setupState.gioco4.sfondoGenerale || ''
-        }))
-      : defaultData.frasi.map((frase: any) => ({
-          ...frase,
-          sfondo: frase.sfondo || setupState.gioco4.sfondoGenerale || ''
-        }));
+      ? setupState.gioco4.frasi.map(frase => {
+          const item = normalizeFraseTempoItem(frase);
+          return {
+            ...item,
+            sfondo: item.sfondo || setupState.gioco4.sfondoGenerale || ''
+          };
+        })
+      : defaultData.frasi.map((frase: any) => {
+          const item = normalizeFraseTempoItem(frase);
+          return {
+            ...item,
+            sfondo: item.sfondo || setupState.gioco4.sfondoGenerale || ''
+          };
+        });
     return { id: 'gioco_frase_tempo', type: 'gioco_frase_tempo', data: { ...defaultData, frasi } };
   }
 

@@ -335,20 +335,20 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
 
     // Arrow navigation for steps
     if (e.key === 'ArrowRight') {
-      if (step < 4) {
+      if (step < 3) {
         setStep(prev => prev + 1);
         return;
       }
     }
     if (e.key === 'ArrowLeft') {
-      if (step > 0 && step <= 4 && !auctionLocked) {
+      if (step > 0 && step <= 3 && !auctionLocked) {
         setStep(prev => prev - 1);
         return;
       }
     }
 
-    // Keyboard numbers and arrows for manual bid movement (solo durante l'asta - Step 4)
-    if (step === 4 && !auctionLocked) {
+    // Keyboard numbers and arrows for manual bid movement (solo durante l'asta - Step 3)
+    if (step === 3 && !auctionLocked) {
       if (e.key === '0') {
         setAuctionValue(10);
         return;
@@ -425,7 +425,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
   const showGuessTimer = auctionLocked && letterCounter === 0 && guessTimerEndAt > 0 && timerDisplay > 0;
 
   const showContent = step >= 1;
-  const showPhraseAndAuction = step >= 4;
+  const showPhraseAndAuction = step >= 3;
 
   return (
     <div data-asset-refresh={assetRefresh} className="relative w-full min-h-screen bg-black text-white flex items-center justify-center overflow-hidden select-none" style={{ backgroundImage: phrase.sfondo ? `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.72)), url("${assetUrl(phrase.sfondo)}")` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
@@ -813,7 +813,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
         )}
 
         {/* Permanent Points & Bonus in basso a destra per tutta la durata del gioco */}
-        {step >= 1 && (
+        {step >= 2 && (
           <div className="absolute bottom-6 right-10 flex items-center gap-4 z-20">
             {phrase.bonus && (
               <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md w-24 h-24 animate-fade-in">

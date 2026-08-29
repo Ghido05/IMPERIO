@@ -285,42 +285,119 @@ export function getDefaultSetupState(): QuizSetupState {
   };
 }
 
-const formatBase64Info = (val: string | undefined): { label: string; size: string; name: string } | null => {
-  if (!val) return null;
-  
-  if (val.startsWith('idb://')) {
-    const name = idbNameCache.get(val) || 'File locale';
-    return { label: '🎵 Audio', size: 'Pronto', name };
-  }
-  
-  if (val.startsWith('data:')) {
-    const match = val.match(/^data:([^;]+);base64,/);
-    const mimeType = match ? match[1] : '';
-    let label = 'File';
-    if (mimeType.startsWith('image/')) {
-      label = '🖼️ Immagine';
-    } else if (mimeType.startsWith('audio/')) {
-      label = '🎵 Audio';
-    }
-    const sizeInKb = Math.round((val.length * 3) / 4 / 1024);
-    const sizeStr = sizeInKb >= 1024 
-      ? `${(sizeInKb / 1024).toFixed(1)} MB` 
-      : `${sizeInKb} KB`;
-    
-    const first100 = val.substring(0, 100);
-    const name = localStorage.getItem('filename_' + first100) || 'File locale';
-    return { label, size: sizeStr, name };
-  }
-  
-  return null;
-};
-
 interface QuizSetupViewProps {
   onStartQuiz?: () => void;
 }
 
 export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
   const [state, setState] = useState<QuizSetupState>(getDefaultSetupState());
+  const [missingFiles, setMissingFiles] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    async function checkMissingFiles() {
+      const missing = new Set<string>();
+      const idbKeys: string[] = [];
+      
+      const scanForIdb = (obj: any) => {
+        if (typeof obj === 'string' && obj.startsWith('idb://')) {
+          idbKeys.push(obj);
+        } else if (obj && typeof obj === 'object') {
+          for (const key in obj) {
+            scanForIdb(obj[key]);
+          }
+        }
+      };
+      
+      scanForIdb(state);
+      
+      if (idbKeys.length > 0) {
+        try {
+          const { getLargeFile } = await import('../lib/idbStore');
+          for (const key of idbKeys) {
+            const cleanKey = key.replace('idb://', '').split('?')[0];
+            const fileData = await getLargeFile(cleanKey);
+            if (!fileData) {
+              missing.add(key);
+            }
+          }
+        } catch (e) {
+          console.error("Errore durante la scansione di IndexedDB:", e);
+        }
+      }
+      
+      setMissingFiles(missing);
+    }
+    
+    checkMissingFiles();
+  }, [state]);
+
+  const formatBase64Info = (val: string | undefined): { label: string; size: string; name: string } | null => {
+    if (!val || typeof val !== 'string' || val.trim() === '') return null;
+    
+    const trimmed = val.trim();
+    
+    if (trimmed.startsWith('idb://')) {
+      const isMissing = missingFiles.has(trimmed);
+      let name = 'File locale';
+      try {
+        const match = trimmed.match(/[?&]name=([^&]+)/);
+        if (match) {
+          name = decodeURIComponent(match[1]);
+        } else {
+          name = idbNameCache.get(trimmed) || idbNameCache.get(trimmed.split('?')[0]) || 'File locale';
+        }
+      } catch (e) {
+        name = idbNameCache.get(trimmed) || idbNameCache.get(trimmed.split('?')[0]) || 'File locale';
+      }
+      
+      let label = '📁 File';
+      const lowerName = name.toLowerCase();
+      if (lowerName.endsWith('.mp3') || lowerName.endsWith('.wav') || lowerName.endsWith('.ogg')) {
+        label = '🎵 Audio';
+      } else if (lowerName.endsWith('.png') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.gif') || lowerName.endsWith('.svg')) {
+        label = '🖼️ Immagine';
+      }
+      
+      if (isMissing) {
+        return { label: '⚠️ ASSENTE', size: 'NON TROVATO LOCALE (ricarica)', name };
+      }
+      
+      return { label, size: 'Pronto', name };
+    }
+    
+    if (trimmed.startsWith('data:')) {
+      const match = trimmed.match(/^data:([^;]+);base64,/);
+      const mimeType = match ? match[1] : '';
+      let label = '📁 File';
+      if (mimeType.startsWith('image/')) {
+        label = '🖼️ Immagine';
+      } else if (mimeType.startsWith('audio/')) {
+        label = '🎵 Audio';
+      }
+      const sizeInKb = Math.round((trimmed.length * 3) / 4 / 1024);
+      const sizeStr = sizeInKb >= 1024 
+        ? `${(sizeInKb / 1024).toFixed(1)} MB` 
+        : `${sizeInKb} KB`;
+      
+      const first100 = trimmed.substring(0, 100);
+      const name = localStorage.getItem('filename_' + first100) || 'File locale';
+      return { label, size: sizeStr, name };
+    }
+    
+    // Se è un percorso relativo (es. /Audio/... o /Icone/...)
+    let label = '📁 File';
+    const lowerVal = trimmed.toLowerCase();
+    if (lowerVal.includes('audio') || lowerVal.endsWith('.mp3') || lowerVal.endsWith('.wav')) {
+      label = '🎵 Audio';
+    } else if (lowerVal.includes('icone') || lowerVal.includes('sfondo') || lowerVal.endsWith('.png') || lowerVal.endsWith('.jpg') || lowerVal.endsWith('.jpeg') || lowerVal.endsWith('.svg')) {
+      label = '🖼️ Immagine';
+    }
+    
+    const parts = trimmed.split('/');
+    const name = parts[parts.length - 1] || trimmed;
+    
+    return { label, size: 'Sistema', name };
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -548,11 +625,17 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           const blob = dataURItoBlob(base64);
           const blobUrl = URL.createObjectURL(blob);
           const { idbBlobUrlCache, idbNameCache } = await import('../lib/assetUrl');
+          
+          const resultKey = `idb://${id}?name=${encodeURIComponent(file.name)}`;
+          
+          // Memorizza sia la chiave completa sia quella pulita per compatibilità
+          idbBlobUrlCache.set(resultKey, blobUrl);
+          idbNameCache.set(resultKey, file.name);
           idbBlobUrlCache.set(`idb://${id}`, blobUrl);
+          idbNameCache.set(`idb://${id}`, file.name);
           
           const first100 = base64.substring(0, 100);
           localStorage.setItem('filename_' + first100, file.name);
-          idbNameCache.set(`idb://${id}`, file.name);
           
           const isElectron = (window as any).electron !== undefined;
           if (isElectron) {
@@ -561,7 +644,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             });
           }
           
-          onLoad(`idb://${id}`);
+          onLoad(resultKey);
         } catch (err) {
           console.error("Errore nel salvataggio del file su IndexedDB:", err);
           showToast("❌ Errore durante il caricamento del file");

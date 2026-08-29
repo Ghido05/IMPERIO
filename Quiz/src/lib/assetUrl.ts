@@ -52,23 +52,44 @@ export function assetUrl(path: string | undefined | null): string {
     if (cached) return cached;
 
     // Caricamento lazy e asincrono da IndexedDB
-    const key = trimmed.replace('idb://', '');
+    const cleanKey = trimmed.replace('idb://', '').split('?')[0];
+    const cleanIdbUrl = `idb://${cleanKey}`;
+    const cachedClean = idbBlobUrlCache.get(cleanIdbUrl);
+    if (cachedClean) {
+      idbBlobUrlCache.set(trimmed, cachedClean);
+      
+      // Assicura che anche la cache dei nomi abbia questa voce
+      if (!idbNameCache.has(trimmed)) {
+        const match = trimmed.match(/[?&]name=([^&]+)/);
+        const name = match ? decodeURIComponent(match[1]) : (idbNameCache.get(cleanIdbUrl) || 'File locale');
+        idbNameCache.set(trimmed, name);
+      }
+      return cachedClean;
+    }
+
     if (!(window as any)[`loading_${trimmed}`]) {
       (window as any)[`loading_${trimmed}`] = true;
-      getLargeFile(key).then((val) => {
+      getLargeFile(cleanKey).then((val) => {
         if (val && val.startsWith('data:')) {
           const blob = dataURItoBlob(val);
           const blobUrl = URL.createObjectURL(blob);
           idbBlobUrlCache.set(trimmed, blobUrl);
           
-          const first100 = val.substring(0, 100);
-          const name = localStorage.getItem('filename_' + first100) || 'File locale';
+          // Estrai il nome dal query parameter o usa localStorage come fallback
+          let name = 'File locale';
+          const match = trimmed.match(/[?&]name=([^&]+)/);
+          if (match) {
+            name = decodeURIComponent(match[1]);
+          } else {
+            const first100 = val.substring(0, 100);
+            name = localStorage.getItem('filename_' + first100) || 'File locale';
+          }
           idbNameCache.set(trimmed, name);
           
           window.dispatchEvent(new CustomEvent('idb-file-loaded', { detail: { path: trimmed } }));
         }
       }).catch(err => {
-        console.error("Errore nel caricamento lazy da IndexedDB per la chiave:", key, err);
+        console.error("Errore nel caricamento lazy da IndexedDB per la chiave:", cleanKey, err);
       }).finally(() => {
         delete (window as any)[`loading_${trimmed}`];
       });

@@ -547,17 +547,19 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
           </div>
         )}
 
+        <div className="flex-grow" />
+
         {/* Phrase Display Grid */}
-        <div className={`flex flex-wrap justify-center gap-x-[1.2%] gap-y-[1.2vw] max-w-[95%] px-6 mb-[2%] min-h-[140px] items-center transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none mb-0'}`}>
+        <div className={`flex flex-wrap justify-center gap-x-[1.6%] gap-y-[1.6vw] max-w-[95%] px-6 mb-4 min-h-[180px] items-center transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none mb-0'}`}>
           {words.map((word, wIdx) => (
-            <div key={wIdx} className="flex gap-[0.2vw]">
+            <div key={wIdx} className="flex gap-[0.3vw]">
               {word.map((t, tIdx) => (
                 t === ' ' ? (
-                  <div key={tIdx} className="w-[1.6vw]" />
+                  <div key={tIdx} className="w-[2.2vw]" />
                 ) : (
                   <div 
                     key={tIdx} 
-                    className={`w-[clamp(30px,3.0vw,76px)] h-[clamp(44px,4.5vw,110px)] border-4 rounded-lg flex items-center justify-center text-[clamp(18px,2.4vw,52px)] font-black shadow-lg transition-all duration-300
+                    className={`w-[clamp(42px,3.8vw,96px)] h-[clamp(60px,5.6vw,136px)] border-[5px] rounded-xl flex items-center justify-center text-[clamp(24px,3.2vw,68px)] font-black shadow-2xl transition-all duration-300
                       ${t === '_' 
                         ? 'bg-blue-950/40 border-blue-600/30 text-transparent shadow-black/40' 
                         : 'bg-gradient-to-b from-blue-900 to-indigo-950 border-blue-400 text-white shadow-blue-950/50 scale-105 animate-zoom-in'
@@ -795,7 +797,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
           </div>
         </div>
 
-        {/* Clue Box, Points container (visible if step >= 1) */}
+        {/* Clue Box (visible if step >= 1) */}
         {step >= 1 && (
           <div className="flex flex-col items-center gap-4 mt-2">
             {/* Clue Box */}
@@ -807,22 +809,22 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
                 {phrase.indizio || 'Nessun indizio inserito'}
               </p>
             </div>
-
-            {/* Points (visible in step 2, dissolve/hide in step 3+) */}
-            <div className={`flex items-center justify-center transition-all duration-1000 ${step === 2 ? 'opacity-100 scale-100 mt-2' : 'opacity-0 scale-95 h-0 overflow-hidden pointer-events-none'}`}>
-              <div className="bg-zinc-950/80 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg min-w-[120px]">
-                <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-2">PUNTI</span>
-                <span className="text-3xl font-black text-white tabular-nums">{phrase.punti ?? 1000}</span>
-              </div>
-            </div>
           </div>
         )}
 
-        {/* Permanent Bonus Box in basso a destra per tutta la durata del gioco */}
-        {phrase.bonus && (
-          <div className="absolute bottom-6 right-10 flex flex-col items-center justify-center bg-zinc-950/80 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-md z-20 w-28 h-28 animate-fade-in">
-            <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-2">BONUS</span>
-            <img src={assetUrl(phrase.bonus)} alt="Bonus" className="w-14 h-14 object-contain animate-pulse" />
+        {/* Permanent Points & Bonus in basso a destra per tutta la durata del gioco */}
+        {step >= 1 && (
+          <div className="absolute bottom-6 right-10 flex items-center gap-4 z-20">
+            {phrase.bonus && (
+              <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md w-24 h-24 animate-fade-in">
+                <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-1.5">BONUS</span>
+                <img src={assetUrl(phrase.bonus)} alt="Bonus" className="w-12 h-12 object-contain animate-pulse" />
+              </div>
+            )}
+            <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md min-w-[100px] h-24 animate-fade-in">
+              <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-1.5">PUNTI</span>
+              <span className="text-3xl font-black text-white tabular-nums">{phrase.punti ?? 1000}</span>
+            </div>
           </div>
         )}
 

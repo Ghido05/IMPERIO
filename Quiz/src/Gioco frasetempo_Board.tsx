@@ -685,45 +685,6 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
                       {letterCounter}
                     </span>
                   </div>
-
-                  {/* Cronometro rotondo da 10s (spostato/ridimensionato sopra o a fianco per salvare spazio) */}
-                  {showGuessTimer && (
-                    <div className="absolute -top-20 left-1/2 -translate-x-1/2 flex flex-col items-center bg-black/90 border border-red-500/30 p-2 rounded-xl shadow-xl animate-fade-in w-[110px] z-30">
-                      <span className="text-[8px] font-black uppercase tracking-wider text-red-400 mb-1">
-                        Tempo
-                      </span>
-                      <div className="relative w-[50px] h-[50px]">
-                        <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                          <circle
-                            cx="60"
-                            cy="60"
-                            r={timerRadius}
-                            fill="none"
-                            stroke="rgb(39 39 42)"
-                            strokeWidth="12"
-                          />
-                          <circle
-                            cx="60"
-                            cy="60"
-                            r={timerRadius}
-                            fill="none"
-                            stroke="rgb(239 68 68)"
-                            strokeWidth="12"
-                            strokeLinecap="round"
-                            strokeDasharray={timerCircumference}
-                            strokeDashoffset={timerStrokeOffset}
-                            className="transition-[stroke-dashoffset] duration-100 ease-linear"
-                            style={{ filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.6))' }}
-                          />
-                        </svg>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-lg font-black text-red-400 tabular-nums">
-                            {Math.ceil(timerDisplay)}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
@@ -824,6 +785,46 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
             <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md min-w-[100px] h-24 animate-fade-in">
               <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-1.5">PUNTI</span>
               <span className="text-3xl font-black text-white tabular-nums">{phrase.punti ?? 1000}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Large Round Timer in alto a destra */}
+        {showGuessTimer && (
+          <div className="absolute top-6 right-10 flex flex-col items-center justify-center bg-zinc-950/90 border-2 border-red-500/50 p-4 rounded-3xl shadow-2xl backdrop-blur-md z-30 animate-fade-in w-[150px] h-[150px]">
+            <span className="text-[9px] font-black uppercase tracking-widest text-red-400 mb-1.5">
+              TEMPO
+            </span>
+            <div className="relative w-[90px] h-[90px]">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                <circle
+                  cx="60"
+                  cy="60"
+                  r={timerRadius}
+                  fill="none"
+                  stroke="rgb(39 39 42)"
+                  strokeWidth="8"
+                />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r={timerRadius}
+                  fill="none"
+                  stroke="rgb(239 68 68)"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={timerCircumference}
+                  strokeDashoffset={timerStrokeOffset}
+                  className="transition-[stroke-dashoffset] duration-100 ease-linear"
+                  style={{ filter: 'drop-shadow(0 0 8px rgba(239,68,68,0.7))' }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-black text-red-400 tabular-nums leading-none">
+                  {Math.ceil(timerDisplay)}
+                </span>
+                <span className="text-[8px] font-black uppercase tracking-wider text-red-400/60 mt-0.5">sec</span>
+              </div>
             </div>
           </div>
         )}

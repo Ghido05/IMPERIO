@@ -3,6 +3,7 @@ import Sandbox from './Sandbox';
 import PresenterView from './views/PresenterView';
 import GamesView from './views/GamesView';
 import ScoresView from './views/ScoresView';
+import IpadView from './views/IpadView';
 
 export type SlideType =
   | 'empty'
@@ -161,6 +162,10 @@ function App() {
 
   if (mode === 'scores') {
     return <ScoresView />;
+  }
+
+  if (mode === 'ipad') {
+    return <IpadView />;
   }
 
   // Fallback

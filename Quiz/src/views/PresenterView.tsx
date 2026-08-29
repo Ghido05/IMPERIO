@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import SlideCanvas from '../components/SlideCanvas';
 import WelcomeScreen from '../components/WelcomeScreen';
 import { triggerFadeOutBroadcast } from '../lib/audioTracker';
+import QRCode from 'qrcode';
 import QuizSetupView, { 
   getDefaultSetupState, 
   createDefaultGioco1Question, 
@@ -258,6 +259,39 @@ export default function PresenterView() {
   const [activeLatestClue] = useSyncedState<number>(`playstate_${activeSlideId}_latest`, 0);
   const lastForwardTimeRef = useRef<number>(0);
   const [maximizedPanel, setMaximizedPanel] = useState<'none' | 'left' | 'right'>('none');
+  const [showIpadModal, setShowIpadModal] = useState(false);
+  const [serverUrl, setServerUrl] = useState('');
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
+  const [ipadStatus, setIpadStatus] = useState({ ipadConnected: false, ipadCount: 0 });
+
+  // Get server URL and listen to iPad connection status from main process
+  useEffect(() => {
+    const isElectron = (window as any).electron !== undefined;
+    if (isElectron) {
+      const electron = (window as any).electron;
+      electron.getServerUrl().then((url: string) => {
+        setServerUrl(url);
+      });
+
+      const unsubscribe = electron.onIpadConnectionStatus((status: { ipadConnected: boolean; ipadCount: number }) => {
+        setIpadStatus(status);
+      });
+      return unsubscribe;
+    }
+  }, []);
+
+  // Generate QR Code when server URL is available
+  useEffect(() => {
+    if (serverUrl) {
+      QRCode.toDataURL(`${serverUrl}/?mode=ipad`, { width: 256, margin: 2 })
+        .then(url => {
+          setQrCodeDataUrl(url);
+        })
+        .catch(err => {
+          console.error("Error generating QR code:", err);
+        });
+    }
+  }, [serverUrl]);
 
   // Generate slides when viewMode turns to 'editor'
   useEffect(() => {
@@ -637,6 +671,18 @@ export default function PresenterView() {
             ← Home
           </button>
           <span className="text-sm font-medium truncate flex-1">{presentationName}</span>
+          <button
+            type="button"
+            onClick={() => setShowIpadModal(true)}
+            className={`text-xs font-semibold px-2.5 py-1 rounded border transition-all flex items-center gap-1.5 cursor-pointer ${
+              ipadStatus.ipadConnected 
+                ? 'bg-emerald-600/10 hover:bg-emerald-600/20 border-emerald-500/30 text-emerald-400' 
+                : 'bg-slate-700 hover:bg-slate-650 border-slate-600 text-slate-300'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${ipadStatus.ipadConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+            📱 iPad: {ipadStatus.ipadConnected ? `${ipadStatus.ipadCount} Connesso/i` : 'Disconnesso'}
+          </button>
           <WebSerialManager activeSlideId={activeSlideId} activeSlideType={activeSlide?.type || ''} />
           <span className="text-[10px] text-white/40 uppercase tracking-wider hidden sm:inline">
             Modellazione Relatore
@@ -912,6 +958,63 @@ export default function PresenterView() {
                 Ho Capito
               </button>
             </footer>
+          </div>
+        </div>
+      )}
+
+      {showIpadModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#1e1e24] border border-white/10 rounded-2xl w-full max-w-md flex flex-col shadow-2xl overflow-hidden p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <span>📱</span> Connessione iPad
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowIpadModal(false)}
+                className="text-white/60 hover:text-white text-sm font-semibold cursor-pointer"
+              >
+                Chiudi ✕
+              </button>
+            </div>
+
+            <div className="flex flex-col items-center text-center space-y-4">
+              <p className="text-xs text-white/60">
+                Inquadra questo QR Code con la fotocamera dell'iPad (o di un altro dispositivo) connesso alla stessa rete Wi-Fi del Mac.
+              </p>
+
+              {qrCodeDataUrl ? (
+                <div className="bg-white p-4 rounded-xl shadow-inner border border-white/15">
+                  <img src={qrCodeDataUrl} alt="QR Code per iPad" className="w-48 h-48" />
+                </div>
+              ) : (
+                <div className="w-48 h-48 flex items-center justify-center bg-slate-800 rounded-xl text-xs text-white/40">
+                  Generazione QR Code...
+                </div>
+              )}
+
+              <div className="w-full bg-slate-800 p-3 rounded-lg border border-slate-700">
+                <span className="text-[10px] text-white/40 uppercase block mb-1 font-black">URL del Server</span>
+                <code className="text-xs text-yellow-400 font-mono select-all break-all">
+                  {serverUrl ? `${serverUrl}/?mode=ipad` : 'Ricerca in corso...'}
+                </code>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs">
+                <span className={`w-2.5 h-2.5 rounded-full ${ipadStatus.ipadConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                <span className="text-white/70">
+                  Stato: {ipadStatus.ipadConnected ? `Connesso (${ipadStatus.ipadCount} dispositivo/i)` : 'Nessun iPad rilevato'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowIpadModal(false)}
+              className="mt-6 w-full py-2.5 bg-slate-700 hover:bg-slate-650 text-white text-xs font-bold rounded-lg transition-all cursor-pointer"
+            >
+              Fatto
+            </button>
           </div>
         </div>
       )}

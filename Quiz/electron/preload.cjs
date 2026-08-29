@@ -31,4 +31,10 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('viewport-changed', subscription);
     return () => ipcRenderer.removeListener('viewport-changed', subscription);
   },
+  getServerUrl: () => ipcRenderer.invoke('get-server-url'),
+  onIpadConnectionStatus: (callback) => {
+    const subscription = (_event, status) => callback(status);
+    ipcRenderer.on('ipad-connection-status', subscription);
+    return () => ipcRenderer.removeListener('ipad-connection-status', subscription);
+  },
 });

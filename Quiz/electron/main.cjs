@@ -1,6 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const express = require('express');
+const http = require('http');
+const { WebSocketServer } = require('ws');
+const os = require('os');
 
 // Disable autoplay gesture requirements
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -249,18 +253,185 @@ ipcMain.handle('write-setup-file', async (event, data) => {
   return { success };
 });
 
+let localServer;
+let wss;
+const clients = new Set();
+let latestSlides = null;
+let latestActiveSlideId = '';
+let latestActiveSlide = null;
+const latestLocalStorage = {};
+
+function getLocalIpAddress() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+function startLocalServer() {
+  const expressApp = express();
+  
+  // Serve static dist folder in production
+  const distPath = path.join(__dirname, '../dist');
+  expressApp.use(express.static(distPath));
+  
+  // Fallback to index.html for SPA
+  expressApp.use((req, res, next) => {
+    if (req.headers.upgrade === 'websocket' || req.method !== 'GET') return next();
+    if (fs.existsSync(path.join(distPath, 'index.html'))) {
+      res.sendFile(path.join(distPath, 'index.html'));
+    } else {
+      res.send('IMPERIO Local Server (Vite Development Mode active). Load from http://localhost:5173/?mode=ipad');
+    }
+  });
+
+  localServer = http.createServer(expressApp);
+  
+  wss = new WebSocketServer({ noServer: true });
+  
+  localServer.on('upgrade', (request, socket, head) => {
+    const { pathname } = new URL(request.url, `http://${request.headers.host}`);
+    if (pathname === '/ws') {
+      wss.handleUpgrade(request, socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+      });
+    } else {
+      socket.destroy();
+    }
+  });
+
+  wss.on('connection', (ws) => {
+    clients.add(ws);
+    broadcastConnectionStatus();
+    
+    // Send initial state to the newly connected client
+    ws.send(JSON.stringify({
+      type: 'init-state',
+      data: {
+        slides: latestSlides,
+        activeSlideId: latestActiveSlideId,
+        activeSlide: latestActiveSlide,
+        localStorage: latestLocalStorage
+      }
+    }));
+    
+    ws.on('message', (message) => {
+      try {
+        const msg = JSON.parse(message);
+        if (msg.type === 'request-state') {
+          ws.send(JSON.stringify({
+            type: 'init-state',
+            data: {
+              slides: latestSlides,
+              activeSlideId: latestActiveSlideId,
+              activeSlide: latestActiveSlide,
+              localStorage: latestLocalStorage
+            }
+          }));
+        } else if (msg.type === 'local-storage-update') {
+          const update = msg.data;
+          latestLocalStorage[update.key] = update.value;
+          
+          // Forward state update to all Electron windows
+          const ipcState = { localStorageUpdate: update };
+          if (presenterWindow && !presenterWindow.webContents.isDestroyed()) {
+            presenterWindow.webContents.send('state-update', ipcState);
+          }
+          if (gamesWindow && !gamesWindow.webContents.isDestroyed()) {
+            gamesWindow.webContents.send('state-update', ipcState);
+          }
+          if (scoresWindow && !scoresWindow.webContents.isDestroyed()) {
+            scoresWindow.webContents.send('state-update', ipcState);
+          }
+          
+          // Broadcast to all OTHER WebSocket clients
+          const wsMessage = JSON.stringify({
+            type: 'local-storage-update',
+            data: update
+          });
+          for (const client of clients) {
+            if (client !== ws && client.readyState === 1) { // 1 = OPEN
+              client.send(wsMessage);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error handling websocket message:', err);
+      }
+    });
+
+    ws.on('close', () => {
+      clients.delete(ws);
+      broadcastConnectionStatus();
+    });
+
+    ws.on('error', () => {
+      clients.delete(ws);
+      broadcastConnectionStatus();
+    });
+  });
+
+  localServer.listen(3001, '0.0.0.0', () => {
+    console.log(`Server locale dell'iPad avviato su http://${getLocalIpAddress()}:3001`);
+  });
+}
+
+function broadcastConnectionStatus() {
+  const status = {
+    ipadConnected: clients.size > 0,
+    ipadCount: clients.size
+  };
+  if (presenterWindow && !presenterWindow.webContents.isDestroyed()) {
+    presenterWindow.webContents.send('ipad-connection-status', status);
+  }
+}
+
 // IPC Handler for State Synchronization
 ipcMain.on('broadcast-state', (event, state) => {
+  if (state.slides !== undefined) latestSlides = state.slides;
+  if (state.activeSlideId !== undefined) latestActiveSlideId = state.activeSlideId;
+  if (state.activeSlide !== undefined) latestActiveSlide = state.activeSlide;
+  if (state.localStorageUpdate) {
+    const { key, value } = state.localStorageUpdate;
+    latestLocalStorage[key] = value;
+  }
+
   // Broadcast state to all windows except the sender
-  if (presenterWindow && event.sender !== presenterWindow.webContents) {
+  if (presenterWindow && event.sender !== presenterWindow.webContents && !presenterWindow.webContents.isDestroyed()) {
     presenterWindow.webContents.send('state-update', state);
   }
-  if (gamesWindow && event.sender !== gamesWindow.webContents) {
+  if (gamesWindow && event.sender !== gamesWindow.webContents && !gamesWindow.webContents.isDestroyed()) {
     gamesWindow.webContents.send('state-update', state);
   }
-  if (scoresWindow && event.sender !== scoresWindow.webContents) {
+  if (scoresWindow && event.sender !== scoresWindow.webContents && !scoresWindow.webContents.isDestroyed()) {
     scoresWindow.webContents.send('state-update', state);
   }
+
+  // Forward updates to connected web clients
+  const wsMessage = JSON.stringify({
+    type: state.localStorageUpdate ? 'local-storage-update' : 'state-update',
+    data: state.localStorageUpdate ? state.localStorageUpdate : {
+      slides: latestSlides,
+      activeSlideId: latestActiveSlideId,
+      activeSlide: latestActiveSlide
+    }
+  });
+
+  for (const client of clients) {
+    if (client.readyState === 1) {
+      client.send(wsMessage);
+    }
+  }
+});
+
+ipcMain.handle('get-server-url', () => {
+  const ip = getLocalIpAddress();
+  return `http://${ip}:3001`;
 });
 
 app.whenReady().then(() => {
@@ -296,6 +467,7 @@ app.whenReady().then(() => {
     return false;
   });
 
+  startLocalServer();
   createWindows();
 
   app.on('activate', () => {

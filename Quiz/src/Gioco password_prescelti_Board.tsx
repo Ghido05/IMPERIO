@@ -22,7 +22,7 @@ const teamColors = {
   neutral: 'bg-gray-600 border-gray-400'
 };
 
-const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) => {
+const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boolean }> = ({ interactive = true, ipadMode = false }) => {
   const gameDataRaw = useGameData();
   if (!gameDataRaw) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -510,78 +510,86 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = ({ interacti
   const isWordGuessed = (word: string) => {
     return grid.find(w => w.word === word.toUpperCase())?.guessed;
   };
-
   return (
-    <div className="w-full min-h-screen bg-slate-900 text-white p-8 font-sans">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-4xl font-bold text-yellow-500">
-            VISTA PRESCELTI / CONDUTTORE
-          </h1>
-          <div className="flex items-center gap-4">
-            <p className="text-slate-400 font-bold">MANCHE {currentManche + 1} di {manches.length}</p>
-            {(gameData as any).musicaIntro && (
-              <button
-                type="button"
-                onClick={() => setAudioPlaying(prev => !prev)}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
-                  audioPlaying 
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse' 
-                    : 'bg-slate-700 hover:bg-slate-650 text-slate-350 border border-slate-600'
-                }`}
-              >
-                {audioPlaying ? '🔊 Stop Intro' : '🎵 Play Intro'}
-              </button>
-            )}
+    <div className={`w-full min-h-screen bg-slate-900 text-white font-sans ${ipadMode ? 'p-3 sm:p-6' : 'p-8'}`}>
+      {!ipadMode ? (
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-4xl font-bold text-yellow-500">
+              VISTA PRESCELTI / CONDUTTORE
+            </h1>
+            <div className="flex items-center gap-4">
+              <p className="text-slate-400 font-bold">MANCHE {currentManche + 1} di {manches.length}</p>
+              {(gameData as any).musicaIntro && (
+                <button
+                  type="button"
+                  onClick={() => setAudioPlaying(prev => !prev)}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                    audioPlaying 
+                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white animate-pulse' 
+                      : 'bg-slate-700 hover:bg-slate-650 text-slate-350 border border-slate-600'
+                  }`}
+                >
+                  {audioPlaying ? '🔊 Stop Intro' : '🎵 Play Intro'}
+                </button>
+              )}
+            </div>
+          </div>
+          <button 
+            onClick={resetGame}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded font-bold text-sm"
+          >
+            RESET TOTALE
+          </button>
+        </div>
+      ) : (
+        <div className="flex justify-between items-center mb-4 bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
+          <div>
+            <span className="text-[10px] text-yellow-500 font-black tracking-widest uppercase block">GIOCO 3: PASSWORD PRESCELTI</span>
+            <span className="text-sm font-bold">MANCHE {currentManche + 1} / {manches.length}</span>
           </div>
         </div>
-        <button 
-          onClick={resetGame}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded font-bold text-sm"
-        >
-          RESET TOTALE
-        </button>
-      </div>
+      )}
 
-      <div className="flex gap-8 mb-8">
+      <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 mb-8">
         <div className="flex-1">
-          <h2 className="text-2xl font-bold mb-4">Mappa Parole (Alfabetico)</h2>
-          <div className="grid grid-cols-3 gap-2">
+          <h2 className="text-lg sm:text-2xl font-bold mb-3 sm:mb-4 text-slate-300">Mappa Parole (Alfabetico)</h2>
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {grid.map((item, i) => (
               <div
                 key={i}
-                className={`p-3 rounded border-2 text-sm font-bold text-center transition-all ${teamColors[item.type]} ${item.guessed ? 'opacity-30 scale-95' : ''}`}
+                className={`p-2 sm:p-3 rounded border sm:border-2 text-xs sm:text-sm font-bold text-center transition-all ${teamColors[item.type]} ${item.guessed ? 'opacity-30 scale-95' : ''}`}
               >
                 {item.word}
-                {item.type === 'bomb' && <span className="block text-[10px] text-red-500">BOMBA</span>}
-                {item.guessed && <span className="block text-[10px] text-white/50">INDIVINATA</span>}
+                {item.type === 'bomb' && <span className="block text-[8px] sm:text-[10px] text-red-450 font-black">BOMBA</span>}
+                {item.guessed && <span className="block text-[8px] sm:text-[10px] text-white/50 font-black">INDIVINATA</span>}
               </div>
             ))}
           </div>
         </div>
 
-        <div className="w-96 flex flex-col gap-6">
-          <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
-            <div className="flex justify-between items-center mb-6">
+        <div className="w-full lg:w-96 flex flex-col gap-4">
+          <div className="bg-slate-800 p-4 sm:p-6 rounded-xl border border-slate-700 shadow-xl">
+            <div className="flex justify-between items-center mb-4 sm:mb-6">
               <div>
-                <span className="text-slate-400 text-xs uppercase font-black block">Round</span>
-                <span className="text-3xl font-black text-white">{currentRound} / 3</span>
+                <span className="text-slate-400 text-[10px] sm:text-xs uppercase font-black block">Round</span>
+                <span className="text-xl sm:text-3xl font-black text-white">{currentRound} / 3</span>
               </div>
               <div className="text-right">
-                <span className="text-slate-400 text-xs uppercase font-black block">Turno di</span>
-                <span className={`text-3xl font-black ${currentTeam === 1 ? 'text-red-500' : currentTeam === 2 ? 'text-blue-500' : 'text-green-500'}`}>
+                <span className="text-slate-400 text-[10px] sm:text-xs uppercase font-black block">Turno di</span>
+                <span className={`text-xl sm:text-3xl font-black ${currentTeam === 1 ? 'text-red-500' : currentTeam === 2 ? 'text-blue-500' : 'text-green-500'}`}>
                   SQUADRA {currentTeam}
                 </span>
               </div>
             </div>
 
-            <h2 className="text-xl font-bold mb-4 text-yellow-400">Suggerimenti Manche {currentManche + 1}:</h2>
-            <div className="grid grid-cols-2 gap-4 mb-6">
+            <h2 className="text-sm sm:text-xl font-bold mb-3 sm:mb-4 text-yellow-400">Suggerimenti Manche {currentManche + 1}:</h2>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
               {currentPair.map((s: string, i: number) => (
                 <button
                   key={i}
                   onClick={() => selectSuggestion(s)}
-                  className={`py-6 px-4 rounded-xl font-black text-xl transition-all border-4 ${chosenSuggestion === s ? 'bg-yellow-500 text-black border-white scale-105 shadow-lg' : 'bg-slate-700 border-slate-600 hover:border-yellow-500'}`}
+                  className={`py-3 sm:py-6 px-2 sm:px-4 rounded-xl font-black text-md sm:text-xl transition-all border-2 sm:border-4 ${chosenSuggestion === s ? 'bg-yellow-500 text-black border-white scale-105 shadow-lg' : 'bg-slate-700 border-slate-600 hover:border-yellow-500'}`}
                 >
                   {s}
                 </button>
@@ -591,20 +599,20 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = ({ interacti
             <div className="flex gap-2">
               <button
                 onClick={prevTurn}
-                className="flex-1 py-4 bg-slate-600 text-white font-black text-sm rounded-xl hover:bg-slate-500 transition-all shadow-lg uppercase tracking-tighter"
+                className="flex-1 py-3 sm:py-4 bg-slate-600 text-white font-black text-xs sm:text-sm rounded-xl hover:bg-slate-500 transition-all shadow-lg uppercase tracking-tighter"
               >
                 ← Indietro
               </button>
               <button
                 onClick={nextTurn}
-                className="flex-1 py-4 bg-white text-black font-black text-sm rounded-xl hover:bg-yellow-400 transition-all shadow-lg uppercase tracking-tighter"
+                className="flex-1 py-3 sm:py-4 bg-white text-black font-black text-xs sm:text-sm rounded-xl hover:bg-yellow-400 transition-all shadow-lg uppercase tracking-tighter"
               >
                 Prossimo →
               </button>
             </div>
             
             {chosenSuggestion && (
-              <div className="mt-4 p-4 bg-yellow-500 text-black rounded-lg text-center font-black animate-pulse">
+              <div className="mt-3 p-3 bg-yellow-500 text-black rounded-lg text-center text-sm font-black animate-pulse">
                 INVIATO: {chosenSuggestion}
               </div>
             )}
@@ -612,29 +620,31 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean }> = ({ interacti
         </div>
       </div>
 
-      <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
-        <h2 className="text-2xl font-bold mb-6 text-center">Riepilogo Squadre (Manche {currentManche + 1})</h2>
-        <div className="grid grid-cols-3 gap-6">
-          {[1, 2, 3].map(t => (
-            <div key={t} className={`p-4 rounded-xl border-2 transition-all ${excludedTeams.includes(t) ? 'opacity-40 grayscale border-gray-600' : (t === 1 ? 'border-red-600 bg-red-900/10' : t === 2 ? 'border-blue-600 bg-blue-900/10' : 'border-green-600 bg-green-900/10')}`}>
-              <h3 className="text-xl font-bold mb-4 text-center">
-                SQUADRA {t} {excludedTeams.includes(t) && "❌"}
-              </h3>
-              <div className="flex flex-col gap-2">
-                {gameData[`squadra${t}` as keyof typeof gameData].map((w: string, i: number) => {
-                  const guessed = isWordGuessed(w);
-                  const colorClass = t === 1 ? 'bg-red-600' : t === 2 ? 'bg-blue-600' : 'bg-green-600';
-                  return (
-                    <div key={i} className={`p-2 rounded text-center font-bold transition-all ${guessed ? colorClass : 'bg-slate-700 text-slate-400'}`}>
-                      {w} {guessed && "✓"}
-                    </div>
-                  );
-                })}
+      {!ipadMode && (
+        <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
+          <h2 className="text-2xl font-bold mb-6 text-center">Riepilogo Squadre (Manche {currentManche + 1})</h2>
+          <div className="grid grid-cols-3 gap-6">
+            {[1, 2, 3].map(t => (
+              <div key={t} className={`p-4 rounded-xl border-2 transition-all ${excludedTeams.includes(t) ? 'opacity-40 grayscale border-gray-600' : (t === 1 ? 'border-red-600 bg-red-900/10' : t === 2 ? 'border-blue-600 bg-blue-900/10' : 'border-green-600 bg-green-900/10')}`}>
+                <h3 className="text-xl font-bold mb-4 text-center">
+                  SQUADRA {t} {excludedTeams.includes(t) && "❌"}
+                </h3>
+                <div className="flex flex-col gap-2">
+                  {gameData[`squadra${t}` as keyof typeof gameData].map((w: string, i: number) => {
+                    const guessed = isWordGuessed(w);
+                    const colorClass = t === 1 ? 'bg-red-600' : t === 2 ? 'bg-blue-600' : 'bg-green-600';
+                    return (
+                      <div key={i} className={`p-2 rounded text-center font-bold transition-all ${guessed ? colorClass : 'bg-slate-700 text-slate-400'}`}>
+                        {w} {guessed && "✓"}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {activeBussolottiRank !== null && getTeamForRank(activeBussolottiRank) && (
         <BussolottiOverlay 

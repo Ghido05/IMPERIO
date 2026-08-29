@@ -1,13 +1,14 @@
-// Web Serial API Manager for ESP32 Buzzer Integration
-// Maintains a global serial connection state that persists across React component cycles.
+// WebSocket Manager for ESP32 Wi-Fi Buzzer Integration
+// Replaces the Web Serial API with a WebSocket connection to the ESP32 at 192.168.1.65:81
+// Maintains the exact same interface to avoid breaking existing React bindings.
 
-let port: any = null;
-let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
-let keepReading = true;
+let ws: WebSocket | null = null;
 let isOpened = false;
-
+let shouldReconnect = false;
 const statusListeners = new Set<(connected: boolean) => void>();
 const dataListeners = new Set<(line: string) => void>();
+
+const WS_URL = 'ws://192.168.1.65:81';
 
 function notifyStatus(status: boolean) {
   isOpened = status;
@@ -18,119 +19,77 @@ function notifyData(line: string) {
   dataListeners.forEach((listener) => listener(line));
 }
 
-// Handle physical device unplug
-if (typeof navigator !== 'undefined' && 'serial' in navigator) {
-  (navigator as any).serial.addEventListener('disconnect', (event: any) => {
-    if (event.port === port) {
-      console.log('Pulsantiera USB scollegata fisicamente.');
-      disconnectSerial();
+export async function connectSerial(): Promise<boolean> {
+  if (isOpened || ws) {
+    return true;
+  }
+
+  shouldReconnect = true;
+  return new Promise((resolve) => {
+    try {
+      console.log(`Connessione WebSocket a ${WS_URL}...`);
+      ws = new WebSocket(WS_URL);
+
+      ws.onopen = () => {
+        console.log('WebSocket connesso con successo!');
+        notifyStatus(true);
+        resolve(true);
+      };
+
+      ws.onmessage = (event) => {
+        const trimmed = event.data?.trim();
+        if (trimmed) {
+          console.log('Messaggio ricevuto via WebSocket:', trimmed);
+          notifyData(trimmed);
+        }
+      };
+
+      ws.onclose = () => {
+        console.log('WebSocket chiuso.');
+        notifyStatus(false);
+        ws = null;
+        if (shouldReconnect) {
+          console.log('Riconnessione automatica in corso tra 3 secondi...');
+          setTimeout(() => {
+            if (shouldReconnect) connectSerial();
+          }, 3000);
+        }
+        resolve(false);
+      };
+
+      ws.onerror = (error) => {
+        console.error('Errore WebSocket:', error);
+        notifyStatus(false);
+        resolve(false);
+      };
+    } catch (e) {
+      console.error('Errore durante la creazione del WebSocket:', e);
+      notifyStatus(false);
+      resolve(false);
     }
   });
 }
 
-async function readLoop() {
-  const decoder = new TextDecoder();
-  let buffer = '';
-
-  while (port && port.readable && keepReading) {
-    try {
-      const activeReader = port.readable.getReader();
-      reader = activeReader;
-      try {
-        while (keepReading) {
-          const { value, done } = await activeReader.read();
-          if (done) {
-            break;
-          }
-          if (value) {
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop() || '';
-            for (const line of lines) {
-              const trimmed = line.trim();
-              if (trimmed) {
-                console.log('Dati ricevuti da seriale:', trimmed);
-                notifyData(trimmed);
-              }
-            }
-          }
-        }
-      } finally {
-        activeReader.releaseLock();
-        reader = null;
-      }
-    } catch (error) {
-      console.error('Errore nel loop di lettura seriale:', error);
-      break;
-    }
-  }
-  notifyStatus(false);
-}
-
-export async function connectSerial(): Promise<boolean> {
-  if (typeof navigator === 'undefined' || !('serial' in navigator)) {
-    alert('La Web Serial API non è supportata da questo browser. Usa Google Chrome, Microsoft Edge o Opera.');
-    return false;
-  }
-
-  if (isOpened) {
-    return true;
-  }
-
-  try {
-    port = await (navigator as any).serial.requestPort();
-    await port.open({ baudRate: 115200 });
-
-    keepReading = true;
-    readLoop();
-    notifyStatus(true);
-    return true;
-  } catch (error) {
-    console.error('Impossibile connettere la porta seriale:', error);
-    notifyStatus(false);
-    return false;
-  }
-}
-
 export async function disconnectSerial() {
-  keepReading = false;
-
-  const currentReader = reader;
-  if (currentReader) {
-    try {
-      await currentReader.cancel();
-    } catch (e) {
-      // Ignora errori di cancellazione durante la disconnessione
-    }
+  shouldReconnect = false;
+  if (ws) {
+    ws.close();
+    ws = null;
   }
-
-  if (port) {
-    try {
-      await port.close();
-    } catch (e) {
-      console.error('Errore nella chiusura della porta seriale:', e);
-    }
-    port = null;
-  }
-
   notifyStatus(false);
 }
 
 export async function sendSerialReset() {
-  if (!port || !port.writable) {
-    console.warn('Porta seriale non connessa o non scrivibile per il Reset.');
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    console.warn('WebSocket non connesso o non pronto per il Reset.');
     return;
   }
 
   try {
-    const encoder = new TextEncoder();
-    const data = encoder.encode('R\n');
-    const writer = port.writable.getWriter();
-    await writer.write(data);
-    writer.releaseLock();
-    console.log('Inviato comando di sblocco pulsantiera (R\\n)');
+    ws.send('R');
+    console.log('Inviato comando di sblocco pulsantiera via WebSocket (R)');
   } catch (error) {
-    console.error("Errore nell'invio del comando di sblocco seriale:", error);
+    console.error("Errore nell'invio del comando di sblocco via WebSocket:", error);
   }
 }
 

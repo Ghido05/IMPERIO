@@ -180,7 +180,7 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
           }`} 
         />
         <span className="text-[10px] font-bold uppercase text-white/70">
-          USB: {connected ? 'OK' : 'OFF'}
+          Wi-Fi: {connected ? 'OK' : 'OFF'}
         </span>
       </div>
       <button
@@ -191,7 +191,7 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
             ? 'text-red-400 bg-red-950/20 hover:bg-red-950/40 border border-red-900/30' 
             : 'text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-900/30'
         }`}
-        title={connected ? "Scollega la pulsantiera seriale" : "Rileva e connetti la pulsantiera seriale ESP32"}
+        title={connected ? "Scollega la pulsantiera Wi-Fi" : "Connetti alla pulsantiera Wi-Fi ESP32"}
       >
         {connected ? 'Scollega' : 'Collega'}
       </button>

@@ -12,6 +12,7 @@ app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 let presenterWindow;
 let gamesWindow;
 let scoresWindow;
+let activePort = 3001;
 
 function createWindows() {
   const commonWebPreferences = {
@@ -376,9 +377,23 @@ function startLocalServer() {
     });
   });
 
-  localServer.listen(3001, '0.0.0.0', () => {
-    console.log(`Server locale dell'iPad avviato su http://${getLocalIpAddress()}:3001`);
+  function tryListen() {
+    localServer.listen(activePort, '0.0.0.0', () => {
+      console.log(`Server locale dell'iPad avviato su http://${getLocalIpAddress()}:${activePort}`);
+    });
+  }
+
+  localServer.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`Porta ${activePort} già in uso, provo la porta successiva ${activePort + 1}...`);
+      activePort++;
+      tryListen();
+    } else {
+      console.error("Errore del server locale:", err);
+    }
   });
+
+  tryListen();
 }
 
 function broadcastConnectionStatus() {
@@ -431,7 +446,7 @@ ipcMain.on('broadcast-state', (event, state) => {
 
 ipcMain.handle('get-server-url', () => {
   const ip = getLocalIpAddress();
-  return `http://${ip}:3001`;
+  return `http://${ip}:${activePort}`;
 });
 
 app.whenReady().then(() => {

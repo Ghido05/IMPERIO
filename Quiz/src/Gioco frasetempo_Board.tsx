@@ -614,6 +614,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
           )}
         </div>
 
+        <div className="flex-grow" />
+
         {/* Descending Auction Bar */}
         <div className={`w-[90%] max-w-[1200px] mb-6 transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none'}`}>
           <div className="grid grid-cols-10 gap-2.5 w-full">
@@ -658,62 +660,37 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
           </div>
         </div>
 
-        {/* Auction Dashboard Panel */}
-        <div className={`flex flex-col items-center w-[90%] max-w-[1000px] bg-zinc-950/80 border border-white/10 rounded-2xl p-8 shadow-2xl backdrop-blur-md transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100 scale-100 mb-6' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none p-0 border-0'}`}>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-10 w-full">
-
-            {/* Letter counter — appare dopo l'aggiudicazione */}
+        {/* Auction Dashboard Panel — in basso a sinistra in modo assoluto, compatto e rimpicciolito */}
+        <div className={`absolute bottom-6 left-10 flex flex-col items-center bg-zinc-950/80 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-md transition-all duration-500 z-20 ${showPhraseAndAuction ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}>
+          <div className="flex items-center gap-6">
+            
+            {/* Letter counter (rimpicciolito, w-20 h-20) — appare dopo l'aggiudicazione */}
             {auctionLocked && (
               <div className="flex flex-col items-center animate-fade-in">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-3">
-                  Lettere rimanenti
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-400 mb-1.5">
+                  Lettere
                 </span>
                 <div className="relative">
-                  {/* Alfabeto decorativo sullo sfondo */}
-                  <div className="absolute inset-0 flex flex-wrap justify-center gap-1 opacity-[0.12] pointer-events-none select-none p-2">
-                    {'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((l) => (
-                      <span key={l} className="text-[11px] font-black text-indigo-300 w-4 text-center">{l}</span>
-                    ))}
-                  </div>
-                  {/* Casella stile tile da gioco di lettere */}
                   <div
                     key={letterCounter}
-                    className={`relative w-[140px] h-[140px] rounded-2xl border-4 flex flex-col items-center justify-center shadow-2xl animate-counter-pop
+                    className={`relative w-[80px] h-[80px] rounded-xl border-2 flex flex-col items-center justify-center shadow-lg animate-counter-pop
                       ${letterCounter === 0
                         ? 'bg-gradient-to-b from-zinc-800 to-zinc-950 border-zinc-600 text-zinc-500'
                         : 'bg-gradient-to-b from-indigo-600 to-blue-950 border-indigo-300 text-white shadow-indigo-950/60'
                       }`}
                   >
-                    {/* Angoli decorativi tipo mattonella Scrabble */}
-                    <span className="absolute top-2 left-2.5 text-[10px] font-black text-indigo-200/40">A</span>
-                    <span className="absolute top-2 right-2.5 text-[10px] font-black text-indigo-200/40">B</span>
-                    <span className="absolute bottom-2 left-2.5 text-[10px] font-black text-indigo-200/40">C</span>
-                    <span className="absolute bottom-2 right-2.5 text-[10px] font-black text-indigo-200/40">Z</span>
-                    <span className="text-[72px] font-black leading-none drop-shadow-lg tabular-nums">
+                    <span className="text-4xl font-black leading-none drop-shadow-lg tabular-nums">
                       {letterCounter}
                     </span>
                   </div>
-                  {/* Tacche lettere rimanenti */}
-                  <div className="flex justify-center gap-1 mt-3 flex-wrap max-w-[160px]">
-                    {Array.from({ length: auctionValue }).map((_, i) => (
-                      <div
-                        key={i}
-                        className={`w-3 h-3 rounded-sm border transition-all duration-300
-                          ${i < letterCounter
-                            ? 'bg-indigo-400 border-indigo-300 shadow-[0_0_6px_rgba(129,140,248,0.5)]'
-                            : 'bg-zinc-800 border-zinc-700 opacity-40'
-                          }`}
-                      />
-                    ))}
-                  </div>
 
-                  {/* Cronometro rotondo da 10s quando il contatore arriva a 0 */}
+                  {/* Cronometro rotondo da 10s (spostato/ridimensionato sopra o a fianco per salvare spazio) */}
                   {showGuessTimer && (
-                    <div className="flex flex-col items-center mt-6 animate-fade-in">
-                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400 mb-3">
-                        Tempo per indovinare
+                    <div className="absolute -top-20 left-1/2 -translate-x-1/2 flex flex-col items-center bg-black/90 border border-red-500/30 p-2 rounded-xl shadow-xl animate-fade-in w-[110px] z-30">
+                      <span className="text-[8px] font-black uppercase tracking-wider text-red-400 mb-1">
+                        Tempo
                       </span>
-                      <div className="relative w-[140px] h-[140px]">
+                      <div className="relative w-[50px] h-[50px]">
                         <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
                           <circle
                             cx="60"
@@ -721,7 +698,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
                             r={timerRadius}
                             fill="none"
                             stroke="rgb(39 39 42)"
-                            strokeWidth="8"
+                            strokeWidth="12"
                           />
                           <circle
                             cx="60"
@@ -729,7 +706,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
                             r={timerRadius}
                             fill="none"
                             stroke="rgb(239 68 68)"
-                            strokeWidth="8"
+                            strokeWidth="12"
                             strokeLinecap="round"
                             strokeDasharray={timerCircumference}
                             strokeDashoffset={timerStrokeOffset}
@@ -737,11 +714,10 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
                             style={{ filter: 'drop-shadow(0 0 6px rgba(239,68,68,0.6))' }}
                           />
                         </svg>
-                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-4xl font-black text-red-400 tabular-nums leading-none">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-lg font-black text-red-400 tabular-nums">
                             {Math.ceil(timerDisplay)}
                           </span>
-                          <span className="text-[9px] font-black uppercase tracking-wider text-red-400/60 mt-1">sec</span>
                         </div>
                       </div>
                     </div>
@@ -750,9 +726,9 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
               </div>
             )}
 
-            {/* Animated Auction Gavel */}
-            <div className="flex flex-col items-center justify-center py-4 relative">
-              <svg width="220" height="150" viewBox="0 0 200 150" className="overflow-visible select-none pointer-events-none">
+            {/* Animated Auction Gavel (SVG rimpicciolito) */}
+            <div className="flex flex-col items-center justify-center relative py-1">
+              <svg width="110" height="75" viewBox="0 0 200 150" className="overflow-visible select-none pointer-events-none">
                 {/* 3D Sound Block / Base */}
                 <ellipse cx="125" cy="128" rx="40" ry="12" fill="#3d1a03" />
                 <rect x="85" y="120" width="80" height="8" fill="#3d1a03" />
@@ -805,24 +781,25 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
                 </g>
               </svg>
               
-              {/* Status badge */}
-              <div className={`absolute bottom-[-15px] px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-wider border whitespace-nowrap
+              {/* Status badge (rimpicciolito) */}
+              <div className={`absolute -bottom-4 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border whitespace-nowrap z-10
                 ${auctionLocked
                   ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-400'
                   : 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400 animate-pulse'
                 }`}
               >
-                {auctionLocked ? `Aggiudicata a ${auctionValue} — chiama le lettere` : `Offerta corrente: ${auctionValue}`}
+                {auctionLocked ? `${auctionValue} Lettere` : `Offerta: ${auctionValue}`}
               </div>
             </div>
+
           </div>
         </div>
 
-        {/* Clue Box, Bonus, Points container (visible if step >= 1) */}
+        {/* Clue Box, Points container (visible if step >= 1) */}
         {step >= 1 && (
           <div className="flex flex-col items-center gap-4 mt-2">
             {/* Clue Box */}
-            <div className="bg-zinc-950/90 border-2 border-amber-500/50 rounded-2xl px-8 py-4 shadow-2xl backdrop-blur-md text-center max-w-[800px] animate-fade-in">
+            <div className="bg-zinc-950/90 border-2 border-amber-500/50 rounded-2xl px-8 py-4 shadow-2xl backdrop-blur-md text-center max-w-[800px] animate-fade-in mb-2">
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-500 mb-1 block">
                 INDIZIO MISTERIOSO
               </span>
@@ -831,19 +808,21 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
               </p>
             </div>
 
-            {/* Bonus & Points (visible in step 2, dissolve/hide in step 3+) */}
-            <div className={`flex items-center justify-center gap-6 transition-all duration-1000 ${step === 2 ? 'opacity-100 scale-100 mt-2' : 'opacity-0 scale-95 h-0 overflow-hidden pointer-events-none'}`}>
-              {phrase.bonus && (
-                <div className="bg-zinc-950/80 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg w-28">
-                  <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-2">BONUS</span>
-                  <img src={assetUrl(phrase.bonus)} alt="Bonus" className="w-16 h-16 object-contain" />
-                </div>
-              )}
+            {/* Points (visible in step 2, dissolve/hide in step 3+) */}
+            <div className={`flex items-center justify-center transition-all duration-1000 ${step === 2 ? 'opacity-100 scale-100 mt-2' : 'opacity-0 scale-95 h-0 overflow-hidden pointer-events-none'}`}>
               <div className="bg-zinc-950/80 border border-white/10 rounded-2xl p-4 flex flex-col items-center justify-center shadow-lg min-w-[120px]">
                 <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-2">PUNTI</span>
                 <span className="text-3xl font-black text-white tabular-nums">{phrase.punti ?? 1000}</span>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Permanent Bonus Box in basso a destra per tutta la durata del gioco */}
+        {phrase.bonus && (
+          <div className="absolute bottom-6 right-10 flex flex-col items-center justify-center bg-zinc-950/80 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-md z-20 w-28 h-28 animate-fade-in">
+            <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-2">BONUS</span>
+            <img src={assetUrl(phrase.bonus)} alt="Bonus" className="w-14 h-14 object-contain animate-pulse" />
           </div>
         )}
 

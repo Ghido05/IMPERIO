@@ -104,12 +104,7 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, []);
 
-  // Save to localStorage whenever scores or bonuses change
-  useEffect(() => {
-    const state = { scores, bonuses };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    console.log("Scores saved to localStorage:", state);
-  }, [scores, bonuses]);
+
 
   const saveToStorage = (newScores: number[], newBonuses: boolean[][]) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ scores: newScores, bonuses: newBonuses }));
@@ -143,12 +138,15 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const resetAll = () => {
-    setScores([0, 0, 0]);
-    setBonuses([
+    const newScores = [0, 0, 0];
+    const newBonuses = [
       [false, false, false],
       [false, false, false],
       [false, false, false]
-    ]);
+    ];
+    setScores(newScores);
+    setBonuses(newBonuses);
+    saveToStorage(newScores, newBonuses);
   };
 
   return (

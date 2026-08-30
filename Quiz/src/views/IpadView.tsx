@@ -47,12 +47,74 @@ function IpadContent() {
 
   const teamNames = setupState?.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
 
-  // Gestione prenotazione pulsante (Buzzer)
   useEffect(() => {
     const checkBooking = () => {
       const currentSlideId = activeSlide?.id ?? 'password_prescelti';
+      const currentSlideType = activeSlide?.type;
+      
+      const activeBoxVal = localStorage.getItem('playstate_active_box') || '1';
+      const activeQuestionVal = localStorage.getItem('playstate_active_question') || '1';
+      const activeBox = parseInt(activeBoxVal, 10);
+      const activeQuestion = parseInt(activeQuestionVal, 10);
+
+      console.log(`[iPad checkBooking] Active Slide ID: ${currentSlideId}, Type: ${currentSlideType}, Box: ${activeBox}, Question: ${activeQuestion}`);
+
+      // Se siamo nei giochi password, la squadra di turno attiva è definita da password_current_team
+      if (
+        currentSlideType === 'password_prescelti' || 
+        currentSlideType === 'password_squadre' || 
+        activeBox === 3 || 
+        activeBox === 4
+      ) {
+        const val = localStorage.getItem('password_current_team');
+        console.log(`[iPad checkBooking] Password current team from localStorage: ${val}`);
+        if (val && val !== 'null') {
+          setBookedTeam(parseInt(val, 10));
+        } else {
+          setBookedTeam(null);
+        }
+        return; // Non eseguiamo il fallback dei buzzer per il gioco password
+      }
+
+      // Se siamo nel box 2 (giochi a classifica / classifica musicale)
+      if (activeBox === 2 || (currentSlideId && currentSlideId.startsWith('box2_'))) {
+        // La squadra attiva è definita da playstate_box2_active_team_idx (0-based)
+        const val = localStorage.getItem('playstate_box2_active_team_idx');
+        console.log(`[iPad checkBooking] Box2 active team idx from localStorage: ${val}`);
+        if (val && val !== 'null') {
+          setBookedTeam(parseInt(val, 10) + 1); // converti da 0-based a 1-based
+          return;
+        }
+
+        // Fallback: se non è ancora impostato l'active team, proviamo ad usare il starter idx
+        const starterVal = localStorage.getItem('playstate_box2_starter_idx');
+        console.log(`[iPad checkBooking] Box2 starter idx from localStorage: ${starterVal}`);
+        if (starterVal && starterVal !== 'null') {
+          const starter = parseInt(starterVal, 10);
+          const questionStarterIdx = (starter + (activeQuestion - 1)) % 3;
+          setBookedTeam(questionStarterIdx + 1); // converti da 0-based a 1-based
+          return;
+        }
+
+        // Fallback finale: calcola in tempo reale la squadra con il punteggio minore
+        if (scores && scores.length > 0) {
+          let lowestIdx = 0;
+          for (let i = 1; i < scores.length; i++) {
+            if (Number(scores[i]) < Number(scores[lowestIdx])) {
+              lowestIdx = i;
+            }
+          }
+          const questionStarterIdx = (lowestIdx + (activeQuestion - 1)) % 3;
+          setBookedTeam(questionStarterIdx + 1);
+        } else {
+          setBookedTeam(null);
+        }
+        return;
+      }
+
       const key = `playstate_${currentSlideId}_booked_team`;
       const val = localStorage.getItem(key);
+      console.log(`[iPad checkBooking] Buzzer booked team for key ${key} from localStorage: ${val}`);
       if (val && val !== 'null') {
         setBookedTeam(parseInt(val, 10));
       } else {
@@ -60,6 +122,7 @@ function IpadContent() {
         const box1ActiveQ = localStorage.getItem('playstate_active_question') || '1';
         const box1Key = `playstate_box1_q${box1ActiveQ}_booked_team`;
         const box1Val = localStorage.getItem(box1Key);
+        console.log(`[iPad checkBooking] Fallback buzzer for key ${box1Key}: ${box1Val}`);
         if (box1Val && box1Val !== 'null') {
           setBookedTeam(parseInt(box1Val, 10));
         } else {
@@ -80,7 +143,7 @@ function IpadContent() {
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('local-storage-update', handleStorage);
     };
-  }, [activeSlide]);
+  }, [activeSlide, scores]);
 
   const isS1Booked = bookedTeam === 1;
   const isS2Booked = bookedTeam === 2;
@@ -163,14 +226,49 @@ function IpadContent() {
                   } else {
                     originalSetItem.call(localStorage, key, value as string);
                   }
+
+                  // Dispatch specific event for this key to trigger useSyncedState and useScores hooks
+                  try {
+                    const storageEvent = new StorageEvent('storage', {
+                      key,
+                      newValue: value === undefined ? null : (value as string | null),
+                      storageArea: localStorage,
+                    });
+                    window.dispatchEvent(storageEvent);
+                  } catch (e) {
+                    console.warn("StorageEvent constructor failed in init-state:", e);
+                    try {
+                      const event = document.createEvent('StorageEvent');
+                      (event as any).initStorageEvent('storage', false, false, key, null, value === undefined ? null : (value as string | null), window.location.href, localStorage);
+                      window.dispatchEvent(event);
+                    } catch (err) {
+                      console.error("Fallback initStorageEvent failed in init-state:", err);
+                    }
+                  }
+
+                  try {
+                    window.dispatchEvent(new CustomEvent('local-storage-update', {
+                      detail: { key, value }
+                    }));
+                  } catch (e) {
+                    console.error("Failed to dispatch local-storage-update in init-state:", e);
+                  }
                 }
               });
               
               // Notify components of local storage update
-              window.dispatchEvent(new Event('storage'));
-              window.dispatchEvent(new CustomEvent('local-storage-update', {
-                detail: { key: 'all' }
-              }));
+              try {
+                window.dispatchEvent(new Event('storage'));
+              } catch (e) {
+                console.error("Failed to dispatch generic storage event in init-state:", e);
+              }
+              try {
+                window.dispatchEvent(new CustomEvent('local-storage-update', {
+                  detail: { key: 'all' }
+                }));
+              } catch (e) {
+                console.error("Failed to dispatch generic local-storage-update in init-state:", e);
+              }
             }
           } else if (msg.type === 'state-update') {
             const { slides: serverSlides, activeSlide: serverActiveSlide } = msg.data;
@@ -190,16 +288,31 @@ function IpadContent() {
               }
               
               // Dispatch events to trigger useSyncedState hook re-renders
-              const storageEvent = new StorageEvent('storage', {
-                key,
-                newValue: value,
-                storageArea: localStorage,
-              });
-              window.dispatchEvent(storageEvent);
+              try {
+                const storageEvent = new StorageEvent('storage', {
+                  key,
+                  newValue: value,
+                  storageArea: localStorage,
+                });
+                window.dispatchEvent(storageEvent);
+              } catch (e) {
+                console.warn("StorageEvent constructor failed in local-storage-update:", e);
+                try {
+                  const event = document.createEvent('StorageEvent');
+                  (event as any).initStorageEvent('storage', false, false, key, null, value, window.location.href, localStorage);
+                  window.dispatchEvent(event);
+                } catch (err) {
+                  console.error("Fallback initStorageEvent failed in local-storage-update:", err);
+                }
+              }
               
-              window.dispatchEvent(new CustomEvent('local-storage-update', {
-                detail: { key, value }
-              }));
+              try {
+                window.dispatchEvent(new CustomEvent('local-storage-update', {
+                  detail: { key, value }
+                }));
+              } catch (e) {
+                console.error("Failed to dispatch local-storage-update in local-storage-update:", e);
+              }
             }
           }
         } catch (err) {

@@ -61,20 +61,30 @@ function App() {
     const originalSetItem = Storage.prototype.setItem;
     const originalRemoveItem = Storage.prototype.removeItem;
 
-    // Override setItem to broadcast modifications for password and general game playstates
+    // Override setItem to broadcast modifications for password, game playstates, scores, and setup
     Storage.prototype.setItem = function (key: string, value: string) {
       originalSetItem.call(this, key, value);
-      if (key.startsWith('password_') || key.startsWith('playstate_')) {
+      if (
+        key.startsWith('password_') || 
+        key.startsWith('playstate_') || 
+        key === 'imperio_quiz_scores' || 
+        key === 'imperio_quiz_setup_config_v1'
+      ) {
         electron.broadcastState({
           localStorageUpdate: { key, value }
         });
       }
     };
 
-    // Override removeItem to broadcast deletions for password and general game playstates
+    // Override removeItem to broadcast deletions for password, game playstates, scores, and setup
     Storage.prototype.removeItem = function (key: string) {
       originalRemoveItem.call(this, key);
-      if (key.startsWith('password_') || key.startsWith('playstate_')) {
+      if (
+        key.startsWith('password_') || 
+        key.startsWith('playstate_') || 
+        key === 'imperio_quiz_scores' || 
+        key === 'imperio_quiz_setup_config_v1'
+      ) {
         electron.broadcastState({
           localStorageUpdate: { key, value: null }
         });
@@ -85,7 +95,12 @@ function App() {
     const handleStateUpdate = async (state: any) => {
       if (state && state.localStorageUpdate) {
         const { key, value } = state.localStorageUpdate;
-        if (key.startsWith('password_') || key.startsWith('playstate_')) {
+        if (
+          key.startsWith('password_') || 
+          key.startsWith('playstate_') || 
+          key === 'imperio_quiz_scores' || 
+          key === 'imperio_quiz_setup_config_v1'
+        ) {
           if (value === null || value === undefined) {
             originalRemoveItem.call(localStorage, key);
           } else {

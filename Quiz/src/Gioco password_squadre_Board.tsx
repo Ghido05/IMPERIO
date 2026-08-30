@@ -206,7 +206,7 @@ export const BussolottiOverlay: React.FC<{
 
 // Dummy line to match bounds
 
-const PasswordBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) => {
+const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ interactive = true, revealAll = false }) => {
   const gameDataRaw = useGameData();
   if (!gameDataRaw) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -658,22 +658,25 @@ const PasswordBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true
 
         <div className="flex gap-12 items-start">
           <div className="grid grid-cols-3 gap-4 bg-gray-800 p-6 rounded-2xl shadow-2xl border border-gray-700">
-            {grid.map((item, i) => (
-              <div
-                key={i}
-                onClick={() => handleWordClick(i)}
-                className={`
-                  w-40 h-24 flex items-center justify-center text-center p-2 rounded-lg cursor-pointer font-bold text-lg transition-all duration-500 transform
-                  ${item.guessed 
-                    ? item.type === 'neutral' 
-                      ? 'opacity-0 scale-50 pointer-events-none' 
-                      : `${teamColors[item.type]} text-white scale-110 shadow-[0_0_20px_rgba(255,255,255,0.3)]` 
-                    : 'bg-gray-100 text-gray-900 hover:bg-white hover:scale-105'}
-                `}
-              >
-                {!item.guessed || item.type !== 'neutral' ? item.word : ''}
-              </div>
-            ))}
+            {grid.map((item, i) => {
+              const isGuessedOrReveal = item.guessed || revealAll;
+              return (
+                <div
+                  key={i}
+                  onClick={() => handleWordClick(i)}
+                  className={`
+                    w-40 h-24 flex items-center justify-center text-center p-2 rounded-lg cursor-pointer font-bold text-lg transition-all duration-500 transform
+                    ${isGuessedOrReveal 
+                      ? item.type === 'neutral' 
+                        ? 'bg-zinc-700/60 border border-zinc-650 text-white/50 scale-95' 
+                        : `${teamColors[item.type]} text-white scale-110 shadow-[0_0_20px_rgba(255,255,255,0.3)]` 
+                      : 'bg-gray-100 text-gray-900 hover:bg-white hover:scale-105'}
+                  `}
+                >
+                  {!isGuessedOrReveal || item.type !== 'neutral' || revealAll ? item.word : ''}
+                </div>
+              );
+            })}
           </div>
 
           <div className="flex flex-col items-center gap-6">

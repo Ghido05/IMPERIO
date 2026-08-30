@@ -13,19 +13,20 @@ import FinaleSquadreBoard from '../FinaleSquadre_Board';
 interface SlideRendererProps {
   type: SlideType;
   interactive?: boolean;
+  revealAll?: boolean;
 }
 
-export default function SlideRenderer({ type, interactive = true }: SlideRendererProps) {
+export default function SlideRenderer({ type, interactive = true, revealAll = false }: SlideRendererProps) {
   return (
     <>
       <style>{`.min-h-screen { min-height: 1080px !important; height: 1080px !important; }`}</style>
-      {type === 'img' && <ImgBoard interactive={interactive} />}
-      {type === 'music' && <MusicBoard interactive={interactive} />}
-      {type === 'classifica' && <ClassificaBoard interactive={interactive} />}
-      {type === 'classifica_musicale' && <ClassificaMusicaleBoard interactive={interactive} />}
-      {type === 'cruciverba' && <CruciverbaBoard interactive={interactive} />}
-      {type === 'gioco_frase_tempo' && <GiocoFraseTempoBoard interactive={interactive} />}
-      {type === 'password_squadre' && <PasswordSquadreBoard interactive={interactive} />}
+      {type === 'img' && <ImgBoard interactive={interactive} revealAll={revealAll} />}
+      {type === 'music' && <MusicBoard interactive={interactive} revealAll={revealAll} />}
+      {type === 'classifica' && <ClassificaBoard interactive={interactive} revealAll={revealAll} />}
+      {type === 'classifica_musicale' && <ClassificaMusicaleBoard interactive={interactive} revealAll={revealAll} />}
+      {type === 'cruciverba' && <CruciverbaBoard interactive={interactive} revealAll={revealAll} />}
+      {type === 'gioco_frase_tempo' && <GiocoFraseTempoBoard interactive={interactive} revealAll={revealAll} />}
+      {type === 'password_squadre' && <PasswordSquadreBoard interactive={interactive} revealAll={revealAll} />}
       {type === 'password_prescelti' && <PasswordPresceltiBoard interactive={interactive} />}
       {type === 'classifica_generale' && <ClassificaGeneraleBoard />}
       {type === 'finale_squadre' && <FinaleSquadreBoard />}

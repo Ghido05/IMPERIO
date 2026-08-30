@@ -18,7 +18,7 @@ interface WordInfo {
   dir: Direction;
 }
 
-const CruciverbaBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) => {
+const CruciverbaBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ interactive = true, revealAll = false }) => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -270,8 +270,8 @@ const CruciverbaBoard: React.FC<{ interactive?: boolean }> = ({ interactive = tr
             const isPast = data.words.some(wIdx => wIdx < currentWordIdx);
             
             let bgColor = "bg-blue-900";
-            if (isActive) bgColor = "bg-orange-500";
-            else if (isPast && data.revealed) bgColor = "bg-green-700";
+            if (isActive && !revealAll) bgColor = "bg-orange-500";
+            else if (revealAll || (isPast && data.revealed)) bgColor = "bg-green-700";
 
             return (
               <div 
@@ -284,7 +284,7 @@ const CruciverbaBoard: React.FC<{ interactive?: boolean }> = ({ interactive = tr
                   height: cellSize
                 }}
               >
-                {data.revealed ? data.char : ''}
+                {data.revealed || revealAll ? data.char : ''}
               </div>
             );
           })}

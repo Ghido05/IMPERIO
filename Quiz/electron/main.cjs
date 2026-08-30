@@ -264,14 +264,54 @@ const latestLocalStorage = {};
 
 function getLocalIpAddress() {
   const interfaces = os.networkInterfaces();
+  const validAddresses = [];
+
   for (const name of Object.keys(interfaces)) {
+    const lowerName = name.toLowerCase();
+    
+    // Escludiamo interfacce virtuali, VPN, ponti e adattatori di servizio
+    if (
+      lowerName.includes('virtual') ||
+      lowerName.includes('vpn') ||
+      lowerName.includes('vbox') ||
+      lowerName.includes('vmnet') ||
+      lowerName.includes('utun') ||
+      lowerName.includes('docker') ||
+      lowerName.includes('bridge') ||
+      lowerName.includes('awdl') ||
+      lowerName.includes('p2p') ||
+      lowerName.includes('gif') ||
+      lowerName.includes('stf') ||
+      lowerName.includes('ap0')
+    ) {
+      continue;
+    }
+
     for (const iface of interfaces[name]) {
       if (iface.family === 'IPv4' && !iface.internal) {
-        return iface.address;
+        validAddresses.push({
+          name: name,
+          address: iface.address
+        });
       }
     }
   }
-  return 'localhost';
+
+  if (validAddresses.length === 0) {
+    return 'localhost';
+  }
+
+  // Diamo priorità alle interfacce di rete fisiche (en0, en*, wlan*, eth*)
+  const priorityPatterns = ['en0', 'en', 'wlan', 'wlo', 'eth'];
+  for (const pattern of priorityPatterns) {
+    const found = validAddresses.find(addr => addr.name.toLowerCase().startsWith(pattern));
+    if (found) {
+      return found.address;
+    }
+  }
+
+  // Fallback sul primo IP non interno valido trovato
+  return validAddresses[0].address;
 }
 
 function startLocalServer() {

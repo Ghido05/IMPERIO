@@ -6,16 +6,33 @@ import { useScores } from './context/ScoreContext';
 
 interface SolutionProps {
   isVisible: boolean;
+  revealAll?: boolean;
 }
 
 // Componente per la Soluzione Finale (senza assegnazione punti e intestazioni superflue, con spazio per artista/dettagli)
-const Solution: React.FC<SolutionProps> = ({ isVisible }) => {
+const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false }) => {
   const gameData = useGameData();
   if (!gameData) return null;
 
   const soluzioneTitolo = (gameData as any).soluzione?.titolo || gameData.soluzioneTesto || 'Soluzione';
   const soluzioneArtista = (gameData as any).soluzione?.artista || '';
   const soluzioneAnno = (gameData as any).soluzione?.anno || '';
+
+  if (revealAll && isVisible) {
+    return (
+      <div className="absolute bottom-4 left-4 z-50 px-6 py-4 rounded-2xl border border-[#792ba6]/50 bg-slate-900/90 backdrop-blur-lg shadow-[0_10px_30px_rgba(0,0,0,0.5)] border-l-4 border-l-[#792ba6] max-w-md pointer-events-auto animate-zoom-in">
+        <span className="text-[9px] font-black text-purple-300 uppercase tracking-widest block mb-1">Soluzione Finale</span>
+        <h2 className="text-xl font-black text-white leading-tight">
+          {soluzioneTitolo}
+        </h2>
+        {(soluzioneArtista || soluzioneAnno) && (
+          <p className="text-xs font-semibold text-slate-400 mt-0.5">
+            {soluzioneArtista}{soluzioneArtista && soluzioneAnno ? ' - ' : ''}{soluzioneAnno}
+          </p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -55,7 +72,7 @@ const Solution: React.FC<SolutionProps> = ({ isVisible }) => {
   );
 };
 
-const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX.Element => {
+const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { interactive?: boolean; revealAll?: boolean }): React.JSX.Element => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -385,7 +402,7 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
         >
           <div className="w-full h-full flex flex-col justify-around gap-2">
             {[...gameData.elementi].reverse().map((el: any) => {
-              const isRevealed = !!revealed[el.posizione];
+              const isRevealed = revealAll || !!revealed[el.posizione];
               return (
                 <div 
                   key={el.posizione}
@@ -403,7 +420,7 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
 
         {/* Pill superiore centrale (Titolo) */}
         <div
-          className={`absolute left-[28.75%] top-[7.87%] w-[42.5%] h-[14.444%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-1000 ${showTitle ? 'shadow-[0_0_40px_rgba(121,43,166,0.6)]' : ''}`}
+          className={`absolute left-[28.75%] top-[7.87%] w-[42.5%] h-[14.444%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-1000 ${showTitle || revealAll ? 'shadow-[0_0_40px_rgba(121,43,166,0.6)]' : ''}`}
           style={{
             borderWidth: "clamp(4px, 0.5208vw, 10px)",
             borderRadius: "clamp(30px, 6.5vw, 124px)"
@@ -459,7 +476,7 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
               }}
             >
               <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${marker.value <= 4 ? 'text-white' : 'text-[#1b1b1b]'}`}>
-                {revealed[marker.value] ? gameData.elementi[marker.value - 1]?.testo : ""}
+                {(revealed[marker.value] || revealAll) ? gameData.elementi[marker.value - 1]?.testo : ""}
               </p>
             </div>
 
@@ -492,7 +509,8 @@ const ClassificaMusicaleBoard = ({ interactive = true }: { interactive?: boolean
 
         {/* Solution Overlay */}
         <Solution 
-          isVisible={showSolution} 
+          isVisible={showSolution || revealAll} 
+          revealAll={revealAll}
         />
       </div>
     </div>

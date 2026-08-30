@@ -4,7 +4,7 @@ import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
 
-const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX.Element => {
+const ClassificaBoard = ({ interactive = true, revealAll = false }: { interactive?: boolean; revealAll?: boolean }): React.JSX.Element => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -42,7 +42,7 @@ const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): Rea
   }, []);
 
   // Controlla se tutti gli indizi da 1 a 10 sono stati svelati
-  const isGameComplete = Array.from({ length: 10 }, (_, i) => i + 1).every(i => revealed[i]);
+  const isGameComplete = revealAll || Array.from({ length: 10 }, (_, i) => i + 1).every(i => revealed[i]);
 
   // Avvia l'audio in automatico al completamento del gioco (quando tutti i 10 elementi sono svelati)
   useEffect(() => {
@@ -89,6 +89,7 @@ const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): Rea
   }, [totalTiles, gameData.griglia]);
 
   const isTileRevealed = (tileIndex: number) => {
+    if (revealAll) return true;
     const orderIndex = tileOrder.indexOf(tileIndex);
     // Dividiamo i tasselli in 10 blocchi (chunk 0 a 9)
     // chunk 0 (bordo esterno) è legato all'indizio 1, ecc... fino a chunk 9 (centro) per l'indizio 10.
@@ -312,7 +313,7 @@ const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): Rea
 
         {/* Pill superiore destra (Titolo) */}
         <div
-          className={`absolute left-[48.438%] top-[7.87%] w-[42.5%] h-[14.444%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-1000 ${showTitle ? 'shadow-[0_0_40px_rgba(121,43,166,0.6)]' : ''}`}
+          className={`absolute left-[48.438%] top-[7.87%] w-[42.5%] h-[14.444%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-1000 ${showTitle || revealAll ? 'shadow-[0_0_40px_rgba(121,43,166,0.6)]' : ''}`}
           style={{
             borderWidth: "clamp(4px, 0.5208vw, 10px)",
             borderRadius: "clamp(30px, 6.5vw, 124px)"
@@ -368,7 +369,7 @@ const ClassificaBoard = ({ interactive = true }: { interactive?: boolean }): Rea
               }}
             >
               <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${marker.value <= 5 ? 'text-white' : 'text-[#1b1b1b]'}`}>
-                {revealed[marker.value] ? gameData.elementi[marker.value - 1]?.testo : ""}
+                {(revealed[marker.value] || revealAll) ? gameData.elementi[marker.value - 1]?.testo : ""}
               </p>
             </div>
 

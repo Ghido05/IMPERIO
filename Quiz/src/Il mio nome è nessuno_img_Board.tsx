@@ -9,7 +9,7 @@ import { useScores } from './context/ScoreContext';
 // Gioco 2 - IMMAGINE: Logica a Step con Rivelazione Griglia e Indizi
 // ============================================================================
 
-const GameBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX.Element => {
+const GameBoard = ({ interactive = true, revealAll = false }: { interactive?: boolean; revealAll?: boolean }): React.JSX.Element => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -255,7 +255,7 @@ const GameBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX
 
   // Calcola se un tassello deve essere visibile o coperto
   const isTileRevealed = (tileIndex: number) => {
-    if (step >= 9) return true; // Soluzione svelata
+    if (revealAll || step >= 9) return true; // Soluzione svelata
     const orderIndex = tileOrder.indexOf(tileIndex);
     const revealStep = Math.floor(orderIndex / tilesPerStep) + 1; // da 1 a 4
     return step >= (revealStep * 2);
@@ -327,7 +327,7 @@ const GameBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX
             <div
               key={idx}
               className={`relative flex items-stretch h-[23%] transition-all duration-700 ${
-                step >= (idx * 2 + 1) ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none'
+                step >= (idx * 2 + 1) || revealAll ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none'
               }`}
             >
               <div className="w-[102px] h-[102px] bg-[#fe7507] border-[9px] border-[#0f2d54] rounded-full flex items-center justify-center z-10 shadow-lg flex-shrink-0">
@@ -352,9 +352,18 @@ const GameBoard = ({ interactive = true }: { interactive?: boolean }): React.JSX
 
         {/* CATEGORIA / SOLUZIONE (Sotto l'immagine) */}
         <div className="absolute left-[4%] top-[77%] w-[38%] h-[16%]">
-          <div className={`w-full h-full bg-[#792ba6] border-[9px] border-[#0f2d54] rounded-[30px] flex items-center justify-center shadow-xl transition-all duration-700 ${step === MAX_STEP ? 'scale-105 shadow-[0_0_50px_rgba(121,43,166,0.6)]' : ''}`}>
+          <div className={`w-full h-full bg-[#792ba6] border-[9px] border-[#0f2d54] rounded-[30px] flex items-center justify-center shadow-xl transition-all duration-700 ${step === MAX_STEP || revealAll ? 'scale-105 shadow-[0_0_50px_rgba(121,43,166,0.6)]' : ''}`}>
             <div className="text-center px-6 w-full">
-              {step < MAX_STEP ? (
+              {revealAll ? (
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-[11px] font-bold text-yellow-400 uppercase tracking-widest block mb-0.5">
+                    {gameData.soluzione.categoria}
+                  </span>
+                  <h2 className="text-white font-black text-[32px] uppercase tracking-tight leading-none truncate">
+                    {gameData.soluzione.titolo}
+                  </h2>
+                </div>
+              ) : step < MAX_STEP ? (
                 <h2 className="text-white font-black text-[32px] uppercase tracking-tighter truncate">
                   {gameData.soluzione.categoria}
                 </h2>

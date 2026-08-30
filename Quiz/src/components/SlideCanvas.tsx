@@ -14,6 +14,7 @@ interface SlideCanvasProps {
   thumbWidth?: number;
   /** fill = finestra esterna; fit = contenitore 16:9; none = solo canvas 1920×1080 (dentro PresenterPreviewPanel) */
   viewportMode?: StageMode | 'none';
+  revealAll?: boolean;
 }
 
 export default function SlideCanvas({
@@ -23,6 +24,7 @@ export default function SlideCanvas({
   mode = 'full',
   thumbWidth = 128,
   viewportMode = 'fit',
+  revealAll = false,
 }: SlideCanvasProps) {
   const [, setTick] = useState(0);
 
@@ -77,7 +79,7 @@ export default function SlideCanvas({
       >
         <div className="pointer-events-none" style={stageStyle}>
           <GameDataProvider data={data}>
-            <SlideRenderer type={slide.type} interactive={false} />
+            <SlideRenderer type={slide.type} interactive={false} revealAll={revealAll} />
           </GameDataProvider>
         </div>
       </div>
@@ -90,7 +92,7 @@ export default function SlideCanvas({
         className={interactive ? 'relative' : 'relative pointer-events-none'}
         style={{ width: STAGE_W, height: STAGE_H }}
       >
-        <SlideRenderer type={slide.type} interactive={interactive} />
+        <SlideRenderer type={slide.type} interactive={interactive} revealAll={revealAll} />
       </div>
     </GameDataProvider>
   );

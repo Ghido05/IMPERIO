@@ -145,9 +145,23 @@ const DynamicHint: React.FC<{
 };
 
 // Componente per la Soluzione Finale
-const Solution: React.FC<{ isVisible: boolean }> = ({ isVisible }) => {
+const Solution: React.FC<{ isVisible: boolean; revealAll?: boolean }> = ({ isVisible, revealAll = false }) => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
+
+  if (revealAll && isVisible) {
+    return (
+      <div className="absolute bottom-4 left-4 z-50 px-6 py-4 rounded-2xl border border-yellow-500/30 bg-slate-900/90 backdrop-blur-lg shadow-[0_10px_30px_rgba(0,0,0,0.5)] border-l-4 border-l-yellow-500 max-w-md pointer-events-auto animate-zoom-in">
+        <span className="text-[9px] font-black text-yellow-500 uppercase tracking-widest block mb-1">Soluzione Finale</span>
+        <h2 className="text-xl font-black text-white leading-tight">
+          {gameData.soluzione.titolo}
+        </h2>
+        <p className="text-xs font-semibold text-slate-400 mt-0.5">
+          {gameData.soluzione.artista} - {gameData.soluzione.anno}
+        </p>
+      </div>
+    );
+  }
 
   return (
   <div 
@@ -176,7 +190,7 @@ const Solution: React.FC<{ isVisible: boolean }> = ({ isVisible }) => {
   );
 };
 
-const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) => {
+const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ interactive = true, revealAll = false }) => {
   const gameData = useGameData();
   const slideId = gameData.slideId ?? 'sandbox';
 
@@ -450,7 +464,7 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
       <div className="relative w-full max-w-[1920px] aspect-[1920/668]">
         
         {/* PENTAGRAMMA (Sempre visibile) */}
-        <div className={`absolute left-0 w-full z-0 pointer-events-none flex justify-center transition-opacity duration-1000 ${step === 10 ? 'opacity-0' : 'opacity-40'}`} style={{ top: '28.44%', height: '63.17%' }}>
+        <div className={`absolute left-0 w-full z-0 pointer-events-none flex justify-center transition-opacity duration-1000 ${step === 10 || revealAll ? 'opacity-0' : 'opacity-40'}`} style={{ top: '28.44%', height: '63.17%' }}>
           <img src={assetUrl('Icone/nessuno_musicale/Pentagramma.svg')} alt="Pentagramma" className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]" />
         </div>
 
@@ -460,8 +474,8 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
             key={strum.step}
             fileName={strum.icona} 
             altText={strum.nome} 
-            className={`w-[7.5%] h-[21.5%] ${strum.posizione} transition-all duration-1000 ${step === 10 ? 'opacity-0 scale-50' : ''}`} 
-            isVisible={step >= strum.step && step < 10} 
+            className={`w-[7.5%] h-[21.5%] ${strum.posizione} transition-all duration-1000 ${step === 10 || revealAll ? 'opacity-0 scale-50' : ''}`} 
+            isVisible={(step >= strum.step && step < 10) || revealAll} 
           />
         ))}
 
@@ -473,7 +487,7 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
           fileName="nessuno_musicale/Nota1.svg" 
           altText="Primo Indizio"
           isDotVisible={false}
-          isStructureVisible={step >= 2 && step < 10}
+          isStructureVisible={revealAll || (step >= 2 && step < 10)}
           className="top-[12.5%] left-[7.13%]"
           stemSide="left"
           compH={465.73}
@@ -486,7 +500,7 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
           fileName="nessuno_musicale/Nota2.svg" 
           altText="Secondo Indizio"
           isDotVisible={false}
-          isStructureVisible={step >= 4 && step < 10}
+          isStructureVisible={revealAll || (step >= 4 && step < 10)}
           className="top-[-3.77%] left-[11.77%]"
           stemSide="right"
           compH={472.12}
@@ -499,7 +513,7 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
           fileName="nessuno_musicale/Nota3.svg" 
           altText="Terzo Indizio"
           isDotVisible={false}
-          isStructureVisible={step >= 6 && step < 10}
+          isStructureVisible={revealAll || (step >= 6 && step < 10)}
           className="top-[12.5%] left-[56.66%]"
           stemSide="left"
           compH={465.73}
@@ -512,7 +526,7 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
           fileName="nessuno_musicale/Nota4.svg" 
           altText="Quarto Indizio"
           isDotVisible={false}
-          isStructureVisible={step >= 8 && step < 10}
+          isStructureVisible={revealAll || (step >= 8 && step < 10)}
           className="top-[-3.77%] left-[61.35%]"
           stemSide="right"
           compH={472.12}
@@ -520,7 +534,7 @@ const GameBoard: React.FC<{ interactive?: boolean }> = ({ interactive = true }) 
         />
 
         {/* Soluzione Finale */}
-        <Solution isVisible={step === 10} />
+        <Solution isVisible={revealAll || step === 10} revealAll={revealAll} />
 
         {/* Box dei Punteggi Centrale Sotto il Pentagramma */}
         {(step < 10 || lockedStep !== null) && (

@@ -74,10 +74,13 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     loadFromStorage();
 
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
+    const handleStorageChange = (e: any) => {
+      const key = e.key || (e.detail && e.detail.key);
+      const newValue = e.newValue !== undefined ? e.newValue : (e.detail && e.detail.value);
+
+      if (key === STORAGE_KEY && newValue) {
         try {
-          const { scores: savedScores, bonuses: savedBonuses } = JSON.parse(e.newValue);
+          const { scores: savedScores, bonuses: savedBonuses } = JSON.parse(newValue);
           if (savedScores) setScores(savedScores);
           if (savedBonuses) {
             const normalizedBonuses = savedBonuses.map((row: boolean[]) => {
@@ -94,7 +97,11 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    window.addEventListener('local-storage-update', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('local-storage-update', handleStorageChange);
+    };
   }, []);
 
   // Save to localStorage whenever scores or bonuses change

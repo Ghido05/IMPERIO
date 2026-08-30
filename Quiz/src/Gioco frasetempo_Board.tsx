@@ -27,7 +27,7 @@ const findBonusSlotIndex = (slideBonus: string, setupIcons: string[] | undefined
   return 0;
 };
 
-const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive = true }) => {
+const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ interactive = true, revealAll = false }) => {
   const phrasesData = useGameData();
   const slideId = phrasesData.slideId ?? 'sandbox';
 
@@ -406,7 +406,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
   // Group tokens into words for wrapping
   const words: string[][] = [];
   let currentWord: string[] = [];
-  tokens.forEach((t) => {
+  const displayTokens = revealAll ? targetTokens : tokens;
+  displayTokens.forEach((t) => {
     if (t === ' ') {
       if (currentWord.length > 0) words.push(currentWord);
       words.push([' ']);
@@ -424,8 +425,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean }> = ({ interactive 
   const timerStrokeOffset = timerCircumference * (1 - timerProgress);
   const showGuessTimer = auctionLocked && letterCounter === 0 && guessTimerEndAt > 0 && timerDisplay > 0;
 
-  const showContent = step >= 1;
-  const showPhraseAndAuction = step >= 3;
+  const showContent = step >= 1 || revealAll;
+  const showPhraseAndAuction = step >= 3 || revealAll;
 
   return (
     <div data-asset-refresh={assetRefresh} className="relative w-full min-h-screen bg-black text-white flex items-center justify-center overflow-hidden select-none" style={{ backgroundImage: phrase.sfondo ? `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.72)), url("${assetUrl(phrase.sfondo)}")` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>

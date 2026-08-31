@@ -726,8 +726,21 @@
           "JAMES BOND"
         ],
         "bussolotti": {
-          "immagine_premio_squadra2": "dado",
-          "immagine_premio_squadra3": "dado"
+          "immagine_premio_squadra1": "dado",
+          "immagine_premio_squadra2": "switch",
+          "immagine_premio_squadra3": "arco",
+          "schede_2_posto": [
+            "bonus",
+            "vuoto",
+            "vuoto"
+          ],
+          "schede_3_posto": [
+            "vuoto",
+            "vuoto",
+            "vuoto",
+            "vuoto",
+            "bonus"
+          ]
         }
       },
       "2": {
@@ -805,7 +818,24 @@
         "paroleNulle": [
           "struffoli",
           "panna cotta"
-        ]
+        ],
+        "bussolotti": {
+          "immagine_premio_squadra1": "dado",
+          "immagine_premio_squadra2": "switch",
+          "immagine_premio_squadra3": "arco",
+          "schede_2_posto": [
+            "bonus",
+            "vuoto",
+            "vuoto"
+          ],
+          "schede_3_posto": [
+            "vuoto",
+            "vuoto",
+            "vuoto",
+            "vuoto",
+            "bonus"
+          ]
+        }
       },
       "3": {
         "sfondo": "",
@@ -882,7 +912,24 @@
         "paroleNulle": [
           "",
           ""
-        ]
+        ],
+        "bussolotti": {
+          "immagine_premio_squadra1": "dado",
+          "immagine_premio_squadra2": "switch",
+          "immagine_premio_squadra3": "arco",
+          "schede_2_posto": [
+            "bonus",
+            "vuoto",
+            "vuoto"
+          ],
+          "schede_3_posto": [
+            "vuoto",
+            "vuoto",
+            "vuoto",
+            "vuoto",
+            "bonus"
+          ]
+        }
       }
     },
     "sfondoGenerale": ""
@@ -912,7 +959,7 @@
         "sfondo": "",
         "lettereVisibili": [],
         "indizio": "",
-        "bonus": "",
+        "bonus": "switch",
         "punti": 1000
       },
       {

@@ -393,15 +393,28 @@ function IpadContent() {
     slideId: presceltiSlide?.id ?? 'password_prescelti'
   };
 
-  // Determina se mostrare un altro gioco con soluzioni
+  // Nel Gioco 3 (Password), l'iPad deve SEMPRE mostrare la visuale dei Prescelti / Conduttore
+  const isPasswordGame = activeSlide?.type === 'password_squadre' || activeSlide?.type === 'password_prescelti';
+
+  // Determina se mostrare un altro gioco con soluzioni (tutti gli altri giochi tranne password, empty e classifica)
   const showSolutionGames = activeSlide && 
-    activeSlide.type !== 'password_prescelti' && 
+    !isPasswordGame && 
     activeSlide.type !== 'empty' && 
     activeSlide.type !== 'classifica_generale';
 
   let mainContent = null;
 
-  if (showSolutionGames && activeSlide) {
+  if (isPasswordGame && activeSlide) {
+    const passwordData = {
+      ...((activeSlide.data as any) ?? presceltiData),
+      slideId: activeSlide.id ?? presceltiData.slideId
+    };
+    mainContent = (
+      <GameDataProvider data={passwordData}>
+        <PasswordPresceltiBoard interactive={true} ipadMode={true} />
+      </GameDataProvider>
+    );
+  } else if (showSolutionGames && activeSlide) {
     mainContent = (
       <div className="w-full h-full flex items-center justify-center bg-black">
         <SlideCanvas slide={activeSlide} interactive={false} revealAll={true} />
@@ -464,7 +477,7 @@ function IpadContent() {
             🟢 {teamNames[2] || 'SQUADRA 3'}
           </span>
           <span className="text-2xl sm:text-4xl font-black leading-none tabular-nums">
-            {(scores?.[2] ?? 0).toLocaleString()} <span className={`text-xs sm:text-sm font-black ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>PT</span>
+            {(scores?.[2] ?? 0).toLocaleString('it-IT')} <span className={`text-xs sm:text-sm font-black ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>PT</span>
           </span>
         </div>
 
@@ -480,7 +493,7 @@ function IpadContent() {
             🔵 {teamNames[1] || 'SQUADRA 2'}
           </span>
           <span className="text-2xl sm:text-4xl font-black leading-none tabular-nums">
-            {(scores?.[1] ?? 0).toLocaleString()} <span className={`text-xs sm:text-sm font-black ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>PT</span>
+            {(scores?.[1] ?? 0).toLocaleString('it-IT')} <span className={`text-xs sm:text-sm font-black ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>PT</span>
           </span>
         </div>
 
@@ -496,7 +509,7 @@ function IpadContent() {
             🔴 {teamNames[0] || 'SQUADRA 1'}
           </span>
           <span className="text-2xl sm:text-4xl font-black leading-none tabular-nums">
-            {(scores?.[0] ?? 0).toLocaleString()} <span className={`text-xs sm:text-sm font-black ${isS1Booked ? 'text-white' : 'text-red-400'}`}>PT</span>
+            {(scores?.[0] ?? 0).toLocaleString('it-IT')} <span className={`text-xs sm:text-sm font-black ${isS1Booked ? 'text-white' : 'text-red-400'}`}>PT</span>
           </span>
         </div>
 

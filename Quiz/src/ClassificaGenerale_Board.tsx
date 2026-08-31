@@ -5,30 +5,42 @@ import { assetUrl } from './lib/assetUrl';
 import { loadSetupStateDb } from './lib/quizDb';
 
 const EditableScore: React.FC<{ index: number; score: number; setScore: (i: number, val: number) => void }> = ({ index, score, setScore }) => {
+  const [isEditing, setIsEditing] = React.useState(false);
   const [localValue, setLocalValue] = React.useState(score.toString());
 
   // Sincronizza il valore locale se cambia dall'esterno (es. reset o altra finestra)
   React.useEffect(() => {
-    setLocalValue(score.toString());
-  }, [score]);
+    if (!isEditing) {
+      setLocalValue(score.toString());
+    }
+  }, [score, isEditing]);
+
+  const displayValue = isEditing ? localValue : (score || 0).toLocaleString('it-IT');
 
   return (
     <div className="mb-3 group relative shrink-0 flex items-center justify-center">
       <input
         type="text"
         inputMode="numeric"
-        value={localValue}
+        value={displayValue}
+        onFocus={() => {
+          setIsEditing(true);
+          setLocalValue((score || 0).toString());
+        }}
         onChange={(e) => {
           const val = e.target.value.replace(/\D/g, '');
           setLocalValue(val);
           if (val !== '') {
-            setScore(index, parseInt(val));
+            setScore(index, parseInt(val, 10));
           }
         }}
         onBlur={() => {
+          setIsEditing(false);
           if (localValue === '') {
             setLocalValue('0');
             setScore(index, 0);
+          } else {
+            setScore(index, parseInt(localValue, 10) || 0);
           }
         }}
         onKeyDown={(e) => {
@@ -38,7 +50,7 @@ const EditableScore: React.FC<{ index: number; score: number; setScore: (i: numb
           }
         }}
         className="bg-transparent text-6xl font-black text-center w-full focus:outline-none focus:ring-2 focus:ring-white/20 rounded-xl transition-all hover:bg-white/5 cursor-text"
-        style={{ width: `${Math.max(localValue.length, 3)}ch` }}
+        style={{ width: `${Math.max(displayValue.length, 3)}ch` }}
       />
       <span className="text-2xl font-black ml-2 opacity-50">PT</span>
       <div className="absolute -bottom-1 left-0 w-full h-0.5 bg-white/20 scale-x-0 group-hover:scale-x-100 transition-transform" />
@@ -136,10 +148,7 @@ const ClassificaGenerale_Board: React.FC = () => {
   React.useEffect(() => {
     const handleIdbLoaded = (e: Event) => {
       const customEvent = e as CustomEvent;
-      if (
-        customEvent.detail?.path === setup?.sfondo ||
-        setup?.iconeBonus?.includes(customEvent.detail?.path)
-      ) {
+      if (customEvent.detail?.path === setup?.sfondo) {
         setTick((t) => t + 1);
       }
     };
@@ -227,7 +236,6 @@ const ClassificaGenerale_Board: React.FC = () => {
                 { key: 'arco', label: 'Arco', emoji: '🏹' },
                 { key: 'scudo', label: 'Scudo', emoji: '🛡️' },
               ].map((bonusMeta, bonusIdx) => {
-                const customImg = setup?.iconeBonus?.[bonusIdx];
                 const isChecked = bonuses[i]?.[bonusIdx];
                 return (
                   <div
@@ -240,19 +248,7 @@ const ClassificaGenerale_Board: React.FC = () => {
                         : 'bg-transparent border-white/10 opacity-20 scale-90 grayscale'}
                     `}
                   >
-                    {customImg && customImg.trim() !== '' ? (
-                      <img
-                        src={assetUrl(customImg)}
-                        alt={bonusMeta.label}
-                        className="w-[72px] h-[72px] object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    ) : null}
-                    {(!customImg || customImg.trim() === '') && (
-                      <span className="text-5xl">{bonusMeta.emoji}</span>
-                    )}
+                    <span className="text-5xl">{bonusMeta.emoji}</span>
                   </div>
                 );
               })}

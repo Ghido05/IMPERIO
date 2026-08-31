@@ -5,47 +5,24 @@ import { assetUrl } from './lib/assetUrl';
 import { getPhraseLetter, isPhraseLetterToken, normalizeFraseTempoItem, parsePhraseTokens } from './lib/fraseTempoUtils';
 import { useScores } from './context/ScoreContext';
 
-const findBonusSlotIndex = (slideBonus: string, setupIcons: string[] | undefined): number => {
+const getBonusSlotIndex = (slideBonus: string): number => {
   if (!slideBonus) return 0;
   const s = slideBonus.toLowerCase().trim();
   if (s === 'dado' || s === '0') return 0;
   if (s === 'switch' || s === '1') return 1;
   if (s === 'arco' || s === '2') return 2;
   if (s === 'scudo' || s === '3') return 3;
-
-  if (setupIcons && Array.isArray(setupIcons)) {
-    const getFilename = (path: string) => {
-      if (!path) return '';
-      const parts = path.split('/');
-      return parts[parts.length - 1].toLowerCase();
-    };
-    const slideBonusFile = getFilename(slideBonus);
-    for (let i = 0; i < setupIcons.length; i++) {
-      if (setupIcons[i] && getFilename(setupIcons[i]) === slideBonusFile) {
-        return i % 4;
-      }
-    }
-  }
   return 0;
 };
 
-const getBonusDisplayImage = (slideBonus: string, setupIcons: string[] | undefined): { src: string; emoji: string } => {
-  if (!slideBonus) return { src: '', emoji: '🎁' };
+const getBonusDisplayEmoji = (slideBonus: string): string => {
+  if (!slideBonus) return '';
   const s = slideBonus.toLowerCase().trim();
-  let idx = -1;
-  let emoji = '🎁';
-  if (s === 'dado' || s === '0') { idx = 0; emoji = '🎲'; }
-  else if (s === 'switch' || s === '1') { idx = 1; emoji = '🔄'; }
-  else if (s === 'arco' || s === '2') { idx = 2; emoji = '🏹'; }
-  else if (s === 'scudo' || s === '3') { idx = 3; emoji = '🛡️'; }
-
-  if (idx !== -1 && setupIcons?.[idx]) {
-    return { src: setupIcons[idx], emoji };
-  }
-  if (s.startsWith('data:') || s.startsWith('idb://') || s.startsWith('/') || s.startsWith('http')) {
-    return { src: slideBonus, emoji };
-  }
-  return { src: '', emoji };
+  if (s === 'dado' || s === '0') return '🎲';
+  if (s === 'switch' || s === '1') return '🔄';
+  if (s === 'arco' || s === '2') return '🏹';
+  if (s === 'scudo' || s === '3') return '🛡️';
+  return '🎁';
 };
 
 const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ interactive = true, revealAll = false }) => {
@@ -78,9 +55,9 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   const [scoreAwarded, setScoreAwarded] = useSyncedState<boolean>(`${phrasePrefix}_score_awarded`, false);
 
   // Scores context
-  const { bonuses, addScore, toggleBonus } = useScores();
+  const { bonuses, awardBonusAndPoints } = useScores();
 
-  // Load general setup config for team names and bonus icons
+  // Load general setup config for team names
   const [setupState, setSetupState] = useState<any>(null);
   const loadSetup = useCallback(() => {
     const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
@@ -110,31 +87,30 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     (new URLSearchParams(window.location.search).get('mode') !== 'games' && 
      new URLSearchParams(window.location.search).get('mode') !== 'scores');
 
-  // Award scores and handle bonus duplicate rules (awards 4000 extra points instead if team already has that bonus)
+  // Award scores and handle bonus duplicate rules (awards 4000 extra points instead if team already has that bonus in Gioco 4)
   const awardPointsAndBonus = useCallback((t: number) => {
-    // 1. Punti base: se la casella punti nel setup presenta una cifra li ottiene, altrimenti nulla (0)
+    // 1. Punti base configurati nel setup
     const rawPunti = (phrase as any).punti;
-    const pointsToAward = (rawPunti !== undefined && rawPunti !== null && rawPunti !== '') 
+    const basePoints = (rawPunti !== undefined && rawPunti !== null && rawPunti !== '') 
       ? (Number(rawPunti) || 0) 
       : 0;
 
-    if (pointsToAward > 0) {
-      addScore(t, pointsToAward);
-    }
-
-    // 2. Bonus: ottiene il bonus solo se nel setup è presente l'immagine del bonus
-    const bonusImage = phrase.bonus;
-    if (bonusImage && typeof bonusImage === 'string' && bonusImage.trim() !== '') {
-      const b = findBonusSlotIndex(bonusImage, setupState?.punteggi?.iconeBonus);
+    const bonusKey = phrase.bonus;
+    if (bonusKey && typeof bonusKey === 'string' && bonusKey.trim() !== '') {
+      const b = getBonusSlotIndex(bonusKey);
       if (bonuses[t]?.[b]) {
-        // Caso particolare: se una squadra ha già quel particolare bonus, gli verranno sommati 4000 punti nella classifica generale invece di darle il bonus
-        addScore(t, 4000);
+        // Gioco 4 regola doppio bonus: se la squadra ha già quel particolare bonus, riceve 4000 punti extra
+        awardBonusAndPoints(t, basePoints + 4000);
       } else {
-        // Altrimenti assegna il bonus
-        toggleBonus(t, b);
+        // Altrimenti riceve i punti base e ottiene il bonus
+        awardBonusAndPoints(t, basePoints, b);
+      }
+    } else {
+      if (basePoints > 0) {
+        awardBonusAndPoints(t, basePoints);
       }
     }
-  }, [phrase.punti, phrase.bonus, setupState?.punteggi?.iconeBonus, bonuses, addScore, toggleBonus]);
+  }, [phrase.punti, phrase.bonus, bonuses, awardBonusAndPoints]);
 
   // Local states
   const [targetTokens, setTargetTokens] = useState<string[]>([]);
@@ -816,14 +792,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
             {phrase.bonus && typeof phrase.bonus === 'string' && phrase.bonus.trim() !== '' && (
               <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md w-24 h-24 animate-fade-in">
                 <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-1.5">BONUS</span>
-                {(() => {
-                  const bDisplay = getBonusDisplayImage(phrase.bonus, setupState?.punteggi?.iconeBonus);
-                  return bDisplay.src ? (
-                    <img src={assetUrl(bDisplay.src)} alt="Bonus" className="w-12 h-12 object-contain animate-pulse" />
-                  ) : (
-                    <span className="text-3xl animate-pulse">{bDisplay.emoji}</span>
-                  );
-                })()}
+                <span className="text-3xl animate-pulse">{getBonusDisplayEmoji(phrase.bonus)}</span>
               </div>
             )}
             <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md min-w-[100px] h-24 animate-fade-in">
@@ -831,7 +800,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
               <span className="text-3xl font-black text-white tabular-nums">
                 {(() => {
                   const rawP = (phrase as any).punti;
-                  return (rawP !== undefined && rawP !== null && rawP !== '') ? (Number(rawP) || 0) : 0;
+                  const pts = (rawP !== undefined && rawP !== null && rawP !== '') ? (Number(rawP) || 0) : 0;
+                  return pts.toLocaleString('it-IT');
                 })()}
               </span>
             </div>

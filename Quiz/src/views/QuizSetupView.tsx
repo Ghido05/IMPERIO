@@ -2772,91 +2772,26 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               </div>
             </div>
 
-            {/* Icone dei Bonus Generali */}
+            {/* 4 Bonus Standard Emojis */}
             <div className="bg-white/5 p-5 rounded-xl border border-white/5 space-y-4">
               <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex flex-col gap-1">
-                <span className="flex items-center gap-1.5">🎁 Icone dei 4 Bonus Generali</span>
-                <span className="text-[10px] text-slate-500 font-normal normal-case">(Configura le immagini per i 4 bonus: Dado 🎲, Switch 🔄, Arco 🏹, Scudo 🛡️. Saranno applicate a tutte le squadre in Classifica e nei giochi)</span>
+                <span className="flex items-center gap-1.5">🎁 I 4 Bonus di Gioco Standard (Emoji)</span>
+                <span className="text-[10px] text-slate-500 font-normal normal-case">I bonus sono unificati con emoji fisse utilizzate automaticamente in tutti i giochi e nella Classifica Generale:</span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                  { key: 'dado', label: '1. Dado 🎲', idx: 0 },
-                  { key: 'switch', label: '2. Switch 🔄', idx: 1 },
-                  { key: 'arco', label: '3. Arco 🏹', idx: 2 },
-                  { key: 'scudo', label: '4. Scudo 🛡️', idx: 3 },
-                ].map(({ label, idx }) => {
-                  const bonusIcon = state.punteggi?.iconeBonus?.[idx] || '';
-                  return (
-                    <div key={idx} className="bg-[#141417] p-3 rounded-lg border border-white/5 space-y-2">
-                      <div className="text-[11px] font-bold text-slate-300">{label}</div>
-                      <div className="flex items-center gap-2">
-                        {bonusIcon.startsWith('data:') || bonusIcon.startsWith('idb://') ? (
-                          <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
-                            <span className="text-emerald-400 font-medium truncate max-w-[100px]">
-                              {formatBase64Info(bonusIcon)?.name || 'Caricato'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setState((prev) => {
-                                const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: ['', '', '', ''] };
-                                const updatedIcons = [...(current.iconeBonus || ['', '', '', ''])];
-                                updatedIcons[idx] = '';
-                                return {
-                                  ...prev,
-                                  punteggi: { ...current, iconeBonus: updatedIcons }
-                                };
-                              })}
-                              className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-1 text-[10px] bg-transparent border-0"
-                            >
-                              Rimuovi
-                            </button>
-                          </div>
-                        ) : (
-                          <input
-                            type="text"
-                            placeholder="URL icona..."
-                            value={bonusIcon}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setState((prev) => {
-                                const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: ['', '', '', ''] };
-                                const updatedIcons = [...(current.iconeBonus || ['', '', '', ''])];
-                                updatedIcons[idx] = val;
-                                return {
-                                  ...prev,
-                                  punteggi: { ...current, iconeBonus: updatedIcons }
-                                };
-                              });
-                            }}
-                            className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500"
-                          />
-                        )}
-                        <label className="px-2.5 py-1.5 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                          🖼️
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) =>
-                              handleFileUpload(e, (base64) =>
-                                setState((prev) => {
-                                  const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: ['', '', '', ''] };
-                                  const updatedIcons = [...(current.iconeBonus || ['', '', '', ''])];
-                                  updatedIcons[idx] = base64;
-                                  return {
-                                    ...prev,
-                                    punteggi: { ...current, iconeBonus: updatedIcons }
-                                  };
-                                })
-                              )
-                            }
-                          />
-                        </label>
-                      </div>
-                    </div>
-                  );
-                })}
+                  { key: 'dado', label: '1. Dado', emoji: '🎲', desc: 'Bonus Dado' },
+                  { key: 'switch', label: '2. Switch', emoji: '🔄', desc: 'Bonus Switch' },
+                  { key: 'arco', label: '3. Arco', emoji: '🏹', desc: 'Bonus Arco' },
+                  { key: 'scudo', label: '4. Scudo', emoji: '🛡️', desc: 'Bonus Scudo' },
+                ].map(({ label, emoji, desc }, idx) => (
+                  <div key={idx} className="bg-[#141417] p-4 rounded-xl border border-white/10 flex flex-col items-center justify-center text-center space-y-2">
+                    <span className="text-4xl">{emoji}</span>
+                    <span className="text-xs font-bold text-white">{label}</span>
+                    <span className="text-[10px] text-slate-400">{desc}</span>
+                  </div>
+                ))}
               </div>
             </div>
 

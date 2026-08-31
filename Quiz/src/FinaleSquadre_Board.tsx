@@ -133,9 +133,9 @@ function TeamPanel({
           <button
             key={bonusIndex}
             onClick={() => onToggleBonus(teamId - 1, bonusIndex)}
-            className={`h-12 rounded-2xl border transition-all ${active ? 'border-amber-300 bg-amber-300 text-black shadow-[0_0_24px_rgba(251,191,36,0.35)]' : 'border-white/15 bg-black/15 text-white/30 hover:bg-white/10'}`}
+            className={`h-12 rounded-2xl border transition-all text-xl flex items-center justify-center ${active ? 'border-amber-300 bg-amber-300/30 text-white shadow-[0_0_24px_rgba(251,191,36,0.35)] scale-105' : 'border-white/15 bg-black/15 text-white/30 hover:bg-white/10 opacity-30 grayscale'}`}
           >
-            ★
+            {['🎲', '🔄', '🏹', '🛡️'][bonusIndex] || '★'}
           </button>
         ))}
       </div>

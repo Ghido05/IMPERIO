@@ -82,23 +82,37 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
   });
 
   const getTeamForRank = (rank: RankType): number | null => {
-    if (rank === 3 && excludedTeams.length > 0) return excludedTeams[0];
     if (rank === 1) return winnersOrder[0] || null;
-    if (rank === 2) return winnersOrder[1] || null;
-    if (rank === 3) return winnersOrder[2] || null;
+    if (rank === 2) {
+      if (winnersOrder[1]) return winnersOrder[1];
+      if (winnersOrder[0] && excludedTeams.length > 0) {
+        const remaining = [1, 2, 3].find(t => t !== winnersOrder[0] && !excludedTeams.includes(t));
+        return remaining || null;
+      }
+      return null;
+    }
+    if (rank === 3) {
+      if (excludedTeams.length > 0) return excludedTeams[0];
+      if (winnersOrder[2]) return winnersOrder[2];
+      if (winnersOrder.length >= 2) {
+        const remaining = [1, 2, 3].find(t => !winnersOrder.includes(t));
+        return remaining || null;
+      }
+      return null;
+    }
     return null;
   };
 
   const handleBussolottiComplete = () => {
     if (activeBussolottiRank) {
-      const slideId = gameDataRaw.slideId ?? 'sandbox';
       const newStatus = { ...bussolottiStatus, [activeBussolottiRank]: 'done' as BussolottiStatus };
       setBussolottiStatus(newStatus);
       setActiveBussolottiRank(null);
       localStorage.setItem('password_bussolotti_status', JSON.stringify(newStatus));
       localStorage.setItem('password_active_bussolotti', JSON.stringify(null));
-      localStorage.removeItem(`playstate_${slideId}_bussolotti_${activeBussolottiRank}_selected_idx`);
-      localStorage.removeItem(`playstate_${slideId}_bussolotti_${activeBussolottiRank}_show_all`);
+      localStorage.removeItem(`password_bussolotti_${activeBussolottiRank}_selected_idx`);
+      localStorage.removeItem(`password_bussolotti_${activeBussolottiRank}_show_all`);
+      localStorage.removeItem(`password_bussolotti_${activeBussolottiRank}_awarded`);
     }
   };
 

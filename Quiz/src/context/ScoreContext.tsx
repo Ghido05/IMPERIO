@@ -124,9 +124,20 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const addScore = (teamIndex: number, points: number) => {
     setData(prev => {
-      const newScores = [...prev.scores];
+      const saved = localStorage.getItem(STORAGE_KEY);
+      let baseData = prev;
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          baseData = {
+            scores: normalizeScores(parsed.scores),
+            bonuses: normalizeBonuses(parsed.bonuses)
+          };
+        } catch (e) {}
+      }
+      const newScores = [...baseData.scores];
       newScores[teamIndex] = (newScores[teamIndex] || 0) + points;
-      const next = { scores: newScores, bonuses: prev.bonuses };
+      const next = { scores: newScores, bonuses: baseData.bonuses };
       saveToStorage(next);
       return next;
     });
@@ -134,9 +145,20 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const setScore = (teamIndex: number, points: number) => {
     setData(prev => {
-      const newScores = [...prev.scores];
+      const saved = localStorage.getItem(STORAGE_KEY);
+      let baseData = prev;
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          baseData = {
+            scores: normalizeScores(parsed.scores),
+            bonuses: normalizeBonuses(parsed.bonuses)
+          };
+        } catch (e) {}
+      }
+      const newScores = [...baseData.scores];
       newScores[teamIndex] = points;
-      const next = { scores: newScores, bonuses: prev.bonuses };
+      const next = { scores: newScores, bonuses: baseData.bonuses };
       saveToStorage(next);
       return next;
     });
@@ -144,9 +166,20 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const toggleBonus = (teamIndex: number, bonusIndex: number) => {
     setData(prev => {
-      const newBonuses = prev.bonuses.map(row => [...row]);
+      const saved = localStorage.getItem(STORAGE_KEY);
+      let baseData = prev;
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          baseData = {
+            scores: normalizeScores(parsed.scores),
+            bonuses: normalizeBonuses(parsed.bonuses)
+          };
+        } catch (e) {}
+      }
+      const newBonuses = baseData.bonuses.map(row => [...row]);
       newBonuses[teamIndex][bonusIndex] = !newBonuses[teamIndex][bonusIndex];
-      const next = { scores: prev.scores, bonuses: newBonuses };
+      const next = { scores: baseData.scores, bonuses: newBonuses };
       saveToStorage(next);
       return next;
     });
@@ -154,11 +187,22 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const awardBonusAndPoints = (teamIndex: number, points: number, bonusIndex?: number) => {
     setData(prev => {
-      const newScores = [...prev.scores];
+      const saved = localStorage.getItem(STORAGE_KEY);
+      let baseData = prev;
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          baseData = {
+            scores: normalizeScores(parsed.scores),
+            bonuses: normalizeBonuses(parsed.bonuses)
+          };
+        } catch (e) {}
+      }
+      const newScores = [...baseData.scores];
       if (points) {
         newScores[teamIndex] = (newScores[teamIndex] || 0) + points;
       }
-      const newBonuses = prev.bonuses.map(row => [...row]);
+      const newBonuses = baseData.bonuses.map(row => [...row]);
       if (bonusIndex !== undefined && bonusIndex >= 0 && bonusIndex < 4) {
         newBonuses[teamIndex][bonusIndex] = true;
       }

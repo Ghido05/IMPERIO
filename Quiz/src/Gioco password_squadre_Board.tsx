@@ -38,36 +38,18 @@ export const BussolottiOverlay: React.FC<{
   bussolottiConfig: BussolottiConfig;
   onComplete: () => void;
 }> = ({ rank, teamNum, bussolottiConfig, onComplete }) => {
-  const gameData = useGameData();
-  const slideId = gameData?.slideId ?? 'sandbox';
   const count = rank === 1 ? 1 : rank === 2 ? 3 : 5;
-  const [selectedIndex, setSelectedIndex] = useSyncedState<number | null>(`playstate_${slideId}_bussolotti_${rank}_selected_idx`, null);
-  const [showAll, setShowAll] = useSyncedState<boolean>(`playstate_${slideId}_bussolotti_${rank}_show_all`, false);
+  const [selectedIndex, setSelectedIndex] = useSyncedState<number | null>(`password_bussolotti_${rank}_selected_idx`, null);
+  const [showAll, setShowAll] = useSyncedState<boolean>(`password_bussolotti_${rank}_show_all`, false);
+  const [awarded, setAwarded] = useSyncedState<boolean>(`password_bussolotti_${rank}_awarded`, false);
 
-  const { toggleBonus, bonuses, addScore } = useScores();
-
-  const [, setTick] = useState(0);
-  useEffect(() => {
-    const handleLoaded = () => setTick(t => t + 1);
-    window.addEventListener('idb-file-loaded', handleLoaded);
-    return () => window.removeEventListener('idb-file-loaded', handleLoaded);
-  }, []);
-
-  const [setupState, setSetupState] = useState<any>(null);
-  useEffect(() => {
-    const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
-    if (saved) {
-      try {
-        setSetupState(JSON.parse(saved));
-      } catch (e) {}
-    }
-  }, []);
+  const { awardBonusAndPoints } = useScores();
 
   const getBonusSlotIdxForTeam = () => {
     let key = '';
-    if (teamNum === 1) key = bussolottiConfig.immagine_premio_squadra1 || 'dado';
-    else if (teamNum === 2) key = bussolottiConfig.immagine_premio_squadra2 || 'switch';
-    else key = bussolottiConfig.immagine_premio_squadra3 || 'arco';
+    if (teamNum === 1) key = bussolottiConfig?.immagine_premio_squadra1 || 'dado';
+    else if (teamNum === 2) key = bussolottiConfig?.immagine_premio_squadra2 || 'switch';
+    else key = bussolottiConfig?.immagine_premio_squadra3 || 'arco';
     
     const s = key.toLowerCase().trim();
     if (s === 'dado' || s === '0') return 0;
@@ -77,26 +59,10 @@ export const BussolottiOverlay: React.FC<{
     return (teamNum - 1) % 4;
   };
 
-  const getImmaginePremioData = (): { src: string; emoji: string } => {
+  const getBonusEmojiForTeam = (): string => {
     const slotIdx = getBonusSlotIdxForTeam();
-    const customIcon = setupState?.punteggi?.iconeBonus?.[slotIdx];
     const emojis = ['🎲', '🔄', '🏹', '🛡️'];
-    const emoji = emojis[slotIdx] || '🎁';
-
-    if (customIcon && customIcon.trim() !== '') {
-      return { src: customIcon, emoji };
-    }
-
-    let key = '';
-    if (teamNum === 1) key = bussolottiConfig.immagine_premio_squadra1 || '';
-    else if (teamNum === 2) key = bussolottiConfig.immagine_premio_squadra2 || '';
-    else key = bussolottiConfig.immagine_premio_squadra3 || '';
-
-    if (key.startsWith('data:') || key.startsWith('idb://') || key.startsWith('/') || key.startsWith('http')) {
-      return { src: key, emoji };
-    }
-
-    return { src: '', emoji };
+    return emojis[slotIdx] || '🎁';
   };
 
   const getCardInfo = (i: number) => {
@@ -104,41 +70,46 @@ export const BussolottiOverlay: React.FC<{
       return { type: 'bonus_4000' as const, label: 'BONUS + 4000' };
     }
     if (rank === 2) {
-      const cards = bussolottiConfig.schede_2_posto || ['bonus', 'vuoto', 'vuoto'];
+      let cards = bussolottiConfig?.schede_2_posto;
+      if (!cards || !Array.isArray(cards) || cards.length === 0) {
+        const pos = (bussolottiConfig as any)?.posizione_premio_2_posto ?? 0;
+        cards = ['vuoto', 'vuoto', 'vuoto'];
+        cards[pos % 3] = 'bonus';
+      }
       const type = cards[i] || 'vuoto';
       return { type, label: type === 'bonus' ? 'BONUS' : type === '2000' ? '+2000 PUNTI' : 'VUOTO' };
     }
     // rank === 3
-    const cards = bussolottiConfig.schede_3_posto || ['vuoto', 'vuoto', 'vuoto', 'vuoto', 'bonus'];
+    let cards = bussolottiConfig?.schede_3_posto;
+    if (!cards || !Array.isArray(cards) || cards.length === 0) {
+      const pos = (bussolottiConfig as any)?.posizione_premio_3_posto ?? 4;
+      cards = ['vuoto', 'vuoto', 'vuoto', 'vuoto', 'bonus'];
+      cards[pos % 5] = 'bonus';
+    }
     const type = cards[i] || 'vuoto';
     return { type, label: type === 'bonus' ? 'BONUS' : type === '2000' ? '+2000 PUNTI' : type === '1000' ? '+1000 PUNTI' : 'VUOTO' };
   };
 
   const handleOpen = (i: number) => {
-    if (selectedIndex !== null) return; // Solo una scelta consentita
+    const awardKey = `password_bussolotti_${rank}_awarded`;
+    if (selectedIndex !== null || awarded || localStorage.getItem(awardKey) === 'true') return; // Solo una scelta consentita ed eseguita esattamente una volta
+    
     setSelectedIndex(i);
+    setAwarded(true);
+    localStorage.setItem(awardKey, 'true');
     
     const teamIdx = teamNum - 1;
     const card = getCardInfo(i);
     const targetBonusSlot = getBonusSlotIdxForTeam();
 
     if (card.type === 'bonus_4000') {
-      if (bonuses[teamIdx]?.[targetBonusSlot]) {
-        addScore(teamIdx, 4000);
-      } else {
-        toggleBonus(teamIdx, targetBonusSlot);
-      }
-      addScore(teamIdx, 4000);
+      awardBonusAndPoints(teamIdx, 4000, targetBonusSlot);
     } else if (card.type === 'bonus') {
-      if (bonuses[teamIdx]?.[targetBonusSlot]) {
-        addScore(teamIdx, 4000);
-      } else {
-        toggleBonus(teamIdx, targetBonusSlot);
-      }
+      awardBonusAndPoints(teamIdx, 0, targetBonusSlot);
     } else if (card.type === '2000') {
-      addScore(teamIdx, 2000);
+      awardBonusAndPoints(teamIdx, 2000);
     } else if (card.type === '1000') {
-      addScore(teamIdx, 1000);
+      awardBonusAndPoints(teamIdx, 1000);
     }
   };
 
@@ -197,48 +168,22 @@ export const BussolottiOverlay: React.FC<{
                 `}>
                   {card.type === 'bonus' || card.type === 'bonus_4000' ? (
                     <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-green-500/10 relative">
-                       {(() => {
-                         const pData = getImmaginePremioData();
-                         return pData.src ? (
-                           <img 
-                             src={assetUrl(pData.src)} 
-                             alt="PREMIO" 
-                             className={`w-full h-[80%] object-contain ${isSelected ? 'animate-pulse' : 'animate-in zoom-in duration-300'}`}
-                           />
-                         ) : (
-                           <span className="text-7xl animate-pulse">{pData.emoji}</span>
-                         );
-                       })()}
-                        {(() => {
-                          const targetSlot = getBonusSlotIdxForTeam();
-                          const alreadyHad = Boolean(bonuses[teamNum - 1]?.[targetSlot]);
-                          
-                          if (card.type === 'bonus_4000') {
-                            return (
-                              <div className="absolute bottom-2 bg-yellow-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)] whitespace-nowrap">
-                                {alreadyHad ? '+8000 PUNTI (DOPPIO)' : '+4000 PUNTI & BONUS'}
-                              </div>
-                            );
-                          }
-                          if (alreadyHad) {
-                            return (
-                              <div className="absolute bottom-2 bg-yellow-400 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)] whitespace-nowrap">
-                                +4000 PUNTI (DOPPIO)
-                              </div>
-                            );
-                          }
-                          return (
-                            <div className="absolute bottom-2 bg-emerald-400 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-[0_0_15px_rgba(52,211,153,0.5)] whitespace-nowrap">
-                              BONUS OTTENUTO
-                            </div>
-                          );
-                        })()}
+                       <span className="text-7xl animate-pulse">{getBonusEmojiForTeam()}</span>
+                       {card.type === 'bonus_4000' ? (
+                         <div className="absolute bottom-2 bg-yellow-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)] whitespace-nowrap">
+                           +4000 PUNTI & BONUS
+                         </div>
+                       ) : (
+                         <div className="absolute bottom-2 bg-emerald-400 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-[0_0_15px_rgba(52,211,153,0.5)] whitespace-nowrap">
+                           BONUS OTTENUTO
+                         </div>
+                       )}
                     </div>
                   ) : card.type === '2000' || card.type === '1000' ? (
                     <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-yellow-500/10">
                       <span className="text-6xl mb-2">🏆</span>
                       <span className="text-3xl font-black text-yellow-400 drop-shadow-md tracking-tight">
-                        {card.type === '2000' ? '+2000' : '+1000'}
+                        {card.type === '2000' ? '+2.000' : '+1.000'}
                       </span>
                       <span className="text-xs text-slate-350 font-bold uppercase tracking-wider mt-1">Punti</span>
                     </div>
@@ -565,6 +510,8 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
     if (idx === 0) return 1;
     if (idx === 1) return 2;
     if (idx === 2) return 3;
+    if (winnersOrder.length >= 2 && !winnersOrder.includes(teamNum)) return 3;
+    if (winnersOrder.length === 1 && excludedTeams.length > 0 && !excludedTeams.includes(teamNum) && !winnersOrder.includes(teamNum)) return 2;
     return null;
   };
 
@@ -591,7 +538,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
       shouldUpdate = true;
     }
 
-    const isMancheOver = (winnersOrder.length + excludedTeams.length) === 3;
+    const isMancheOver = (winnersOrder.length >= 2) || (winnersOrder.length >= 1 && excludedTeams.length > 0) || (excludedTeams.length >= 2);
 
     if (isMancheOver) {
       if (newStatus[1] === 'done' && newStatus[2] === 'pending') {
@@ -628,22 +575,36 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
 
   const handleBussolottiComplete = () => {
     if (activeBussolottiRank) {
-      const slideId = gameDataRaw?.slideId ?? 'sandbox';
       const newStatus = { ...bussolottiStatus, [activeBussolottiRank]: 'done' as BussolottiStatus };
       setBussolottiStatus(newStatus);
       setActiveBussolottiRank(null);
       localStorage.setItem('password_bussolotti_status', JSON.stringify(newStatus));
       localStorage.setItem('password_active_bussolotti', JSON.stringify(null));
-      localStorage.removeItem(`playstate_${slideId}_bussolotti_${activeBussolottiRank}_selected_idx`);
-      localStorage.removeItem(`playstate_${slideId}_bussolotti_${activeBussolottiRank}_show_all`);
+      localStorage.removeItem(`password_bussolotti_${activeBussolottiRank}_selected_idx`);
+      localStorage.removeItem(`password_bussolotti_${activeBussolottiRank}_show_all`);
+      localStorage.removeItem(`password_bussolotti_${activeBussolottiRank}_awarded`);
     }
   };
 
   const getTeamForRank = (rank: RankType): number | null => {
-    if (rank === 3 && excludedTeams.length > 0) return excludedTeams[0];
     if (rank === 1) return winnersOrder[0] || null;
-    if (rank === 2) return winnersOrder[1] || null;
-    if (rank === 3) return winnersOrder[2] || null;
+    if (rank === 2) {
+      if (winnersOrder[1]) return winnersOrder[1];
+      if (winnersOrder[0] && excludedTeams.length > 0) {
+        const remaining = [1, 2, 3].find(t => t !== winnersOrder[0] && !excludedTeams.includes(t));
+        return remaining || null;
+      }
+      return null;
+    }
+    if (rank === 3) {
+      if (excludedTeams.length > 0) return excludedTeams[0];
+      if (winnersOrder[2]) return winnersOrder[2];
+      if (winnersOrder.length >= 2) {
+        const remaining = [1, 2, 3].find(t => !winnersOrder.includes(t));
+        return remaining || null;
+      }
+      return null;
+    }
     return null;
   };
 

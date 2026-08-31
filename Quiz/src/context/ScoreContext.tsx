@@ -6,6 +6,7 @@ interface ScoreContextType {
   addScore: (teamIndex: number, points: number) => void;
   setScore: (teamIndex: number, points: number) => void;
   toggleBonus: (teamIndex: number, bonusIndex: number) => void;
+  awardBonusAndPoints: (teamIndex: number, points: number, bonusIndex?: number) => void;
   resetAll: () => void;
 }
 
@@ -13,59 +14,75 @@ const ScoreContext = createContext<ScoreContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'imperio_quiz_scores';
 
-export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [scores, setScores] = useState<number[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.scores) return parsed.scores;
-      } catch (e) {
-        console.error("Failed to parse saved scores", e);
-      }
-    }
-    return [0, 0, 0];
-  });
-  const [bonuses, setBonuses] = useState<boolean[][]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.bonuses) {
-          return parsed.bonuses.map((row: boolean[]) => {
-            if (row.length > 3) return row.slice(0, 3);
-            if (row.length < 3) return [...row, ...Array(3 - row.length).fill(false)];
-            return row;
-          });
-        }
-      } catch (e) {
-        console.error("Failed to parse saved bonuses", e);
-      }
-    }
+const normalizeScores = (arr: any): number[] => {
+  if (!Array.isArray(arr)) return [0, 0, 0];
+  return [
+    Number(arr[0]) || 0,
+    Number(arr[1]) || 0,
+    Number(arr[2]) || 0
+  ];
+};
+
+const normalizeBonuses = (savedBonuses: any): boolean[][] => {
+  if (!Array.isArray(savedBonuses)) {
     return [
-      [false, false, false],
-      [false, false, false],
-      [false, false, false]
+      [false, false, false, false],
+      [false, false, false, false],
+      [false, false, false, false]
+    ];
+  }
+  return [0, 1, 2].map((teamIdx) => {
+    const row = Array.isArray(savedBonuses[teamIdx]) ? savedBonuses[teamIdx] : [];
+    return [
+      Boolean(row[0]),
+      Boolean(row[1]),
+      Boolean(row[2]),
+      Boolean(row[3])
     ];
   });
+};
 
-  // Load from localStorage on init and listen for changes from other windows
+interface ScoreData {
+  scores: number[];
+  bonuses: boolean[][];
+}
+
+const getInitialScoreData = (): ScoreData => {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      return {
+        scores: normalizeScores(parsed.scores),
+        bonuses: normalizeBonuses(parsed.bonuses),
+      };
+    } catch (e) {
+      console.error("Failed to parse saved scores", e);
+    }
+  }
+  return {
+    scores: [0, 0, 0],
+    bonuses: [
+      [false, false, false, false],
+      [false, false, false, false],
+      [false, false, false, false]
+    ]
+  };
+};
+
+export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [data, setData] = useState<ScoreData>(getInitialScoreData);
+
   useEffect(() => {
     const loadFromStorage = () => {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         try {
-          const { scores: savedScores, bonuses: savedBonuses } = JSON.parse(saved);
-          if (savedScores) setScores(savedScores);
-          if (savedBonuses) {
-            // Assicuriamoci che ogni riga abbia 3 elementi
-            const normalizedBonuses = savedBonuses.map((row: boolean[]) => {
-              if (row.length > 3) return row.slice(0, 3);
-              if (row.length < 3) return [...row, ...Array(3 - row.length).fill(false)];
-              return row;
-            });
-            setBonuses(normalizedBonuses);
-          }
+          const parsed = JSON.parse(saved);
+          setData({
+            scores: normalizeScores(parsed.scores),
+            bonuses: normalizeBonuses(parsed.bonuses),
+          });
         } catch (e) {
           console.error("Failed to parse saved scores", e);
         }
@@ -80,16 +97,11 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
       if (key === STORAGE_KEY && newValue) {
         try {
-          const { scores: savedScores, bonuses: savedBonuses } = JSON.parse(newValue);
-          if (savedScores) setScores(savedScores);
-          if (savedBonuses) {
-            const normalizedBonuses = savedBonuses.map((row: boolean[]) => {
-              if (row.length > 3) return row.slice(0, 3);
-              if (row.length < 3) return [...row, ...Array(3 - row.length).fill(false)];
-              return row;
-            });
-            setBonuses(normalizedBonuses);
-          }
+          const parsed = JSON.parse(newValue);
+          setData({
+            scores: normalizeScores(parsed.scores),
+            bonuses: normalizeBonuses(parsed.bonuses),
+          });
         } catch (err) {
           console.error("Error parsing storage change", err);
         }
@@ -104,53 +116,83 @@ export const ScoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
   }, []);
 
-
-
-  const saveToStorage = (newScores: number[], newBonuses: boolean[][]) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ scores: newScores, bonuses: newBonuses }));
+  const saveToStorage = (newData: ScoreData) => {
+    const jsonStr = JSON.stringify(newData);
+    localStorage.setItem(STORAGE_KEY, jsonStr);
+    window.dispatchEvent(new CustomEvent('local-storage-update', { detail: { key: STORAGE_KEY, value: jsonStr } }));
   };
 
   const addScore = (teamIndex: number, points: number) => {
-    setScores(prev => {
-      const newScores = [...prev];
-      newScores[teamIndex] += points;
-      saveToStorage(newScores, bonuses);
-      return newScores;
+    setData(prev => {
+      const newScores = [...prev.scores];
+      newScores[teamIndex] = (newScores[teamIndex] || 0) + points;
+      const next = { scores: newScores, bonuses: prev.bonuses };
+      saveToStorage(next);
+      return next;
     });
   };
 
   const setScore = (teamIndex: number, points: number) => {
-    setScores(prev => {
-      const newScores = [...prev];
+    setData(prev => {
+      const newScores = [...prev.scores];
       newScores[teamIndex] = points;
-      saveToStorage(newScores, bonuses);
-      return newScores;
+      const next = { scores: newScores, bonuses: prev.bonuses };
+      saveToStorage(next);
+      return next;
     });
   };
 
   const toggleBonus = (teamIndex: number, bonusIndex: number) => {
-    setBonuses(prev => {
-      const newBonuses = prev.map(row => [...row]);
+    setData(prev => {
+      const newBonuses = prev.bonuses.map(row => [...row]);
       newBonuses[teamIndex][bonusIndex] = !newBonuses[teamIndex][bonusIndex];
-      saveToStorage(scores, newBonuses);
-      return newBonuses;
+      const next = { scores: prev.scores, bonuses: newBonuses };
+      saveToStorage(next);
+      return next;
+    });
+  };
+
+  const awardBonusAndPoints = (teamIndex: number, points: number, bonusIndex?: number) => {
+    setData(prev => {
+      const newScores = [...prev.scores];
+      if (points) {
+        newScores[teamIndex] = (newScores[teamIndex] || 0) + points;
+      }
+      const newBonuses = prev.bonuses.map(row => [...row]);
+      if (bonusIndex !== undefined && bonusIndex >= 0 && bonusIndex < 4) {
+        newBonuses[teamIndex][bonusIndex] = true;
+      }
+      const next = { scores: newScores, bonuses: newBonuses };
+      saveToStorage(next);
+      return next;
     });
   };
 
   const resetAll = () => {
-    const newScores = [0, 0, 0];
-    const newBonuses = [
-      [false, false, false],
-      [false, false, false],
-      [false, false, false]
-    ];
-    setScores(newScores);
-    setBonuses(newBonuses);
-    saveToStorage(newScores, newBonuses);
+    const next = {
+      scores: [0, 0, 0],
+      bonuses: [
+        [false, false, false, false],
+        [false, false, false, false],
+        [false, false, false, false]
+      ]
+    };
+    setData(next);
+    saveToStorage(next);
   };
 
   return (
-    <ScoreContext.Provider value={{ scores, bonuses, addScore, setScore, toggleBonus, resetAll }}>
+    <ScoreContext.Provider
+      value={{
+        scores: data.scores,
+        bonuses: data.bonuses,
+        addScore,
+        setScore,
+        toggleBonus,
+        awardBonusAndPoints,
+        resetAll
+      }}
+    >
       {children}
     </ScoreContext.Provider>
   );

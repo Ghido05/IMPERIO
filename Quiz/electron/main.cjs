@@ -262,7 +262,7 @@ let latestActiveSlideId = '';
 let latestActiveSlide = null;
 const latestLocalStorage = {};
 
-function getLocalIpAddress() {
+function getAllIpAddresses() {
   const interfaces = os.networkInterfaces();
   const validAddresses = [];
 
@@ -288,7 +288,8 @@ function getLocalIpAddress() {
     }
 
     for (const iface of interfaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
+      // Filtriamo IPv4 non interni e che non siano link-local (169.254.x.x)
+      if (iface.family === 'IPv4' && !iface.internal && !iface.address.startsWith('169.254.')) {
         validAddresses.push({
           name: name,
           address: iface.address
@@ -296,13 +297,18 @@ function getLocalIpAddress() {
       }
     }
   }
+  return validAddresses;
+}
+
+function getLocalIpAddress() {
+  const validAddresses = getAllIpAddresses();
 
   if (validAddresses.length === 0) {
     return 'localhost';
   }
 
-  // Diamo priorità alle interfacce di rete fisiche (en0, en*, wlan*, eth*)
-  const priorityPatterns = ['en0', 'en', 'wlan', 'wlo', 'eth'];
+  // Diamo priorità alle interfacce di rete fisiche (en0, en1, en*, wlan*, eth*)
+  const priorityPatterns = ['en0', 'en1', 'en', 'wlan', 'wlo', 'eth'];
   for (const pattern of priorityPatterns) {
     const found = validAddresses.find(addr => addr.name.toLowerCase().startsWith(pattern));
     if (found) {
@@ -317,8 +323,37 @@ function getLocalIpAddress() {
 function startLocalServer() {
   const expressApp = express();
   
-  // Serve static dist folder in production
+  // Abilita CORS per compatibilità con Safari / iPad
+  expressApp.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    next();
+  });
+
   const distPath = path.join(__dirname, '../dist');
+
+  // In Development Mode (npm run dev), inoltra le richieste HTTP a Vite su 5173
+  if (process.env.NODE_ENV === 'development') {
+    expressApp.use((req, res, next) => {
+      if (req.headers.upgrade === 'websocket') return next();
+      const proxyReq = http.request(
+        `http://127.0.0.1:5173${req.url}`,
+        { method: req.method, headers: req.headers },
+        (proxyRes) => {
+          res.writeHead(proxyRes.statusCode, proxyRes.headers);
+          proxyRes.pipe(res, { end: true });
+        }
+      );
+      proxyReq.on('error', () => {
+        // Fallback a dist se il server di dev non risponde
+        next();
+      });
+      req.pipe(proxyReq, { end: true });
+    });
+  }
+  
+  // Serve static dist folder in production
   expressApp.use(express.static(distPath));
   
   // Fallback to index.html for SPA
@@ -336,12 +371,17 @@ function startLocalServer() {
   wss = new WebSocketServer({ noServer: true });
   
   localServer.on('upgrade', (request, socket, head) => {
-    const { pathname } = new URL(request.url, `http://${request.headers.host}`);
-    if (pathname === '/ws') {
-      wss.handleUpgrade(request, socket, head, (ws) => {
-        wss.emit('connection', ws, request);
-      });
-    } else {
+    try {
+      const host = request.headers.host || 'localhost';
+      const { pathname } = new URL(request.url, `http://${host}`);
+      if (pathname === '/ws') {
+        wss.handleUpgrade(request, socket, head, (ws) => {
+          wss.emit('connection', ws, request);
+        });
+      } else {
+        socket.destroy();
+      }
+    } catch (e) {
       socket.destroy();
     }
   });
@@ -487,6 +527,15 @@ ipcMain.on('broadcast-state', (event, state) => {
 ipcMain.handle('get-server-url', () => {
   const ip = getLocalIpAddress();
   return `http://${ip}:${activePort}`;
+});
+
+ipcMain.handle('get-all-ip-addresses', () => {
+  const addresses = getAllIpAddresses();
+  return {
+    addresses: addresses,
+    defaultIp: getLocalIpAddress(),
+    port: activePort
+  };
 });
 
 app.whenReady().then(() => {

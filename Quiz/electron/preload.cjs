@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('electron', {
     return () => ipcRenderer.removeListener('viewport-changed', subscription);
   },
   getServerUrl: () => ipcRenderer.invoke('get-server-url'),
+  getAllIpAddresses: () => ipcRenderer.invoke('get-all-ip-addresses'),
   onIpadConnectionStatus: (callback) => {
     const subscription = (_event, status) => callback(status);
     ipcRenderer.on('ipad-connection-status', subscription);

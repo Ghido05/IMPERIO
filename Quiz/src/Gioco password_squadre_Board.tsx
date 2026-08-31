@@ -53,10 +53,50 @@ export const BussolottiOverlay: React.FC<{
     return () => window.removeEventListener('idb-file-loaded', handleLoaded);
   }, []);
 
-  const getImmaginePremio = () => {
-    if (teamNum === 1) return bussolottiConfig.immagine_premio_squadra1 || bussolottiConfig.immagine_premio || '/Icone/premio_bonus.png';
-    if (teamNum === 2) return bussolottiConfig.immagine_premio_squadra2 || bussolottiConfig.immagine_premio || '/Icone/premio_bonus.png';
-    return bussolottiConfig.immagine_premio_squadra3 || bussolottiConfig.immagine_premio || '/Icone/premio_bonus.png';
+  const [setupState, setSetupState] = useState<any>(null);
+  useEffect(() => {
+    const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
+    if (saved) {
+      try {
+        setSetupState(JSON.parse(saved));
+      } catch (e) {}
+    }
+  }, []);
+
+  const getBonusSlotIdxForTeam = () => {
+    let key = '';
+    if (teamNum === 1) key = bussolottiConfig.immagine_premio_squadra1 || 'dado';
+    else if (teamNum === 2) key = bussolottiConfig.immagine_premio_squadra2 || 'switch';
+    else key = bussolottiConfig.immagine_premio_squadra3 || 'arco';
+    
+    const s = key.toLowerCase().trim();
+    if (s === 'dado' || s === '0') return 0;
+    if (s === 'switch' || s === '1') return 1;
+    if (s === 'arco' || s === '2') return 2;
+    if (s === 'scudo' || s === '3') return 3;
+    return (teamNum - 1) % 4;
+  };
+
+  const getImmaginePremioData = (): { src: string; emoji: string } => {
+    const slotIdx = getBonusSlotIdxForTeam();
+    const customIcon = setupState?.punteggi?.iconeBonus?.[slotIdx];
+    const emojis = ['🎲', '🔄', '🏹', '🛡️'];
+    const emoji = emojis[slotIdx] || '🎁';
+
+    if (customIcon && customIcon.trim() !== '') {
+      return { src: customIcon, emoji };
+    }
+
+    let key = '';
+    if (teamNum === 1) key = bussolottiConfig.immagine_premio_squadra1 || '';
+    else if (teamNum === 2) key = bussolottiConfig.immagine_premio_squadra2 || '';
+    else key = bussolottiConfig.immagine_premio_squadra3 || '';
+
+    if (key.startsWith('data:') || key.startsWith('idb://') || key.startsWith('/') || key.startsWith('http')) {
+      return { src: key, emoji };
+    }
+
+    return { src: '', emoji };
   };
 
   const getCardInfo = (i: number) => {
@@ -80,17 +120,20 @@ export const BussolottiOverlay: React.FC<{
     
     const teamIdx = teamNum - 1;
     const card = getCardInfo(i);
+    const targetBonusSlot = getBonusSlotIdxForTeam();
 
     if (card.type === 'bonus_4000') {
-      const nextBonusIdx = bonuses[teamIdx].findIndex(b => !b);
-      if (nextBonusIdx !== -1) {
-        toggleBonus(teamIdx, nextBonusIdx);
+      if (bonuses[teamIdx]?.[targetBonusSlot]) {
+        addScore(teamIdx, 4000);
+      } else {
+        toggleBonus(teamIdx, targetBonusSlot);
       }
       addScore(teamIdx, 4000);
     } else if (card.type === 'bonus') {
-      const nextBonusIdx = bonuses[teamIdx].findIndex(b => !b);
-      if (nextBonusIdx !== -1) {
-        toggleBonus(teamIdx, nextBonusIdx);
+      if (bonuses[teamIdx]?.[targetBonusSlot]) {
+        addScore(teamIdx, 4000);
+      } else {
+        toggleBonus(teamIdx, targetBonusSlot);
       }
     } else if (card.type === '2000') {
       addScore(teamIdx, 2000);
@@ -154,20 +197,42 @@ export const BussolottiOverlay: React.FC<{
                 `}>
                   {card.type === 'bonus' || card.type === 'bonus_4000' ? (
                     <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-green-500/10 relative">
-                       <img 
-                         src={assetUrl(getImmaginePremio())} 
-                         alt="PREMIO" 
-                         className={`w-full h-[80%] object-contain ${isSelected ? 'animate-pulse' : 'animate-in zoom-in duration-300'}`}
-                         onError={(e) => {
-                             const color = teamNum === 1 ? 'dc2626' : teamNum === 2 ? '2563eb' : '16a34a';
-                             (e.target as HTMLImageElement).src = `https://placehold.co/400x600/${color}/white?text=BONUS`;
-                          }}
-                       />
-                       {card.type === 'bonus_4000' && (
-                         <div className="absolute bottom-2 bg-yellow-500 text-slate-950 font-black text-[10px] px-2.5 py-0.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)]">
-                           +4000 PUNTI
-                         </div>
-                       )}
+                       {(() => {
+                         const pData = getImmaginePremioData();
+                         return pData.src ? (
+                           <img 
+                             src={assetUrl(pData.src)} 
+                             alt="PREMIO" 
+                             className={`w-full h-[80%] object-contain ${isSelected ? 'animate-pulse' : 'animate-in zoom-in duration-300'}`}
+                           />
+                         ) : (
+                           <span className="text-7xl animate-pulse">{pData.emoji}</span>
+                         );
+                       })()}
+                        {(() => {
+                          const targetSlot = getBonusSlotIdxForTeam();
+                          const alreadyHad = Boolean(bonuses[teamNum - 1]?.[targetSlot]);
+                          
+                          if (card.type === 'bonus_4000') {
+                            return (
+                              <div className="absolute bottom-2 bg-yellow-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)] whitespace-nowrap">
+                                {alreadyHad ? '+8000 PUNTI (DOPPIO)' : '+4000 PUNTI & BONUS'}
+                              </div>
+                            );
+                          }
+                          if (alreadyHad) {
+                            return (
+                              <div className="absolute bottom-2 bg-yellow-400 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)] whitespace-nowrap">
+                                +4000 PUNTI (DOPPIO)
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="absolute bottom-2 bg-emerald-400 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-[0_0_15px_rgba(52,211,153,0.5)] whitespace-nowrap">
+                              BONUS OTTENUTO
+                            </div>
+                          );
+                        })()}
                     </div>
                   ) : card.type === '2000' || card.type === '1000' ? (
                     <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-yellow-500/10">

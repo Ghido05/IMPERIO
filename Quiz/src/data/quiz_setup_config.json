@@ -647,7 +647,7 @@
     "sfondoGenerale": ""
   },
   "gioco3": {
-    "selectedQuestion": 2,
+    "selectedQuestion": 1,
     "questions": {
       "1": {
         "sfondo": "",
@@ -724,7 +724,11 @@
         "paroleNulle": [
           "INDIANA JONES",
           "JAMES BOND"
-        ]
+        ],
+        "bussolotti": {
+          "immagine_premio_squadra2": "dado",
+          "immagine_premio_squadra3": "dado"
+        }
       },
       "2": {
         "sfondo": "",
@@ -892,8 +896,8 @@
         "sfondo": "",
         "lettereVisibili": [],
         "indizio": "",
-        "bonus": "",
-        "punti": 1000
+        "bonus": "switch",
+        "punti": 0
       },
       {
         "testo": "CHI CERCA TROVA",
@@ -937,16 +941,11 @@
   "punteggi": {
     "sfondo": "",
     "nomiSquadre": [
-      "SQUADRA 1",
-      "SQUADRA 2",
-      "SQUADRA 3"
+      "PORTO",
+      "MARMIROLO",
+      "GOITO"
     ],
     "iconeBonus": [
-      "",
-      "",
-      "",
-      "",
-      "",
       "",
       "",
       "",

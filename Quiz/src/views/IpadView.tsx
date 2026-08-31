@@ -1,10 +1,58 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react';
 import PasswordPresceltiBoard from '../Gioco password_prescelti_Board';
 import { GameDataProvider } from '../context/GameDataContext';
 import { cloneDefaultData } from '../lib/defaultGameData';
 import type { Slide } from '../App';
 import SlideCanvas from '../components/SlideCanvas';
 import { ScoreProvider, useScores } from '../context/ScoreContext';
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class IpadErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  public state: ErrorBoundaryState = {
+    hasError: false,
+    error: null,
+  };
+
+  public static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('Uncaught error in iPad View:', error, errorInfo);
+  }
+
+  public render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-full h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center">
+          <div className="bg-slate-900 border border-red-500/30 rounded-2xl p-8 max-w-lg shadow-2xl">
+            <span className="text-4xl mb-4 block">⚠️</span>
+            <h1 className="text-xl font-bold text-red-400 mb-2">Si è verificato un errore su iPad</h1>
+            <p className="text-xs text-slate-400 mb-4 font-mono break-all">
+              {this.state.error?.message || 'Errore di rendering.'}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white text-xs font-bold rounded-lg transition-all cursor-pointer"
+            >
+              Ricarica Pagina
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 function IpadContent() {
   const [slides, setSlides] = useState<Slide[]>([]);
@@ -57,8 +105,6 @@ function IpadContent() {
       const activeBox = parseInt(activeBoxVal, 10);
       const activeQuestion = parseInt(activeQuestionVal, 10);
 
-      console.log(`[iPad checkBooking] Active Slide ID: ${currentSlideId}, Type: ${currentSlideType}, Box: ${activeBox}, Question: ${activeQuestion}`);
-
       // Se siamo nei giochi password, la squadra di turno attiva è definita da password_current_team
       if (
         currentSlideType === 'password_prescelti' || 
@@ -67,36 +113,30 @@ function IpadContent() {
         activeBox === 4
       ) {
         const val = localStorage.getItem('password_current_team');
-        console.log(`[iPad checkBooking] Password current team from localStorage: ${val}`);
         if (val && val !== 'null') {
           setBookedTeam(parseInt(val, 10));
         } else {
           setBookedTeam(null);
         }
-        return; // Non eseguiamo il fallback dei buzzer per il gioco password
+        return;
       }
 
       // Se siamo nel box 2 (giochi a classifica / classifica musicale)
       if (activeBox === 2 || (currentSlideId && currentSlideId.startsWith('box2_'))) {
-        // La squadra attiva è definita da playstate_box2_active_team_idx (0-based)
         const val = localStorage.getItem('playstate_box2_active_team_idx');
-        console.log(`[iPad checkBooking] Box2 active team idx from localStorage: ${val}`);
         if (val && val !== 'null') {
-          setBookedTeam(parseInt(val, 10) + 1); // converti da 0-based a 1-based
+          setBookedTeam(parseInt(val, 10) + 1);
           return;
         }
 
-        // Fallback: se non è ancora impostato l'active team, proviamo ad usare il starter idx
         const starterVal = localStorage.getItem('playstate_box2_starter_idx');
-        console.log(`[iPad checkBooking] Box2 starter idx from localStorage: ${starterVal}`);
         if (starterVal && starterVal !== 'null') {
           const starter = parseInt(starterVal, 10);
           const questionStarterIdx = (starter + (activeQuestion - 1)) % 3;
-          setBookedTeam(questionStarterIdx + 1); // converti da 0-based a 1-based
+          setBookedTeam(questionStarterIdx + 1);
           return;
         }
 
-        // Fallback finale: calcola in tempo reale la squadra con il punteggio minore
         if (scores && scores.length > 0) {
           let lowestIdx = 0;
           for (let i = 1; i < scores.length; i++) {
@@ -114,15 +154,12 @@ function IpadContent() {
 
       const key = `playstate_${currentSlideId}_booked_team`;
       const val = localStorage.getItem(key);
-      console.log(`[iPad checkBooking] Buzzer booked team for key ${key} from localStorage: ${val}`);
       if (val && val !== 'null') {
         setBookedTeam(parseInt(val, 10));
       } else {
-        // Fallback per prenotazione su classifica (box1)
         const box1ActiveQ = localStorage.getItem('playstate_active_question') || '1';
         const box1Key = `playstate_box1_q${box1ActiveQ}_booked_team`;
         const box1Val = localStorage.getItem(box1Key);
-        console.log(`[iPad checkBooking] Fallback buzzer for key ${box1Key}: ${box1Val}`);
         if (box1Val && box1Val !== 'null') {
           setBookedTeam(parseInt(box1Val, 10));
         } else {
@@ -151,11 +188,11 @@ function IpadContent() {
 
   // Sync state over WebSocket
   useEffect(() => {
-    const wsPort = window.location.port === '5173' ? '3001' : window.location.port;
+    const wsPort = (window.location.port === '5173' || !window.location.port) ? '3001' : window.location.port;
     const socketUrl = `ws://${window.location.hostname}:${wsPort}/ws`;
     
     console.log(`iPad connecting to WebSocket: ${socketUrl}`);
-    let ws = new WebSocket(socketUrl);
+    let ws: WebSocket | null = null;
     let reconnectTimeout: any;
 
     const originalSetItem = Storage.prototype.setItem;
@@ -178,7 +215,7 @@ function IpadContent() {
     Storage.prototype.setItem = function (key: string, value: string) {
       originalSetItem.call(this, key, value);
       if (isOutgoingSyncKey(key)) {
-        if (ws.readyState === WebSocket.OPEN) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
             type: 'local-storage-update',
             data: { key, value }
@@ -190,7 +227,7 @@ function IpadContent() {
     Storage.prototype.removeItem = function (key: string) {
       originalRemoveItem.call(this, key);
       if (isOutgoingSyncKey(key)) {
-        if (ws.readyState === WebSocket.OPEN) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify({
             type: 'local-storage-update',
             data: { key, value: null }
@@ -200,10 +237,18 @@ function IpadContent() {
     };
 
     function connect() {
+      try {
+        ws = new WebSocket(socketUrl);
+      } catch (err) {
+        console.error('Failed to instantiate WebSocket:', err);
+        reconnectTimeout = setTimeout(connect, 2000);
+        return;
+      }
+
       ws.onopen = () => {
         console.log('Connected to Mac Server');
         setWsConnected(true);
-        ws.send(JSON.stringify({ type: 'request-state' }));
+        if (ws) ws.send(JSON.stringify({ type: 'request-state' }));
       };
 
       ws.onmessage = (event) => {
@@ -227,7 +272,6 @@ function IpadContent() {
                     originalSetItem.call(localStorage, key, value as string);
                   }
 
-                  // Dispatch specific event for this key to trigger useSyncedState and useScores hooks
                   try {
                     const storageEvent = new StorageEvent('storage', {
                       key,
@@ -236,13 +280,12 @@ function IpadContent() {
                     });
                     window.dispatchEvent(storageEvent);
                   } catch (e) {
-                    console.warn("StorageEvent constructor failed in init-state:", e);
                     try {
                       const event = document.createEvent('StorageEvent');
                       (event as any).initStorageEvent('storage', false, false, key, null, value === undefined ? null : (value as string | null), window.location.href, localStorage);
                       window.dispatchEvent(event);
                     } catch (err) {
-                      console.error("Fallback initStorageEvent failed in init-state:", err);
+                      // ignore
                     }
                   }
 
@@ -251,23 +294,22 @@ function IpadContent() {
                       detail: { key, value }
                     }));
                   } catch (e) {
-                    console.error("Failed to dispatch local-storage-update in init-state:", e);
+                    // ignore
                   }
                 }
               });
               
-              // Notify components of local storage update
               try {
                 window.dispatchEvent(new Event('storage'));
               } catch (e) {
-                console.error("Failed to dispatch generic storage event in init-state:", e);
+                // ignore
               }
               try {
                 window.dispatchEvent(new CustomEvent('local-storage-update', {
                   detail: { key: 'all' }
                 }));
               } catch (e) {
-                console.error("Failed to dispatch generic local-storage-update in init-state:", e);
+                // ignore
               }
             }
           } else if (msg.type === 'state-update') {
@@ -287,7 +329,6 @@ function IpadContent() {
                 originalSetItem.call(localStorage, key, value);
               }
               
-              // Dispatch events to trigger useSyncedState hook re-renders
               try {
                 const storageEvent = new StorageEvent('storage', {
                   key,
@@ -296,13 +337,12 @@ function IpadContent() {
                 });
                 window.dispatchEvent(storageEvent);
               } catch (e) {
-                console.warn("StorageEvent constructor failed in local-storage-update:", e);
                 try {
                   const event = document.createEvent('StorageEvent');
                   (event as any).initStorageEvent('storage', false, false, key, null, value, window.location.href, localStorage);
                   window.dispatchEvent(event);
                 } catch (err) {
-                  console.error("Fallback initStorageEvent failed in local-storage-update:", err);
+                  // ignore
                 }
               }
               
@@ -311,7 +351,7 @@ function IpadContent() {
                   detail: { key, value }
                 }));
               } catch (e) {
-                console.error("Failed to dispatch local-storage-update in local-storage-update:", e);
+                // ignore
               }
             }
           }
@@ -323,22 +363,23 @@ function IpadContent() {
       ws.onclose = () => {
         console.log('Disconnected from Mac Server, reconnecting...');
         setWsConnected(false);
-        reconnectTimeout = setTimeout(() => {
-          ws = new WebSocket(socketUrl);
-          connect();
-        }, 2000);
+        reconnectTimeout = setTimeout(connect, 2000);
       };
 
       ws.onerror = (err) => {
         console.error('WebSocket error:', err);
-        ws.close();
+        if (ws) {
+          try { ws.close(); } catch(e){}
+        }
       };
     }
 
     connect();
 
     return () => {
-      ws.close();
+      if (ws) {
+        try { ws.close(); } catch(e){}
+      }
       clearTimeout(reconnectTimeout);
       Storage.prototype.setItem = originalSetItem;
       Storage.prototype.removeItem = originalRemoveItem;
@@ -423,7 +464,7 @@ function IpadContent() {
             🟢 {teamNames[2] || 'SQUADRA 3'}
           </span>
           <span className="text-2xl sm:text-4xl font-black leading-none tabular-nums">
-            {scores[2].toLocaleString()} <span className={`text-xs sm:text-sm font-black ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>PT</span>
+            {(scores?.[2] ?? 0).toLocaleString()} <span className={`text-xs sm:text-sm font-black ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>PT</span>
           </span>
         </div>
 
@@ -439,7 +480,7 @@ function IpadContent() {
             🔵 {teamNames[1] || 'SQUADRA 2'}
           </span>
           <span className="text-2xl sm:text-4xl font-black leading-none tabular-nums">
-            {scores[1].toLocaleString()} <span className={`text-xs sm:text-sm font-black ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>PT</span>
+            {(scores?.[1] ?? 0).toLocaleString()} <span className={`text-xs sm:text-sm font-black ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>PT</span>
           </span>
         </div>
 
@@ -455,7 +496,7 @@ function IpadContent() {
             🔴 {teamNames[0] || 'SQUADRA 1'}
           </span>
           <span className="text-2xl sm:text-4xl font-black leading-none tabular-nums">
-            {scores[0].toLocaleString()} <span className={`text-xs sm:text-sm font-black ${isS1Booked ? 'text-white' : 'text-red-400'}`}>PT</span>
+            {(scores?.[0] ?? 0).toLocaleString()} <span className={`text-xs sm:text-sm font-black ${isS1Booked ? 'text-white' : 'text-red-400'}`}>PT</span>
           </span>
         </div>
 
@@ -470,8 +511,10 @@ function IpadContent() {
 
 export default function IpadView() {
   return (
-    <ScoreProvider>
-      <IpadContent />
-    </ScoreProvider>
+    <IpadErrorBoundary>
+      <ScoreProvider>
+        <IpadContent />
+      </ScoreProvider>
+    </IpadErrorBoundary>
   );
 }

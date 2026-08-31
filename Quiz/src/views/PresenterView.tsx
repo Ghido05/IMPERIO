@@ -261,6 +261,9 @@ export default function PresenterView() {
   const [maximizedPanel, setMaximizedPanel] = useState<'none' | 'left' | 'right'>('none');
   const [showIpadModal, setShowIpadModal] = useState(false);
   const [serverUrl, setServerUrl] = useState('');
+  const [availableIps, setAvailableIps] = useState<{ name: string; address: string }[]>([]);
+  const [selectedIp, setSelectedIp] = useState<string>('');
+  const [serverPort, setServerPort] = useState<number>(3001);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [ipadStatus, setIpadStatus] = useState({ ipadConnected: false, ipadCount: 0 });
 
@@ -269,9 +272,22 @@ export default function PresenterView() {
     const isElectron = (window as any).electron !== undefined;
     if (isElectron) {
       const electron = (window as any).electron;
-      electron.getServerUrl().then((url: string) => {
-        setServerUrl(url);
-      });
+
+      if (electron.getAllIpAddresses) {
+        electron.getAllIpAddresses().then((res: { addresses: { name: string; address: string }[]; defaultIp: string; port: number }) => {
+          if (res) {
+            setAvailableIps(res.addresses || []);
+            const chosenIp = res.defaultIp || (res.addresses?.[0]?.address ?? 'localhost');
+            setSelectedIp(chosenIp);
+            setServerPort(res.port || 3001);
+            setServerUrl(`http://${chosenIp}:${res.port || 3001}`);
+          }
+        });
+      } else if (electron.getServerUrl) {
+        electron.getServerUrl().then((url: string) => {
+          setServerUrl(url);
+        });
+      }
 
       const unsubscribe = electron.onIpadConnectionStatus((status: { ipadConnected: boolean; ipadCount: number }) => {
         setIpadStatus(status);
@@ -279,6 +295,11 @@ export default function PresenterView() {
       return unsubscribe;
     }
   }, []);
+
+  const handleIpChange = (newIp: string) => {
+    setSelectedIp(newIp);
+    setServerUrl(`http://${newIp}:${serverPort}`);
+  };
 
   // Generate QR Code when server URL is available
   useEffect(() => {
@@ -990,6 +1011,25 @@ export default function PresenterView() {
               ) : (
                 <div className="w-48 h-48 flex items-center justify-center bg-slate-800 rounded-xl text-xs text-white/40">
                   Generazione QR Code...
+                </div>
+              )}
+
+              {availableIps.length > 1 && (
+                <div className="w-full text-left bg-slate-800/80 p-2.5 rounded-lg border border-slate-700">
+                  <label className="text-[10px] text-white/50 uppercase font-black block mb-1">
+                    Interfaccia di Rete Mac:
+                  </label>
+                  <select
+                    value={selectedIp}
+                    onChange={(e) => handleIpChange(e.target.value)}
+                    className="w-full bg-slate-900 text-white text-xs p-2 rounded border border-slate-600 font-mono outline-none focus:border-blue-500"
+                  >
+                    {availableIps.map(iface => (
+                      <option key={iface.address} value={iface.address}>
+                        {iface.name} — {iface.address}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               )}
 

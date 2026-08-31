@@ -220,27 +220,42 @@ const ClassificaGenerale_Board: React.FC = () => {
               </div>
             </div>
 
-            <div className="w-full bg-white/5 p-4 rounded-3xl border-2 border-white/10 flex justify-center gap-5">
-              {[0, 1, 2].map(bonusIdx => (
-                <div
-                  key={bonusIdx}
-                  onClick={() => toggleBonus(i, bonusIdx)}
-                  className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-500 border-2 cursor-pointer
-                    ${bonuses[i][bonusIdx]
-                      ? `${team.color} border-white shadow-[0_0_20px_rgba(255,255,255,0.4)] scale-110`
-                      : 'bg-transparent border-white/10 opacity-20 scale-90 grayscale'}
-                  `}
-                >
-                  <img
-                    src={setup?.iconeBonus?.[i * 3 + bonusIdx] ? assetUrl(setup.iconeBonus[i * 3 + bonusIdx]) : assetUrl(`Icone/nessuno_musicale/${bonusIdx === 0 ? 'Primo' : bonusIdx === 1 ? 'Secondo' : 'Terzo'} indizio.svg`)}
-                    alt="Bonus"
-                    className="w-10 h-10 object-contain"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = `https://placehold.co/100x100/ffffff/000000?text=B${bonusIdx + 1}`;
-                    }}
-                  />
-                </div>
-              ))}
+            <div className="w-full bg-white/5 p-6 rounded-3xl border-2 border-white/10 flex justify-center items-center gap-3 min-h-[112px]">
+              {[
+                { key: 'dado', label: 'Dado', emoji: '🎲' },
+                { key: 'switch', label: 'Switch', emoji: '🔄' },
+                { key: 'arco', label: 'Arco', emoji: '🏹' },
+                { key: 'scudo', label: 'Scudo', emoji: '🛡️' },
+              ].map((bonusMeta, bonusIdx) => {
+                const customImg = setup?.iconeBonus?.[bonusIdx];
+                const isChecked = bonuses[i]?.[bonusIdx];
+                return (
+                  <div
+                    key={bonusIdx}
+                    onClick={() => toggleBonus(i, bonusIdx)}
+                    title={bonusMeta.label}
+                    className={`w-28 h-28 rounded-2xl flex items-center justify-center transition-all duration-500 border-2 cursor-pointer
+                      ${isChecked
+                        ? `${team.color} border-white shadow-[0_0_20px_rgba(255,255,255,0.4)] scale-110`
+                        : 'bg-transparent border-white/10 opacity-20 scale-90 grayscale'}
+                    `}
+                  >
+                    {customImg && customImg.trim() !== '' ? (
+                      <img
+                        src={assetUrl(customImg)}
+                        alt={bonusMeta.label}
+                        className="w-[72px] h-[72px] object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ) : null}
+                    {(!customImg || customImg.trim() === '') && (
+                      <span className="text-5xl">{bonusMeta.emoji}</span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )})}

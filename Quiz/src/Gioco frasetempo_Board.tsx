@@ -6,25 +6,46 @@ import { getPhraseLetter, isPhraseLetterToken, normalizeFraseTempoItem, parsePhr
 import { useScores } from './context/ScoreContext';
 
 const findBonusSlotIndex = (slideBonus: string, setupIcons: string[] | undefined): number => {
-  if (!slideBonus || !setupIcons) return 0;
-  
-  const getFilename = (path: string) => {
-    if (!path) return '';
-    const parts = path.split('/');
-    return parts[parts.length - 1].toLowerCase();
-  };
-  
-  const slideBonusFile = getFilename(slideBonus);
-  
-  for (let b = 0; b < 3; b++) {
-    for (let i = 0; i < 3; i++) {
-      const iconPath = setupIcons[i * 3 + b];
-      if (iconPath && getFilename(iconPath) === slideBonusFile) {
-        return b;
+  if (!slideBonus) return 0;
+  const s = slideBonus.toLowerCase().trim();
+  if (s === 'dado' || s === '0') return 0;
+  if (s === 'switch' || s === '1') return 1;
+  if (s === 'arco' || s === '2') return 2;
+  if (s === 'scudo' || s === '3') return 3;
+
+  if (setupIcons && Array.isArray(setupIcons)) {
+    const getFilename = (path: string) => {
+      if (!path) return '';
+      const parts = path.split('/');
+      return parts[parts.length - 1].toLowerCase();
+    };
+    const slideBonusFile = getFilename(slideBonus);
+    for (let i = 0; i < setupIcons.length; i++) {
+      if (setupIcons[i] && getFilename(setupIcons[i]) === slideBonusFile) {
+        return i % 4;
       }
     }
   }
   return 0;
+};
+
+const getBonusDisplayImage = (slideBonus: string, setupIcons: string[] | undefined): { src: string; emoji: string } => {
+  if (!slideBonus) return { src: '', emoji: '🎁' };
+  const s = slideBonus.toLowerCase().trim();
+  let idx = -1;
+  let emoji = '🎁';
+  if (s === 'dado' || s === '0') { idx = 0; emoji = '🎲'; }
+  else if (s === 'switch' || s === '1') { idx = 1; emoji = '🔄'; }
+  else if (s === 'arco' || s === '2') { idx = 2; emoji = '🏹'; }
+  else if (s === 'scudo' || s === '3') { idx = 3; emoji = '🛡️'; }
+
+  if (idx !== -1 && setupIcons?.[idx]) {
+    return { src: setupIcons[idx], emoji };
+  }
+  if (s.startsWith('data:') || s.startsWith('idb://') || s.startsWith('/') || s.startsWith('http')) {
+    return { src: slideBonus, emoji };
+  }
+  return { src: '', emoji };
 };
 
 const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ interactive = true, revealAll = false }) => {
@@ -89,16 +110,31 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     (new URLSearchParams(window.location.search).get('mode') !== 'games' && 
      new URLSearchParams(window.location.search).get('mode') !== 'scores');
 
-  // Award scores and handle bonus duplicate rules (awards 4000 extra points instead)
-  const awardPointsAndBonus = useCallback((t: number, points: number) => {
-    addScore(t, points);
-    const b = findBonusSlotIndex(phrase.bonus || '', setupState?.punteggi?.iconeBonus);
-    if (bonuses[t]?.[b]) {
-      addScore(t, 4000);
-    } else {
-      toggleBonus(t, b);
+  // Award scores and handle bonus duplicate rules (awards 4000 extra points instead if team already has that bonus)
+  const awardPointsAndBonus = useCallback((t: number) => {
+    // 1. Punti base: se la casella punti nel setup presenta una cifra li ottiene, altrimenti nulla (0)
+    const rawPunti = (phrase as any).punti;
+    const pointsToAward = (rawPunti !== undefined && rawPunti !== null && rawPunti !== '') 
+      ? (Number(rawPunti) || 0) 
+      : 0;
+
+    if (pointsToAward > 0) {
+      addScore(t, pointsToAward);
     }
-  }, [phrase.bonus, setupState?.punteggi?.iconeBonus, bonuses, addScore, toggleBonus]);
+
+    // 2. Bonus: ottiene il bonus solo se nel setup è presente l'immagine del bonus
+    const bonusImage = phrase.bonus;
+    if (bonusImage && typeof bonusImage === 'string' && bonusImage.trim() !== '') {
+      const b = findBonusSlotIndex(bonusImage, setupState?.punteggi?.iconeBonus);
+      if (bonuses[t]?.[b]) {
+        // Caso particolare: se una squadra ha già quel particolare bonus, gli verranno sommati 4000 punti nella classifica generale invece di darle il bonus
+        addScore(t, 4000);
+      } else {
+        // Altrimenti assegna il bonus
+        toggleBonus(t, b);
+      }
+    }
+  }, [phrase.punti, phrase.bonus, setupState?.punteggi?.iconeBonus, bonuses, addScore, toggleBonus]);
 
   // Local states
   const [targetTokens, setTargetTokens] = useState<string[]>([]);
@@ -284,10 +320,10 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
 
     // Award scores
     if (winningTeamIndex !== null && !scoreAwarded) {
-      awardPointsAndBonus(winningTeamIndex, phrase.punti ?? 1000);
+      awardPointsAndBonus(winningTeamIndex);
       setScoreAwarded(true);
     }
-  }, [revealed, targetTokens, winningTeamIndex, scoreAwarded, phrase.punti, awardPointsAndBonus, setStep, setTokens, setRevealed]);
+  }, [revealed, targetTokens, winningTeamIndex, scoreAwarded, awardPointsAndBonus, setStep, setTokens, setRevealed]);
 
   const handleWrongGuess = useCallback(() => {
     if (revealed) return;
@@ -299,11 +335,11 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     if (winningTeamIndex !== null && !scoreAwarded) {
       const otherTeams = [0, 1, 2].filter(idx => idx !== winningTeamIndex);
       otherTeams.forEach(t => {
-        awardPointsAndBonus(t, phrase.punti ?? 1000);
+        awardPointsAndBonus(t);
       });
       setScoreAwarded(true);
     }
-  }, [revealed, targetTokens, winningTeamIndex, scoreAwarded, phrase.punti, awardPointsAndBonus, setStep, setTokens, setRevealed]);
+  }, [revealed, targetTokens, winningTeamIndex, scoreAwarded, awardPointsAndBonus, setStep, setTokens, setRevealed]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (
@@ -777,15 +813,27 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         {/* Permanent Points & Bonus in basso a destra per tutta la durata del gioco */}
         {step >= 2 && (
           <div className="absolute bottom-6 right-10 flex items-center gap-4 z-20">
-            {phrase.bonus && (
+            {phrase.bonus && typeof phrase.bonus === 'string' && phrase.bonus.trim() !== '' && (
               <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md w-24 h-24 animate-fade-in">
                 <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-1.5">BONUS</span>
-                <img src={assetUrl(phrase.bonus)} alt="Bonus" className="w-12 h-12 object-contain animate-pulse" />
+                {(() => {
+                  const bDisplay = getBonusDisplayImage(phrase.bonus, setupState?.punteggi?.iconeBonus);
+                  return bDisplay.src ? (
+                    <img src={assetUrl(bDisplay.src)} alt="Bonus" className="w-12 h-12 object-contain animate-pulse" />
+                  ) : (
+                    <span className="text-3xl animate-pulse">{bDisplay.emoji}</span>
+                  );
+                })()}
               </div>
             )}
             <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md min-w-[100px] h-24 animate-fade-in">
               <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-1.5">PUNTI</span>
-              <span className="text-3xl font-black text-white tabular-nums">{phrase.punti ?? 1000}</span>
+              <span className="text-3xl font-black text-white tabular-nums">
+                {(() => {
+                  const rawP = (phrase as any).punti;
+                  return (rawP !== undefined && rawP !== null && rawP !== '') ? (Number(rawP) || 0) : 0;
+                })()}
+              </span>
             </div>
           </div>
         )}

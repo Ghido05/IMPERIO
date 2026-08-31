@@ -220,14 +220,14 @@ function normalizeGioco4(raw: any, def: Gioco4Setup): Gioco4Setup {
 
 function normalizePunteggi(raw: any, def: PunteggiSetup): PunteggiSetup {
   if (!raw) return def;
-  let rawIcons = Array.isArray(raw.iconeBonus)
-    ? raw.iconeBonus
-    : (raw.iconaBonus ? [raw.iconaBonus, raw.iconaBonus, raw.iconaBonus] : def.iconeBonus || []);
+  let rawIcons = Array.isArray(raw.iconeBonus) ? raw.iconeBonus : [];
   
-  const iconeBonus = [...rawIcons];
-  while (iconeBonus.length < 9) {
-    iconeBonus.push('');
-  }
+  const iconeBonus = [
+    rawIcons[0] || '',
+    rawIcons[1] || '',
+    rawIcons[2] || '',
+    rawIcons[3] || '',
+  ];
 
   return {
     sfondo: raw.sfondo || '',
@@ -280,7 +280,7 @@ export function getDefaultSetupState(): QuizSetupState {
     punteggi: {
       sfondo: '',
       nomiSquadre: ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'],
-      iconeBonus: ['', '', '', '', '', '', '', '', ''],
+      iconeBonus: ['', '', '', ''],
     },
   };
 }
@@ -2186,174 +2186,66 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               <span>🎁 Configurazione Bussolotti Bonus (Manche #{currentQ3Num})</span>
             </div>
 
-            {/* Immagini Bonus per Squadra */}
+            {/* Select bonus per Squadra */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* Immagine S1 */}
+              {/* Squadra 1 */}
               <div>
                 <label className="block text-[10px] font-semibold text-slate-400 mb-1">
                   Bonus Squadra 1 (Rosso):
                 </label>
-                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
-                  {currentQ3.bussolotti?.immagine_premio_squadra1?.startsWith('data:') || currentQ3.bussolotti?.immagine_premio_squadra1?.startsWith('idb://') ? (
-                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
-                      <span className="text-emerald-400 font-medium truncate max-w-[100px]">
-                        {formatBase64Info(currentQ3.bussolotti.immagine_premio_squadra1)?.name || 'Caricato'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => updateQ3((prev) => ({
-                          ...prev,
-                          bussolotti: { ...prev.bussolotti!, immagine_premio_squadra1: '/Icone/premio_bonus_s1.png' }
-                        }))}
-                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
-                      >
-                        Ripristina
-                      </button>
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="Immagine bonus S1..."
-                      value={currentQ3.bussolotti?.immagine_premio_squadra1 || ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        updateQ3((prev) => ({
-                          ...prev,
-                          bussolotti: { ...prev.bussolotti!, immagine_premio_squadra1: val }
-                        }));
-                      }}
-                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
-                    />
-                  )}
-                  <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                    🖼️ Sfoglia
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) =>
-                        handleFileUpload(e, (base64) =>
-                          updateQ3((prev) => ({
-                            ...prev,
-                            bussolotti: { ...prev.bussolotti!, immagine_premio_squadra1: base64 }
-                          }))
-                        )
-                      }
-                    />
-                  </label>
-                </div>
+                <select
+                  value={currentQ3.bussolotti?.immagine_premio_squadra1 || 'dado'}
+                  onChange={(e) => updateQ3((prev) => ({
+                    ...prev,
+                    bussolotti: { ...prev.bussolotti!, immagine_premio_squadra1: e.target.value }
+                  }))}
+                  className="w-full bg-[#141417] border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="dado">🎲 Dado</option>
+                  <option value="switch">🔄 Switch</option>
+                  <option value="arco">🏹 Arco</option>
+                  <option value="scudo">🛡️ Scudo</option>
+                </select>
               </div>
 
-              {/* Immagine S2 */}
+              {/* Squadra 2 */}
               <div>
                 <label className="block text-[10px] font-semibold text-slate-400 mb-1">
                   Bonus Squadra 2 (Blu):
                 </label>
-                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
-                  {currentQ3.bussolotti?.immagine_premio_squadra2?.startsWith('data:') || currentQ3.bussolotti?.immagine_premio_squadra2?.startsWith('idb://') ? (
-                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
-                      <span className="text-emerald-400 font-medium truncate max-w-[100px]">
-                        {formatBase64Info(currentQ3.bussolotti.immagine_premio_squadra2)?.name || 'Caricato'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => updateQ3((prev) => ({
-                          ...prev,
-                          bussolotti: { ...prev.bussolotti!, immagine_premio_squadra2: '/Icone/premio_bonus_s2.png' }
-                        }))}
-                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
-                      >
-                        Ripristina
-                      </button>
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="Immagine bonus S2..."
-                      value={currentQ3.bussolotti?.immagine_premio_squadra2 || ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        updateQ3((prev) => ({
-                          ...prev,
-                          bussolotti: { ...prev.bussolotti!, immagine_premio_squadra2: val }
-                        }));
-                      }}
-                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
-                    />
-                  )}
-                  <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                    🖼️ Sfoglia
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) =>
-                        handleFileUpload(e, (base64) =>
-                          updateQ3((prev) => ({
-                            ...prev,
-                            bussolotti: { ...prev.bussolotti!, immagine_premio_squadra2: base64 }
-                          }))
-                        )
-                      }
-                    />
-                  </label>
-                </div>
+                <select
+                  value={currentQ3.bussolotti?.immagine_premio_squadra2 || 'switch'}
+                  onChange={(e) => updateQ3((prev) => ({
+                    ...prev,
+                    bussolotti: { ...prev.bussolotti!, immagine_premio_squadra2: e.target.value }
+                  }))}
+                  className="w-full bg-[#141417] border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="dado">🎲 Dado</option>
+                  <option value="switch">🔄 Switch</option>
+                  <option value="arco">🏹 Arco</option>
+                  <option value="scudo">🛡️ Scudo</option>
+                </select>
               </div>
 
-              {/* Immagine S3 */}
+              {/* Squadra 3 */}
               <div>
                 <label className="block text-[10px] font-semibold text-slate-400 mb-1">
                   Bonus Squadra 3 (Verde):
                 </label>
-                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
-                  {currentQ3.bussolotti?.immagine_premio_squadra3?.startsWith('data:') || currentQ3.bussolotti?.immagine_premio_squadra3?.startsWith('idb://') ? (
-                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
-                      <span className="text-emerald-400 font-medium truncate max-w-[100px]">
-                        {formatBase64Info(currentQ3.bussolotti.immagine_premio_squadra3)?.name || 'Caricato'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => updateQ3((prev) => ({
-                          ...prev,
-                          bussolotti: { ...prev.bussolotti!, immagine_premio_squadra3: '/Icone/premio_bonus_s3.png' }
-                        }))}
-                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
-                      >
-                        Ripristina
-                      </button>
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="Immagine bonus S3..."
-                      value={currentQ3.bussolotti?.immagine_premio_squadra3 || ''}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        updateQ3((prev) => ({
-                          ...prev,
-                          bussolotti: { ...prev.bussolotti!, immagine_premio_squadra3: val }
-                        }));
-                      }}
-                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
-                    />
-                  )}
-                  <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                    🖼️ Sfoglia
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) =>
-                        handleFileUpload(e, (base64) =>
-                          updateQ3((prev) => ({
-                            ...prev,
-                            bussolotti: { ...prev.bussolotti!, immagine_premio_squadra3: base64 }
-                          }))
-                        )
-                      }
-                    />
-                  </label>
-                </div>
+                <select
+                  value={currentQ3.bussolotti?.immagine_premio_squadra3 || 'arco'}
+                  onChange={(e) => updateQ3((prev) => ({
+                    ...prev,
+                    bussolotti: { ...prev.bussolotti!, immagine_premio_squadra3: e.target.value }
+                  }))}
+                  className="w-full bg-[#141417] border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
+                >
+                  <option value="dado">🎲 Dado</option>
+                  <option value="switch">🔄 Switch</option>
+                  <option value="arco">🏹 Arco</option>
+                  <option value="scudo">🛡️ Scudo</option>
+                </select>
               </div>
             </div>
 
@@ -2710,42 +2602,18 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">Bonus Associato (immagine)</label>
-                      <div className="flex gap-2">
-                        {frase.bonus?.startsWith('data:') || frase.bonus?.startsWith('idb://') ? (
-                          <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
-                            <span className="text-emerald-400 font-medium truncate max-w-[150px]">
-                              {formatBase64Info(frase.bonus)?.name || 'Caricato'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleGioco4BonusChange(idx, '')}
-                              className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[10px] bg-transparent border-0"
-                            >
-                              Rimuovi
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <input
-                              type="text"
-                              value={frase.bonus || ''}
-                              onChange={(e) => handleGioco4BonusChange(idx, e.target.value)}
-                              placeholder="URL o percorso immagine..."
-                              className="min-w-0 flex-1 bg-black/40 border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500 transition-colors"
-                            />
-                            <label className="px-2.5 py-2 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0">
-                              🖼️ Sfoglia
-                              <input
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) => handleFileUpload(e, (base64) => handleGioco4BonusChange(idx, base64))}
-                              />
-                            </label>
-                          </>
-                        )}
-                      </div>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">Bonus Associato</label>
+                      <select
+                        value={frase.bonus || ''}
+                        onChange={(e) => handleGioco4BonusChange(idx, e.target.value)}
+                        className="w-full bg-black/40 border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 transition-colors"
+                      >
+                        <option value="">❌ Nessun Bonus</option>
+                        <option value="dado">🎲 Dado</option>
+                        <option value="switch">🔄 Switch</option>
+                        <option value="arco">🏹 Arco</option>
+                        <option value="scudo">🛡️ Scudo</option>
+                      </select>
                     </div>
                     <div>
                       <label className="block text-[10px] font-semibold text-slate-400 mb-1">Punti in palio</label>
@@ -2904,104 +2772,87 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               </div>
             </div>
 
-            {/* Icone dei Bonus */}
+            {/* Icone dei Bonus Generali */}
             <div className="bg-white/5 p-5 rounded-xl border border-white/5 space-y-4">
               <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex flex-col gap-1">
-                <span className="flex items-center gap-1.5">🎁 Icone dei Bonus per Squadra</span>
-                <span className="text-[10px] text-slate-500 font-normal normal-case">(Configura fino a 3 icone diverse per i bonus di ciascuna squadra)</span>
+                <span className="flex items-center gap-1.5">🎁 Icone dei 4 Bonus Generali</span>
+                <span className="text-[10px] text-slate-500 font-normal normal-case">(Configura le immagini per i 4 bonus: Dado 🎲, Switch 🔄, Arco 🏹, Scudo 🛡️. Saranno applicate a tutte le squadre in Classifica e nei giochi)</span>
               </div>
-              
-              <div className="space-y-6">
-                {[0, 1, 2].map((teamIdx) => {
-                  const teamName = state.punteggi?.nomiSquadre?.[teamIdx] || `SQUADRA ${teamIdx + 1}`;
-                  const teamColorLabel = teamIdx === 0 ? '(Rosso)' : teamIdx === 1 ? '(Blu)' : '(Verde)';
-                  const teamColorClass = teamIdx === 0 ? 'bg-red-500' : teamIdx === 1 ? 'bg-blue-500' : 'bg-green-500';
-                  
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {[
+                  { key: 'dado', label: '1. Dado 🎲', idx: 0 },
+                  { key: 'switch', label: '2. Switch 🔄', idx: 1 },
+                  { key: 'arco', label: '3. Arco 🏹', idx: 2 },
+                  { key: 'scudo', label: '4. Scudo 🛡️', idx: 3 },
+                ].map(({ label, idx }) => {
+                  const bonusIcon = state.punteggi?.iconeBonus?.[idx] || '';
                   return (
-                    <div key={teamIdx} className="space-y-2 border-t border-white/5 pt-4 first:border-t-0 first:pt-0">
-                      <div className="text-xs font-bold flex items-center gap-2">
-                        <span className={`w-2.5 h-2.5 rounded-full ${teamColorClass}`} />
-                        <span className="text-slate-200 uppercase tracking-wide">{teamName} {teamColorLabel}</span>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        {[0, 1, 2].map((bonusSlotIdx) => {
-                          const idx = teamIdx * 3 + bonusSlotIdx;
-                          const bonusIcon = state.punteggi?.iconeBonus?.[idx] || '';
-                          const bonusLabel = `Slot ${bonusSlotIdx + 1}`;
-                          return (
-                            <div key={bonusSlotIdx} className="bg-[#141417] p-3 rounded-lg border border-white/5 space-y-2">
-                              <div className="text-[11px] font-medium text-slate-400">{bonusLabel}</div>
-                              <div className="flex items-center gap-2">
-                                {bonusIcon.startsWith('data:') || bonusIcon.startsWith('idb://') ? (
-                                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
-                                    <span className="text-emerald-400 font-medium truncate max-w-[120px]">
-                                      {(() => {
-                                        const info = formatBase64Info(bonusIcon);
-                                        return info ? info.name : 'File caricato';
-                                      })()}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => setState((prev) => {
-                                        const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: Array(9).fill('') };
-                                        const updatedIcons = [...(current.iconeBonus || Array(9).fill(''))];
-                                        updatedIcons[idx] = '';
-                                        return {
-                                          ...prev,
-                                          punteggi: { ...current, iconeBonus: updatedIcons }
-                                        };
-                                      })}
-                                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-1 text-[10px] bg-transparent border-0"
-                                    >
-                                      Rimuovi
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <input
-                                    type="text"
-                                    placeholder="URL icona..."
-                                    value={bonusIcon}
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      setState((prev) => {
-                                        const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: Array(9).fill('') };
-                                        const updatedIcons = [...(current.iconeBonus || Array(9).fill(''))];
-                                        updatedIcons[idx] = val;
-                                        return {
-                                          ...prev,
-                                          punteggi: { ...current, iconeBonus: updatedIcons }
-                                        };
-                                      });
-                                    }}
-                                    className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500"
-                                  />
-                                )}
-                                <label className="px-2.5 py-1.5 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                                  🖼️
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={(e) =>
-                                      handleFileUpload(e, (base64) =>
-                                        setState((prev) => {
-                                          const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: Array(9).fill('') };
-                                          const updatedIcons = [...(current.iconeBonus || Array(9).fill(''))];
-                                          updatedIcons[idx] = base64;
-                                          return {
-                                            ...prev,
-                                            punteggi: { ...current, iconeBonus: updatedIcons }
-                                          };
-                                        })
-                                      )
-                                    }
-                                  />
-                                </label>
-                              </div>
-                            </div>
-                          );
-                        })}
+                    <div key={idx} className="bg-[#141417] p-3 rounded-lg border border-white/5 space-y-2">
+                      <div className="text-[11px] font-bold text-slate-300">{label}</div>
+                      <div className="flex items-center gap-2">
+                        {bonusIcon.startsWith('data:') || bonusIcon.startsWith('idb://') ? (
+                          <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                            <span className="text-emerald-400 font-medium truncate max-w-[100px]">
+                              {formatBase64Info(bonusIcon)?.name || 'Caricato'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setState((prev) => {
+                                const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: ['', '', '', ''] };
+                                const updatedIcons = [...(current.iconeBonus || ['', '', '', ''])];
+                                updatedIcons[idx] = '';
+                                return {
+                                  ...prev,
+                                  punteggi: { ...current, iconeBonus: updatedIcons }
+                                };
+                              })}
+                              className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-1 text-[10px] bg-transparent border-0"
+                            >
+                              Rimuovi
+                            </button>
+                          </div>
+                        ) : (
+                          <input
+                            type="text"
+                            placeholder="URL icona..."
+                            value={bonusIcon}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setState((prev) => {
+                                const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: ['', '', '', ''] };
+                                const updatedIcons = [...(current.iconeBonus || ['', '', '', ''])];
+                                updatedIcons[idx] = val;
+                                return {
+                                  ...prev,
+                                  punteggi: { ...current, iconeBonus: updatedIcons }
+                                };
+                              });
+                            }}
+                            className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500"
+                          />
+                        )}
+                        <label className="px-2.5 py-1.5 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                          🖼️
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) =>
+                              handleFileUpload(e, (base64) =>
+                                setState((prev) => {
+                                  const current = prev.punteggi || { nomiSquadre: ['', '', ''], iconeBonus: ['', '', '', ''] };
+                                  const updatedIcons = [...(current.iconeBonus || ['', '', '', ''])];
+                                  updatedIcons[idx] = base64;
+                                  return {
+                                    ...prev,
+                                    punteggi: { ...current, iconeBonus: updatedIcons }
+                                  };
+                                })
+                              )
+                            }
+                          />
+                        </label>
                       </div>
                     </div>
                   );

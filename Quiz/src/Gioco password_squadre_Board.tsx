@@ -4,16 +4,10 @@ import { useScores } from './context/ScoreContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 
-type WordType = 'team1' | 'team2' | 'team3' | 'bomb' | 'neutral';
+import { getInitialPasswordGrid, type WordItem, type WordType } from './lib/passwordUtils';
+
 type RankType = 1 | 2 | 3;
 type BussolottiStatus = 'pending' | 'active' | 'done';
-
-interface WordItem {
-  word: string;
-  type: WordType;
-  guessed: boolean;
-  guessedBy?: number;
-}
 
 export interface BussolottiConfig {
   immagine_premio: string;
@@ -42,8 +36,21 @@ export const BussolottiOverlay: React.FC<{
   const [selectedIndex, setSelectedIndex] = useSyncedState<number | null>(`password_bussolotti_${rank}_selected_idx`, null);
   const [showAll, setShowAll] = useSyncedState<boolean>(`password_bussolotti_${rank}_show_all`, false);
   const [awarded, setAwarded] = useSyncedState<boolean>(`password_bussolotti_${rank}_awarded`, false);
+  const [teamNames, setTeamNames] = useState<string[]>(['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']);
 
   const { awardBonusAndPoints } = useScores();
+
+  useEffect(() => {
+    const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.punteggi?.nomiSquadre) {
+          setTeamNames(parsed.punteggi.nomiSquadre);
+        }
+      } catch {}
+    }
+  }, []);
 
   const getBonusSlotIdxForTeam = () => {
     let key = '';
@@ -117,12 +124,12 @@ export const BussolottiOverlay: React.FC<{
     if (selectedIndex !== null && rank !== 1 && !showAll) {
       const t = setTimeout(() => {
         setShowAll(true);
-      }, 3000);
+      }, 1500);
       return () => clearTimeout(t);
     }
   }, [selectedIndex, rank, showAll]);
 
-  const teamName = `SQUADRA ${teamNum}`;
+  const teamName = teamNames[teamNum - 1] || `SQUADRA ${teamNum}`;
   const teamColor = teamNum === 1 ? 'text-red-500' : teamNum === 2 ? 'text-blue-500' : 'text-green-500';
 
   return (
@@ -140,10 +147,12 @@ export const BussolottiOverlay: React.FC<{
           const isWinningChoice = isSelected && card.type !== 'vuoto';
           
           const borderClass = isWinningChoice
-            ? 'border-green-400 shadow-[0_0_50px_rgba(74,222,128,0.8)] bg-green-900/20' 
-            : card.type !== 'vuoto' && showAll
-              ? 'border-green-400/50 shadow-[0_0_30px_rgba(74,222,128,0.3)] bg-green-900/10'
-              : 'border-white/40 shadow-[0_0_50px_rgba(255,255,255,0.1)]';
+            ? 'border-green-400 shadow-[0_0_50px_rgba(74,222,128,0.8)] bg-green-900/30 ring-4 ring-green-400/50' 
+            : isSelected
+              ? 'border-red-400 shadow-[0_0_40px_rgba(248,113,113,0.6)] bg-red-950/40'
+              : card.type !== 'vuoto' && showAll
+                ? 'border-yellow-400/80 shadow-[0_0_35px_rgba(250,204,21,0.5)] bg-yellow-950/30'
+                : 'border-white/30 shadow-[0_0_30px_rgba(255,255,255,0.1)] bg-gray-800/80';
 
           return (
             <div 
@@ -162,19 +171,16 @@ export const BussolottiOverlay: React.FC<{
                 </div>
 
                 {/* PARTE POSTERIORE */}
-                <div className={`absolute inset-0 [backface-visibility:hidden] [webkit-backface-visibility:hidden] [transform:rotateY(180deg)] bg-gray-800 border-4 rounded-2xl flex items-center justify-center overflow-hidden transition-all duration-500
-                  ${borderClass}
-                  ${!isSelected && showAll ? 'opacity-40 grayscale' : ''}
-                `}>
+                <div className={`absolute inset-0 [backface-visibility:hidden] [webkit-backface-visibility:hidden] [transform:rotateY(180deg)] rounded-2xl flex items-center justify-center overflow-hidden transition-all duration-500 border-4 ${borderClass}`}>
                   {card.type === 'bonus' || card.type === 'bonus_4000' ? (
                     <div className="w-full h-full flex flex-col items-center justify-center p-4 bg-green-500/10 relative">
                        <span className="text-7xl animate-pulse">{getBonusEmojiForTeam()}</span>
                        {card.type === 'bonus_4000' ? (
-                         <div className="absolute bottom-2 bg-yellow-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)] whitespace-nowrap">
+                         <div className="absolute bottom-2 bg-yellow-500 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-[0_0_15px_rgba(234,179,8,0.5)] whitespace-nowrap uppercase tracking-wider">
                            +4000 PUNTI & BONUS
                          </div>
                        ) : (
-                         <div className="absolute bottom-2 bg-emerald-400 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-[0_0_15px_rgba(52,211,153,0.5)] whitespace-nowrap">
+                         <div className="absolute bottom-2 bg-emerald-400 text-slate-950 font-black text-[9px] px-2 py-0.5 rounded-full shadow-[0_0_15px_rgba(52,211,153,0.5)] whitespace-nowrap uppercase tracking-wider">
                            BONUS OTTENUTO
                          </div>
                        )}
@@ -188,7 +194,7 @@ export const BussolottiOverlay: React.FC<{
                       <span className="text-xs text-slate-350 font-bold uppercase tracking-wider mt-1">Punti</span>
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center opacity-30">
+                    <div className="flex flex-col items-center opacity-40">
                       <svg className="w-20 h-20 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l18 18" />
                       </svg>
@@ -202,10 +208,10 @@ export const BussolottiOverlay: React.FC<{
         })}
       </div>
 
-      {selectedIndex !== null && (
+      {(selectedIndex !== null && (showAll || rank === 1)) && (
         <button
           onClick={onComplete}
-          className="mt-20 px-10 py-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full text-white font-bold tracking-widest transition-all uppercase animate-bounce shadow-[0_0_30px_rgba(255,255,255,0.1)]"
+          className="mt-20 px-10 py-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-full text-white font-bold tracking-widest transition-all uppercase animate-bounce shadow-[0_0_30px_rgba(255,255,255,0.1)] cursor-pointer"
         >
           Continua
         </button>
@@ -347,47 +353,23 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
   useEffect(() => {
     const handleStorage = () => {
       const manche = localStorage.getItem('password_current_manche');
+      const mancheIdx = (manche && manche !== "null") ? parseInt(manche, 10) : 0;
+      setCurrentManche(mancheIdx);
+
       const team = localStorage.getItem('password_current_team');
+      if (team && team !== "null") setCurrentTeam(parseInt(team, 10));
+
       const sugg = localStorage.getItem('password_chosen_suggestion') || "";
-      const gridState = localStorage.getItem('password_grid_state');
-      const excluded = localStorage.getItem('password_excluded_teams');
-      const winners = localStorage.getItem('password_winners_order');
+      setChosenSuggestion(sugg);
 
-      const isMancheFalsy = !manche || manche === "null" || manche === "undefined";
-      const isGridFalsy = !gridState || gridState === "null" || gridState === "undefined";
-
-      // Se non c'è stato salvato, resetta tutto
-      if (isMancheFalsy && isGridFalsy) {
-        setCurrentManche(0);
-        setCurrentTeam(1);
-        setChosenSuggestion("");
-        setExcludedTeams([]);
-        setWinnersOrder([]);
-        setBussolottiStatus({ 1: 'pending', 2: 'pending', 3: 'pending' });
-        setActiveBussolottiRank(null);
-        
-        const m0 = manches[0] || gameData;
-        if (m0) {
-          const allWords: WordItem[] = [
-            ...m0.squadra1.map((w: string) => ({ word: w.toUpperCase(), type: 'team1' as WordType, guessed: false })),
-            ...m0.squadra2.map((w: string) => ({ word: w.toUpperCase(), type: 'team2' as WordType, guessed: false })),
-            ...m0.squadra3.map((w: string) => ({ word: w.toUpperCase(), type: 'team3' as WordType, guessed: false })),
-            ...m0.altre.map((w: string, i: number) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType, guessed: false }))
-          ];
-          const shuffled = [...allWords].sort(() => Math.random() - 0.5);
-          setGrid(shuffled);
-        }
-        return;
-      }
-
-      if (manche && manche !== "null") setCurrentManche(parseInt(manche));
-      if (team && team !== "null") setCurrentTeam(parseInt(team));
-      if (sugg && sugg !== "null") setChosenSuggestion(sugg);
+      const gridState = localStorage.getItem(`password_grid_state_m${mancheIdx}`) || localStorage.getItem('password_grid_state');
       if (gridState && gridState !== "null") {
         try {
           setGrid(JSON.parse(gridState));
         } catch {}
       }
+
+      const excluded = localStorage.getItem(`password_excluded_teams_m${mancheIdx}`) || localStorage.getItem('password_excluded_teams');
       if (excluded && excluded !== "null") {
         try {
           setExcludedTeams(JSON.parse(excluded));
@@ -395,6 +377,8 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
       } else {
         setExcludedTeams([]);
       }
+
+      const winners = localStorage.getItem(`password_winners_order_m${mancheIdx}`) || localStorage.getItem('password_winners_order');
       if (winners && winners !== "null") {
         try {
           setWinnersOrder(JSON.parse(winners));
@@ -403,7 +387,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
         setWinnersOrder([]);
       }
       
-      const bStatus = localStorage.getItem('password_bussolotti_status');
+      const bStatus = localStorage.getItem(`password_bussolotti_status_m${mancheIdx}`) || localStorage.getItem('password_bussolotti_status');
       if (bStatus && bStatus !== "null") {
         try {
           setBussolottiStatus(JSON.parse(bStatus));
@@ -411,7 +395,8 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
       } else {
         setBussolottiStatus({ 1: 'pending', 2: 'pending', 3: 'pending' });
       }
-      const bActive = localStorage.getItem('password_active_bussolotti');
+
+      const bActive = localStorage.getItem(`password_active_bussolotti_m${mancheIdx}`) || localStorage.getItem('password_active_bussolotti');
       if (bActive !== null && bActive !== "null") {
         try {
           setActiveBussolottiRank(JSON.parse(bActive));
@@ -422,59 +407,65 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
     };
 
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    window.addEventListener('local-storage-update', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('local-storage-update', handleStorage);
+    };
   }, []);
 
   useEffect(() => {
     // Gestione Bussolotti per Manche
     const storedBussolottiManche = localStorage.getItem('password_bussolotti_manche');
     if (storedBussolottiManche !== currentManche.toString()) {
-      const initialBussolotti = { 1: 'pending' as BussolottiStatus, 2: 'pending' as BussolottiStatus, 3: 'pending' as BussolottiStatus };
+      const savedBStatus = localStorage.getItem(`password_bussolotti_status_m${currentManche}`);
+      const initialBussolotti = savedBStatus ? JSON.parse(savedBStatus) : { 1: 'pending' as BussolottiStatus, 2: 'pending' as BussolottiStatus, 3: 'pending' as BussolottiStatus };
       setBussolottiStatus(initialBussolotti);
       setActiveBussolottiRank(null);
+      localStorage.setItem(`password_bussolotti_status_m${currentManche}`, JSON.stringify(initialBussolotti));
       localStorage.setItem('password_bussolotti_status', JSON.stringify(initialBussolotti));
       localStorage.setItem('password_active_bussolotti', JSON.stringify(null));
       localStorage.setItem('password_bussolotti_manche', currentManche.toString());
     }
 
-    // Inizializzazione Griglia Parole
-    const allWords: WordItem[] = [
-      ...gameData.squadra1.map((w: string) => ({ word: w.toUpperCase(), type: 'team1' as WordType, guessed: false })),
-      ...gameData.squadra2.map((w: string) => ({ word: w.toUpperCase(), type: 'team2' as WordType, guessed: false })),
-      ...gameData.squadra3.map((w: string) => ({ word: w.toUpperCase(), type: 'team3' as WordType, guessed: false })),
-      ...gameData.altre.map((w: string, i: number) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType, guessed: false }))
-    ];
-    const storedGrid = localStorage.getItem('password_grid_state');
-    if (storedGrid) {
+    // Inizializzazione Griglia Parole deterministica per questa manche
+    const storedMancheGrid = localStorage.getItem(`password_grid_state_m${currentManche}`);
+    if (storedMancheGrid && storedMancheGrid !== "null") {
       try {
-        setGrid(JSON.parse(storedGrid));
+        const parsed = JSON.parse(storedMancheGrid);
+        setGrid(parsed);
+        localStorage.setItem('password_grid_state', storedMancheGrid);
       } catch {
-        const shuffled = [...allWords].sort(() => Math.random() - 0.5);
-        setGrid(shuffled);
-        localStorage.setItem('password_grid_state', JSON.stringify(shuffled));
+        const initial = getInitialPasswordGrid(gameData, currentManche);
+        setGrid(initial);
+        localStorage.setItem(`password_grid_state_m${currentManche}`, JSON.stringify(initial));
+        localStorage.setItem('password_grid_state', JSON.stringify(initial));
       }
     } else {
-      const shuffled = [...allWords].sort(() => Math.random() - 0.5);
-      setGrid(shuffled);
-      localStorage.setItem('password_grid_state', JSON.stringify(shuffled));
+      const initial = getInitialPasswordGrid(gameData, currentManche);
+      setGrid(initial);
+      localStorage.setItem(`password_grid_state_m${currentManche}`, JSON.stringify(initial));
+      localStorage.setItem('password_grid_state', JSON.stringify(initial));
     }
   }, [currentManche, gameData]);
 
   const handleWordClick = (index: number) => {
-    if (gameOver || grid[index].guessed || excludedTeams.includes(currentTeam)) return;
+    if (gameOver || grid[index]?.guessed || excludedTeams.includes(currentTeam)) return;
 
     const newGrid = [...grid];
-    const clickedWord = newGrid[index];
+    const clickedWord = { ...newGrid[index] };
     clickedWord.guessed = true;
     clickedWord.guessedBy = currentTeam;
+    newGrid[index] = clickedWord;
     setGrid(newGrid);
 
     let newExcluded = [...excludedTeams];
     if (clickedWord.type === 'bomb') {
       newExcluded.push(currentTeam);
       setExcludedTeams(newExcluded);
+      localStorage.setItem(`password_excluded_teams_m${currentManche}`, JSON.stringify(newExcluded));
       localStorage.setItem('password_excluded_teams', JSON.stringify(newExcluded));
-      alert(`SQUADRA ${currentTeam} HA COLPITO LA BOMBA ED È ESCLUSA! (3° POSTO)`);
+      alert(`${boardTeamNames[currentTeam - 1] || `SQUADRA ${currentTeam}`} HA COLPITO LA BOMBA ED È ESCLUSA! (3° POSTO)`);
     }
 
     // Controlla vincitori
@@ -493,11 +484,16 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
 
     if (winnersChanged) {
       setWinnersOrder(newWinners);
+      localStorage.setItem(`password_winners_order_m${currentManche}`, JSON.stringify(newWinners));
       localStorage.setItem('password_winners_order', JSON.stringify(newWinners));
     }
 
+    localStorage.setItem(`password_grid_state_m${currentManche}`, JSON.stringify(newGrid));
     localStorage.setItem('password_grid_state', JSON.stringify(newGrid));
     window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new CustomEvent('local-storage-update', {
+      detail: { key: 'password_grid_state', value: JSON.stringify(newGrid) }
+    }));
   };
 
   const getTeamWords = (teamType: WordType) => {
@@ -608,6 +604,20 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
     return null;
   };
 
+  const [boardTeamNames, setBoardTeamNames] = useState<string[]>(['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.punteggi?.nomiSquadre) {
+          setBoardTeamNames(parsed.punteggi.nomiSquadre);
+        }
+      } catch {}
+    }
+  }, []);
+
   return (
     <div className="relative w-full min-h-screen bg-neutral-900 text-white flex flex-col items-center p-8 font-sans select-none overflow-hidden">
       {/* Sfondo base scuro */}
@@ -650,6 +660,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
             const isActive = currentTeam === t;
             const isExcluded = excludedTeams.includes(t);
             const medal = getMedal(t);
+            const currentTeamName = boardTeamNames[t - 1] || `SQUADRA ${t}`;
             
             let borderColor = 'border-gray-700';
             if (rank === 1) {
@@ -668,7 +679,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
                 ${isActive && !hasFinished ? 'scale-105 shadow-[0_0_15px_rgba(255,255,255,0.1)]' : 'bg-gray-800/50'}
                 ${isExcluded ? 'opacity-50 grayscale border-gray-800' : ''}`}>
                 <h2 className={`text-2xl font-bold mb-4 ${t === 1 ? 'text-red-500' : t === 2 ? 'text-blue-500' : 'text-green-500'}`}>
-                  SQUADRA {t} {isExcluded && "(BOMBA)"} {medal}
+                  {currentTeamName} {isExcluded && "(BOMBA)"} {medal}
                 </h2>
                 <div className="flex flex-col gap-2 w-full">
                   {getTeamWords(`team${t}` as WordType).map((w, i) => (

@@ -385,16 +385,14 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       }
     }
 
-    // Scoring controls (Step 5, 6, 7)
-    if (auctionLocked && winningTeamIndex !== null) {
-      // S or Enter for correct guess
-      if (e.key.toUpperCase() === 'S' || e.key === 'Enter') {
+    // Scoring controls (Enter for victory, \ for error)
+    if (auctionLocked && winningTeamIndex !== null && !revealed) {
+      if (e.key === 'Enter') {
         handleCorrectGuess();
         return;
       }
 
-      // X or E for wrong guess
-      if (e.key.toUpperCase() === 'X' || e.key.toUpperCase() === 'E') {
+      if (e.key === '\\' || e.key === '|') {
         handleWrongGuess();
         return;
       }
@@ -614,7 +612,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
                 onClick={handleCorrectGuess}
                 className="px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/35 hover:text-white transition-all shadow-lg hover:shadow-emerald-900/30 cursor-pointer"
               >
-                Scopri soluzione (Vittoria)
+                Scopri soluzione (Vittoria) [Invio]
               </button>
               {winningTeamIndex !== null && (
                 <button
@@ -622,7 +620,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
                   onClick={handleWrongGuess}
                   className="px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider bg-red-600/20 border border-red-500/40 text-red-300 hover:bg-red-600/35 hover:text-white transition-all shadow-lg hover:shadow-red-900/30 cursor-pointer"
                 >
-                  Errore (X)
+                  Errore ( \ )
                 </button>
               )}
             </div>

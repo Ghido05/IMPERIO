@@ -88,7 +88,6 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
   const [pointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
   const [, setLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
   const [showError, setShowError] = useState(false);
-  const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
   const [showTitle, setShowTitle] = useSyncedState(`playstate_${slideId}_showtitle`, false);
   const [showSolution, setShowSolution] = useSyncedState(`playstate_${slideId}_showsolution`, false);
   
@@ -110,7 +109,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
       }
     });
 
-    // Canzone finale (suona quando si preme T)
+    // Canzone finale
     if ((gameData as any).canzoneFinale) {
       finalAudioRef.current = new Audio(assetUrl((gameData as any).canzoneFinale));
     }
@@ -127,8 +126,9 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     };
   }, []);
 
-  // Smuta gli stems in base ai clue rivelati
+  // Smuta gli stems in base ai clue rivelati (solo se la soluzione non è attiva)
   useEffect(() => {
+    if (showSolution) return;
     Object.keys(revealed).forEach(key => {
       const clue = Number(key);
       if (revealed[clue] && audiosRef.current[clue]) {
@@ -137,7 +137,24 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
         }
       }
     });
-  }, [revealed]);
+  }, [revealed, showSolution]);
+
+  // Quando viene mostrata la soluzione, ferma tutti gli stems e riproduce solo la canzone finale
+  useEffect(() => {
+    if (showSolution && interactive) {
+      Object.values(audiosRef.current).forEach(a => {
+        a.pause();
+        a.currentTime = 0;
+      });
+      isPlayingStemsRef.current = false;
+
+      if (finalAudioRef.current && finalAudioRef.current.paused) {
+        finalAudioRef.current.currentTime = 0;
+        finalAudioRef.current.volume = 1;
+        finalAudioRef.current.play().catch(err => console.log("Errore riproduzione canzone finale:", err));
+      }
+    }
+  }, [showSolution, interactive]);
 
   const getPhraseStyle = (clue: number, isRevealed: boolean) => {
     if (!isRevealed) return "bg-white/5 border border-white/10";
@@ -156,6 +173,29 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     return "bg-[#f7f700] text-[#1b1b1b]"; // clue 7
   };
 
+  const getInstrumentIcon = (audioPath?: string, text?: string, frase?: string): string => {
+    const combined = `${audioPath || ''} ${text || ''} ${frase || ''}`.toLowerCase();
+    if (combined.includes('batteria') || combined.includes('drum')) {
+      return 'Icone/nessuno_musicale/Batteria.svg';
+    }
+    if (combined.includes('chitarra elettrica') || combined.includes('elettr')) {
+      return 'Icone/nessuno_musicale/Chitarra elettrica.svg';
+    }
+    if (combined.includes('chitarra') || combined.includes('guitar') || combined.includes('acustic')) {
+      return 'Icone/nessuno_musicale/Chitarra.svg';
+    }
+    if (combined.includes('basso') || combined.includes('bass')) {
+      return 'Icone/nessuno_musicale/Chitarra.svg';
+    }
+    if (combined.includes('flauto') || combined.includes('fluato') || combined.includes('flute')) {
+      return 'Icone/nessuno_musicale/Flauto.svg';
+    }
+    if (combined.includes('violino') || combined.includes('violin') || combined.includes('archi') || combined.includes('viola')) {
+      return 'Icone/nessuno_musicale/Violino.svg';
+    }
+    return 'Icone/nessuno_musicale/Icona di base.svg';
+  };
+
   // Gestione dell'animazione di errore
   useEffect(() => {
     if (showError) {
@@ -164,69 +204,15 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     }
   }, [showError]);
 
-  // Avanzamento automatico verso la soluzione
-  useEffect(() => {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    if (isAutoAdvancing) {
-      // Trova il primo indizio non ancora svelato (da 1 a 7)
-      const nextClue = Array.from({ length: 7 }, (_, i) => i + 1).find(i => !revealed[i]);
-      if (nextClue) {
-        timer = setTimeout(() => {
-          // Assicuriamoci che tutti gli stems stiano andando avanti (in background se non svelati)
-          if (!isPlayingStemsRef.current) {
-            isPlayingStemsRef.current = true;
-            Object.values(audiosRef.current).forEach(a => {
-              const p = a.play();
-              if (p !== undefined) p.catch(err => console.log("Errore riproduzione stem:", err));
-            });
-          }
-          setRevealed(prev => ({ ...prev, [nextClue]: true }));
-          setLatestClue(nextClue);
-        }, 1500); // Leggero ritardo tra un indizio e l'altro
-      } else {
-        setIsAutoAdvancing(false); // Tutti svelati, ferma l'avanzamento
-        
-        // Quando tutti sono svelati in automatico, si avvia la soluzione e il crossfade
-        if (!showSolution) {
-          setShowSolution(true);
-          
-          if (finalAudioRef.current && !isFadingOutRef.current) {
-            isFadingOutRef.current = true;
-            
-            finalAudioRef.current.currentTime = 0;
-            finalAudioRef.current.volume = 0;
-            finalAudioRef.current.play().catch(err => console.log("Errore riproduzione canzone finale:", err));
-            
-            let fadeStep = 0;
-            const fadeInterval = setInterval(() => {
-              fadeStep += 1;
-              const finalVol = Math.min(1, fadeStep * 0.05); // Fade in: 20 steps da 0 a 1 in 2 secondi
-              const stemVol = Math.max(0, 1 - fadeStep * 0.05); // Fade out
-              
-              if (finalAudioRef.current) finalAudioRef.current.volume = finalVol;
-              
-              Object.values(audiosRef.current).forEach(a => {
-                if (a && !a.paused) a.volume = stemVol;
-              });
-              
-              if (fadeStep >= 20) {
-                clearInterval(fadeInterval);
-                // Fermiamo completamente gli stems
-                Object.values(audiosRef.current).forEach(a => a.pause());
-              }
-            }, 150); // 3 secondi di crossfade
-          }
-        }
-      }
-    }
-    return () => clearTimeout(timer);
-  }, [revealed, isAutoAdvancing]);
-
-  // Input da tastiera (1-7)
+  // Input da tastiera (1-7, S / Invio, M, T, E, X)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Se stiamo auto-avanzando blocchiamo i numeri, ma permettiamo le altre funzioni
-      if (isAutoAdvancing && e.key >= '1' && e.key <= '7') return;
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
+        return;
+      }
 
       const getBox2StarterIdx = (): number => {
         const saved = localStorage.getItem('playstate_box2_starter_idx');
@@ -279,50 +265,28 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
           setLatestClue(numKey);
         }
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
-        const allRevealed = Array.from({ length: 7 }, (_, i) => i + 1).every(i => revealed[i]);
-        
-        // Se non tutto è svelato, avvia auto-svelamento (che alla fine mostrerà la soluzione)
-        if (!allRevealed) {
-          if (!isAutoAdvancing) {
-            const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
-            const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
-            addScore(targetTeamIdx, 5000);
-            setIsAutoAdvancing(true);
-          }
-        } else {
-          // Se tutto è GIA' svelato (manualmente), premendo S mostra la soluzione e fa il crossfade
-          if (!showSolution) {
-            const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
-            const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
-            addScore(targetTeamIdx, 5000);
-            setShowSolution(true);
-            
-            if (finalAudioRef.current && !isFadingOutRef.current) {
-              isFadingOutRef.current = true;
-              
-              finalAudioRef.current.currentTime = 0;
-              finalAudioRef.current.volume = 0;
-              finalAudioRef.current.play().catch(err => console.log("Errore riproduzione canzone finale:", err));
-              
-              let fadeStep = 0;
-              const fadeInterval = setInterval(() => {
-                fadeStep += 1;
-                const finalVol = Math.min(1, fadeStep * 0.05); // Fade in: 20 steps da 0 a 1 in 2 secondi
-                const stemVol = Math.max(0, 1 - fadeStep * 0.05); // Fade out
-                
-                if (finalAudioRef.current) finalAudioRef.current.volume = finalVol;
-                
-                Object.values(audiosRef.current).forEach(a => {
-                  if (a && !a.paused) a.volume = stemVol;
-                });
-                
-                if (fadeStep >= 20) {
-                  clearInterval(fadeInterval);
-                  Object.values(audiosRef.current).forEach(a => a.pause());
-                }
-              }, 150); // 3 secondi di crossfade
-            }
-          }
+        // Tasto Soluzione: Ferma e resetta tutti gli stems immediatamente
+        Object.values(audiosRef.current).forEach(a => {
+          a.pause();
+          a.currentTime = 0;
+        });
+        isPlayingStemsRef.current = false;
+
+        // Svela tutte le 7 risposte della lista
+        const allRevealedObj: Record<number, boolean> = {};
+        for (let i = 1; i <= 7; i++) {
+          allRevealedObj[i] = true;
+        }
+        setRevealed(allRevealedObj);
+
+        // Mostra la soluzione
+        setShowSolution(true);
+
+        // Fai partire solo l'audio della soluzione
+        if (finalAudioRef.current && interactive) {
+          finalAudioRef.current.currentTime = 0;
+          finalAudioRef.current.volume = 1;
+          finalAudioRef.current.play().catch(err => console.log("Errore riproduzione canzone finale:", err));
         }
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
         setShowError(true);
@@ -330,14 +294,16 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
         setShowTitle(true);
       } else if (key.toLowerCase() === 'm') {
         // Riavvia tutti gli stems dall'inizio (e anche la canzone finale se sta suonando)
-        Object.values(audiosRef.current).forEach(a => {
-          a.currentTime = 0;
-          if (a.paused) {
-             const p = a.play();
-             if (p !== undefined) p.catch(err => console.log("Errore play stem:", err));
-          }
-        });
-        isPlayingStemsRef.current = true;
+        if (!showSolution) {
+          Object.values(audiosRef.current).forEach(a => {
+            a.currentTime = 0;
+            if (a.paused) {
+              const p = a.play();
+              if (p !== undefined) p.catch(err => console.log("Errore play stem:", err));
+            }
+          });
+          isPlayingStemsRef.current = true;
+        }
         
         if (finalAudioRef.current && !finalAudioRef.current.paused) {
           finalAudioRef.current.currentTime = 0;
@@ -348,7 +314,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAutoAdvancing, interactive, scores, revealed, questionNum, addScore, showSolution]);
+  }, [interactive, scores, revealed, questionNum, addScore, showSolution]);
 
   const rankingMarkers = [
     { value: 7, top: "34.070%" }, // Giallo (1 indizio)
@@ -403,15 +369,25 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
           <div className="w-full h-full flex flex-col justify-around gap-2">
             {[...gameData.elementi].reverse().map((el: any) => {
               const isRevealed = revealAll || !!revealed[el.posizione];
+              const iconPath = getInstrumentIcon(el.audio, el.testo, el.frase);
               return (
                 <div 
                   key={el.posizione}
-                  className={`flex-1 flex items-center justify-center rounded-xl transition-all duration-700 ${getPhraseStyle(el.posizione, isRevealed)}`}
+                  className={`flex-1 flex items-center justify-between px-4 rounded-xl transition-all duration-700 ${getPhraseStyle(el.posizione, isRevealed)}`}
                   style={{ boxShadow: isRevealed ? "inset 0 0 20px rgba(255,255,255,0.2)" : "none" }}
                 >
-                  <span className={`font-black tracking-tight text-[clamp(14px,1.5vw,28px)] text-center px-4 transition-all duration-700 ${isRevealed ? 'opacity-100 scale-100' : 'opacity-0 scale-90 text-transparent'}`}>
-                    {(el as any).frase}
+                  <span className={`font-black tracking-tight text-[clamp(14px,1.5vw,28px)] text-left flex-1 transition-all duration-700 ${isRevealed ? 'opacity-100 scale-100' : 'opacity-0 scale-90 text-transparent'}`}>
+                    {(el as any).frase || el.testo}
                   </span>
+                  {isRevealed && (
+                    <div className="w-10 h-10 flex items-center justify-center shrink-0 ml-3 bg-black/20 rounded-lg p-1.5 shadow-sm animate-zoom-in">
+                      <img
+                        src={assetUrl(iconPath)}
+                        alt="Strumento"
+                        className="w-full h-full object-contain filter drop-shadow"
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -465,47 +441,61 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
         {/* ========================================================== */}
         {/* TESTI INDIZI E MARKER NUMERICI                             */}
         {/* ========================================================== */}
-        {rankingMarkers.map((marker) => (
-          <React.Fragment key={marker.value}>
-            {/* Testo dell'indizio (Allineato esattamente al marker) */}
-            <div
-              className="absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[2%]"
-              style={{
-                top: marker.top,
-                height: "4.352%"
-              }}
-            >
-              <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${marker.value <= 4 ? 'text-white' : 'text-[#1b1b1b]'}`}>
-                {(revealed[marker.value] || revealAll) ? gameData.elementi[marker.value - 1]?.testo : ""}
-              </p>
-            </div>
+        {rankingMarkers.map((marker) => {
+          const el = gameData.elementi[marker.value - 1];
+          const isRevealed = (revealed[marker.value] || revealAll);
+          const iconPath = el ? getInstrumentIcon(el.audio, el.testo, el.frase) : '';
+          return (
+            <React.Fragment key={marker.value}>
+              {/* Testo dell'indizio + Icona Strumento (Allineato esattamente al marker) */}
+              <div
+                className="absolute left-[53.073%] w-[33.229%] flex items-center justify-between px-[2%]"
+                style={{
+                  top: marker.top,
+                  height: "4.352%"
+                }}
+              >
+                <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${marker.value <= 4 ? 'text-white' : 'text-[#1b1b1b]'}`}>
+                  {isRevealed ? el?.testo : ""}
+                </p>
+                {isRevealed && iconPath && (
+                  <div className="w-8 h-8 flex items-center justify-center shrink-0 ml-2 animate-zoom-in">
+                    <img
+                      src={assetUrl(iconPath)}
+                      alt="Icona Strumento"
+                      className="w-full h-full object-contain filter drop-shadow opacity-90"
+                    />
+                  </div>
+                )}
+              </div>
 
-            {/* Marker numerico a destra */}
-            <div
-              className="absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group"
-              style={{
-                top: marker.top,
-                borderWidth: "clamp(2px, 0.2083vw, 4px)",
-                borderRadius: "clamp(6px, 0.5208vw, 10px)"
-              }}
-            >
-              <span className="text-white font-black text-[clamp(12px,1.56vw,30px)] leading-none">
-                {marker.value}
-              </span>
+              {/* Marker numerico a destra */}
+              <div
+                className="absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group"
+                style={{
+                  top: marker.top,
+                  borderWidth: "clamp(2px, 0.2083vw, 4px)",
+                  borderRadius: "clamp(6px, 0.5208vw, 10px)"
+                }}
+              >
+                <span className="text-white font-black text-[clamp(12px,1.56vw,30px)] leading-none">
+                  {marker.value}
+                </span>
 
-              {/* Mostra il pallino colorato della squadra che ha indovinato */}
-              {pointsAssigned[marker.value] !== undefined && pointsAssigned[marker.value] !== 0 && (
-                <div 
-                  className={`absolute left-full ml-2 w-[clamp(20px,2vw,40px)] h-[clamp(20px,2vw,40px)] rounded-full font-black text-white text-[clamp(12px,1.2vw,24px)] flex items-center justify-center border-2 border-white/30 shadow-md animate-zoom-in ${
-                    pointsAssigned[marker.value] === 1 ? 'bg-red-600' : pointsAssigned[marker.value] === 2 ? 'bg-blue-600' : 'bg-green-600'
-                  }`}
-                >
-                  {pointsAssigned[marker.value]}
-                </div>
-              )}
-            </div>
-          </React.Fragment>
-        ))}
+                {/* Mostra il pallino colorato della squadra che ha indovinato */}
+                {pointsAssigned[marker.value] !== undefined && pointsAssigned[marker.value] !== 0 && (
+                  <div 
+                    className={`absolute left-full ml-2 w-[clamp(20px,2vw,40px)] h-[clamp(20px,2vw,40px)] rounded-full font-black text-white text-[clamp(12px,1.2vw,24px)] flex items-center justify-center border-2 border-white/30 shadow-md animate-zoom-in ${
+                      pointsAssigned[marker.value] === 1 ? 'bg-red-600' : pointsAssigned[marker.value] === 2 ? 'bg-blue-600' : 'bg-green-600'
+                    }`}
+                  >
+                    {pointsAssigned[marker.value]}
+                  </div>
+                )}
+              </div>
+            </React.Fragment>
+          );
+        })}
 
         {/* Solution Overlay */}
         <Solution 

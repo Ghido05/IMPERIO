@@ -325,16 +325,43 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
 
   const handlePasswordMancheSelect = (mancheIndex: number) => {
     setPasswordManche(mancheIndex);
-    
-    // Reset di tutte le chiavi dello stato di gioco per la manche precedente
-    localStorage.removeItem('password_grid_state');
-    localStorage.removeItem('password_chosen_suggestion');
-    localStorage.setItem('password_current_team', '1');
-    localStorage.setItem('password_excluded_teams', JSON.stringify([]));
-    localStorage.setItem('password_winners_order', JSON.stringify([]));
-    localStorage.removeItem('password_bussolotti_status');
-    localStorage.removeItem('password_active_bussolotti');
     localStorage.setItem('password_current_manche', mancheIndex.toString());
+
+    const turnSeq = mancheIndex === 0 ? [1, 2, 3] : mancheIndex === 1 ? [2, 3, 1] : [3, 1, 2];
+    
+    // Team
+    const savedTeam = localStorage.getItem(`password_current_team_m${mancheIndex}`) || turnSeq[0].toString();
+    localStorage.setItem('password_current_team', savedTeam);
+
+    // Round
+    const savedRound = localStorage.getItem(`password_current_round_m${mancheIndex}`) || '1';
+    localStorage.setItem('password_current_round', savedRound);
+
+    // Excluded
+    const savedExcluded = localStorage.getItem(`password_excluded_teams_m${mancheIndex}`) || JSON.stringify([]);
+    localStorage.setItem('password_excluded_teams', savedExcluded);
+
+    // Winners
+    const savedWinners = localStorage.getItem(`password_winners_order_m${mancheIndex}`) || JSON.stringify([]);
+    localStorage.setItem('password_winners_order', savedWinners);
+
+    // Suggestion
+    const savedSugg = localStorage.getItem(`password_chosen_suggestion_m${mancheIndex}`) || '';
+    localStorage.setItem('password_chosen_suggestion', savedSugg);
+
+    // Bussolotti
+    const savedBStatus = localStorage.getItem(`password_bussolotti_status_m${mancheIndex}`) || JSON.stringify({ 1: 'pending', 2: 'pending', 3: 'pending' });
+    localStorage.setItem('password_bussolotti_status', savedBStatus);
+    const savedBActive = localStorage.getItem(`password_active_bussolotti_m${mancheIndex}`) || 'null';
+    localStorage.setItem('password_active_bussolotti', savedBActive);
+
+    // Grid
+    const savedGrid = localStorage.getItem(`password_grid_state_m${mancheIndex}`);
+    if (savedGrid) {
+      localStorage.setItem('password_grid_state', savedGrid);
+    } else {
+      localStorage.removeItem('password_grid_state');
+    }
 
     // Dispatch degli eventi per aggiornare la finestra corrente
     window.dispatchEvent(new Event('storage'));
@@ -344,20 +371,26 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
 
     // Broadcast per le altre finestre (Electron)
     if ((window as any).electron?.broadcastState) {
-      (window as any).electron.broadcastState({
-        localStorageUpdate: { key: 'password_current_manche', value: mancheIndex.toString() }
-      });
-      // Spediamo anche il reset degli altri campi alle altre finestre
-      const resetKeys = [
-        'password_grid_state',
-        'password_chosen_suggestion',
+      const keysToBroadcast = [
+        'password_current_manche',
         'password_current_team',
+        'password_current_round',
         'password_excluded_teams',
         'password_winners_order',
+        'password_chosen_suggestion',
         'password_bussolotti_status',
-        'password_active_bussolotti'
+        'password_active_bussolotti',
+        'password_grid_state',
+        `password_grid_state_m${mancheIndex}`,
+        `password_current_team_m${mancheIndex}`,
+        `password_current_round_m${mancheIndex}`,
+        `password_excluded_teams_m${mancheIndex}`,
+        `password_winners_order_m${mancheIndex}`,
+        `password_chosen_suggestion_m${mancheIndex}`,
+        `password_bussolotti_status_m${mancheIndex}`,
+        `password_active_bussolotti_m${mancheIndex}`
       ];
-      resetKeys.forEach(k => {
+      keysToBroadcast.forEach(k => {
         const val = localStorage.getItem(k);
         (window as any).electron.broadcastState({
           localStorageUpdate: { key: k, value: val }
@@ -436,34 +469,7 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
     }
   }, [activeSlide, activeBox, activeQuestion]);
 
-  // Forward keyboard events (game control keys) to other windows
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        document.activeElement?.tagName === 'INPUT' ||
-        document.activeElement?.tagName === 'TEXTAREA'
-      ) {
-        return;
-      }
-      if (e.metaKey || e.ctrlKey) return;
 
-      const isElectron = (window as any).electron !== undefined;
-      if (isElectron) {
-        (window as any).electron.broadcastState({
-          forwardedKey: {
-            key: e.key,
-            code: e.code,
-            keyCode: e.keyCode,
-            shiftKey: e.shiftKey,
-            altKey: e.altKey,
-          },
-        });
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   const maxQuestionsForBox = activeBox === 1 ? 10 : activeBox === 2 ? 6 : activeBox === 3 ? 3 : 1;
 
@@ -750,31 +756,48 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
                   </ul>
                 </div>
 
-                {/* Gruppo 4: Altri moduli */}
+                {/* Gruppo 4: Gioco 4 Frase Tempo */}
                 <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
-                  <h3 className="text-xs font-black uppercase text-purple-400 tracking-wider flex items-center gap-1.5">
-                    🧩 Cruciverba & Frase Tempo & Password
+                  <h3 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center gap-1.5">
+                    🔤 Box 4 — Frase con Tempo
                   </h3>
                   <ul className="space-y-2.5">
                     <li className="flex items-start justify-between gap-4">
-                      <span>Inserisci caratteri (Verifica lettera o parola)</span>
+                      <span>Inserisci lettera nella frase</span>
                       <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">A - Z</kbd>
                     </li>
                     <li className="flex items-start justify-between gap-4">
-                      <span>Cancella lettere / Resetta manche (Frase Tempo)</span>
+                      <span>Scopri soluzione (Vittoria asta)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">Invio</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Segnala Errore squadra (Bonus agli altri)</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">\</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Imposta offerta asta / Frecce</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">0 - 9 / ▲▼</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Resetta frase corrente</span>
                       <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">Canc / Backspace</kbd>
                     </li>
-                    <li className="flex items-start justify-between gap-4">
-                      <span>Imposta valore offerta asta (Frase Tempo - durante asta)</span>
-                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">0 - 9</kbd>
-                    </li>
-                    <li className="flex items-start justify-between gap-4">
-                      <span>Regola offerta asta (Frase Tempo - durante asta)</span>
-                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">▲▼ / ◀▶ Frecce</kbd>
-                    </li>
+                  </ul>
+                </div>
+
+                {/* Gruppo 5: Altri moduli */}
+                <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/5">
+                  <h3 className="text-xs font-black uppercase text-purple-400 tracking-wider flex items-center gap-1.5">
+                    🧩 Box 3 Password & Altri Moduli
+                  </h3>
+                  <ul className="space-y-2.5">
                     <li className="flex items-start justify-between gap-4">
                       <span>Seleziona bussolotto (Password Squadre)</span>
-                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">1 - 3</kbd>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">1 - 5</kbd>
+                    </li>
+                    <li className="flex items-start justify-between gap-4">
+                      <span>Avvia/Ferma musica di sottofondo</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-white rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">M</kbd>
                     </li>
                   </ul>
                 </div>

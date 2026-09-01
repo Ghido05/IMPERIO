@@ -65,6 +65,7 @@ function TeamFigure({
 
 function TeamPanel({
   teamId,
+  teamName,
   activeTeam,
   selectedFace,
   members,
@@ -75,6 +76,7 @@ function TeamPanel({
   onToggleBonus,
 }: {
   teamId: TeamId;
+  teamName: string;
   activeTeam: TeamId;
   selectedFace: DiceFace | null;
   members: number;
@@ -99,9 +101,9 @@ function TeamPanel({
       }`}
     >
       <div className="flex items-center justify-between mb-3">
-        <button onClick={() => onSelectTeam(teamId)} className="text-left">
+        <button onClick={() => onSelectTeam(teamId)} className="text-left cursor-pointer">
           <div className="text-xs uppercase tracking-[0.35em] text-white/45">Turno</div>
-          <div className="text-2xl font-black">{meta.name}</div>
+          <div className="text-2xl font-black">{teamName}</div>
         </button>
         <div className="w-4 h-4 rounded-full" style={{ background: meta.color, boxShadow: `0 0 18px ${meta.color}` }} />
       </div>
@@ -133,7 +135,7 @@ function TeamPanel({
           <button
             key={bonusIndex}
             onClick={() => onToggleBonus(teamId - 1, bonusIndex)}
-            className={`h-12 rounded-2xl border transition-all text-xl flex items-center justify-center ${active ? 'border-amber-300 bg-amber-300/30 text-white shadow-[0_0_24px_rgba(251,191,36,0.35)] scale-105' : 'border-white/15 bg-black/15 text-white/30 hover:bg-white/10 opacity-30 grayscale'}`}
+            className={`h-12 rounded-2xl border transition-all text-xl flex items-center justify-center cursor-pointer ${active ? 'border-amber-300 bg-amber-300/30 text-white shadow-[0_0_24px_rgba(251,191,36,0.35)] scale-105' : 'border-white/15 bg-black/15 text-white/30 hover:bg-white/10 opacity-30 grayscale'}`}
           >
             {['🎲', '🔄', '🏹', '🛡️'][bonusIndex] || '★'}
           </button>
@@ -245,7 +247,7 @@ function Dice3D({
 
 export default function FinaleSquadre_Board() {
   const gameData = useGameData() as { title?: string; subtitle?: string } | null;
-  const { scores, bonuses, setScore, toggleBonus } = useScores();
+  const { scores, bonuses, toggleBonus } = useScores();
   const [activeTeam, setActiveTeam] = useState<TeamId>(3);
   const [selectedDieFace, setSelectedDieFace] = useState<DiceFace | null>(null);
   const [dieTargetFace, setDieTargetFace] = useState<DiceFace | null>(null);
@@ -253,6 +255,19 @@ export default function FinaleSquadre_Board() {
   const [eliminatedQuestions, setEliminatedQuestions] = useState<number[]>([]);
   const [rolling, setRolling] = useState(false);
   const [eliminatedMembers, setEliminatedMembers] = useState<Record<TeamId, number[]>>({ 1: [], 2: [], 3: [] });
+  const [teamNames, setTeamNames] = useState<string[]>(['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.punteggi?.nomiSquadre) {
+          setTeamNames(parsed.punteggi.nomiSquadre);
+        }
+      } catch {}
+    }
+  }, []);
 
   const members = useMemo(() => normalizeMembers(scores), [scores]);
 
@@ -309,7 +324,7 @@ export default function FinaleSquadre_Board() {
       const current = next[teamId] ?? [];
       if (current.length >= members[teamId]) return prev;
       next[teamId] = [...current, current.length + 1];
-      setScore(teamId - 1, Math.max(0, scores[teamId - 1] - 1));
+      // Do NOT subtract from overall quiz points; only members of the team are eliminated in Finale
       return next;
     });
   };
@@ -363,9 +378,9 @@ export default function FinaleSquadre_Board() {
               <button
                 key={t}
                 onClick={() => setActiveTeam(t as TeamId)}
-                className={`px-5 py-3 rounded-full border text-sm font-bold tracking-[0.2em] uppercase transition-all ${activeTeam === t ? 'border-white bg-white text-black' : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'}`}
+                className={`px-5 py-3 rounded-full border text-sm font-bold tracking-[0.2em] uppercase transition-all cursor-pointer ${activeTeam === t ? 'border-white bg-white text-black' : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'}`}
               >
-                Turno S{t}
+                Turno {teamNames[t - 1] || `S${t}`}
               </button>
             ))}
           </div>
@@ -377,6 +392,7 @@ export default function FinaleSquadre_Board() {
               <TeamPanel
                 key={t}
                 teamId={t as TeamId}
+                teamName={teamNames[t - 1] || `SQUADRA ${t}`}
                 activeTeam={activeTeam}
                 selectedFace={selectedDieFace}
                 members={members[t as TeamId]}
@@ -403,7 +419,7 @@ export default function FinaleSquadre_Board() {
                     key={t}
                     disabled={!isTeamSelectable(t as TeamId)}
                     onClick={() => commitTarget(t as TeamId)}
-                    className={`py-3 rounded-2xl border font-bold uppercase tracking-[0.2em] transition-all ${
+                    className={`py-3 rounded-2xl border font-bold uppercase tracking-[0.2em] transition-all cursor-pointer ${
                       targetTeam === t
                         ? 'bg-white text-black border-white'
                         : isTeamSelectable(t as TeamId)
@@ -411,18 +427,18 @@ export default function FinaleSquadre_Board() {
                           : 'bg-white/3 border-white/5 text-white/20 cursor-not-allowed'
                     }`}
                   >
-                    {selectedDieFace === 'self' ? 'Te stessa' : `Sfidata S${t}`}
+                    {selectedDieFace === 'self' ? 'Te stessa' : `Sfidata ${teamNames[t - 1] || `S${t}`}`}
                   </button>
                 ))}
                 <button
                   onClick={() => handleOutcome(true)}
-                  className="py-3 rounded-2xl bg-emerald-400/15 border border-emerald-300/20 text-emerald-50 font-bold uppercase tracking-[0.2em]"
+                  className="py-3 rounded-2xl bg-emerald-400/15 border border-emerald-300/20 text-emerald-50 font-bold uppercase tracking-[0.2em] cursor-pointer hover:bg-emerald-400/25 transition-all"
                 >
                   Corretto
                 </button>
                 <button
                   onClick={() => handleOutcome(false)}
-                  className="py-3 rounded-2xl bg-rose-400/15 border border-rose-300/20 text-rose-50 font-bold uppercase tracking-[0.2em]"
+                  className="py-3 rounded-2xl bg-rose-400/15 border border-rose-300/20 text-rose-50 font-bold uppercase tracking-[0.2em] cursor-pointer hover:bg-rose-400/25 transition-all"
                 >
                   Sbagliato
                 </button>

@@ -5,6 +5,7 @@ import { cloneDefaultData } from '../lib/defaultGameData';
 import type { Slide } from '../App';
 import SlideCanvas from '../components/SlideCanvas';
 import { ScoreProvider, useScores } from '../context/ScoreContext';
+import { formatScoreNumber } from '../lib/formatUtils';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -105,12 +106,11 @@ function IpadContent() {
       const activeBox = parseInt(activeBoxVal, 10);
       const activeQuestion = parseInt(activeQuestionVal, 10);
 
-      // Se siamo nei giochi password, la squadra di turno attiva è definita da password_current_team
+      // Se siamo nei giochi password (Box 3), la squadra di turno attiva è definita da password_current_team
       if (
         currentSlideType === 'password_prescelti' || 
         currentSlideType === 'password_squadre' || 
-        activeBox === 3 || 
-        activeBox === 4
+        activeBox === 3
       ) {
         const val = localStorage.getItem('password_current_team');
         if (val && val !== 'null') {
@@ -149,6 +149,22 @@ function IpadContent() {
         } else {
           setBookedTeam(null);
         }
+        return;
+      }
+
+      // Se siamo nel box 4 (Frase con tempo)
+      if (activeBox === 4 || (currentSlideId && currentSlideId.includes('frase'))) {
+        const winTeamVal = localStorage.getItem(`playstate_box4_winning_team`);
+        if (winTeamVal && winTeamVal !== 'null') {
+          setBookedTeam(parseInt(winTeamVal, 10) + 1);
+          return;
+        }
+        const buzzerVal = localStorage.getItem(`playstate_box4_booked_team`) || localStorage.getItem(`playstate_box4_q1_booked_team`);
+        if (buzzerVal && buzzerVal !== 'null') {
+          setBookedTeam(parseInt(buzzerVal, 10));
+          return;
+        }
+        setBookedTeam(null);
         return;
       }
 
@@ -477,7 +493,7 @@ function IpadContent() {
             🟢 {teamNames[2] || 'SQUADRA 3'}
           </span>
           <span className="text-2xl sm:text-4xl font-black leading-none tabular-nums">
-            {(scores?.[2] ?? 0).toLocaleString('it-IT')} <span className={`text-xs sm:text-sm font-black ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>PT</span>
+            {formatScoreNumber(scores?.[2] ?? 0)} <span className={`text-xs sm:text-sm font-black ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>PT</span>
           </span>
         </div>
 
@@ -493,7 +509,7 @@ function IpadContent() {
             🔵 {teamNames[1] || 'SQUADRA 2'}
           </span>
           <span className="text-2xl sm:text-4xl font-black leading-none tabular-nums">
-            {(scores?.[1] ?? 0).toLocaleString('it-IT')} <span className={`text-xs sm:text-sm font-black ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>PT</span>
+            {formatScoreNumber(scores?.[1] ?? 0)} <span className={`text-xs sm:text-sm font-black ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>PT</span>
           </span>
         </div>
 
@@ -509,7 +525,7 @@ function IpadContent() {
             🔴 {teamNames[0] || 'SQUADRA 1'}
           </span>
           <span className="text-2xl sm:text-4xl font-black leading-none tabular-nums">
-            {(scores?.[0] ?? 0).toLocaleString('it-IT')} <span className={`text-xs sm:text-sm font-black ${isS1Booked ? 'text-white' : 'text-red-400'}`}>PT</span>
+            {formatScoreNumber(scores?.[0] ?? 0)} <span className={`text-xs sm:text-sm font-black ${isS1Booked ? 'text-white' : 'text-red-400'}`}>PT</span>
           </span>
         </div>
 

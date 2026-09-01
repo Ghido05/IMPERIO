@@ -195,6 +195,19 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
   const slideId = gameData.slideId ?? 'sandbox';
 
   const { addScore } = useScores();
+  const [teamNames, setTeamNames] = useState<string[]>(['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.punteggi?.nomiSquadre) {
+          setTeamNames(parsed.punteggi.nomiSquadre);
+        }
+      } catch {}
+    }
+  }, []);
 
   // Stato per tenere traccia dello step attuale (da 0 a 10)
   // 0 = vuoto, 1-9 = Strumenti e Indizi, 10 = Soluzione
@@ -550,7 +563,7 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
               <span className={`text-3xl font-black tabular-nums transition-colors duration-500 ${
                 lockedStep !== null ? 'text-amber-300 drop-shadow-[0_0_15px_rgba(251,191,36,0.9)]' : 'text-amber-400 drop-shadow-[0_0_12px_rgba(251,191,36,0.4)]'
               }`}>
-                {displayedPoints.toLocaleString()} pt
+                {displayedPoints.toLocaleString('it-IT')} pt
               </span>
             </div>
 
@@ -559,7 +572,7 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
               <div className="mt-1 flex flex-col items-center gap-1.5">
                 {bookedTeam !== null && assignedTeam === null && (
                   <span className="text-amber-400 font-black text-[11px] animate-pulse uppercase tracking-wider mb-1">
-                    ⚡ SQUADRA {bookedTeam} PRENOTATA!
+                    ⚡ {teamNames[bookedTeam - 1] || `SQUADRA ${bookedTeam}`} PRENOTATA!
                   </span>
                 )}
 
@@ -570,10 +583,10 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
                   />
                 ) : (
                   <div className="flex items-center gap-3 bg-white/10 border border-white/10 px-4 py-1.5 rounded-full text-xs font-bold">
-                    <span className="text-emerald-400">✓ Assegnati a Squadra {assignedTeam}</span>
+                    <span className="text-emerald-400">✓ Assegnati a {teamNames[assignedTeam - 1] || `Squadra ${assignedTeam}`}</span>
                     <button 
                       onClick={handleResetPoints}
-                      className="text-white/40 hover:text-red-400 transition-colors uppercase tracking-wider text-[10px]"
+                      className="text-white/40 hover:text-red-400 transition-colors uppercase tracking-wider text-[10px] cursor-pointer"
                     >
                       Annulla
                     </button>
@@ -585,14 +598,14 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
             {/* Mostra chi ha indovinato sullo schermo pubblico */}
             {!interactive && assignedTeam !== null && (
               <div className="bg-emerald-500/20 border border-emerald-500/30 px-6 py-2 rounded-full text-xs font-bold text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)] animate-pulse">
-                ✓ RISPOSTA ESATTA: SQUADRA {assignedTeam} (+{displayedPoints.toLocaleString()} pt)
+                ✓ RISPOSTA ESATTA: {teamNames[assignedTeam - 1] || `SQUADRA ${assignedTeam}`} (+{displayedPoints.toLocaleString('it-IT')} pt)
               </div>
             )}
 
             {/* Mostra la prenotazione in corso sullo schermo pubblico */}
             {!interactive && bookedTeam !== null && assignedTeam === null && (
               <div className="bg-amber-500/20 border border-amber-500/30 px-6 py-1.5 rounded-full text-xs font-bold text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse">
-                ⚡ IN PRENOTAZIONE: SQUADRA {bookedTeam}
+                ⚡ IN PRENOTAZIONE: {teamNames[bookedTeam - 1] || `SQUADRA ${bookedTeam}`}
               </div>
             )}
           </div>

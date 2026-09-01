@@ -568,6 +568,18 @@ export default function PresenterView() {
           'password_active_bussolotti',
           'password_grid_state'
         ];
+        for (let m = 0; m < 10; m++) {
+          pwdKeys.push(
+            `password_grid_state_m${m}`,
+            `password_excluded_teams_m${m}`,
+            `password_winners_order_m${m}`,
+            `password_chosen_suggestion_m${m}`,
+            `password_bussolotti_status_m${m}`,
+            `password_active_bussolotti_m${m}`,
+            `password_current_team_m${m}`,
+            `password_current_round_m${m}`
+          );
+        }
         pwdKeys.forEach(key => {
           localStorage.removeItem(key);
           window.dispatchEvent(new CustomEvent('local-storage-update', {

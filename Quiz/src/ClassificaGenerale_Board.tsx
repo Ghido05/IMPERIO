@@ -3,6 +3,7 @@ import { useScores } from './context/ScoreContext';
 import { useSyncedState } from './hooks/useSyncedState';
 import { assetUrl } from './lib/assetUrl';
 import { loadSetupStateDb } from './lib/quizDb';
+import { formatScoreNumber } from './lib/formatUtils';
 
 const EditableScore: React.FC<{ index: number; score: number; setScore: (i: number, val: number) => void }> = ({ index, score, setScore }) => {
   const [isEditing, setIsEditing] = React.useState(false);
@@ -15,7 +16,7 @@ const EditableScore: React.FC<{ index: number; score: number; setScore: (i: numb
     }
   }, [score, isEditing]);
 
-  const displayValue = isEditing ? localValue : (score || 0).toLocaleString('it-IT');
+  const displayValue = isEditing ? localValue : formatScoreNumber(score);
 
   return (
     <div className="mb-3 group relative shrink-0 flex items-center justify-center">

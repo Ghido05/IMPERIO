@@ -3,16 +3,10 @@ import { useGameData } from './context/GameDataContext';
 import { useSyncedState } from './hooks/useSyncedState';
 import { assetUrl } from './lib/assetUrl';
 import { BussolottiOverlay } from './Gioco password_squadre_Board';
+import { getInitialPasswordGrid, type WordItem } from './lib/passwordUtils';
 
-type WordType = 'team1' | 'team2' | 'team3' | 'bomb' | 'neutral';
 type RankType = 1 | 2 | 3;
 type BussolottiStatus = 'pending' | 'active' | 'done';
-
-interface WordItem {
-  word: string;
-  type: WordType;
-  guessed?: boolean;
-}
 
 const teamColors = {
   team1: 'bg-red-600 border-red-400',
@@ -108,7 +102,9 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       const newStatus = { ...bussolottiStatus, [activeBussolottiRank]: 'done' as BussolottiStatus };
       setBussolottiStatus(newStatus);
       setActiveBussolottiRank(null);
+      localStorage.setItem(`password_bussolotti_status_m${currentManche}`, JSON.stringify(newStatus));
       localStorage.setItem('password_bussolotti_status', JSON.stringify(newStatus));
+      localStorage.setItem(`password_active_bussolotti_m${currentManche}`, JSON.stringify(null));
       localStorage.setItem('password_active_bussolotti', JSON.stringify(null));
       localStorage.removeItem(`password_bussolotti_${activeBussolottiRank}_selected_idx`);
       localStorage.removeItem(`password_bussolotti_${activeBussolottiRank}_show_all`);
@@ -192,27 +188,25 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
   useEffect(() => {
     const handleStorage = () => {
       const manche = localStorage.getItem('password_current_manche');
-      if (manche && manche !== "null") {
-        setCurrentManche(parseInt(manche));
-      } else {
-        setCurrentManche(0);
-      }
+      const mancheIdx = (manche && manche !== "null") ? parseInt(manche, 10) : 0;
+      setCurrentManche(mancheIdx);
 
-      const team = localStorage.getItem('password_current_team');
+      const team = localStorage.getItem(`password_current_team_m${mancheIdx}`) || localStorage.getItem('password_current_team');
       if (team && team !== "null") {
-        setCurrentTeam(parseInt(team));
+        setCurrentTeam(parseInt(team, 10));
       } else {
-        setCurrentTeam(1);
+        const seq = getTurnSequence(mancheIdx);
+        setCurrentTeam(seq[0]);
       }
       
-      const round = localStorage.getItem('password_current_round');
+      const round = localStorage.getItem(`password_current_round_m${mancheIdx}`) || localStorage.getItem('password_current_round');
       if (round && round !== "null") {
-        setCurrentRound(parseInt(round));
+        setCurrentRound(parseInt(round, 10));
       } else {
         setCurrentRound(1);
       }
 
-      const excluded = localStorage.getItem('password_excluded_teams');
+      const excluded = localStorage.getItem(`password_excluded_teams_m${mancheIdx}`) || localStorage.getItem('password_excluded_teams');
       if (excluded && excluded !== "null") {
         try {
           setExcludedTeams(JSON.parse(excluded));
@@ -221,23 +215,21 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
         setExcludedTeams([]);
       }
 
-      const storedGrid = localStorage.getItem('password_grid_state');
+      const storedGrid = localStorage.getItem(`password_grid_state_m${mancheIdx}`) || localStorage.getItem('password_grid_state');
       if (storedGrid && storedGrid !== "null") {
         try {
           setGrid(JSON.parse(storedGrid));
         } catch {}
-      } else {
-        setGrid([]);
       }
 
-      const sugg = localStorage.getItem('password_chosen_suggestion');
+      const sugg = localStorage.getItem(`password_chosen_suggestion_m${mancheIdx}`) || localStorage.getItem('password_chosen_suggestion');
       if (sugg && sugg !== "null") {
         setChosenSuggestion(sugg);
       } else {
         setChosenSuggestion("");
       }
 
-      const winners = localStorage.getItem('password_winners_order');
+      const winners = localStorage.getItem(`password_winners_order_m${mancheIdx}`) || localStorage.getItem('password_winners_order');
       if (winners && winners !== "null") {
         try {
           setWinnersOrder(JSON.parse(winners));
@@ -246,7 +238,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
         setWinnersOrder([]);
       }
 
-      const bStatus = localStorage.getItem('password_bussolotti_status');
+      const bStatus = localStorage.getItem(`password_bussolotti_status_m${mancheIdx}`) || localStorage.getItem('password_bussolotti_status');
       if (bStatus && bStatus !== "null") {
         try {
           setBussolottiStatus(JSON.parse(bStatus));
@@ -255,7 +247,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
         setBussolottiStatus({ 1: 'pending', 2: 'pending', 3: 'pending' });
       }
 
-      const bActive = localStorage.getItem('password_active_bussolotti');
+      const bActive = localStorage.getItem(`password_active_bussolotti_m${mancheIdx}`) || localStorage.getItem('password_active_bussolotti');
       if (bActive !== null && bActive !== "null") {
         try {
           setActiveBussolottiRank(JSON.parse(bActive));
@@ -266,16 +258,22 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     };
 
     window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    window.addEventListener('local-storage-update', handleStorage);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('local-storage-update', handleStorage);
+    };
   }, []);
 
   useEffect(() => {
     // Gestione Bussolotti per Manche
     const storedBussolottiManche = localStorage.getItem('password_bussolotti_manche');
     if (storedBussolottiManche !== currentManche.toString()) {
-      const initialBussolotti = { 1: 'pending' as BussolottiStatus, 2: 'pending' as BussolottiStatus, 3: 'pending' as BussolottiStatus };
+      const savedBStatus = localStorage.getItem(`password_bussolotti_status_m${currentManche}`);
+      const initialBussolotti = savedBStatus ? JSON.parse(savedBStatus) : { 1: 'pending' as BussolottiStatus, 2: 'pending' as BussolottiStatus, 3: 'pending' as BussolottiStatus };
       setBussolottiStatus(initialBussolotti);
       setActiveBussolottiRank(null);
+      localStorage.setItem(`password_bussolotti_status_m${currentManche}`, JSON.stringify(initialBussolotti));
       localStorage.setItem('password_bussolotti_status', JSON.stringify(initialBussolotti));
       localStorage.setItem('password_active_bussolotti', JSON.stringify(null));
       localStorage.setItem('password_bussolotti_manche', currentManche.toString());
@@ -283,39 +281,35 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
   }, [currentManche]);
 
   useEffect(() => {
-    // Inizializza la griglia basandosi sulla manche attuale
-    const initializeGrid = () => {
-      const storedGrid = localStorage.getItem('password_grid_state');
-      if (storedGrid) {
-        try {
-          setGrid(JSON.parse(storedGrid));
-        } catch {
-          generateNewGrid();
-        }
-      } else {
-        generateNewGrid();
+    // Inizializza la griglia deterministica per la manche attuale
+    const storedGrid = localStorage.getItem(`password_grid_state_m${currentManche}`);
+    if (storedGrid && storedGrid !== "null") {
+      try {
+        const parsed = JSON.parse(storedGrid);
+        setGrid(parsed);
+        localStorage.setItem('password_grid_state', storedGrid);
+      } catch {
+        const initial = getInitialPasswordGrid(gameData, currentManche);
+        setGrid(initial);
+        localStorage.setItem(`password_grid_state_m${currentManche}`, JSON.stringify(initial));
+        localStorage.setItem('password_grid_state', JSON.stringify(initial));
       }
-    };
-
-    const generateNewGrid = () => {
-      const allWords: WordItem[] = [
-        ...gameData.squadra1.map((w: string) => ({ word: w.toUpperCase(), type: 'team1' as WordType })),
-        ...gameData.squadra2.map((w: string) => ({ word: w.toUpperCase(), type: 'team2' as WordType })),
-        ...gameData.squadra3.map((w: string) => ({ word: w.toUpperCase(), type: 'team3' as WordType })),
-        ...gameData.altre.map((w: string, i: number) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType }))
-      ];
-      const sorted = [...allWords].sort((a, b) => a.word.localeCompare(b.word));
-      setGrid(sorted);
-      localStorage.setItem('password_grid_state', JSON.stringify(sorted));
-    };
-
-    initializeGrid();
+    } else {
+      const initial = getInitialPasswordGrid(gameData, currentManche);
+      setGrid(initial);
+      localStorage.setItem(`password_grid_state_m${currentManche}`, JSON.stringify(initial));
+      localStorage.setItem('password_grid_state', JSON.stringify(initial));
+    }
   }, [currentManche, gameData]);
 
   const selectSuggestion = (sugg: string) => {
     setChosenSuggestion(sugg);
+    localStorage.setItem(`password_chosen_suggestion_m${currentManche}`, sugg);
     localStorage.setItem('password_chosen_suggestion', sugg);
     window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new CustomEvent('local-storage-update', {
+      detail: { key: 'password_chosen_suggestion', value: sugg }
+    }));
   };
 
   const getTurnSequence = (mancheIndex: number) => {
@@ -323,6 +317,52 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     if (mancheIndex === 1) return [2, 3, 1];
     if (mancheIndex === 2) return [3, 1, 2];
     return [1, 2, 3];
+  };
+
+  const handleWordClick = (index: number) => {
+    if (!grid[index] || grid[index].guessed || excludedTeams.includes(currentTeam)) return;
+
+    const newGrid = [...grid];
+    const clickedWord = { ...newGrid[index] };
+    clickedWord.guessed = true;
+    clickedWord.guessedBy = currentTeam;
+    newGrid[index] = clickedWord;
+    setGrid(newGrid);
+
+    let newExcluded = [...excludedTeams];
+    if (clickedWord.type === 'bomb') {
+      newExcluded.push(currentTeam);
+      setExcludedTeams(newExcluded);
+      localStorage.setItem(`password_excluded_teams_m${currentManche}`, JSON.stringify(newExcluded));
+      localStorage.setItem('password_excluded_teams', JSON.stringify(newExcluded));
+    }
+
+    // Controlla vincitori
+    const teams = ['team1', 'team2', 'team3'];
+    const newWinners = [...winnersOrder];
+    let winnersChanged = false;
+
+    teams.forEach((t, i) => {
+      const teamNum = i + 1;
+      const teamWords = newGrid.filter(w => w.type === t);
+      if (teamWords.every(w => w.guessed) && !newWinners.includes(teamNum) && !newExcluded.includes(teamNum)) {
+        newWinners.push(teamNum);
+        winnersChanged = true;
+      }
+    });
+
+    if (winnersChanged) {
+      setWinnersOrder(newWinners);
+      localStorage.setItem(`password_winners_order_m${currentManche}`, JSON.stringify(newWinners));
+      localStorage.setItem('password_winners_order', JSON.stringify(newWinners));
+    }
+
+    localStorage.setItem(`password_grid_state_m${currentManche}`, JSON.stringify(newGrid));
+    localStorage.setItem('password_grid_state', JSON.stringify(newGrid));
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new CustomEvent('local-storage-update', {
+      detail: { key: 'password_grid_state', value: JSON.stringify(newGrid) }
+    }));
   };
 
   const nextTurn = () => {
@@ -352,21 +392,19 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
             setCurrentManche(nextM);
             setCurrentRound(1);
             setCurrentTeam(nextSeq[0]);
-            setExcludedTeams([]);
             setChosenSuggestion("");
-            setGrid([]);
+            
             localStorage.setItem('password_current_manche', nextM.toString());
+            localStorage.setItem(`password_current_round_m${nextM}`, "1");
             localStorage.setItem('password_current_round', "1");
+            localStorage.setItem(`password_current_team_m${nextM}`, nextSeq[0].toString());
             localStorage.setItem('password_current_team', nextSeq[0].toString());
-            localStorage.setItem('password_excluded_teams', JSON.stringify([]));
-            localStorage.setItem('password_winners_order', JSON.stringify([]));
-            localStorage.removeItem('password_grid_state');
             localStorage.removeItem('password_chosen_suggestion');
-            localStorage.removeItem('password_bussolotti_status');
-            localStorage.removeItem('password_active_bussolotti');
-            localStorage.removeItem('playstate_password_bussolotti_selected_idx');
-            localStorage.removeItem('playstate_password_bussolotti_show_all');
+            localStorage.removeItem(`password_chosen_suggestion_m${nextM}`);
             window.dispatchEvent(new Event('storage'));
+            window.dispatchEvent(new CustomEvent('local-storage-update', {
+              detail: { key: 'password_current_manche', value: nextM.toString() }
+            }));
             return;
           }
         } else {
@@ -390,10 +428,16 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       setCurrentRound(nextRound);
       setChosenSuggestion("");
       
+      localStorage.setItem(`password_current_team_m${currentManche}`, nextTeam.toString());
       localStorage.setItem('password_current_team', nextTeam.toString());
+      localStorage.setItem(`password_current_round_m${currentManche}`, nextRound.toString());
       localStorage.setItem('password_current_round', nextRound.toString());
       localStorage.removeItem('password_chosen_suggestion');
+      localStorage.removeItem(`password_chosen_suggestion_m${currentManche}`);
       window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('local-storage-update', {
+        detail: { key: 'password_current_team', value: nextTeam.toString() }
+      }));
     }
   };
 
@@ -433,20 +477,18 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
             setCurrentRound(3);
             setCurrentTeam(lastTeam);
             setChosenSuggestion("");
-            setGrid([]);
             
             localStorage.setItem('password_current_manche', prevM.toString());
+            localStorage.setItem(`password_current_round_m${prevM}`, "3");
             localStorage.setItem('password_current_round', "3");
+            localStorage.setItem(`password_current_team_m${prevM}`, lastTeam.toString());
             localStorage.setItem('password_current_team', lastTeam.toString());
-            localStorage.setItem('password_excluded_teams', JSON.stringify([]));
-            localStorage.setItem('password_winners_order', JSON.stringify([]));
-            localStorage.removeItem('password_grid_state');
             localStorage.removeItem('password_chosen_suggestion');
-            localStorage.removeItem('password_bussolotti_status');
-            localStorage.removeItem('password_active_bussolotti');
-            localStorage.removeItem('playstate_password_bussolotti_selected_idx');
-            localStorage.removeItem('playstate_password_bussolotti_show_all');
+            localStorage.removeItem(`password_chosen_suggestion_m${prevM}`);
             window.dispatchEvent(new Event('storage'));
+            window.dispatchEvent(new CustomEvent('local-storage-update', {
+              detail: { key: 'password_current_manche', value: prevM.toString() }
+            }));
             return;
           }
         } else {
@@ -470,10 +512,16 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       setCurrentRound(prevRound);
       setChosenSuggestion("");
       
+      localStorage.setItem(`password_current_team_m${currentManche}`, prevTeam.toString());
       localStorage.setItem('password_current_team', prevTeam.toString());
+      localStorage.setItem(`password_current_round_m${currentManche}`, prevRound.toString());
       localStorage.setItem('password_current_round', prevRound.toString());
       localStorage.removeItem('password_chosen_suggestion');
+      localStorage.removeItem(`password_chosen_suggestion_m${currentManche}`);
       window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('local-storage-update', {
+        detail: { key: 'password_current_team', value: prevTeam.toString() }
+      }));
     }
   };
 
@@ -494,6 +542,19 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       'playstate_password_bussolotti_selected_idx',
       'playstate_password_bussolotti_show_all'
     ];
+    // Rimuovi anche le chiavi per manche
+    for (let m = 0; m < 10; m++) {
+      keysToRemove.push(
+        `password_grid_state_m${m}`,
+        `password_excluded_teams_m${m}`,
+        `password_winners_order_m${m}`,
+        `password_chosen_suggestion_m${m}`,
+        `password_bussolotti_status_m${m}`,
+        `password_active_bussolotti_m${m}`,
+        `password_current_team_m${m}`,
+        `password_current_round_m${m}`
+      );
+    }
     keysToRemove.forEach(k => localStorage.removeItem(k));
     
     setCurrentManche(0);
@@ -505,19 +566,28 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     
     const m0 = manches[0] || gameData;
     if (m0) {
-      const allWords: WordItem[] = [
-        ...m0.squadra1.map((w: string) => ({ word: w.toUpperCase(), type: 'team1' as WordType })),
-        ...m0.squadra2.map((w: string) => ({ word: w.toUpperCase(), type: 'team2' as WordType })),
-        ...m0.squadra3.map((w: string) => ({ word: w.toUpperCase(), type: 'team3' as WordType })),
-        ...m0.altre.map((w: string, i: number) => ({ word: w.toUpperCase(), type: (i === 0 ? 'bomb' : 'neutral') as WordType }))
-      ];
-      const sorted = [...allWords].sort((a, b) => a.word.localeCompare(b.word));
-      setGrid(sorted);
-      localStorage.setItem('password_grid_state', JSON.stringify(sorted));
+      const initial = getInitialPasswordGrid(m0, 0);
+      setGrid(initial);
+      localStorage.setItem('password_grid_state_m0', JSON.stringify(initial));
+      localStorage.setItem('password_grid_state', JSON.stringify(initial));
     }
     
     window.dispatchEvent(new Event('storage'));
   };
+
+  const [presceltiTeamNames, setPresceltiTeamNames] = useState<string[]>(['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed?.punteggi?.nomiSquadre) {
+          setPresceltiTeamNames(parsed.punteggi.nomiSquadre);
+        }
+      } catch {}
+    }
+  }, []);
 
   const currentPair = gameData.suggerimenti_turni[currentRound - 1]?.[currentTeam - 1] || [];
 
@@ -551,7 +621,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
           </div>
           <button 
             onClick={resetGame}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded font-bold text-sm"
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded font-bold text-sm cursor-pointer"
           >
             RESET TOTALE
           </button>
@@ -567,16 +637,21 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
 
       <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 mb-8">
         <div className="flex-1">
-          <h2 className="text-lg sm:text-2xl font-bold mb-3 sm:mb-4 text-slate-300">Mappa Parole (Alfabetico)</h2>
+          <h2 className="text-lg sm:text-2xl font-bold mb-3 sm:mb-4 text-slate-300">Mappa Parole (Griglia)</h2>
           <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
             {grid.map((item, i) => (
               <div
                 key={i}
-                className={`p-2 sm:p-3 rounded border sm:border-2 text-xs sm:text-sm font-bold text-center transition-all ${teamColors[item.type]} ${item.guessed ? 'opacity-30 scale-95' : ''}`}
+                onClick={() => {
+                  if (interactive && !item.guessed) {
+                    handleWordClick(i);
+                  }
+                }}
+                className={`p-2 sm:p-3 rounded border sm:border-2 text-xs sm:text-sm font-bold text-center transition-all ${teamColors[item.type]} ${item.guessed ? 'opacity-30 scale-95' : 'cursor-pointer hover:scale-105 active:scale-95'}`}
               >
                 {item.word}
                 {item.type === 'bomb' && <span className="block text-[8px] sm:text-[10px] text-red-450 font-black">BOMBA</span>}
-                {item.guessed && <span className="block text-[8px] sm:text-[10px] text-white/50 font-black">INDIVINATA</span>}
+                {item.guessed && <span className="block text-[8px] sm:text-[10px] text-white/50 font-black">INDOVINATA</span>}
               </div>
             ))}
           </div>
@@ -592,7 +667,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
               <div className="text-right">
                 <span className="text-slate-400 text-[10px] sm:text-xs uppercase font-black block">Turno di</span>
                 <span className={`text-xl sm:text-3xl font-black ${currentTeam === 1 ? 'text-red-500' : currentTeam === 2 ? 'text-blue-500' : 'text-green-500'}`}>
-                  SQUADRA {currentTeam}
+                  {presceltiTeamNames[currentTeam - 1] || `SQUADRA ${currentTeam}`}
                 </span>
               </div>
             </div>
@@ -613,13 +688,13 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
             <div className="flex gap-2">
               <button
                 onClick={prevTurn}
-                className="flex-1 py-3 sm:py-4 bg-slate-600 text-white font-black text-xs sm:text-sm rounded-xl hover:bg-slate-500 transition-all shadow-lg uppercase tracking-tighter"
+                className="flex-1 py-3 sm:py-4 bg-slate-600 text-white font-black text-xs sm:text-sm rounded-xl hover:bg-slate-500 transition-all shadow-lg uppercase tracking-tighter cursor-pointer"
               >
                 ← Indietro
               </button>
               <button
                 onClick={nextTurn}
-                className="flex-1 py-3 sm:py-4 bg-white text-black font-black text-xs sm:text-sm rounded-xl hover:bg-yellow-400 transition-all shadow-lg uppercase tracking-tighter"
+                className="flex-1 py-3 sm:py-4 bg-white text-black font-black text-xs sm:text-sm rounded-xl hover:bg-yellow-400 transition-all shadow-lg uppercase tracking-tighter cursor-pointer"
               >
                 Prossimo →
               </button>
@@ -641,7 +716,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
             {[1, 2, 3].map(t => (
               <div key={t} className={`p-4 rounded-xl border-2 transition-all ${excludedTeams.includes(t) ? 'opacity-40 grayscale border-gray-600' : (t === 1 ? 'border-red-600 bg-red-900/10' : t === 2 ? 'border-blue-600 bg-blue-900/10' : 'border-green-600 bg-green-900/10')}`}>
                 <h3 className="text-xl font-bold mb-4 text-center">
-                  SQUADRA {t} {excludedTeams.includes(t) && "❌"}
+                  {presceltiTeamNames[t - 1] || `SQUADRA ${t}`} {excludedTeams.includes(t) && "❌"}
                 </h3>
                 <div className="flex flex-col gap-2">
                   {gameData[`squadra${t}` as keyof typeof gameData].map((w: string, i: number) => {

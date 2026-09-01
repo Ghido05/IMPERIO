@@ -48,6 +48,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   const [calledLetters, setCalledLetters] = useSyncedState<string[]>(`${phrasePrefix}_called_letters`, []);
   const [wrongLetter, setWrongLetter] = useSyncedState<string | null>(`${phrasePrefix}_wrong_letter`, null);
   const [guessTimerEndAt, setGuessTimerEndAt] = useSyncedState<number>(`${phrasePrefix}_guess_timer_end`, 0);
+  const [showError, setShowError] = useSyncedState<boolean>(`${phrasePrefix}_show_error`, false);
+  const [showSuccess, setShowSuccess] = useSyncedState<boolean>(`${phrasePrefix}_show_success`, false);
 
   // New Synced States for steps, winning team selection and score tracking
   const [step, setStep] = useSyncedState<number>(`${phrasePrefix}_step`, 0);
@@ -169,6 +171,22 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
 
   const playErrorSound = useCallback(() => playTone(220, 0.4, 'square', 0.28, 90), [playTone]);
 
+  // Gestione dell'animazione di errore (reset dopo 800ms)
+  useEffect(() => {
+    if (showError) {
+      const timer = setTimeout(() => setShowError(false), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [showError, setShowError]);
+
+  // Gestione dell'animazione di successo / sfondo verde (reset dopo 1000ms)
+  useEffect(() => {
+    if (showSuccess) {
+      const timer = setTimeout(() => setShowSuccess(false), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccess, setShowSuccess]);
+
   // Nasconde la lettera sbagliata dopo 3 secondi
   useEffect(() => {
     if (!wrongLetter) return;
@@ -237,6 +255,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     localStorage.setItem(`${phrasePrefix}_step`, '0');
     localStorage.setItem(`${phrasePrefix}_winning_team`, 'null');
     localStorage.setItem(`${phrasePrefix}_score_awarded`, 'false');
+    localStorage.setItem(`${phrasePrefix}_show_error`, 'false');
+    localStorage.setItem(`${phrasePrefix}_show_success`, 'false');
 
     window.dispatchEvent(new StorageEvent('storage', {
       key: `${phrasePrefix}_tokens`,
@@ -290,6 +310,10 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
 
   const handleCorrectGuess = useCallback(() => {
     if (revealed) return;
+    setShowSuccess(true);
+    playTone(523.25, 0.35, 'sine', 0.25);
+    setTimeout(() => playTone(659.25, 0.35, 'sine', 0.25), 110);
+    setTimeout(() => playTone(783.99, 0.55, 'sine', 0.25), 220);
     setRevealed(true);
     setTokens([...targetTokens]);
     setStep(7);
@@ -299,10 +323,12 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       awardPointsAndBonus(winningTeamIndex);
       setScoreAwarded(true);
     }
-  }, [revealed, targetTokens, winningTeamIndex, scoreAwarded, awardPointsAndBonus, setStep, setTokens, setRevealed]);
+  }, [revealed, targetTokens, winningTeamIndex, scoreAwarded, awardPointsAndBonus, setStep, setTokens, setRevealed, setShowSuccess, playTone]);
 
   const handleWrongGuess = useCallback(() => {
     if (revealed) return;
+    setShowError(true);
+    playErrorSound();
     setRevealed(true);
     setTokens([...targetTokens]);
     setStep(7);
@@ -315,7 +341,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       });
       setScoreAwarded(true);
     }
-  }, [revealed, targetTokens, winningTeamIndex, scoreAwarded, awardPointsAndBonus, setStep, setTokens, setRevealed]);
+  }, [revealed, targetTokens, winningTeamIndex, scoreAwarded, awardPointsAndBonus, setStep, setTokens, setRevealed, setShowError, playErrorSound]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (
@@ -342,6 +368,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       setStep(0);
       setWinningTeamIndex(null);
       setScoreAwarded(false);
+      setShowError(false);
+      setShowSuccess(false);
       return;
     }
 
@@ -439,7 +467,37 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   const showPhraseAndAuction = step >= 3 || revealAll;
 
   return (
-    <div data-asset-refresh={assetRefresh} className="relative w-full min-h-screen bg-black text-white flex items-center justify-center overflow-hidden select-none" style={{ backgroundImage: phrase.sfondo ? `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.72)), url("${assetUrl(phrase.sfondo)}")` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+    <div 
+      data-asset-refresh={assetRefresh} 
+      className={`relative w-full min-h-screen bg-black text-white flex items-center justify-center overflow-hidden select-none transition-transform duration-100 ${showError ? 'animate-shake' : ''}`} 
+      style={{ backgroundImage: phrase.sfondo ? `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.72)), url("${assetUrl(phrase.sfondo)}")` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}
+    >
+      {/* Overlay Errore (Sfondo Rosso + X Gigante) */}
+      {showError && (
+        <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center">
+          <div className="absolute inset-0 animate-flash-red" />
+          <svg 
+            className="w-[45%] h-auto text-red-600 drop-shadow-[0_0_50px_rgba(220,38,38,0.9)] animate-error-x" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="4" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </div>
+      )}
+
+      {/* Overlay Risposta Esatta (Illuminazione Verde) */}
+      {showSuccess && (
+        <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center">
+          <div className="absolute inset-0 animate-flash-green" />
+        </div>
+      )}
+
       {/* Visual gavel style sheets */}
       <style>{`
         @keyframes gavel-strike {

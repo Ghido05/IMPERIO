@@ -573,6 +573,206 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     }
   };
 
+  const handleDownloadPDF = () => {
+    const squadreNomi = state.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
+
+    const fileLabel = (val: string | undefined): string => {
+      if (!val || val.trim() === '') return '—';
+      const trimmed = val.trim();
+      if (trimmed.startsWith('idb://')) {
+        try {
+          const match = trimmed.match(/[?&]name=([^&]+)/);
+          if (match) return decodeURIComponent(match[1]);
+        } catch { /* ignore */ }
+        return 'File locale';
+      }
+      if (trimmed.startsWith('data:')) return '(file incorporato)';
+      const parts = trimmed.split('/');
+      return parts[parts.length - 1] || trimmed;
+    };
+
+    let sectionsHtml = '';
+
+    // ── GIOCO 1 ──────────────────────────────────────────────────────────────
+    sectionsHtml += `<section class="game-section">
+      <h2>🎵 GIOCO 1 — Il mio nome è nessuno</h2>`;
+    for (let i = 1; i <= 10; i++) {
+      const q = state.gioco1.questions[i];
+      if (!q) continue;
+      const tipo = q.tipo || 'canzone';
+      if (tipo === 'canzone') {
+        const c = q.canzone;
+        if (!c.titolo && !c.indizi?.some(v => v)) continue;
+        sectionsHtml += `<div class="slide-block">
+          <div class="slide-num">Domanda ${i} — Tipo: Canzone</div>
+          <table>
+            <tr><th>Titolo</th><td>${c.titolo || '—'}</td></tr>
+            <tr><th>Anno</th><td>${c.anno || '—'}</td></tr>
+            ${(c.indizi || []).map((ind, j) => `<tr><th>Indizio ${j + 1}</th><td>${ind || '—'}</td></tr>`).join('')}
+            <tr><th>Audio strumenti (5)</th><td>${(c.audioFiles || []).map((f, j) => `S${j + 1}: ${fileLabel(f)}`).join(' &nbsp;|&nbsp; ')}</td></tr>
+            <tr><th>Soluzione Audio</th><td>${fileLabel(c.soluzioneAudio)}</td></tr>
+          </table>
+        </div>`;
+      } else {
+        const im = q.immagine;
+        if (!im.soluzione && !im.indizi?.some(v => v)) continue;
+        sectionsHtml += `<div class="slide-block">
+          <div class="slide-num">Domanda ${i} — Tipo: Immagine</div>
+          <table>
+            <tr><th>Soluzione</th><td>${im.soluzione || '—'}</td></tr>
+            ${(im.indizi || []).map((ind, j) => `<tr><th>Indizio ${j + 1}</th><td>${ind || '—'}</td></tr>`).join('')}
+            <tr><th>Immagine</th><td>${fileLabel(im.immagineJpg)}</td></tr>
+            <tr><th>Audio conferma</th><td>${fileLabel(im.confermaAudio)}</td></tr>
+          </table>
+        </div>`;
+      }
+    }
+    sectionsHtml += `</section>`;
+
+    // ── GIOCO 2 ──────────────────────────────────────────────────────────────
+    sectionsHtml += `<section class="game-section">
+      <h2>🎼 GIOCO 2 — Classifica</h2>`;
+    for (let i = 1; i <= 6; i++) {
+      const q = state.gioco2.questions[i];
+      if (!q) continue;
+      const tipo = q.tipo || 'canzone';
+      if (tipo === 'canzone') {
+        const c = q.canzone;
+        if (!c.titolo && !c.artista && !c.indizi?.some(v => v)) continue;
+        sectionsHtml += `<div class="slide-block">
+          <div class="slide-num">Domanda ${i} — Tipo: Classifica Musicale</div>
+          <table>
+            <tr><th>Domanda</th><td>${c.domanda || '—'}</td></tr>
+            <tr><th>Titolo</th><td>${c.titolo || '—'}</td></tr>
+            <tr><th>Artista</th><td>${c.artista || '—'}</td></tr>
+            <tr><th>Info</th><td>${c.info || '—'}</td></tr>
+            ${(c.risposte || []).map((r, j) => `<tr><th>Strumento ${j + 1}</th><td><strong>${r || '—'}</strong> — ${c.indizi?.[j] || '—'}</td></tr>`).join('')}
+            <tr><th>Soluzione Audio</th><td>${fileLabel(c.soluzioneAudio)}</td></tr>
+          </table>
+        </div>`;
+      } else {
+        const im = q.immagine;
+        if (!im.soluzioneTesto && !im.lista10?.some(v => v)) continue;
+        sectionsHtml += `<div class="slide-block">
+          <div class="slide-num">Domanda ${i} — Tipo: Classifica Immagine</div>
+          <table>
+            <tr><th>Domanda</th><td>${im.domanda || '—'}</td></tr>
+            <tr><th>Soluzione</th><td>${im.soluzioneTesto || '—'}</td></tr>
+            ${(im.lista10 || []).map((r, j) => `<tr><th>Indizio ${j + 1}</th><td>${r || '—'}</td></tr>`).join('')}
+            <tr><th>Immagine</th><td>${fileLabel(im.immagineJpg)}</td></tr>
+            <tr><th>Soluzione Audio</th><td>${fileLabel(im.soluzioneAudio)}</td></tr>
+          </table>
+        </div>`;
+      }
+    }
+    sectionsHtml += `</section>`;
+
+    // ── GIOCO 3 — PASSWORD SQUADRE ────────────────────────────────────────────
+    sectionsHtml += `<section class="game-section">
+      <h2>🔑 GIOCO 3 — Password Squadre</h2>`;
+    for (let i = 1; i <= 3; i++) {
+      const q = state.gioco3?.questions?.[i];
+      if (!q) continue;
+      const hasContent = q.squadra1?.[0]?.parola || q.squadra2?.[0]?.parola || q.squadra3?.[0]?.parola || q.parolaBomba;
+      if (!hasContent) continue;
+      const squadraKeys: Array<'squadra1' | 'squadra2' | 'squadra3'> = ['squadra1', 'squadra2', 'squadra3'];
+      sectionsHtml += `<div class="slide-block">
+        <div class="slide-num">Manche ${i}</div>
+        <table>
+          <tr><th>Parola Bomba</th><td>${q.parolaBomba || '—'}</td></tr>
+          <tr><th>Parole Nulle</th><td>${(q.paroleNulle || []).join(', ') || '—'}</td></tr>
+        </table>
+        ${squadraKeys.map((sk, si) => {
+          const words = q[sk];
+          return `<div class="sub-group">${squadreNomi[si]}
+            <table>${(words || []).map((w, wi) =>
+              `<tr><th>Parola ${wi + 1}</th><td>${w.parola || '—'} &nbsp;|&nbsp; Ind.1: ${w.indizi?.[0] || '—'} &nbsp;|&nbsp; Ind.2: ${w.indizi?.[1] || '—'}</td></tr>`
+            ).join('')}</table>
+          </div>`;
+        }).join('')}
+      </div>`;
+    }
+    sectionsHtml += `</section>`;
+
+    // ── GIOCO 4 — FRASE TEMPO ─────────────────────────────────────────────────
+    const frasi = state.gioco4?.frasi || [];
+    sectionsHtml += `<section class="game-section">
+      <h2>⏱️ GIOCO 4 — Frase Tempo</h2>`;
+    if (frasi.length === 0) {
+      sectionsHtml += `<p class="empty">Nessuna frase inserita.</p>`;
+    } else {
+      sectionsHtml += `<table>
+        <thead><tr><th style="width:30px">#</th><th>Frase</th><th style="width:160px">Indizio</th><th style="width:80px">Bonus</th><th style="width:60px">Punti</th></tr></thead>
+        <tbody>
+          ${frasi.map((f, i) => {
+            const item = (typeof f === 'string' ? { testo: f, indizio: '', bonus: '', punti: 1000 } : f) as any;
+            return `<tr>
+              <td>${i + 1}</td>
+              <td class="frase-cell">${item.testo || '—'}</td>
+              <td>${item.indizio || '—'}</td>
+              <td>${item.bonus || '—'}</td>
+              <td>${item.punti ?? 1000}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+    }
+    sectionsHtml += `</section>`;
+
+    // ── SQUADRE ───────────────────────────────────────────────────────────────
+    sectionsHtml += `<section class="game-section">
+      <h2>🏆 Configurazione Squadre</h2>
+      <table>
+        ${squadreNomi.map((n, i) => `<tr><th>Squadra ${i + 1}</th><td>${n || '—'}</td></tr>`).join('')}
+      </table>
+    </section>`;
+
+    const htmlDoc = `<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <title>IMPERIO — Riepilogo Setup</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 11pt; color: #1a1a2e; background: #fff; padding: 20mm 15mm; }
+    .cover { text-align: center; padding: 12mm 0 10mm; border-bottom: 3px solid #d24726; margin-bottom: 10mm; }
+    .cover h1 { font-size: 26pt; font-weight: 900; color: #d24726; letter-spacing: 4px; }
+    .cover p { font-size: 10pt; color: #666; margin-top: 3mm; }
+    .game-section { margin-bottom: 8mm; }
+    .game-section h2 { font-size: 12pt; font-weight: 800; color: #fff; background: #d24726; padding: 5px 10px; border-radius: 4px; margin-bottom: 4mm; }
+    .slide-block { margin-bottom: 5mm; border: 1px solid #e0e0e0; border-radius: 6px; overflow: hidden; page-break-inside: avoid; }
+    .slide-num { background: #f5f5f5; font-size: 9pt; font-weight: 700; padding: 4px 10px; color: #555; border-bottom: 1px solid #e0e0e0; }
+    table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+    table th { text-align: left; width: 150px; padding: 4px 10px; background: #fafafa; color: #888; font-weight: 600; font-size: 9pt; border-bottom: 1px solid #eee; }
+    table td { padding: 4px 10px; color: #1a1a2e; border-bottom: 1px solid #eee; word-break: break-word; }
+    .frase-cell { font-weight: 700; letter-spacing: 1px; }
+    .sub-group { padding: 5px 10px 0; font-size: 9pt; font-weight: 700; color: #d24726; border-top: 1px solid #eee; }
+    .empty { color: #aaa; font-style: italic; padding: 6px 10px; font-size: 10pt; }
+    thead tr th { background: #eee; color: #555; }
+    tbody tr:nth-child(even) td { background: #fafafa; }
+    @media print { body { padding: 8mm 10mm; } .game-section h2 { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  </style>
+</head>
+<body>
+  <div class="cover">
+    <h1>IMPERIO</h1>
+    <p>Riepilogo Risposte Setup — generato il ${new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
+  </div>
+  ${sectionsHtml}
+</body>
+</html>`;
+
+    const printWindow = window.open('', '_blank', 'width=960,height=720');
+    if (!printWindow) {
+      showToast('❌ Popup bloccato! Consenti i popup per questo sito e riprova.');
+      return;
+    }
+    printWindow.document.write(htmlDoc);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => { printWindow.print(); }, 700);
+  };
+
   const handleSave = async () => {
     try {
       await saveSetupStateDb(state);
@@ -775,7 +975,17 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </button>
           )}
 
-
+          <button
+            type="button"
+            onClick={handleDownloadPDF}
+            title="Genera un PDF riepilogativo con tutte le risposte inserite nel setup"
+            className="px-4 py-2 text-xs font-semibold rounded-lg bg-emerald-700/20 hover:bg-emerald-700/30 text-emerald-300 border border-emerald-600/30 hover:border-emerald-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            </svg>
+            Scarica PDF Risposte
+          </button>
 
           <button
             type="button"
@@ -2816,13 +3026,26 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             Resetta Partita
           </button>
         </div>
-        <button
-          type="button"
-          onClick={handleSave}
-          className="px-6 py-2.5 text-xs font-bold rounded-lg bg-gradient-to-r from-[#d24726] to-[#e85a38] hover:from-[#e85a38] hover:to-[#f97316] text-white shadow-lg shadow-[#d24726]/20 transition-all flex items-center gap-2"
-        >
-          💾 Salva Impostazioni
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleDownloadPDF}
+            title="Genera un PDF riepilogativo con tutte le risposte inserite nel setup"
+            className="px-4 py-2.5 text-xs font-semibold rounded-lg bg-emerald-700/20 hover:bg-emerald-700/30 text-emerald-300 border border-emerald-600/30 hover:border-emerald-500/50 transition-all flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            </svg>
+            📄 Scarica PDF Risposte
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            className="px-6 py-2.5 text-xs font-bold rounded-lg bg-gradient-to-r from-[#d24726] to-[#e85a38] hover:from-[#e85a38] hover:to-[#f97316] text-white shadow-lg shadow-[#d24726]/20 transition-all flex items-center gap-2"
+          >
+            💾 Salva Impostazioni
+          </button>
+        </div>
       </footer>
     </div>
   );

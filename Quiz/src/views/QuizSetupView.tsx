@@ -24,6 +24,7 @@ export interface Gioco1Question {
   canzone: Gioco1CanzoneData;
   immagine: Gioco1ImmagineData;
   sfondo?: string;
+  notePresentatore?: string;
 }
 
 // Data types for Box 2 (Gioco 2)
@@ -51,6 +52,7 @@ export interface Gioco2Question {
   canzone: Gioco2CanzoneData;
   immagine: Gioco2ImmagineData;
   sfondo?: string;
+  notePresentatore?: string;
 }
 
 export interface BoxGenericSetup {
@@ -88,6 +90,7 @@ export interface Gioco3Question {
     schede_2_posto: ('bonus' | 'vuoto' | '2000')[];
     schede_3_posto: ('bonus' | 'vuoto' | '2000' | '1000')[];
   };
+  notePresentatore?: string;
 }
 
 export interface Gioco4Setup {
@@ -95,6 +98,7 @@ export interface Gioco4Setup {
   note?: string;
   frasi: FraseTempoItem[];
   sfondoGenerale?: string;
+  notePresentatore?: string;
 }
 
 export interface QuizSetupState {
@@ -137,6 +141,7 @@ export function createDefaultGioco1Question(): Gioco1Question {
       soluzione: '',
     },
     sfondo: '',
+    notePresentatore: '',
   };
 }
 
@@ -161,6 +166,7 @@ export function createDefaultGioco2Question(): Gioco2Question {
       soluzioneTesto: '',
     },
     sfondo: '',
+    notePresentatore: '',
   };
 }
 
@@ -181,7 +187,8 @@ export function createDefaultGioco3Question(): Gioco3Question {
       immagine_premio: '/Icone/premio_bonus.png',
       schede_2_posto: ['bonus', 'vuoto', 'vuoto'],
       schede_3_posto: ['vuoto', 'vuoto', 'vuoto', 'vuoto', 'bonus'],
-    }
+    },
+    notePresentatore: '',
   };
 }
 
@@ -524,6 +531,14 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     });
   };
 
+  const handleGioco4NoteChange = (idx: number, notePresentatore: string) => {
+    setState(prev => {
+      const frasi = [...(prev.gioco4?.frasi || [])];
+      frasi[idx] = { ...normalizeFraseTempoItem(frasi[idx] || ''), notePresentatore };
+      return { ...prev, gioco4: { ...prev.gioco4, frasi } };
+    });
+  };
+
   const toggleGioco4VisibleLetter = (idx: number, tokenIndex: number) => {
     setState(prev => {
       const frasi = [...(prev.gioco4?.frasi || [])];
@@ -611,6 +626,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             ${(c.indizi || []).map((ind, j) => `<tr><th>Indizio ${j + 1}</th><td>${ind || '—'}</td></tr>`).join('')}
             <tr><th>Audio strumenti (5)</th><td>${(c.audioFiles || []).map((f, j) => `S${j + 1}: ${fileLabel(f)}`).join(' &nbsp;|&nbsp; ')}</td></tr>
             <tr><th>Soluzione Audio</th><td>${fileLabel(c.soluzioneAudio)}</td></tr>
+            ${q.notePresentatore ? `<tr><th>Note Presentatore</th><td>${q.notePresentatore}</td></tr>` : ''}
           </table>
         </div>`;
       } else {
@@ -623,6 +639,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             ${(im.indizi || []).map((ind, j) => `<tr><th>Indizio ${j + 1}</th><td>${ind || '—'}</td></tr>`).join('')}
             <tr><th>Immagine</th><td>${fileLabel(im.immagineJpg)}</td></tr>
             <tr><th>Audio conferma</th><td>${fileLabel(im.confermaAudio)}</td></tr>
+            ${q.notePresentatore ? `<tr><th>Note Presentatore</th><td>${q.notePresentatore}</td></tr>` : ''}
           </table>
         </div>`;
       }
@@ -648,6 +665,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             <tr><th>Info</th><td>${c.info || '—'}</td></tr>
             ${(c.risposte || []).map((r, j) => `<tr><th>Strumento ${j + 1}</th><td><strong>${r || '—'}</strong> — ${c.indizi?.[j] || '—'}</td></tr>`).join('')}
             <tr><th>Soluzione Audio</th><td>${fileLabel(c.soluzioneAudio)}</td></tr>
+            ${q.notePresentatore ? `<tr><th>Note Presentatore</th><td>${q.notePresentatore}</td></tr>` : ''}
           </table>
         </div>`;
       } else {
@@ -661,6 +679,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             ${(im.lista10 || []).map((r, j) => `<tr><th>Indizio ${j + 1}</th><td>${r || '—'}</td></tr>`).join('')}
             <tr><th>Immagine</th><td>${fileLabel(im.immagineJpg)}</td></tr>
             <tr><th>Soluzione Audio</th><td>${fileLabel(im.soluzioneAudio)}</td></tr>
+            ${q.notePresentatore ? `<tr><th>Note Presentatore</th><td>${q.notePresentatore}</td></tr>` : ''}
           </table>
         </div>`;
       }
@@ -681,6 +700,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
         <table>
           <tr><th>Parola Bomba</th><td>${q.parolaBomba || '—'}</td></tr>
           <tr><th>Parole Nulle</th><td>${(q.paroleNulle || []).join(', ') || '—'}</td></tr>
+          ${q.notePresentatore ? `<tr><th>Note Presentatore</th><td>${q.notePresentatore}</td></tr>` : ''}
         </table>
         ${squadraKeys.map((sk, si) => {
           const words = q[sk];
@@ -702,16 +722,17 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
       sectionsHtml += `<p class="empty">Nessuna frase inserita.</p>`;
     } else {
       sectionsHtml += `<table>
-        <thead><tr><th style="width:30px">#</th><th>Frase</th><th style="width:160px">Indizio</th><th style="width:80px">Bonus</th><th style="width:60px">Punti</th></tr></thead>
+        <thead><tr><th style="width:30px">#</th><th>Frase</th><th style="width:160px">Indizio</th><th style="width:80px">Bonus</th><th style="width:60px">Punti</th><th>Note Relatore</th></tr></thead>
         <tbody>
           ${frasi.map((f, i) => {
-            const item = (typeof f === 'string' ? { testo: f, indizio: '', bonus: '', punti: 1000 } : f) as any;
+            const item = (typeof f === 'string' ? { testo: f, indizio: '', bonus: '', punti: 1000, notePresentatore: '' } : f) as any;
             return `<tr>
               <td>${i + 1}</td>
               <td class="frase-cell">${item.testo || '—'}</td>
               <td>${item.indizio || '—'}</td>
               <td>${item.bonus || '—'}</td>
               <td>${item.punti ?? 1000}</td>
+              <td>${item.notePresentatore || '—'}</td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -1608,6 +1629,26 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 </div>
               </div>
             )}
+
+            {/* Note del Presentatore Box 1 */}
+            <div className="bg-[#141417] p-4 rounded-xl border border-white/5 space-y-2 mt-4">
+              <label className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                <span>📝 Note del Presentatore (Domanda {currentQ1Num})</span>
+                <span className="text-[10px] text-slate-500 font-normal">(Visibili sul display dell'iPad)</span>
+              </label>
+              <textarea
+                rows={2}
+                placeholder={`Inserisci qui note, aneddoti o istruzioni per il conduttore durante la Domanda ${currentQ1Num}...`}
+                value={currentQ1.notePresentatore || ''}
+                onChange={(e) =>
+                  updateQ1((prev) => ({
+                    ...prev,
+                    notePresentatore: e.target.value,
+                  }))
+                }
+                className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500 transition-colors resize-none"
+              />
+            </div>
           </div>
 
           {/* ==================== BOX 2: GIOCO 2 ==================== */}
@@ -2238,6 +2279,26 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 </div>
               </div>
             )}
+
+            {/* Note del Presentatore Box 2 */}
+            <div className="bg-[#141417] p-4 rounded-xl border border-white/5 space-y-2 mt-4">
+              <label className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                <span>📝 Note del Presentatore (Domanda {currentQ2Num})</span>
+                <span className="text-[10px] text-slate-500 font-normal">(Visibili sul display dell'iPad)</span>
+              </label>
+              <textarea
+                rows={2}
+                placeholder={`Inserisci qui note, aneddoti o istruzioni per il conduttore durante la Domanda ${currentQ2Num}...`}
+                value={currentQ2.notePresentatore || ''}
+                onChange={(e) =>
+                  updateQ2((prev) => ({
+                    ...prev,
+                    notePresentatore: e.target.value,
+                  }))
+                }
+                className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
+              />
+            </div>
           </div>
 
         </div>
@@ -2633,6 +2694,26 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               />
             </div>
           </div>
+
+          {/* Note del Presentatore Box 3 */}
+          <div className="bg-[#141417] p-4 rounded-xl border border-white/5 space-y-2 mt-4">
+            <label className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+              <span>📝 Note del Presentatore (Manche {currentQ3Num})</span>
+              <span className="text-[10px] text-slate-500 font-normal">(Visibili sul display dell'iPad)</span>
+            </label>
+            <textarea
+              rows={2}
+              placeholder={`Inserisci qui note, parole chiave o suggerimenti per il conduttore durante la Manche ${currentQ3Num} di Password...`}
+              value={currentQ3.notePresentatore || ''}
+              onChange={(e) =>
+                updateQ3((prev) => ({
+                  ...prev,
+                  notePresentatore: e.target.value,
+                }))
+              }
+              className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500 transition-colors resize-none"
+            />
+          </div>
         </div>
 
         {/* BOX 4 — Frase Tempo (Full Width, BOX 5 rimosso dal setup) */}
@@ -2835,6 +2916,21 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                         className="w-full bg-black/40 border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white focus:outline-none focus:border-cyan-500 transition-colors"
                       />
                     </div>
+                  </div>
+
+                  {/* Note del Presentatore Frase */}
+                  <div className="pl-0 md:pl-[76px] pt-2 border-t border-white/5">
+                    <label className="block text-[10px] font-semibold text-amber-400 mb-1 flex items-center gap-1.5">
+                      <span>📝 Note del Presentatore (Frase {idx + 1})</span>
+                      <span className="text-[9px] text-slate-500 font-normal">(Visibili sul display dell'iPad)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={frase.notePresentatore || ''}
+                      onChange={(e) => handleGioco4NoteChange(idx, e.target.value)}
+                      placeholder="Appunti o curiosità per il conduttore su questa frase..."
+                      className="w-full bg-black/40 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500 transition-colors"
+                    />
                   </div>
                 </div>
                 );

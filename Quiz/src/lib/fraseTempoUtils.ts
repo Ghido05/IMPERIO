@@ -5,6 +5,7 @@ export interface FraseTempoItem {
   indizio?: string;
   bonus?: string;
   punti?: number;
+  notePresentatore?: string;
 }
 
 /** Restituisce la vocale/lettera base di un token, ignorando gli accenti. */
@@ -37,7 +38,7 @@ export function parsePhraseTokens(frase: string): string[] {
 
 export function normalizeFraseTempoItem(raw: string | FraseTempoItem): FraseTempoItem {
   if (typeof raw === 'string') {
-    return { testo: raw, sfondo: '', lettereVisibili: [], indizio: '', bonus: '', punti: 1000 };
+    return { testo: raw, sfondo: '', lettereVisibili: [], indizio: '', bonus: '', punti: 1000, notePresentatore: '' };
   }
   return {
     testo: raw.testo ?? '',
@@ -46,6 +47,7 @@ export function normalizeFraseTempoItem(raw: string | FraseTempoItem): FraseTemp
     indizio: raw.indizio ?? '',
     bonus: raw.bonus ?? '',
     punti: typeof raw.punti === 'number' ? raw.punti : 1000,
+    notePresentatore: raw.notePresentatore ?? '',
   };
 }
 

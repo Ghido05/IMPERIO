@@ -218,13 +218,19 @@ function IpadContent() {
       return (
         key.startsWith('password_') || 
         key.startsWith('playstate_') || 
+        key.startsWith('note_presentatore_') ||
         key === 'imperio_quiz_scores' || 
         key === 'imperio_quiz_setup_config_v1'
       );
     };
 
     const isOutgoingSyncKey = (key: string) => {
-      return key.startsWith('password_') || key.startsWith('playstate_');
+      return (
+        key.startsWith('password_') || 
+        key.startsWith('playstate_') || 
+        key.startsWith('note_presentatore_') ||
+        key === 'imperio_quiz_setup_config_v1'
+      );
     };
 
     // Setup local storage override to send changes to Mac
@@ -444,8 +450,147 @@ function IpadContent() {
     );
   }
 
+  // Calcolo dinamico del contesto per le Note del Presentatore (per ogni gioco e per ogni manche/domanda/frase)
+  const activeBoxVal = localStorage.getItem('playstate_active_box') || '1';
+  const activeQuestionVal = localStorage.getItem('playstate_active_question') || '1';
+  const activeBox = parseInt(activeBoxVal, 10);
+  const activeQuestion = parseInt(activeQuestionVal, 10);
+  const currentSlideId = activeSlide?.id ?? '';
+
+  const getActiveNoteContext = () => {
+    // 1. Box 1: Il mio nome è nessuno (Domande 1-10)
+    if (activeBox === 1 || currentSlideId.startsWith('box1_')) {
+      const qNum = currentSlideId.startsWith('box1_q')
+        ? parseInt(currentSlideId.replace('box1_q', ''), 10) || activeQuestion
+        : activeQuestion;
+      const note = setupState?.gioco1?.questions?.[qNum]?.notePresentatore ?? '';
+      return {
+        box: 1,
+        question: qNum,
+        label: `GIOCO 1 — Domanda ${qNum}`,
+        note,
+        saveKey: { game: 'gioco1' as const, qNum }
+      };
+    }
+
+    // 2. Box 2: Classifica (Domande 1-6)
+    if (activeBox === 2 || currentSlideId.startsWith('box2_')) {
+      const qNum = currentSlideId.startsWith('box2_q')
+        ? parseInt(currentSlideId.replace('box2_q', ''), 10) || activeQuestion
+        : activeQuestion;
+      const note = setupState?.gioco2?.questions?.[qNum]?.notePresentatore ?? '';
+      return {
+        box: 2,
+        question: qNum,
+        label: `GIOCO 2 — Domanda ${qNum}`,
+        note,
+        saveKey: { game: 'gioco2' as const, qNum }
+      };
+    }
+
+    // 3. Box 3: Password (Manche 1-3)
+    if (isPasswordGame || activeBox === 3) {
+      const mancheStored = localStorage.getItem('password_current_manche');
+      const mancheIdx = mancheStored ? parseInt(mancheStored, 10) : (activeQuestion - 1);
+      const mancheNum = Math.min(Math.max(mancheIdx + 1, 1), 3);
+      const note = setupState?.gioco3?.questions?.[mancheNum]?.notePresentatore ?? '';
+      return {
+        box: 3,
+        question: mancheNum,
+        label: `GIOCO 3 — Manche ${mancheNum}`,
+        note,
+        saveKey: { game: 'gioco3' as const, qNum: mancheNum }
+      };
+    }
+
+    // 4. Box 4: Frase Tempo
+    if (activeBox === 4 || currentSlideId.includes('frase')) {
+      const storedIdx = localStorage.getItem(`playstate_${currentSlideId}_index`) ||
+                        localStorage.getItem('playstate_gioco_frase_tempo_index') ||
+                        localStorage.getItem('playstate_box4_index') || '0';
+      const phraseIdx = parseInt(storedIdx, 10) || 0;
+      const frasi = setupState?.gioco4?.frasi || [];
+      const note = frasi[phraseIdx]?.notePresentatore ?? setupState?.gioco4?.notePresentatore ?? '';
+      return {
+        box: 4,
+        question: phraseIdx + 1,
+        label: `GIOCO 4 — Frase ${phraseIdx + 1}`,
+        note,
+        saveKey: { game: 'gioco4' as const, phraseIdx }
+      };
+    }
+
+    // Fallback: da activeSlide data
+    const dataNote = (activeSlide?.data as any)?.notePresentatore || '';
+    return {
+      box: activeBox,
+      question: activeQuestion,
+      label: activeSlide?.id || 'Note Presentatore',
+      note: dataNote,
+      saveKey: null
+    };
+  };
+
+  const noteContext = getActiveNoteContext();
+  const [noteText, setNoteText] = useState<string>('');
+  const [isEditingNote, setIsEditingNote] = useState<boolean>(false);
+
+  // Sincronizza il testo della nota quando cambia slide, manche o configurazione
+  useEffect(() => {
+    if (!isEditingNote) {
+      setNoteText(noteContext.note || '');
+    }
+  }, [noteContext.label, noteContext.note, isEditingNote]);
+
+  const handleNoteSave = () => {
+    setIsEditingNote(false);
+    if (!noteContext.saveKey || !setupState) return;
+
+    const newSetup = JSON.parse(JSON.stringify(setupState));
+    if (noteContext.saveKey.game === 'gioco1') {
+      if (!newSetup.gioco1) newSetup.gioco1 = { questions: {} };
+      if (!newSetup.gioco1.questions) newSetup.gioco1.questions = {};
+      if (!newSetup.gioco1.questions[noteContext.saveKey.qNum]) {
+        newSetup.gioco1.questions[noteContext.saveKey.qNum] = {};
+      }
+      newSetup.gioco1.questions[noteContext.saveKey.qNum].notePresentatore = noteText;
+    } else if (noteContext.saveKey.game === 'gioco2') {
+      if (!newSetup.gioco2) newSetup.gioco2 = { questions: {} };
+      if (!newSetup.gioco2.questions) newSetup.gioco2.questions = {};
+      if (!newSetup.gioco2.questions[noteContext.saveKey.qNum]) {
+        newSetup.gioco2.questions[noteContext.saveKey.qNum] = {};
+      }
+      newSetup.gioco2.questions[noteContext.saveKey.qNum].notePresentatore = noteText;
+    } else if (noteContext.saveKey.game === 'gioco3') {
+      if (!newSetup.gioco3) newSetup.gioco3 = { questions: {} };
+      if (!newSetup.gioco3.questions) newSetup.gioco3.questions = {};
+      if (!newSetup.gioco3.questions[noteContext.saveKey.qNum]) {
+        newSetup.gioco3.questions[noteContext.saveKey.qNum] = {};
+      }
+      newSetup.gioco3.questions[noteContext.saveKey.qNum].notePresentatore = noteText;
+    } else if (noteContext.saveKey.game === 'gioco4') {
+      if (!newSetup.gioco4) newSetup.gioco4 = { frasi: [] };
+      if (!newSetup.gioco4.frasi) newSetup.gioco4.frasi = [];
+      const pIdx = (noteContext.saveKey as any).phraseIdx;
+      if (newSetup.gioco4.frasi[pIdx]) {
+        if (typeof newSetup.gioco4.frasi[pIdx] === 'string') {
+          newSetup.gioco4.frasi[pIdx] = { testo: newSetup.gioco4.frasi[pIdx], notePresentatore: noteText };
+        } else {
+          newSetup.gioco4.frasi[pIdx].notePresentatore = noteText;
+        }
+      }
+    }
+
+    setSetupState(newSetup);
+    try {
+      localStorage.setItem('imperio_quiz_setup_config_v1', JSON.stringify(newSetup));
+    } catch (e) {
+      console.warn('Errore salvataggio localStorage iPad:', e);
+    }
+  };
+
   return (
-    <div className="w-full h-screen bg-slate-900 text-white flex flex-col overflow-hidden">
+    <div className="w-full h-screen bg-slate-950 text-white flex flex-col overflow-hidden font-sans select-none">
       {/* CSS per Animazione di Lampeggio Buzzer Conduttore */}
       <style>{`
         @keyframes ipad-blink {
@@ -465,74 +610,119 @@ function IpadContent() {
         }
       `}</style>
 
-      {/* Top Connection Indicator (Sottile) */}
-      <div className="bg-slate-950 px-4 py-1.5 flex justify-between items-center text-[10px] border-b border-slate-800 shrink-0 select-none">
-        <div className="flex items-center gap-2">
-          <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-          <span className="font-semibold text-slate-400">
-            {wsConnected ? 'CONNESSO AL MAC' : 'DISCONNESSO — TENTATIVO DI RICONNESSIONE...'}
-          </span>
+      {/* ========================================================================= */}
+      {/* 1. SEZIONE SUPERIORE: Box Punteggi e Squadre (20% altezza, 100% larghezza) */}
+      {/* ========================================================================= */}
+      <div className="w-full h-[20vh] grid grid-cols-3 border-b-2 border-slate-800 bg-slate-950 shrink-0 select-none relative z-20 overflow-hidden">
+        {/* Pillola discreta per lo stato di connessione */}
+        <div className="absolute top-2 right-2 z-30 pointer-events-none flex items-center gap-1.5 bg-black/60 backdrop-blur px-2.5 py-0.5 rounded-full border border-white/10 text-[9px] font-semibold text-slate-300">
+          <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
+          <span>{wsConnected ? 'LIVE' : 'OFFLINE'}</span>
         </div>
-        <span className="text-slate-500 font-bold uppercase tracking-wider text-[8px]">
-          IMPERIO VII iPad Client
-        </span>
-      </div>
 
-      {/* Striscia dei Punteggi Specchiata a Tutto Schermo (Verde / Blu / Rosso) */}
-      <div className="w-full grid grid-cols-3 h-20 sm:h-24 border-b border-slate-950 shrink-0 font-sans select-none">
-        
         {/* Squadra 3 (Verde) */}
         <div 
-          className={`flex flex-col items-center justify-center border-r border-slate-950/40 transition-all duration-300 ${
+          className={`h-full flex flex-col items-center justify-center border-r border-slate-950/40 p-2 sm:p-3 transition-all duration-300 ${
             isS3Booked 
-              ? 'bg-emerald-500 text-white animate-ipad-blink z-10 border-4 border-white' 
+              ? 'bg-emerald-500 text-white animate-ipad-blink z-10 border-4 border-white shadow-2xl' 
               : 'bg-emerald-950/70 text-emerald-100 hover:bg-emerald-900/80'
           }`}
         >
-          <span className={`text-[10px] sm:text-xs font-black uppercase tracking-widest leading-none mb-1 transition-colors ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>
+          <span className={`text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-widest leading-none mb-1.5 transition-colors ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>
             🟢 {teamNames[2] || 'SQUADRA 3'}
           </span>
-          <span className="text-2xl sm:text-4xl font-black leading-none tabular-nums">
-            {formatScoreNumber(scores?.[2] ?? 0)} <span className={`text-xs sm:text-sm font-black ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>PT</span>
-          </span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-3xl sm:text-5xl md:text-6xl font-black leading-none tabular-nums tracking-tight">
+              {formatScoreNumber(scores?.[2] ?? 0)}
+            </span>
+            <span className={`text-xs sm:text-sm md:text-base font-black ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>PT</span>
+          </div>
+          {isS3Booked && (
+            <span className="mt-1 px-2 py-0.5 rounded bg-white text-emerald-900 text-[10px] font-black uppercase tracking-wider animate-bounce">
+              Buzzer Prenotato!
+            </span>
+          )}
         </div>
 
         {/* Squadra 2 (Blu) */}
         <div 
-          className={`flex flex-col items-center justify-center border-r border-slate-950/40 transition-all duration-300 ${
+          className={`h-full flex flex-col items-center justify-center border-r border-slate-950/40 p-2 sm:p-3 transition-all duration-300 ${
             isS2Booked 
-              ? 'bg-blue-500 text-white animate-ipad-blink z-10 border-4 border-white' 
+              ? 'bg-blue-500 text-white animate-ipad-blink z-10 border-4 border-white shadow-2xl' 
               : 'bg-blue-950/70 text-blue-100 hover:bg-blue-900/80'
           }`}
         >
-          <span className={`text-[10px] sm:text-xs font-black uppercase tracking-widest leading-none mb-1 transition-colors ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>
+          <span className={`text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-widest leading-none mb-1.5 transition-colors ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>
             🔵 {teamNames[1] || 'SQUADRA 2'}
           </span>
-          <span className="text-2xl sm:text-4xl font-black leading-none tabular-nums">
-            {formatScoreNumber(scores?.[1] ?? 0)} <span className={`text-xs sm:text-sm font-black ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>PT</span>
-          </span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-3xl sm:text-5xl md:text-6xl font-black leading-none tabular-nums tracking-tight">
+              {formatScoreNumber(scores?.[1] ?? 0)}
+            </span>
+            <span className={`text-xs sm:text-sm md:text-base font-black ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>PT</span>
+          </div>
+          {isS2Booked && (
+            <span className="mt-1 px-2 py-0.5 rounded bg-white text-blue-900 text-[10px] font-black uppercase tracking-wider animate-bounce">
+              Buzzer Prenotato!
+            </span>
+          )}
         </div>
 
         {/* Squadra 1 (Rosso) */}
         <div 
-          className={`flex flex-col items-center justify-center transition-all duration-300 ${
+          className={`h-full flex flex-col items-center justify-center p-2 sm:p-3 transition-all duration-300 ${
             isS1Booked 
-              ? 'bg-red-500 text-white animate-ipad-blink z-10 border-4 border-white' 
+              ? 'bg-red-500 text-white animate-ipad-blink z-10 border-4 border-white shadow-2xl' 
               : 'bg-red-950/70 text-red-100 hover:bg-red-900/80'
           }`}
         >
-          <span className={`text-[10px] sm:text-xs font-black uppercase tracking-widest leading-none mb-1 transition-colors ${isS1Booked ? 'text-white' : 'text-red-400'}`}>
+          <span className={`text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-widest leading-none mb-1.5 transition-colors ${isS1Booked ? 'text-white' : 'text-red-400'}`}>
             🔴 {teamNames[0] || 'SQUADRA 1'}
           </span>
-          <span className="text-2xl sm:text-4xl font-black leading-none tabular-nums">
-            {formatScoreNumber(scores?.[0] ?? 0)} <span className={`text-xs sm:text-sm font-black ${isS1Booked ? 'text-white' : 'text-red-400'}`}>PT</span>
-          </span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-3xl sm:text-5xl md:text-6xl font-black leading-none tabular-nums tracking-tight">
+              {formatScoreNumber(scores?.[0] ?? 0)}
+            </span>
+            <span className={`text-xs sm:text-sm md:text-base font-black ${isS1Booked ? 'text-white' : 'text-red-400'}`}>PT</span>
+          </div>
+          {isS1Booked && (
+            <span className="mt-1 px-2 py-0.5 rounded bg-white text-red-900 text-[10px] font-black uppercase tracking-wider animate-bounce">
+              Buzzer Prenotato!
+            </span>
+          )}
         </div>
-
       </div>
 
-      <div className="flex-1 w-full overflow-hidden relative bg-black flex items-center justify-center">
+      {/* ========================================================================= */}
+      {/* 2. SEZIONE CENTRALE: Grafica del Gioco con Soluzioni (70% altezza con scroll) */}
+      {/* ========================================================================= */}
+      <div className="w-full h-[70vh] overflow-y-auto overflow-x-hidden relative bg-black flex flex-col items-center justify-center p-1 sm:p-2 shrink-0 touch-pan-y">
         {mainContent}
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 3. SEZIONE INFERIORE: Note del Presentatore (10% altezza con scroll) */}
+      {/* ========================================================================= */}
+      <div className="w-full h-[10vh] border-t-2 border-slate-800 bg-[#141418] px-3 py-1.5 shrink-0 flex flex-col overflow-y-auto select-text touch-pan-y">
+        <div className="flex items-center justify-between text-[11px] font-bold text-amber-400 mb-1 shrink-0">
+          <span className="flex items-center gap-1.5">
+            <span>📝 NOTE PRESENTATORE</span>
+            <span className="text-[10px] text-slate-400 font-normal">({noteContext.label})</span>
+          </span>
+          <span className="text-[9px] text-slate-500 font-mono">
+            {isEditingNote ? '✎ In modifica...' : 'Tocca per modificare • Scorri se lungo'}
+          </span>
+        </div>
+        <textarea
+          value={noteText}
+          onChange={(e) => {
+            setNoteText(e.target.value);
+            setIsEditingNote(true);
+          }}
+          onBlur={handleNoteSave}
+          placeholder="Nessuna nota per questa manche. Tocca qui per inserire o modificare appunti per il conduttore..."
+          className="w-full flex-1 min-h-[32px] bg-black/40 border border-white/10 rounded px-2.5 py-1 text-xs text-amber-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400/80 resize-none font-sans leading-relaxed"
+        />
       </div>
     </div>
   );

@@ -78,6 +78,7 @@ export function getSlideForBoxQuestion(
           audio: q1.canzone.soluzioneAudio || '',
         },
         sfondo: sf,
+        notePresentatore: q1.notePresentatore || '',
       };
       return { id: `box1_q${questionNum}`, type: 'music', data };
     } else {
@@ -97,6 +98,7 @@ export function getSlideForBoxQuestion(
           anno: '',
         },
         griglia: { colonne: 10, righe: 10, puntoFocale: { colonna: 5, riga: 5 } },
+        notePresentatore: q1.notePresentatore || '',
       };
       return { id: `box1_q${questionNum}`, type: 'img', data };
     }
@@ -123,6 +125,7 @@ export function getSlideForBoxQuestion(
           audio: q2.canzone.audioFiles[i] || '',
           frase: q2.canzone.indizi[i] || '',
         })),
+        notePresentatore: q2.notePresentatore || '',
       };
       return { id: `box2_q${questionNum}`, type: 'classifica_musicale', data };
     } else {
@@ -135,6 +138,7 @@ export function getSlideForBoxQuestion(
           posizione: i + 1,
           testo: txt || `Voce ${i + 1}`,
         })),
+        notePresentatore: q2.notePresentatore || '',
       };
       return { id: `box2_q${questionNum}`, type: 'classifica', data };
     }
@@ -204,12 +208,14 @@ export function getSlideForBoxQuestion(
             schede_2_posto,
             schede_3_posto
           };
-        })()
+        })(),
+        notePresentatore: q.notePresentatore || '',
       };
     }).filter(Boolean);
 
     const data = {
-      manches: setupManches.length > 0 ? setupManches : defaultData.manches
+      manches: setupManches.length > 0 ? setupManches : defaultData.manches,
+      notePresentatore: setupState.gioco3?.questions?.[questionNum]?.notePresentatore || '',
     };
     return { id: 'password_squadre', type: 'password_squadre', data };
   }

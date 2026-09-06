@@ -1,6 +1,6 @@
 {
   "gioco1": {
-    "selectedQuestion": 2,
+    "selectedQuestion": 1,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -32,7 +32,8 @@
           ],
           "confermaAudio": "",
           "soluzione": ""
-        }
+        },
+        "notePresentatore": "suca"
       },
       "2": {
         "tipo": "immagine",
@@ -944,7 +945,8 @@
         "lettereVisibili": [],
         "indizio": "",
         "bonus": "switch",
-        "punti": 0
+        "punti": 0,
+        "notePresentatore": ""
       },
       {
         "testo": "CHI CERCA TROVA",
@@ -952,7 +954,8 @@
         "lettereVisibili": [],
         "indizio": "",
         "bonus": "",
-        "punti": 1000
+        "punti": 1000,
+        "notePresentatore": ""
       },
       {
         "testo": "A BUON INTENDITORE POCHE PAROLE",
@@ -960,7 +963,8 @@
         "lettereVisibili": [],
         "indizio": "",
         "bonus": "switch",
-        "punti": 1000
+        "punti": 1000,
+        "notePresentatore": ""
       },
       {
         "testo": "IL GATTO MIAGOLA, IL CANE NO",
@@ -968,7 +972,8 @@
         "lettereVisibili": [],
         "indizio": "",
         "bonus": "",
-        "punti": 1000
+        "punti": 1000,
+        "notePresentatore": ""
       },
       {
         "testo": "NON Ce N'è PER NESSUNO, la libertà",
@@ -976,7 +981,8 @@
         "lettereVisibili": [],
         "indizio": "",
         "bonus": "",
-        "punti": 1000
+        "punti": 1000,
+        "notePresentatore": ""
       }
     ],
     "sfondoGenerale": ""

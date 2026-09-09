@@ -1,6 +1,6 @@
 {
   "gioco1": {
-    "selectedQuestion": 1,
+    "selectedQuestion": 3,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -68,7 +68,7 @@
         }
       },
       "3": {
-        "tipo": "canzone",
+        "tipo": "immagine",
         "canzone": {
           "audioFiles": [
             "",
@@ -88,16 +88,17 @@
           "anno": ""
         },
         "immagine": {
-          "immagineJpg": "",
+          "immagineJpg": "idb://file_1788906605968_ofwh21t?name=images.jpeg",
           "indizi": [
-            "",
-            "",
-            "",
-            ""
+            "Uomo forte di destini forti, di cui cronos determinerà le sorti",
+            "indizio 2 poi ci penso",
+            "Cercavo un padre in mezzo al vasto mondo \"\\n\" sotto di me il mare è molto profondo",
+            "figlio di Ulisse"
           ],
           "confermaAudio": "",
-          "soluzione": ""
-        }
+          "soluzione": "Telemaco "
+        },
+        "notePresentatore": "Locandina film \"The Odissey\""
       },
       "4": {
         "tipo": "canzone",
@@ -940,7 +941,7 @@
     "note": "Modulo Gioco 4 (in arrivo)",
     "frasi": [
       {
-        "testo": "IL MATTINO HA L'ORO IN BOCCa",
+        "testo": "diga di assuan",
         "sfondo": "",
         "lettereVisibili": [],
         "indizio": "",
@@ -949,13 +950,30 @@
         "notePresentatore": ""
       },
       {
-        "testo": "CHI CERCA TROVA",
-        "sfondo": "",
-        "lettereVisibili": [],
-        "indizio": "",
+        "testo": "CENTENARIO DELLA MITICA STRADA CHE COLLEGA CHICAGO A SANTA MONICA",
+        "sfondo": "idb://file_1788948107975_uh8mvgs?name=4_1_route66.jpg",
+        "lettereVisibili": [
+          1,
+          6,
+          8,
+          12,
+          15,
+          20,
+          22,
+          29,
+          33,
+          36,
+          41,
+          45,
+          49,
+          57,
+          60,
+          64
+        ],
+        "indizio": "11 NOVEMBRE 2026, ROUTE 66",
         "bonus": "",
-        "punti": 1000,
-        "notePresentatore": ""
+        "punti": 3000,
+        "notePresentatore": "❓ Domanda Curiosità sulla Route 66 Domanda: Nel suo capolavoro letterario del 1939 \"Furore\" (The Grapes of Wrath), lo scrittore John Steinbeck descrive la migrazione della famiglia Joad verso ovest durante la Grande Depressione. In questo romanzo, Steinbeck coniò per la Route 66 un celebre soprannome che è rimasto nella storia. Quale? Opzioni: A) L'Arteria d'America B) La Via della Speranza C) La Strada Madre D) Il Nastro d'Asfalto Risposta corretta: C) La Strada Madre (The Mother Road). \"L'11 novembre 2026 celebriamo i 100 anni dalla nascita della Route 66, inaugurata ufficialmente nel 1926. Questa leggendaria autostrada, lunga originariamente quasi 4.000 chilometri, tagliava l'America in diagonale collegando Chicago a Santa Monica, in California, attraversando ben 8 Stati. Anche se nel 1985 è stata ufficialmente cancellata dalle mappe del sistema autostradale americano (sostituita dalle più veloci Interstate), il suo spirito non è mai morto. Oggi, i tratti sopravvissuti formano la 'Historic Route 66'. Festeggiare il suo centenario non significa solo celebrare un pezzo di asfalto, ma omaggiare il simbolo per eccellenza della libertà, dell'avventura e del classico viaggio on the road americano.\""
       },
       {
         "testo": "A BUON INTENDITORE POCHE PAROLE",

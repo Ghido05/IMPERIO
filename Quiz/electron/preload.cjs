@@ -38,4 +38,5 @@ contextBridge.exposeInMainWorld('electron', {
     ipcRenderer.on('ipad-connection-status', subscription);
     return () => ipcRenderer.removeListener('ipad-connection-status', subscription);
   },
+  findBuzzerIp: (currentIp) => ipcRenderer.invoke('find-buzzer-ip', currentIp),
 });

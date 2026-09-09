@@ -5,6 +5,7 @@ const express = require('express');
 const http = require('http');
 const { WebSocketServer } = require('ws');
 const os = require('os');
+const net = require('net');
 
 // Disable autoplay gesture requirements
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -536,6 +537,81 @@ ipcMain.handle('get-all-ip-addresses', () => {
     defaultIp: getLocalIpAddress(),
     port: activePort
   };
+});
+
+function checkPort(host, port = 81, timeout = 600) {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(timeout);
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(host);
+    });
+    socket.once('timeout', () => {
+      socket.destroy();
+      resolve(null);
+    });
+    socket.once('error', () => {
+      socket.destroy();
+      resolve(null);
+    });
+    socket.connect(port, host);
+  });
+}
+
+async function findBuzzerIp(preferredIp) {
+  // 1. Prova l'IP fornito/salvato
+  if (preferredIp) {
+    const ok = await checkPort(preferredIp, 81, 700);
+    if (ok) return ok;
+  }
+
+  // 2. Prova host mDNS e IP tipici (es. Access Point ESP32 o IP recenti)
+  const commonHosts = [
+    '192.168.1.97',
+    '192.168.1.65',
+    '192.168.4.1', // Default Access Point ESP32
+    'esp32.local',
+    'imperio-buzzer.local',
+    'pulsantiera.local'
+  ];
+
+  for (const host of commonHosts) {
+    if (host !== preferredIp) {
+      const ok = await checkPort(host, 81, 400);
+      if (ok) return ok;
+    }
+  }
+
+  // 3. Scansione rapida della sottorete locale (porta 81)
+  const interfaces = getAllIpAddresses();
+  for (const iface of interfaces) {
+    const parts = iface.address.split('.');
+    if (parts.length === 4) {
+      const prefix = `${parts[0]}.${parts[1]}.${parts[2]}.`;
+      const candidates = [];
+      for (let i = 1; i <= 254; i++) {
+        const ip = `${prefix}${i}`;
+        if (ip !== iface.address) {
+          candidates.push(ip);
+        }
+      }
+
+      // Esegui in blocchi concorrenti da 50 socket
+      for (let i = 0; i < candidates.length; i += 50) {
+        const chunk = candidates.slice(i, i + 50);
+        const results = await Promise.all(chunk.map(ip => checkPort(ip, 81, 600)));
+        const found = results.find(Boolean);
+        if (found) return found;
+      }
+    }
+  }
+
+  return null;
+}
+
+ipcMain.handle('find-buzzer-ip', async (event, currentIp) => {
+  return await findBuzzerIp(currentIp);
 });
 
 app.whenReady().then(() => {

@@ -1,6 +1,6 @@
 {
   "gioco1": {
-    "selectedQuestion": 1,
+    "selectedQuestion": 7,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -18,9 +18,9 @@
             "ind 3",
             "ind 4"
           ],
-          "soluzioneAudio": "/Audio/Modà - Come un Pittore con Testo.mp3",
-          "titolo": "Come un pittore ",
-          "anno": "Modà - 2007"
+          "soluzioneAudio": "",
+          "titolo": "Ossessione",
+          "anno": "Samurai Jay - 2026"
         },
         "immagine": {
           "immagineJpg": "",
@@ -33,7 +33,7 @@
           "confermaAudio": "",
           "soluzione": ""
         },
-        "notePresentatore": "suca"
+        "notePresentatore": ""
       },
       "2": {
         "tipo": "immagine",
@@ -200,11 +200,11 @@
         "tipo": "canzone",
         "canzone": {
           "audioFiles": [
-            "",
-            "",
-            "",
-            "",
-            ""
+            "idb://file_1789060447242_oh1wv8m?name=g01m07s01%20elettronico%20-%20payphone.mp3",
+            "idb://file_1789060451612_0atfp2t?name=g01m07s02%20chitarra%20-%20payphone.mp3",
+            "idb://file_1789060455632_3livl0i?name=g01m07s03%20piano%20-%20payphone.mp3",
+            "idb://file_1789060459242_mzg9maj?name=g01m07s04%20basso%20-%20payphone.mp3",
+            "idb://file_1789060462419_qq3dvgq?name=g01m07s05%20flauto%20-%20payphone.mp3"
           ],
           "indizi": [
             "",
@@ -212,9 +212,9 @@
             "",
             ""
           ],
-          "soluzioneAudio": "",
-          "titolo": "",
-          "anno": ""
+          "soluzioneAudio": "idb://file_1789060372971_2uwu5xr?name=g01m07soluzione.mp3",
+          "titolo": "Payphone",
+          "anno": "Maroon 5 ft. Wiz Khalifa - 2012"
         },
         "immagine": {
           "immagineJpg": "",
@@ -328,13 +328,13 @@
     "sfondoGenerale": ""
   },
   "gioco2": {
-    "selectedQuestion": 1,
+    "selectedQuestion": 3,
     "questions": {
       "1": {
         "tipo": "canzone",
         "canzone": {
           "audioFiles": [
-            "idb://file_1788017351092_17xer6x?name=g02m01s01%20batteria%20-%20ossessione.mp3",
+            "idb://file_1789060737380_j60v42x?name=g02m01s01%20batteria%20-%20ossessione.mp3",
             "/Audio/strumenti/g02m01s02basso-ossessione.mp3",
             "/Audio/strumenti/g02m01s03 chitarra acustica 1 e elettronica.mp3",
             "/Audio/strumenti/g02m01s04chitarra.mp3",
@@ -360,7 +360,7 @@
             "",
             ""
           ],
-          "soluzioneAudio": "/Audio/g02m01soluzione.mp3",
+          "soluzioneAudio": "idb://file_1789060718681_krnnq7j?name=g02m01soluzione.mp3",
           "titolo": "Ossessione",
           "info": "2026",
           "domanda": "Nazioni con più lettere nel nome corrente in Italiano",
@@ -441,13 +441,13 @@
         "tipo": "canzone",
         "canzone": {
           "audioFiles": [
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            ""
+            "idb://file_1789060765388_9h6lvrl?name=g02m03s01%20violino.mp3",
+            "idb://file_1789060771447_ihrpqc8?name=g02m03s02%20basso.mp3",
+            "idb://file_1789060776291_9o3o8kd?name=g02m03s03%20chitarra%20acustica%20siamo%20uguali.mp3",
+            "idb://file_1789060783884_ozzye2i?name=g02m03s04%20elettrico%20siamo%20uguali.mp3",
+            "idb://file_1789060791204_rzym8i6?name=g02m03s05%20piano%20siamo%20uguali.mp3",
+            "idb://file_1789060799892_3wdz6uh?name=g02m03s06%20tastiera%20siamo%20uguali.mp3",
+            "idb://file_1789061216003_o2wjpjz?name=g02m03s07fluato%20siamo%20uguali.mp3"
           ],
           "risposte": [
             "",
@@ -467,9 +467,10 @@
             "",
             ""
           ],
-          "soluzioneAudio": "",
-          "titolo": "",
-          "info": ""
+          "soluzioneAudio": "idb://file_1789061037995_y846fck?name=g02m03soluzione.mp3",
+          "titolo": "Siamo uguali",
+          "info": "2015",
+          "artista": "Lorenzo fragola"
         },
         "immagine": {
           "lista10": [

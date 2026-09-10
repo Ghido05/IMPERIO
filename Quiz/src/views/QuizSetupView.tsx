@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { idbNameCache } from '../lib/assetUrl';
+import { assetUrl, idbNameCache } from '../lib/assetUrl';
 import { saveSetupStateDb, loadSetupStateDb } from '../lib/quizDb';
 import { createDefaultFraseTempoItem, isPhraseLetterToken, normalizeFraseTempoItem, parsePhraseTokens, type FraseTempoItem } from '../lib/fraseTempoUtils';
 
@@ -17,6 +17,7 @@ export interface Gioco1ImmagineData {
   indizi: string[];      // 4 text clues
   confermaAudio: string; // confirmation audio mp3
   soluzione: string;     // solution text
+  grigliaSeme?: number;  // seed per la generazione deterministica della griglia
 }
 
 export interface Gioco1Question {
@@ -294,6 +295,217 @@ export function getDefaultSetupState(): QuizSetupState {
 
 interface QuizSetupViewProps {
   onStartQuiz?: () => void;
+}
+
+function JpgPreview({ src, alt }: { src: string; alt: string }) {
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => setTick((t) => t + 1);
+    window.addEventListener('idb-file-loaded', refresh);
+    return () => window.removeEventListener('idb-file-loaded', refresh);
+  }, []);
+
+  const resolved = assetUrl(src);
+
+  return (
+    <div className="mt-2 w-20 h-20 rounded border border-white/20 overflow-hidden bg-black flex items-center justify-center">
+      {resolved ? (
+        <img src={resolved} alt={alt} className="w-full h-full object-cover" />
+      ) : (
+        <span className="text-[9px] text-slate-500 text-center px-1 leading-tight">{alt}</span>
+      )}
+    </div>
+  );
+}
+
+// ─── Helper: generatore pseudo-casuale (mulberry32) ─────────────────────────
+function mulberry32(seed: number) {
+  return function () {
+    let t = (seed += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ─── Helper: genera tileOrder deterministico dato seed, righe, colonne ──────
+function buildTileOrder(cols: number, rows: number, seed: number): number[] {
+  const rand = mulberry32(seed);
+  const centerCol = (cols - 1) / 2;
+  const centerRow = (rows - 1) / 2;
+  const maxDist = Math.max(
+    Math.hypot(0 - centerCol, 0 - centerRow),
+    Math.hypot(cols - 1 - centerCol, 0 - centerRow),
+    Math.hypot(0 - centerCol, rows - 1 - centerRow),
+    Math.hypot(cols - 1 - centerCol, rows - 1 - centerRow),
+  );
+  const total = cols * rows;
+  const tiles = Array.from({ length: total }, (_, i) => {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const dist = Math.hypot(col - centerCol, row - centerRow);
+    const normalizedDist = dist / (maxDist || 1);
+    const weight = normalizedDist * 0.7 + rand() * 0.3;
+    return { index: i, weight };
+  });
+  return tiles.sort((a, b) => b.weight - a.weight).map((t) => t.index);
+}
+
+// ─── Componente anteprima griglia con 5 step ─────────────────────────────────
+function GridStepPreview({
+  src,
+  cols,
+  rows,
+  seed,
+  onRegenerate,
+  onConfirm,
+}: {
+  src: string;
+  cols: number;
+  rows: number;
+  seed: number;
+  onRegenerate: () => void;
+  onConfirm: () => void;
+}) {
+  const [previewStep, setPreviewStep] = useState(0);
+  const [confirmed, setConfirmed] = useState(false);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const refresh = () => setTick((t) => t + 1);
+    window.addEventListener('idb-file-loaded', refresh);
+    return () => window.removeEventListener('idb-file-loaded', refresh);
+  }, []);
+
+  const resolvedSrc = assetUrl(src);
+  const totalTiles = cols * rows;
+  const tileOrder = React.useMemo(
+    () => buildTileOrder(cols, rows, seed),
+    [cols, rows, seed],
+  );
+  const tilesPerStep = Math.ceil(totalTiles / 5);
+
+  const isTileRevealed = (tileIndex: number) => {
+    if (previewStep >= 5) return true;
+    const orderIndex = tileOrder.indexOf(tileIndex);
+    const revealStep = Math.floor(orderIndex / tilesPerStep) + 1;
+    return previewStep >= revealStep;
+  };
+
+  const STEP_LABELS = ['Tutto coperto', 'Step 1', 'Step 2', 'Step 3', 'Step 4', '✓ Soluzione'];
+
+  const handleConfirm = () => {
+    onConfirm();
+    setConfirmed(true);
+    setTimeout(() => setConfirmed(false), 2000);
+  };
+
+  const handleRegenerate = () => {
+    onRegenerate();
+    setConfirmed(false);
+  };
+
+  return (
+    <div className="mt-3 rounded-xl border border-white/10 bg-black/30 p-3 space-y-2">
+      {/* Intestazione */}
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider">
+          🔲 Anteprima Griglia ({cols}×{rows})
+        </span>
+        <span className="text-[10px] text-slate-500">seed: {seed}</span>
+      </div>
+
+      {/* Canvas immagine + overlay tasselli */}
+      <div className="relative w-full aspect-square rounded overflow-hidden border border-white/10 bg-black">
+        {resolvedSrc ? (
+          <img src={resolvedSrc} alt="Anteprima" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="text-[10px] text-slate-500">Carica prima un'immagine</span>
+          </div>
+        )}
+        {/* Overlay griglia */}
+        <div
+          className="absolute inset-0 grid"
+          style={{
+            gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`,
+            gridTemplateRows: `repeat(${rows}, minmax(0, 1fr))`,
+          }}
+        >
+          {Array.from({ length: totalTiles }).map((_, i) => (
+            <div
+              key={i}
+              className={`w-full h-full bg-[#181a1d] border border-white/5 transition-all duration-300 ${
+                isTileRevealed(i) ? 'opacity-0' : 'opacity-100'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Controlli navigazione step */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setPreviewStep((s) => Math.max(0, s - 1))}
+          disabled={previewStep === 0}
+          className="w-7 h-7 rounded bg-white/10 hover:bg-white/20 disabled:opacity-30 flex items-center justify-center text-white text-sm cursor-pointer disabled:cursor-default"
+        >
+          ◀
+        </button>
+        <div className="flex-1 flex flex-col items-center">
+          <span className="text-[11px] font-bold text-white">{STEP_LABELS[previewStep]}</span>
+          <div className="flex gap-1 mt-1">
+            {[0, 1, 2, 3, 4, 5].map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => setPreviewStep(s)}
+                className={`w-2 h-2 rounded-full transition-colors cursor-pointer ${
+                  s === previewStep ? 'bg-amber-400' : 'bg-white/20 hover:bg-white/40'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setPreviewStep((s) => Math.min(5, s + 1))}
+          disabled={previewStep === 5}
+          className="w-7 h-7 rounded bg-white/10 hover:bg-white/20 disabled:opacity-30 flex items-center justify-center text-white text-sm cursor-pointer disabled:cursor-default"
+        >
+          ▶
+        </button>
+      </div>
+
+      {/* Tasti azione */}
+      <div className="flex gap-2 pt-1">
+        <button
+          type="button"
+          onClick={handleRegenerate}
+          className="flex-1 py-1.5 text-[11px] font-semibold rounded bg-white/10 hover:bg-white/20 text-white/80 transition-colors cursor-pointer"
+        >
+          🔀 Rigenera Griglia
+        </button>
+        <button
+          type="button"
+          onClick={handleConfirm}
+          className={`flex-1 py-1.5 text-[11px] font-semibold rounded transition-colors cursor-pointer ${
+            confirmed
+              ? 'bg-emerald-500 text-white'
+              : 'bg-emerald-600/80 hover:bg-emerald-500/80 text-white'
+          }`}
+        >
+          {confirmed ? '✅ Griglia Confermata!' : '✓ Conferma Griglia'}
+        </button>
+      </div>
+      <p className="text-[10px] text-slate-500 text-center leading-tight">
+        Naviga gli step per controllare se l'immagine svela subito parti importanti.<br/>
+        Se non va bene, rigenera. Quando è perfetta, conferma.
+      </p>
+    </div>
+  );
 }
 
 export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
@@ -1506,13 +1718,28 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     </label>
                   </div>
                   {currentQ1.immagine.immagineJpg && (
-                    <div className="mt-2 w-20 h-20 rounded border border-white/20 overflow-hidden bg-black flex items-center justify-center">
-                      <img
-                        src={currentQ1.immagine.immagineJpg}
-                        alt="Anteprima JPG"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    <JpgPreview src={currentQ1.immagine.immagineJpg} alt="Anteprima JPG" />
+                  )}
+                  {/* Anteprima griglia con 5 step navigabili */}
+                  {currentQ1.immagine.immagineJpg && (
+                    <GridStepPreview
+                      src={currentQ1.immagine.immagineJpg}
+                      cols={10}
+                      rows={10}
+                      seed={currentQ1.immagine.grigliaSeme ?? 1}
+                      onRegenerate={() =>
+                        updateQ1((prev) => ({
+                          ...prev,
+                          immagine: {
+                            ...prev.immagine,
+                            grigliaSeme: Math.floor(Math.random() * 2_000_000),
+                          },
+                        }))
+                      }
+                      onConfirm={() => {
+                        /* Il seed è già nel state. Il feedback visivo è gestito internamente dal componente. */
+                      }}
+                    />
                   )}
                 </div>
 
@@ -2189,13 +2416,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     </label>
                   </div>
                   {currentQ2.immagine.immagineJpg && (
-                    <div className="mt-2 w-20 h-20 rounded border border-white/20 overflow-hidden bg-black flex items-center justify-center">
-                      <img
-                        src={currentQ2.immagine.immagineJpg}
-                        alt="Anteprima JPG"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    <JpgPreview src={currentQ2.immagine.immagineJpg} alt="Anteprima JPG" />
                   )}
                 </div>
 
@@ -2924,12 +3145,12 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                       <span>📝 Note del Presentatore (Frase {idx + 1})</span>
                       <span className="text-[9px] text-slate-500 font-normal">(Visibili sul display dell'iPad)</span>
                     </label>
-                    <input
-                      type="text"
+                    <textarea
+                      rows={2}
                       value={frase.notePresentatore || ''}
                       onChange={(e) => handleGioco4NoteChange(idx, e.target.value)}
                       placeholder="Appunti o curiosità per il conduttore su questa frase..."
-                      className="w-full bg-black/40 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500 transition-colors"
+                      className="w-full bg-black/40 border border-white/15 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500 transition-colors resize-none"
                     />
                   </div>
                 </div>

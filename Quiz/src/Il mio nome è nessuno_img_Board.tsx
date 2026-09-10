@@ -77,6 +77,17 @@ const GameBoard = ({ interactive = true, revealAll = false }: { interactive?: bo
     const cols = gameData.griglia.colonne;
     const rows = gameData.griglia.righe;
     
+    // Seed deterministico: se presente nel JSON lo usiamo, altrimenti 42 come fallback stabile
+    let seed: number = (gameData.griglia as any)?.seme ?? 42;
+    
+    // Generatore pseudo-casuale mulberry32 — identico all'anteprima nel setup
+    const rand = () => {
+      let t = (seed += 0x6d2b79f5);
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+    
     // Controlliamo se esiste un punto focale definito nel JSON, altrimenti usiamo il centro perfetto
     const centerCol = (gameData.griglia as any)?.puntoFocale?.colonna !== undefined 
       ? (gameData.griglia as any).puntoFocale.colonna 
@@ -102,15 +113,15 @@ const GameBoard = ({ interactive = true, revealAll = false }: { interactive?: bo
       // Normalizziamo (da 0 a 1, dove 1 è il bordo)
       const normalizedDist = dist / (maxDist || 1);
       
-      // Diamo priorità ai bordi (70% peso alla distanza, 30% casuale)
-      const weight = (normalizedDist * 0.7) + (Math.random() * 0.3);
+      // Diamo priorità ai bordi (70% peso alla distanza, 30% casuale deterministico)
+      const weight = (normalizedDist * 0.7) + (rand() * 0.3);
       
       return { index: i, weight };
     });
     
     // Ordine decrescente: i più alti (bordi) vengono prima
     return tiles.sort((a, b) => b.weight - a.weight).map(t => t.index);
-  }, [totalTiles, gameData.griglia.colonne, gameData.griglia.righe]);
+  }, [totalTiles, gameData.griglia.colonne, gameData.griglia.righe, (gameData.griglia as any)?.seme]);
 
   // Quanti tasselli rivelare per ogni step di svelamento griglia (diviso per 5 per lasciare l'ultimo 20% coperto fino alla soluzione)
   const tilesPerStep = Math.ceil(totalTiles / 5);

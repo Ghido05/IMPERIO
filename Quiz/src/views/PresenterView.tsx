@@ -71,7 +71,11 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
         soluzione: {
           ...defaultData.soluzione,
           titolo: q.immagine.soluzione || defaultData.soluzione.titolo
-        }
+        },
+        griglia: {
+          ...defaultData.griglia,
+          seme: q.immagine.grigliaSeme ?? defaultData.griglia?.seme,
+        },
       };
       return {
         id: `gioco1_${num}`,

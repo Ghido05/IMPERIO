@@ -1,6 +1,6 @@
 {
   "gioco1": {
-    "selectedQuestion": 3,
+    "selectedQuestion": 1,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -941,15 +941,6 @@
     "note": "Modulo Gioco 4 (in arrivo)",
     "frasi": [
       {
-        "testo": "diga di assuan",
-        "sfondo": "",
-        "lettereVisibili": [],
-        "indizio": "",
-        "bonus": "switch",
-        "punti": 0,
-        "notePresentatore": ""
-      },
-      {
         "testo": "CENTENARIO DELLA MITICA STRADA CHE COLLEGA CHICAGO A SANTA MONICA",
         "sfondo": "idb://file_1788948107975_uh8mvgs?name=4_1_route66.jpg",
         "lettereVisibili": [
@@ -976,22 +967,37 @@
         "notePresentatore": "❓ Domanda Curiosità sulla Route 66 Domanda: Nel suo capolavoro letterario del 1939 \"Furore\" (The Grapes of Wrath), lo scrittore John Steinbeck descrive la migrazione della famiglia Joad verso ovest durante la Grande Depressione. In questo romanzo, Steinbeck coniò per la Route 66 un celebre soprannome che è rimasto nella storia. Quale? Opzioni: A) L'Arteria d'America B) La Via della Speranza C) La Strada Madre D) Il Nastro d'Asfalto Risposta corretta: C) La Strada Madre (The Mother Road). \"L'11 novembre 2026 celebriamo i 100 anni dalla nascita della Route 66, inaugurata ufficialmente nel 1926. Questa leggendaria autostrada, lunga originariamente quasi 4.000 chilometri, tagliava l'America in diagonale collegando Chicago a Santa Monica, in California, attraversando ben 8 Stati. Anche se nel 1985 è stata ufficialmente cancellata dalle mappe del sistema autostradale americano (sostituita dalle più veloci Interstate), il suo spirito non è mai morto. Oggi, i tratti sopravvissuti formano la 'Historic Route 66'. Festeggiare il suo centenario non significa solo celebrare un pezzo di asfalto, ma omaggiare il simbolo per eccellenza della libertà, dell'avventura e del classico viaggio on the road americano.\""
       },
       {
-        "testo": "A BUON INTENDITORE POCHE PAROLE",
+        "testo": "DIGA DI ASSUAN",
         "sfondo": "",
         "lettereVisibili": [],
         "indizio": "",
-        "bonus": "switch",
-        "punti": 1000,
+        "bonus": "dado",
+        "punti": 0,
         "notePresentatore": ""
       },
       {
-        "testo": "IL GATTO MIAGOLA, IL CANE NO",
-        "sfondo": "",
-        "lettereVisibili": [],
-        "indizio": "",
-        "bonus": "",
-        "punti": 1000,
-        "notePresentatore": ""
+        "testo": "L' ITALIANO LUCA PARMITANO PARTECIPERà ALLA MISSIONE SPAZIALE",
+        "sfondo": "idb://file_1789057807365_aqh6uzv?name=4_3_ArtemisIII.jpg",
+        "lettereVisibili": [
+          4,
+          9,
+          14,
+          17,
+          20,
+          24,
+          27,
+          32,
+          36,
+          41,
+          44,
+          50,
+          54,
+          59
+        ],
+        "indizio": "FINE 2027, ARTEMIS III",
+        "bonus": "switch",
+        "punti": 2000,
+        "notePresentatore": "❓A seguito dei drastici cambiamenti annunciati nel 2026, quale sarà il vero obiettivo della missione Artemis III della NASA (posticipata al 2027)?\nA) Atterrare sul Polo Sud lunare B) Testare l'attracco con i lander lunari nell'orbita terrestre C) Sorvolare Marte\nRisposta corretta: B) Testare l'attracco con i lander lunari nell'orbita terrestre. \nL'atterraggio sulla Luna avverrà con Artemis IV nel 2028.\n"
       },
       {
         "testo": "NON Ce N'è PER NESSUNO, la libertà",

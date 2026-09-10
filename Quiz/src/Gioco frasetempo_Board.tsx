@@ -619,7 +619,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         <div className="flex-grow" />
 
         {/* Phrase Display Grid */}
-        <div className={`flex flex-wrap justify-center gap-x-[1.6%] gap-y-[1.6vw] max-w-[95%] px-6 mb-4 min-h-[180px] items-center transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none mb-0'}`}>
+        <div className={`flex flex-wrap justify-center gap-x-[1.6%] gap-y-[1.6vw] max-w-[95%] px-10 py-8 rounded-3xl bg-black/50 backdrop-blur-sm mb-4 min-h-[180px] items-center transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none mb-0'}`}>
           {words.map((word, wIdx) => (
             <div key={wIdx} className="flex gap-[0.3vw]">
               {word.map((t, tIdx) => (

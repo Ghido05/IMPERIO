@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { useScores } from './context/ScoreContext';
 import { useSyncedState } from './hooks/useSyncedState';
@@ -117,17 +117,57 @@ function playSound(type: 'roll' | 'land' | 'correct' | 'wrong' | 'eliminate') {
         osc.stop(now + idx * 0.1 + 0.3);
       });
     } else if (type === 'eliminate') {
+      // 1. Descending slide (falling into water)
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(520, now);
-      osc.frequency.exponentialRampToValueAtTime(80, now + 0.35);
-      gain.gain.setValueAtTime(0.2, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(100, now + 0.28);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
-      osc.stop(now + 0.42);
+      osc.stop(now + 0.31);
+
+      // 2. Water splash noise burst
+      try {
+        const bufferSize = Math.floor(ctx.sampleRate * 0.22);
+        const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const output = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.28));
+        }
+        const whiteNoise = ctx.createBufferSource();
+        whiteNoise.buffer = noiseBuffer;
+
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(850, now + 0.2);
+        filter.Q.setValueAtTime(2.2, now + 0.2);
+
+        const noiseGain = ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.26, now + 0.2);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.44);
+
+        whiteNoise.connect(filter);
+        filter.connect(noiseGain);
+        noiseGain.connect(ctx.destination);
+        whiteNoise.start(now + 0.2);
+      } catch {}
+
+      // 3. Water bubble "bloop"
+      const bubble = ctx.createOscillator();
+      const bubbleGain = ctx.createGain();
+      bubble.type = 'sine';
+      bubble.frequency.setValueAtTime(240, now + 0.26);
+      bubble.frequency.exponentialRampToValueAtTime(480, now + 0.42);
+      bubbleGain.gain.setValueAtTime(0.2, now + 0.26);
+      bubbleGain.gain.exponentialRampToValueAtTime(0.001, now + 0.48);
+      bubble.connect(bubbleGain);
+      bubbleGain.connect(ctx.destination);
+      bubble.start(now + 0.26);
+      bubble.stop(now + 0.49);
     }
   } catch {}
 }
@@ -150,28 +190,35 @@ function normalizeStartingMembers(scores: number[] | null): Record<TeamId, numbe
   return base;
 }
 
-// Stylized Omino Pawn component matching omini.jpg
+// Stylized Omino Pawn component matching omini.jpg with hilarious splash-sink animation
 function OminoFigure({
   color,
   neonColor,
   active,
+  isDrowning,
   onClick,
 }: {
   color: string;
   neonColor: string;
   active: boolean;
+  isDrowning?: boolean;
   onClick: () => void;
 }) {
   return (
     <div
       onClick={onClick}
-      className={`cursor-pointer select-none transition-all duration-500 transform ${
-        active
-          ? 'opacity-100 scale-100 hover:scale-115 hover:-translate-y-1.5'
-          : 'opacity-0 scale-50 pointer-events-none'
+      className={`cursor-pointer select-none transform transition-all ${
+        isDrowning
+          ? 'z-40 pointer-events-none'
+          : active
+          ? 'opacity-100 scale-100 hover:scale-115 hover:-translate-y-1.5 duration-300'
+          : 'opacity-0 scale-50 pointer-events-none duration-500'
       }`}
       style={{
-        filter: active ? `drop-shadow(0 0 10px ${neonColor}) drop-shadow(0 0 4px ${color})` : 'none',
+        animation: isDrowning ? 'omino-splash-sink 1.15s cubic-bezier(0.3, 0, 0.2, 1) forwards' : undefined,
+        filter: active || isDrowning
+          ? `drop-shadow(0 0 10px ${neonColor}) drop-shadow(0 0 4px ${color})`
+          : 'none',
       }}
       title={active ? 'Clicca per eliminare omino' : ''}
     >
@@ -217,7 +264,7 @@ function OminoFigure({
   );
 }
 
-// 3D Isometric Floating Cube Pedestal with mathematically exact projections
+// 3D Isometric Floating Cube Pedestal with mathematically exact projections & water immersion
 function PedestalCube({
   number,
   color,
@@ -233,6 +280,20 @@ function PedestalCube({
   isAssigned: boolean;
   onToggle: () => void;
 }) {
+  const [isDrowning, setIsDrowning] = useState(false);
+  const prevHasOmino = useRef(hasOmino);
+
+  useEffect(() => {
+    if (prevHasOmino.current && !hasOmino && isAssigned) {
+      setIsDrowning(true);
+      const timer = setTimeout(() => {
+        setIsDrowning(false);
+      }, 1200);
+      return () => clearTimeout(timer);
+    }
+    prevHasOmino.current = hasOmino;
+  }, [hasOmino, isAssigned]);
+
   return (
     <div
       onClick={onToggle}
@@ -248,8 +309,60 @@ function PedestalCube({
           color={color}
           neonColor={neonColor}
           active={hasOmino && isAssigned}
+          isDrowning={isDrowning}
           onClick={onToggle}
         />
+
+        {/* Water Splash Burst, Comic Text & Air Bubbles upon elimination */}
+        {isDrowning && (
+          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-end z-30">
+            {/* Pop comic text */}
+            <span
+              className="absolute -top-3 text-[11px] font-black italic tracking-widest text-cyan-200 drop-shadow-[0_0_10px_#00e5ff] uppercase"
+              style={{ animation: 'splash-text-pop 1.1s ease-out forwards' }}
+            >
+              SPLASH!
+            </span>
+
+            {/* Splash water droplet crown */}
+            <svg
+              width="64"
+              height="40"
+              viewBox="0 0 64 40"
+              className="overflow-visible absolute -bottom-1"
+              style={{ animation: 'water-splash-burst 1s ease-out forwards' }}
+            >
+              <circle cx="12" cy="22" r="2.8" fill="#38bdf8" />
+              <circle cx="22" cy="10" r="3.2" fill="#e0f2fe" />
+              <circle cx="32" cy="6" r="3.5" fill="#e0f2fe" />
+              <circle cx="42" cy="10" r="3.2" fill="#e0f2fe" />
+              <circle cx="52" cy="22" r="2.8" fill="#38bdf8" />
+              <circle cx="18" cy="6" r="2.2" fill="#7dd3fc" />
+              <circle cx="46" cy="6" r="2.2" fill="#7dd3fc" />
+              <path
+                d="M 10 32 Q 18 10 24 24 Q 32 4 40 24 Q 46 10 54 32"
+                stroke="#bae6fd"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                fill="none"
+              />
+            </svg>
+
+            {/* Rising bubbles */}
+            <span
+              className="absolute bottom-2 left-1 text-sm select-none"
+              style={{ animation: 'float-bubble 1.1s ease-out 0.15s forwards' }}
+            >
+              🫧
+            </span>
+            <span
+              className="absolute bottom-5 right-1 text-xs select-none"
+              style={{ animation: 'float-bubble 1s ease-out 0.3s forwards' }}
+            >
+              🫧
+            </span>
+          </div>
+        )}
       </div>
 
       {/* 3D Isometric Cube with Exact Parallel Geometry */}
@@ -279,6 +392,40 @@ function PedestalCube({
               <stop offset="100%" stopColor="#000000" stopOpacity={hasOmino ? '0.92' : '0.75'} />
             </linearGradient>
           </defs>
+
+          {/* Water Lagoon Ripples encircling the cube base (just like omini.jpg!) */}
+          <ellipse
+            cx="38"
+            cy="62"
+            rx="40"
+            ry="8"
+            stroke="rgba(56, 189, 248, 0.45)"
+            strokeWidth="1.4"
+            fill="rgba(6, 182, 212, 0.12)"
+          />
+          <ellipse
+            cx="38"
+            cy="62"
+            rx="27"
+            ry="5.5"
+            stroke="rgba(125, 211, 252, 0.65)"
+            strokeWidth="1.2"
+            fill="none"
+          />
+
+          {/* Drowning water shockwave ping */}
+          {isDrowning && (
+            <ellipse
+              cx="38"
+              cy="62"
+              rx="26"
+              ry="5.5"
+              stroke="#38bdf8"
+              strokeWidth="2.5"
+              fill="rgba(56, 189, 248, 0.3)"
+              className="animate-ping"
+            />
+          )}
 
           {/* Water reflection & glow ripple under cube */}
           {hasOmino && (
@@ -521,14 +668,14 @@ function ProminentDice3D({
   }, [rolling, targetFace, faceAngles]);
 
   return (
-    <div className="flex items-center gap-3.5">
-      {/* 3D Cube Viewport (Expanded Size) */}
+    <div className="flex flex-col items-center gap-2">
+      {/* 3D Cube Viewport (Clickable directly to roll) */}
       <div
-        onClick={onRoll}
-        className="relative w-28 h-28 cursor-pointer select-none group [perspective:1000px] shrink-0"
-        title="Clicca per lanciare il dado"
+        onClick={rolling ? undefined : onRoll}
+        className="relative w-28 h-28 cursor-pointer select-none group [perspective:1000px] shrink-0 hover:scale-105 active:scale-95 transition-transform"
+        title="Clicca direttamente sul dado per lanciarlo!"
       >
-        <div className="absolute inset-0 rounded-full bg-cyan-500/25 blur-xl group-hover:bg-cyan-500/40 transition-all pointer-events-none" />
+        <div className="absolute inset-0 rounded-full bg-cyan-500/25 blur-xl group-hover:bg-cyan-500/45 transition-all pointer-events-none" />
 
         <div
           className="relative w-full h-full [transform-style:preserve-3d] transition-transform duration-[1200ms] ease-out"
@@ -566,28 +713,29 @@ function ProminentDice3D({
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={onRoll}
-          disabled={rolling}
-          className={`px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg flex items-center gap-2 ${
-            rolling
-              ? 'bg-slate-700 text-slate-300 cursor-not-allowed opacity-75'
-              : 'bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-cyan-500/30 hover:scale-105 active:scale-95 border border-cyan-300/50'
-          }`}
-        >
-          <span className="text-sm">🎲</span>
-          <span>{rolling ? 'Lancio...' : 'Lancia Dado'}</span>
-        </button>
+      {/* Subtle Hint & Bonus Re-roll */}
+      <div className="flex flex-col items-center gap-1.5">
+        {rolling ? (
+          <span className="text-[10px] font-black uppercase tracking-widest text-cyan-300 animate-pulse flex items-center gap-1.5 bg-cyan-950/70 border border-cyan-400/40 px-3 py-1 rounded-full">
+            <span className="animate-spin">🔄</span> ROTAZIONE...
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={onRoll}
+            className="text-[10px] font-black uppercase tracking-wider text-cyan-200 hover:text-white bg-black/60 hover:bg-cyan-600/30 px-3 py-1 rounded-full border border-cyan-400/30 hover:border-cyan-300 transition-all cursor-pointer flex items-center gap-1 shadow-sm"
+          >
+            <span>🎲</span>
+            <span>TOCCA PER LANCIARE</span>
+          </button>
+        )}
 
         {canRollBonus && (
           <button
             type="button"
             onClick={onUseBonusRoll}
             disabled={rolling}
-            className="px-4 py-2 rounded-xl font-black text-[11px] uppercase tracking-wider bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black shadow-lg shadow-amber-500/35 hover:scale-105 active:scale-95 border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer animate-pulse"
+            className="px-3.5 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-wider bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black shadow-lg shadow-amber-500/35 hover:scale-105 active:scale-95 border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer animate-pulse"
             title="Spendi il Bonus Dado per rilanciare"
           >
             <span>✨</span>
@@ -718,8 +866,7 @@ export default function FinaleSquadre_Board() {
       const remainingCubes = [1, 2, 3, 4, 5, 6]
         .slice(0, maxCount)
         .filter((c) => !currentList.includes(c));
-      if (remainingCubes.length === 0) return prev;
-      const toEliminate = remainingCubes[remainingCubes.length - 1];
+      const toEliminate = remainingCubes[0]; // Elimination strictly begins from 1 in order (1 -> 2 -> 3 -> 4 -> 5 -> 6)
       return {
         ...prev,
         [teamId]: [...currentList, toEliminate],
@@ -806,6 +953,76 @@ export default function FinaleSquadre_Board() {
 
   return (
     <div className="relative w-full h-full overflow-hidden text-white font-sans bg-black select-none">
+      <style>{`
+        @keyframes omino-splash-sink {
+          0% {
+            transform: translateY(0) scale(1) rotate(0deg);
+            opacity: 1;
+          }
+          18% {
+            transform: translateY(-10px) scale(1.08) rotate(14deg);
+            opacity: 1;
+          }
+          42% {
+            transform: translateY(18px) scale(0.85) rotate(-18deg);
+            opacity: 0.92;
+          }
+          70% {
+            transform: translateY(44px) scale(0.5) rotate(10deg);
+            opacity: 0.55;
+          }
+          100% {
+            transform: translateY(75px) scale(0.1) rotate(0deg);
+            opacity: 0;
+          }
+        }
+        @keyframes water-splash-burst {
+          0% {
+            transform: translateY(0) scale(0.3);
+            opacity: 1;
+          }
+          50% {
+            transform: translateY(-22px) scale(1.25);
+            opacity: 0.95;
+          }
+          100% {
+            transform: translateY(-36px) scale(1.5);
+            opacity: 0;
+          }
+        }
+        @keyframes splash-text-pop {
+          0% {
+            transform: translateY(0) scale(0.6) rotate(-8deg);
+            opacity: 0;
+          }
+          30% {
+            transform: translateY(-14px) scale(1.2) rotate(4deg);
+            opacity: 1;
+          }
+          75% {
+            transform: translateY(-26px) scale(1) rotate(-2deg);
+            opacity: 0.85;
+          }
+          100% {
+            transform: translateY(-38px) scale(0.8) rotate(0deg);
+            opacity: 0;
+          }
+        }
+        @keyframes float-bubble {
+          0% {
+            transform: translateY(0) scale(0.4);
+            opacity: 0;
+          }
+          30% {
+            opacity: 0.9;
+          }
+          100% {
+            transform: translateY(-36px) scale(1.1);
+            opacity: 0;
+          }
+        }
+      `}</style>
+
       {/* 100% UNTOUCHED, FULL-VIEW BACKGROUND (No black overlays or boxes!) */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-700"

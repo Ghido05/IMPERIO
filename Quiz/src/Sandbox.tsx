@@ -10,6 +10,7 @@ import GiocoFraseTempoBoard from './Gioco frasetempo_Board';
 import PasswordSquadreBoard from './Gioco password_squadre_Board';
 import PasswordPresceltiBoard from './Gioco password_prescelti_Board';
 import ClassificaGeneraleBoard from './ClassificaGenerale_Board';
+import FinaleSquadreBoard from './FinaleSquadre_Board';
 
 import defaultImgData from './data/Il mio nome è nessuno_img_Data.json';
 import defaultMusicData from './data/Il mio nome è nessuno_musicale_Data.json';
@@ -29,10 +30,11 @@ const defaultGameDataMap: Record<string, any> = {
   password_squadre: defaultPasswordData,
   password_prescelti: defaultPasswordData,
   classifica_generale: {}, // Non ha JSON
+  finale_squadre: {},
 };
 
 function App() {
-  const [game, setGame] = useState<'img' | 'music' | 'classifica' | 'classifica_musicale' | 'cruciverba' | 'gioco_frase_tempo' | 'password_squadre' | 'password_prescelti' | 'classifica_generale'>(() => {
+  const [game, setGame] = useState<'img' | 'music' | 'classifica' | 'classifica_musicale' | 'cruciverba' | 'gioco_frase_tempo' | 'password_squadre' | 'password_prescelti' | 'classifica_generale' | 'finale_squadre'>(() => {
     const params = new URLSearchParams(window.location.search);
     const gameParam = params.get('game');
     if (gameParam === 'musica') return 'music';
@@ -43,6 +45,7 @@ function App() {
     if (gameParam === 'password_squadre') return 'password_squadre';
     if (gameParam === 'password_prescelti') return 'password_prescelti';
     if (gameParam === 'classifica_generale') return 'classifica_generale';
+    if (gameParam === 'finale_squadre') return 'finale_squadre';
     return 'img';
   });
 
@@ -61,7 +64,8 @@ function App() {
         'gioco_frase_tempo': 'gioco_frase_tempo',
         'password_squadre': 'password_squadre',
         'password_prescelti': 'password_prescelti',
-        'classifica_generale': 'classifica_generale'
+        'classifica_generale': 'classifica_generale',
+        'finale_squadre': 'finale_squadre'
       };
       url.searchParams.set('game', paramMap[newGame] || newGame);
     }
@@ -82,6 +86,7 @@ function App() {
         {game === 'password_squadre' && <PasswordSquadreBoard />}
         {game === 'password_prescelti' && <PasswordPresceltiBoard />}
         {game === 'classifica_generale' && <ClassificaGeneraleBoard />}
+        {game === 'finale_squadre' && <FinaleSquadreBoard />}
       </GameDataProvider>
       
       {/* Piccolo selettore rapido in alto a sinistra - Nascosto in modalità proiezione */}
@@ -134,6 +139,12 @@ function App() {
             className={`px-3 py-1 rounded text-xs font-bold ${game === 'password_prescelti' ? 'bg-fuchsia-600 text-white' : 'bg-gray-800 text-gray-400'}`}
           >
             PASS. PRESCELTI
+          </button>
+          <button 
+            onClick={() => changeGame('finale_squadre')}
+            className={`px-3 py-1 rounded text-xs font-bold ${game === 'finale_squadre' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400'}`}
+          >
+            FINALE SQUADRE
           </button>
           <button 
             onClick={() => window.open('?game=classifica_generale&project=true', '_blank', 'width=1280,height=720')}

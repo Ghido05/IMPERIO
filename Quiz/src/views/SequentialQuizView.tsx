@@ -241,7 +241,16 @@ export function getSlideForBoxQuestion(
   }
 
   if (boxNum === 5) {
-    return { id: 'finale_squadre', type: 'finale_squadre', data: { title: 'Finale Squadre', subtitle: 'Box 5' } };
+    return {
+      id: 'finale_squadre',
+      type: 'finale_squadre',
+      data: {
+        title: (setupState as any).gioco5?.titolo || 'Finale Squadre',
+        subtitle: (setupState as any).gioco5?.sottotitolo || 'Box 5',
+        sfondo: (setupState as any).gioco5?.sfondoGenerale || '/sfondo_finale_default.jpg',
+        numeroDomande: (setupState as any).gioco5?.numeroDomande || 15
+      }
+    };
   }
 
   return { id: `box${boxNum}_q${questionNum}`, type: 'empty' };

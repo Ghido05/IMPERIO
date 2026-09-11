@@ -244,6 +244,16 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
       data: mappedPasswordData
     },
     {
+      id: 'finale_squadre',
+      type: 'finale_squadre',
+      data: {
+        title: (setup as any)?.gioco5?.titolo || 'Finale Squadre',
+        subtitle: (setup as any)?.gioco5?.sottotitolo || 'Box 5',
+        sfondo: (setup as any)?.gioco5?.sfondoGenerale || '/sfondo_finale_default.jpg',
+        numeroDomande: (setup as any)?.gioco5?.numeroDomande || 15
+      }
+    },
+    {
       id: 'classifica_generale',
       type: 'classifica_generale',
       data: {}

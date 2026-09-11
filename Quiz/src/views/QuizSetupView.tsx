@@ -56,6 +56,14 @@ export interface Gioco2Question {
   notePresentatore?: string;
 }
 
+export interface Gioco5Setup {
+  titolo: string;
+  sottotitolo?: string;
+  sfondoGenerale?: string;
+  numeroDomande?: number;
+  notePresentatore?: string;
+}
+
 export interface BoxGenericSetup {
   titolo: string;
   note: string;
@@ -119,7 +127,7 @@ export interface QuizSetupState {
     sfondoGenerale?: string;
   };
   gioco4: Gioco4Setup;
-  gioco5: BoxGenericSetup;
+  gioco5: Gioco5Setup;
   punteggi?: PunteggiSetup;
 }
 
@@ -226,6 +234,17 @@ function normalizeGioco4(raw: any, def: Gioco4Setup): Gioco4Setup {
   };
 }
 
+function normalizeGioco5(raw: any, def: Gioco5Setup): Gioco5Setup {
+  if (!raw) return def;
+  return {
+    titolo: raw.titolo || def.titolo,
+    sottotitolo: raw.sottotitolo || def.sottotitolo || '',
+    sfondoGenerale: raw.sfondoGenerale !== undefined ? raw.sfondoGenerale : def.sfondoGenerale,
+    numeroDomande: Number(raw.numeroDomande) || def.numeroDomande || 15,
+    notePresentatore: raw.notePresentatore || '',
+  };
+}
+
 function normalizePunteggi(raw: any, def: PunteggiSetup): PunteggiSetup {
   if (!raw) return def;
   let rawIcons = Array.isArray(raw.iconeBonus) ? raw.iconeBonus : [];
@@ -284,7 +303,13 @@ export function getDefaultSetupState(): QuizSetupState {
       frasi: DEFAULT_FRASI_TEMPO.map((testo) => createDefaultFraseTempoItem(testo)),
       sfondoGenerale: '',
     },
-    gioco5: { titolo: 'Gioco 5', note: 'Modulo Gioco 5 (in arrivo)' },
+    gioco5: {
+      titolo: 'GIOCO 5 - Finale a Squadre',
+      sottotitolo: 'Sfida con dado, omini sui cubi 3D e 4 bonus per squadra',
+      sfondoGenerale: '/sfondo_finale_default.jpg',
+      numeroDomande: 15,
+      notePresentatore: '',
+    },
     punteggi: {
       sfondo: '',
       nomiSquadre: ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'],
@@ -670,7 +695,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           },
           gioco3: normalizeGioco3(loadedState.gioco3, def.gioco3),
           gioco4: normalizeGioco4(loadedState.gioco4, def.gioco4),
-          gioco5: loadedState.gioco5 || def.gioco5,
+          gioco5: normalizeGioco5(loadedState.gioco5, def.gioco5),
           punteggi: normalizePunteggi(loadedState.punteggi, def.punteggi!),
         });
       }
@@ -3174,6 +3199,156 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               <span className="text-[11px] text-slate-400">
                 Totale: <strong className="text-white">{state.gioco4?.frasi?.length || 0}</strong> frasi salvate
               </span>
+            </div>
+          </div>
+        </div>
+
+        {/* ==================== BOX 5: FINALE A SQUADRE ==================== */}
+        <div className="pt-4">
+          <div className="bg-[#1c1c21] rounded-2xl border border-white/10 p-6 flex flex-col gap-5 shadow-lg">
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 font-extrabold flex items-center justify-center text-sm shadow-inner">
+                  5
+                </span>
+                <div>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    GIOCO 5 — Finale a Squadre (Box 5)
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Sfida ad eliminazione diretta con il dado, piedistalli 3D a piramide e i 4 bonus (Dado, Switch, Arco, Scudo).
+                  </p>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-red-500/10 text-red-400 border border-red-500/20">
+                Gran Finale
+              </span>
+            </div>
+
+            {/* Sfondo Generale Box 5 */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
+              <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  🖼️ Sfondo Generale Box 5 (Comune per tutte e tre le squadre)
+                </span>
+                <span className="text-[10px] text-slate-500 font-normal">Default: Panorama Giungla & Canyon 16:9</span>
+              </div>
+              <div className="flex items-center gap-3 bg-[#141417] p-2.5 rounded-lg border border-white/5">
+                {state.gioco5?.sfondoGenerale?.startsWith('data:') || state.gioco5?.sfondoGenerale?.startsWith('idb://') ? (
+                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                    <span className="text-emerald-400 font-medium truncate max-w-[200px] sm:max-w-xs">
+                      {(() => {
+                        const info = formatBase64Info(state.gioco5.sfondoGenerale);
+                        return info ? `${info.label}: ${info.name} (${info.size})` : 'File caricato';
+                      })()}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setState((prev) => ({ ...prev, gioco5: { ...prev.gioco5, sfondoGenerale: '/sfondo_finale_default.jpg' } }))}
+                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
+                    >
+                      Ripristina Default
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Percorso URL / immagine di sfondo (default: /sfondo_finale_default.jpg)..."
+                    value={state.gioco5?.sfondoGenerale || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setState((prev) => ({
+                        ...prev,
+                        gioco5: { ...prev.gioco5, sfondoGenerale: val }
+                      }));
+                    }}
+                    className="flex-1 bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-red-500"
+                  />
+                )}
+                <label className="px-3 py-1.5 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                  🖼️ Sfoglia
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileUpload(e, (base64) =>
+                        setState((prev) => ({ ...prev, gioco5: { ...prev.gioco5, sfondoGenerale: base64 } }))
+                      )
+                    }
+                  />
+                </label>
+              </div>
+
+              {/* Thumbnail Preview */}
+              {(state.gioco5?.sfondoGenerale || '/sfondo_finale_default.jpg') && (
+                <div className="relative w-full h-36 rounded-lg overflow-hidden border border-white/10 bg-black/40">
+                  <img
+                    src={assetUrl(state.gioco5?.sfondoGenerale || '/sfondo_finale_default.jpg')}
+                    alt="Anteprima sfondo finale"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2.5">
+                    <span className="text-[11px] text-white/80 font-medium">Anteprima Sfondo Arena Finale</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Impostazioni Titolo, Sottotitolo e Domande */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
+                <label className="text-xs font-semibold text-slate-300 block">
+                  Titolo Schermata:
+                </label>
+                <input
+                  type="text"
+                  value={state.gioco5?.titolo || ''}
+                  onChange={(e) => setState((prev) => ({ ...prev, gioco5: { ...prev.gioco5, titolo: e.target.value } }))}
+                  placeholder="GIOCO 5 - Finale a Squadre"
+                  className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
+                <label className="text-xs font-semibold text-slate-300 block">
+                  Sottotitolo / Regole Rapide:
+                </label>
+                <input
+                  type="text"
+                  value={state.gioco5?.sottotitolo || ''}
+                  onChange={(e) => setState((prev) => ({ ...prev, gioco5: { ...prev.gioco5, sottotitolo: e.target.value } }))}
+                  placeholder="Sfida ad eliminazione diretta con il dado"
+                  className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
+                <label className="text-xs font-semibold text-slate-300 block">
+                  Numero Domande Totali:
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={state.gioco5?.numeroDomande || 15}
+                  onChange={(e) => setState((prev) => ({ ...prev, gioco5: { ...prev.gioco5, numeroDomande: parseInt(e.target.value, 10) || 15 } }))}
+                  className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                />
+              </div>
+
+              <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
+                <label className="text-xs font-semibold text-slate-300 block">
+                  Note per il Presentatore:
+                </label>
+                <input
+                  type="text"
+                  value={state.gioco5?.notePresentatore || ''}
+                  onChange={(e) => setState((prev) => ({ ...prev, gioco5: { ...prev.gioco5, notePresentatore: e.target.value } }))}
+                  placeholder="Note, suggerimenti o promemoria..."
+                  className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
+                />
+              </div>
             </div>
           </div>
         </div>

@@ -1,482 +1,1133 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { useScores } from './context/ScoreContext';
+import { useSyncedState } from './hooks/useSyncedState';
+import { assetUrl } from './lib/assetUrl';
 
-type TeamId = 1 | 2 | 3;
-type DiceFace = 'right' | 'left' | 'both' | 'self';
+export type TeamId = 1 | 2 | 3;
+export type DiceFace = 'right' | 'left' | 'both' | 'self';
 
-const STORAGE_KEY = 'playstate_game5_finale_state_v3';
-const QUESTION_NUMBERS = Array.from({ length: 15 }, (_, i) => i + 1);
-const DICE_FACES: DiceFace[] = ['right', 'left', 'both', 'self'];
+interface TeamVisualMeta {
+  id: TeamId;
+  defaultName: string;
+  colorName: string;
+  colorHex: string;
+  colorNeon: string;
+  colorGlow: string;
+  bgGradient: string;
+  borderActive: string;
+  badgeBg: string;
+}
 
-const TEAM_META: Record<TeamId, { name: string; color: string; accent: string }> = {
-  1: { name: 'Squadra 1', color: '#ff6b6b', accent: 'rgba(255,107,107,0.35)' },
-  2: { name: 'Squadra 2', color: '#6ea8ff', accent: 'rgba(110,168,255,0.35)' },
-  3: { name: 'Squadra 3', color: '#66d19e', accent: 'rgba(102,209,158,0.35)' },
+const TEAMS_CONFIG: Record<TeamId, TeamVisualMeta> = {
+  1: {
+    id: 1,
+    defaultName: 'SQUADRA 1',
+    colorName: 'Rosso',
+    colorHex: '#ef4444',
+    colorNeon: '#ff3344',
+    colorGlow: 'rgba(239, 68, 68, 0.65)',
+    bgGradient: 'linear-gradient(180deg, rgba(239,68,68,0.22) 0%, rgba(185,28,28,0.08) 100%)',
+    borderActive: 'border-red-500 shadow-[0_0_40px_rgba(239,68,68,0.45)]',
+    badgeBg: 'bg-red-500/20 text-red-300 border-red-500/40',
+  },
+  2: {
+    id: 2,
+    defaultName: 'SQUADRA 2',
+    colorName: 'Blu',
+    colorHex: '#3b82f6',
+    colorNeon: '#00b4d8',
+    colorGlow: 'rgba(59, 130, 246, 0.65)',
+    bgGradient: 'linear-gradient(180deg, rgba(59,130,246,0.22) 0%, rgba(29,78,216,0.08) 100%)',
+    borderActive: 'border-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.45)]',
+    badgeBg: 'bg-blue-500/20 text-blue-300 border-blue-500/40',
+  },
+  3: {
+    id: 3,
+    defaultName: 'SQUADRA 3',
+    colorName: 'Verde',
+    colorHex: '#10b981',
+    colorNeon: '#05f190',
+    colorGlow: 'rgba(16, 185, 129, 0.65)',
+    bgGradient: 'linear-gradient(180deg, rgba(16,185,129,0.22) 0%, rgba(4,120,87,0.08) 100%)',
+    borderActive: 'border-emerald-500 shadow-[0_0_40px_rgba(16,185,129,0.45)]',
+    badgeBg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40',
+  },
 };
 
-const baseMembers: Record<TeamId, number> = { 1: 6, 2: 5, 3: 3 };
+const DICE_FACES: DiceFace[] = ['right', 'left', 'both', 'self'];
 
-function normalizeMembers(scores: number[] | null) {
-  const members: Record<TeamId, number> = { ...baseMembers };
-  if (!scores || scores.length < 3) return members;
-  const ranking = scores.map((score, index) => ({ teamId: (index + 1) as TeamId, score })).sort((a, b) => b.score - a.score);
+// 4 Standard Bonuses metadata
+const BONUS_CONFIGS = [
+  { key: 'dado', label: 'Dado', sublabel: 'Rilancia', symbol: '🎲' },
+  { key: 'switch', label: 'Switch', sublabel: 'Cambio', symbol: '🔄' },
+  { key: 'arco', label: 'Arco', sublabel: 'Attacco', symbol: '🏹' },
+  { key: 'scudo', label: 'Scudo', sublabel: 'Difesa', symbol: '🛡️' },
+];
+
+// Audio synthesizer for zero-dependency sounds
+function playSound(type: 'roll' | 'land' | 'correct' | 'wrong' | 'eliminate') {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    if (type === 'roll') {
+      for (let i = 0; i < 7; i++) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(220 + Math.random() * 280, now + i * 0.12);
+        gain.gain.setValueAtTime(0.1, now + i * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.08);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.12);
+        osc.stop(now + i * 0.12 + 0.09);
+      }
+    } else if (type === 'land') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.2);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.32);
+    } else if (type === 'correct') {
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+        gain.gain.setValueAtTime(0.22, now + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.35);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 0.38);
+      });
+    } else if (type === 'wrong') {
+      [280, 220, 160].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+        gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.28);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.1);
+        osc.stop(now + idx * 0.1 + 0.3);
+      });
+    } else if (type === 'eliminate') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.35);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.42);
+    }
+  } catch {}
+}
+
+function getNextTeam(team: TeamId, dir: 'left' | 'right'): TeamId {
+  if (dir === 'right') return (team === 3 ? 1 : team + 1) as TeamId;
+  return (team === 1 ? 3 : team - 1) as TeamId;
+}
+
+function normalizeStartingMembers(scores: number[] | null): Record<TeamId, number> {
+  const base: Record<TeamId, number> = { 1: 6, 2: 5, 3: 3 };
+  if (!scores || scores.length < 3) return base;
+  const ranking = scores
+    .map((score, index) => ({ teamId: (index + 1) as TeamId, score }))
+    .sort((a, b) => b.score - a.score);
   const assigned = [6, 5, 3];
   ranking.forEach((item, idx) => {
-    members[item.teamId] = assigned[idx] ?? members[item.teamId];
+    base[item.teamId] = assigned[idx] ?? base[item.teamId];
   });
-  return members;
+  return base;
 }
 
-function getNextTeam(team: TeamId, dir: 'left' | 'right') {
-  if (dir === 'right') return (team === 3 ? 1 : (team + 1)) as TeamId;
-  return (team === 1 ? 3 : (team - 1)) as TeamId;
-}
-
-function TeamFigure({
-  active,
-  removed,
+// Stylized Omino Pawn component inspired by omini.jpg
+function OminoFigure({
   color,
-  index,
-  onRemove,
+  neonColor,
+  active,
+  onClick,
 }: {
-  active: boolean;
-  removed: boolean;
   color: string;
-  index: number;
-  onRemove: () => void;
+  neonColor: string;
+  active: boolean;
+  onClick: () => void;
 }) {
   return (
-    <button
-      onClick={onRemove}
-      disabled={removed}
-      className={`relative w-12 h-12 transition-all duration-300 ${removed ? 'opacity-0 scale-50 pointer-events-none' : 'hover:scale-110 active:scale-95'}`}
-      title={`Elimina omino ${index + 1}`}
+    <div
+      onClick={onClick}
+      className={`cursor-pointer select-none transition-all duration-500 transform ${
+        active
+          ? 'opacity-100 scale-100 hover:scale-115 hover:-translate-y-1'
+          : 'opacity-0 scale-50 pointer-events-none'
+      }`}
+      style={{
+        filter: active ? `drop-shadow(0 0 10px ${neonColor}) drop-shadow(0 0 4px ${color})` : 'none',
+      }}
+      title={active ? 'Clicca per eliminare' : ''}
     >
-      <div
-        className={`absolute inset-0 rounded-full border-2 border-white/90 shadow-[0_0_20px_rgba(255,255,255,0.15)] ${active ? 'ring-2 ring-white/40' : ''}`}
-        style={{ background: color, boxShadow: `0 0 18px ${color}66` }}
-      />
-      <div className="absolute left-1/2 top-[33px] w-6 h-7 -translate-x-1/2 rounded-b-xl rounded-t-md bg-white/92" />
-      <div className="absolute left-1/2 top-[28px] w-8 h-2 -translate-x-1/2 rounded-full bg-white/76" />
-    </button>
+      <svg
+        width="44"
+        height="64"
+        viewBox="0 0 40 64"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        className="overflow-visible"
+      >
+        <defs>
+          <linearGradient id={`omino-grad-${color.replace('#', '')}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
+            <stop offset="35%" stopColor={color} />
+            <stop offset="100%" stopColor={color} stopOpacity="0.9" />
+          </linearGradient>
+        </defs>
+
+        {/* Head */}
+        <circle
+          cx="20"
+          cy="11"
+          r="8.5"
+          fill={`url(#omino-grad-${color.replace('#', '')})`}
+          stroke="#111111"
+          strokeWidth="2.2"
+        />
+
+        {/* Body, Torso, Arms and Separated Legs */}
+        <path
+          d="M 12 24 C 14 22, 26 22, 28 24 C 31 26, 33 32, 33 40 C 33 42, 31 43, 29 42 C 28 40, 28 34, 27 32 L 26 48 L 26 62 C 26 63.8, 22 63.8, 22 62 L 21 46 L 19 46 L 18 62 C 18 63.8, 14 63.8, 14 62 L 14 48 L 13 32 C 12 34, 12 40, 11 42 C 9 43, 7 42, 7 40 C 7 32, 9 26, 12 24 Z"
+          fill={`url(#omino-grad-${color.replace('#', '')})`}
+          stroke="#111111"
+          strokeWidth="2.2"
+          strokeLinejoin="round"
+        />
+
+        {/* Subtle Specular Chest Glow */}
+        <ellipse cx="20" cy="29" rx="3.5" ry="6" fill="#ffffff" opacity="0.35" />
+      </svg>
+    </div>
   );
 }
 
-function TeamPanel({
-  teamId,
-  teamName,
-  activeTeam,
-  selectedFace,
-  members,
-  remaining,
-  onSelectTeam,
-  onEliminate,
-  bonuses,
-  onToggleBonus,
+// 3D Isometric Floating Cube Pedestal with omino on top
+function PedestalCube({
+  number,
+  color,
+  neonColor,
+  hasOmino,
+  isAssigned,
+  onToggle,
 }: {
-  teamId: TeamId;
-  teamName: string;
-  activeTeam: TeamId;
-  selectedFace: DiceFace | null;
-  members: number;
-  remaining: number;
-  onSelectTeam: (teamId: TeamId) => void;
-  onEliminate: (teamId: TeamId) => void;
-  bonuses: boolean[];
-  onToggleBonus: (teamIndex: number, bonusIndex: number) => void;
+  number: number;
+  color: string;
+  neonColor: string;
+  hasOmino: boolean;
+  isAssigned: boolean;
+  onToggle: () => void;
 }) {
-  const meta = TEAM_META[teamId];
-  const displayed = Array.from({ length: 6 }, (_, i) => i < members);
-  const rows = [
-    { indices: [3, 4, 5] },
-    { indices: [1, 2] },
-    { indices: [0] },
-  ];
-
   return (
     <div
-      className={`rounded-[2rem] border p-5 transition-all duration-500 ${
-        activeTeam === teamId ? 'border-white/35 bg-white/10 shadow-[0_20px_60px_rgba(0,0,0,0.25)]' : 'border-white/10 bg-white/5'
+      onClick={onToggle}
+      className={`relative flex flex-col items-center cursor-pointer group transition-all duration-300 ${
+        isAssigned ? 'opacity-100' : 'opacity-20 pointer-events-none'
       }`}
+      style={{ width: '84px' }}
+      title={`Cubo #${number} — Clicca per cambiare stato omino`}
     >
-      <div className="flex items-center justify-between mb-3">
-        <button onClick={() => onSelectTeam(teamId)} className="text-left cursor-pointer">
-          <div className="text-xs uppercase tracking-[0.35em] text-white/45">Turno</div>
-          <div className="text-2xl font-black">{teamName}</div>
-        </button>
-        <div className="w-4 h-4 rounded-full" style={{ background: meta.color, boxShadow: `0 0 18px ${meta.color}` }} />
+      {/* Omino standing on top face */}
+      <div className="h-[66px] flex items-end justify-center mb-[-12px] z-20 relative">
+        <OminoFigure
+          color={color}
+          neonColor={neonColor}
+          active={hasOmino && isAssigned}
+          onClick={onToggle}
+        />
       </div>
 
-      <div className="flex flex-col items-center gap-2 min-h-[210px] justify-center">
-        {rows.map((row, rowIdx) => (
-          <div key={rowIdx} className="flex justify-center gap-4 min-h-[56px]">
-            {row.indices.map((index) => (
-              <TeamFigure
-                key={index}
-                index={index}
-                active={activeTeam === teamId}
-                removed={!displayed[index] || index >= remaining}
-                color={meta.color}
-                onRemove={() => onEliminate(teamId)}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
+      {/* 3D Isometric / Oblique Cube */}
+      <div className="relative w-[78px] h-[66px] z-10">
+        <svg
+          width="78"
+          height="66"
+          viewBox="0 0 78 66"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          className="overflow-visible"
+        >
+          <defs>
+            <filter id={`cube-glow-${number}-${color.replace('#', '')}`} x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="0" stdDeviation="4" floodColor={hasOmino ? neonColor : 'rgba(255,255,255,0.1)'} floodOpacity="0.8" />
+            </filter>
+            <linearGradient id={`cube-top-grad-${color.replace('#', '')}`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={color} stopOpacity={hasOmino ? '0.75' : '0.15'} />
+              <stop offset="100%" stopColor="#ffffff" stopOpacity={hasOmino ? '0.35' : '0.05'} />
+            </linearGradient>
+            <linearGradient id={`cube-front-grad-${color.replace('#', '')}`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={color} stopOpacity={hasOmino ? '0.85' : '0.2'} />
+              <stop offset="100%" stopColor="#000000" stopOpacity={hasOmino ? '0.85' : '0.6'} />
+            </linearGradient>
+            <linearGradient id={`cube-side-grad-${color.replace('#', '')}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor={color} stopOpacity={hasOmino ? '0.6' : '0.15'} />
+              <stop offset="100%" stopColor="#000000" stopOpacity={hasOmino ? '0.9' : '0.7'} />
+            </linearGradient>
+          </defs>
 
-      <div className="mt-4 flex items-center justify-between text-sm text-white/65">
-        <span>{remaining} persone rimaste</span>
-        <span>{selectedFace ? 'dado pronto' : 'in attesa'}</span>
-      </div>
+          {/* Water reflection / glow at bottom */}
+          {hasOmino && (
+            <ellipse
+              cx="39"
+              cy="62"
+              rx="34"
+              ry="7"
+              fill={color}
+              opacity="0.35"
+              className="animate-pulse"
+            />
+          )}
 
-      <div className="mt-4 grid grid-cols-4 gap-2">
-        {bonuses.map((active, bonusIndex) => (
-          <button
-            key={bonusIndex}
-            onClick={() => onToggleBonus(teamId - 1, bonusIndex)}
-            className={`h-12 rounded-2xl border transition-all text-xl flex items-center justify-center cursor-pointer ${active ? 'border-amber-300 bg-amber-300/30 text-white shadow-[0_0_24px_rgba(251,191,36,0.35)] scale-105' : 'border-white/15 bg-black/15 text-white/30 hover:bg-white/10 opacity-30 grayscale'}`}
+          {/* Top Face (Oblique diamond receding backwards) */}
+          <polygon
+            points="14,14 64,14 74,3 24,3"
+            fill={`url(#cube-top-grad-${color.replace('#', '')})`}
+            stroke={hasOmino ? neonColor : 'rgba(255,255,255,0.2)'}
+            strokeWidth={hasOmino ? '1.8' : '1'}
+          />
+
+          {/* Right/Side Face */}
+          <polygon
+            points="64,14 74,3 74,48 64,59"
+            fill={`url(#cube-side-grad-${color.replace('#', '')})`}
+            stroke={hasOmino ? neonColor : 'rgba(255,255,255,0.2)'}
+            strokeWidth={hasOmino ? '1.8' : '1'}
+          />
+
+          {/* Front Face (Square facing the camera with the number) */}
+          <polygon
+            points="4,14 64,14 64,59 4,59"
+            fill={`url(#cube-front-grad-${color.replace('#', '')})`}
+            stroke={hasOmino ? neonColor : 'rgba(255,255,255,0.25)'}
+            strokeWidth={hasOmino ? '2.2' : '1'}
+            filter={hasOmino ? `url(#cube-glow-${number}-${color.replace('#', '')})` : undefined}
+          />
+
+          {/* Inner Front Bevel Highlight */}
+          {hasOmino && (
+            <line
+              x1="6"
+              y1="16"
+              x2="62"
+              y2="16"
+              stroke="#ffffff"
+              strokeWidth="1"
+              strokeOpacity="0.6"
+            />
+          )}
+
+          {/* Bold White Number */}
+          <text
+            x="34"
+            y="44"
+            textAnchor="middle"
+            fill="#ffffff"
+            fontSize="26"
+            fontWeight="900"
+            fontFamily="system-ui, -apple-system, sans-serif"
+            opacity={hasOmino ? '1' : '0.3'}
+            style={{
+              filter: hasOmino ? 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))' : 'none',
+            }}
           >
-            {['🎲', '🔄', '🏹', '🛡️'][bonusIndex] || '★'}
-          </button>
-        ))}
+            {number}
+          </text>
+        </svg>
       </div>
     </div>
   );
 }
 
-function Dice3D({
-  rolling,
-  targetFace,
-  onRoll,
+// Suspended Cybernetic Bonus Monitor inspired by omini.jpg
+function CyberBonusMonitor({
+  label,
+  sublabel,
+  symbol,
+  active,
+  teamColor,
+  teamNeon,
+  onToggle,
 }: {
-  rolling: boolean;
-  targetFace: DiceFace | null;
-  onRoll: () => void;
+  label: string;
+  sublabel: string;
+  symbol: string;
+  active: boolean;
+  teamColor: string;
+  teamNeon: string;
+  onToggle: () => void;
 }) {
-  const [rollCount, setRollCount] = useState(0);
-  const [rotation, setRotation] = useState({ x: -18, y: 22, z: -6 });
-
-  const faceRotations = useMemo(() => ({
-    right: { x: -18, y: 18, z: 0 },
-    left: { x: -18, y: 182, z: 0 },
-    both: { x: -18, y: 272, z: 10 },
-    self: { x: -18, y: 92, z: -8 }
-  }), []);
-
-  useEffect(() => {
-    if (rolling && targetFace) {
-      const nextCount = rollCount + 1;
-      setRollCount(nextCount);
-      const rot = faceRotations[targetFace];
-      if (rot) {
-        // La rotazione cumulativa finale viene calcolata ed impostata SUBITO all'inizio del lancio.
-        // In questo modo compie un unico movimento fluido di 1200ms fino a fermarsi.
-        setRotation({
-          x: rot.x + 360 * 2 * nextCount,
-          y: rot.y + 360 * 3 * nextCount,
-          z: rot.z + 360 * 1 * nextCount
-        });
-      }
-    } else if (!rolling && targetFace) {
-      // Se non sta girando ma c'è una faccia target impostata, posiziona il dado
-      const rot = faceRotations[targetFace];
-      if (rot) {
-        setRotation({
-          x: rot.x + 360 * 2 * rollCount,
-          y: rot.y + 360 * 3 * rollCount,
-          z: rot.z + 360 * 1 * rollCount
-        });
-      }
-    }
-  }, [rolling, targetFace, faceRotations]);
-
-  const faceTexts: Record<DiceFace, string> = {
-    right: 'DESTRA',
-    left: 'SINISTRA',
-    both: 'ENTRAMBE',
-    self: 'SE STESSA',
-  };
-
   return (
-    <div className="relative w-full max-w-[420px] h-[260px] perspective-[1400px]">
+    <div className="flex flex-col items-center">
+      {/* Hanging industrial conduit / cable coming from ceiling */}
+      <div className="w-1.5 h-6 bg-gradient-to-b from-black/80 via-slate-500 to-slate-400 relative">
+        <div className="absolute top-0 -left-1 w-3.5 h-1.5 bg-slate-600 rounded-sm" />
+        <div className="absolute bottom-0 -left-0.5 w-2.5 h-1.5 bg-slate-700 rounded-sm" />
+      </div>
+
+      {/* Futuristic Monitor Bezel */}
       <button
         type="button"
-        onClick={onRoll}
-        className="relative w-full h-full rounded-[2rem] border border-white/15 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.14),_rgba(255,255,255,0.04)_32%,_rgba(0,0,0,0.32)_100%)] shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-xl overflow-hidden"
+        onClick={onToggle}
+        className={`group relative w-16 sm:w-20 h-16 sm:h-20 rounded-xl border-2 transition-all duration-300 flex flex-col items-center justify-center cursor-pointer overflow-hidden ${
+          active
+            ? 'bg-slate-950/90 hover:scale-105'
+            : 'bg-black/85 border-white/10 opacity-35 grayscale hover:opacity-50'
+        }`}
+        style={{
+          borderColor: active ? teamNeon : 'rgba(255,255,255,0.12)',
+          boxShadow: active
+            ? `0 0 16px ${teamColor}80, inset 0 0 12px ${teamNeon}40`
+            : 'none',
+        }}
+        title={`Bonus ${label} (${sublabel}): ${active ? 'Disponibile (clicca per spendere)' : 'Utilizzato (clicca per ripristinare)'}`}
       >
-        <div className="absolute inset-0 opacity-75">
-          <div className="absolute -top-12 left-8 w-28 h-28 rounded-full bg-white/15 blur-2xl" />
-          <div className="absolute top-10 right-6 w-24 h-24 rounded-full bg-cyan-400/20 blur-2xl" />
-          <div className="absolute bottom-[-2rem] left-1/3 w-40 h-40 rounded-full bg-emerald-400/15 blur-3xl" />
-        </div>
-        <div className="absolute inset-[18px] rounded-[1.4rem] border border-white/10 bg-black/10">
-          <div className="absolute inset-0 bg-[linear-gradient(135deg,transparent_0%,rgba(255,255,255,0.10)_45%,transparent_55%)] opacity-70" />
-          <div className="absolute left-1/2 top-1/2 w-[160px] h-[160px] -translate-x-1/2 -translate-y-[56%] [perspective:1400px]">
-            <div 
-              className="relative w-full h-full transition-transform duration-[1200ms] ease-out [transform-style:preserve-3d]"
-              style={{
-                transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) rotateZ(${rotation.z}deg)`
-              }}
-            >
-              <div className="absolute inset-0 rounded-[26px] border border-white/35 bg-[linear-gradient(135deg,#ffffff,#e7eef9_45%,#9fb4d6)] shadow-[inset_0_0_30px_rgba(255,255,255,0.55),0_18px_40px_rgba(0,0,0,0.35)] [transform:translateZ(80px)]">
-                <span className="absolute inset-0 flex items-center justify-center text-4xl font-black text-slate-900">{faceTexts.right}</span>
-              </div>
-              <div className="absolute inset-0 rounded-[26px] border border-white/28 bg-[linear-gradient(135deg,#e7eef9,#c7d5eb_48%,#8093b4)] shadow-[inset_0_0_30px_rgba(255,255,255,0.35),0_18px_40px_rgba(0,0,0,0.25)] [transform:rotateY(180deg)_translateZ(80px)]">
-                <span className="absolute inset-0 flex items-center justify-center text-4xl font-black text-slate-900">{faceTexts.left}</span>
-              </div>
-              <div className="absolute inset-0 rounded-[26px] border border-white/24 bg-[linear-gradient(135deg,#ffffff,#d7e6fb_44%,#94add5)] shadow-[inset_0_0_30px_rgba(255,255,255,0.35),0_18px_40px_rgba(0,0,0,0.25)] [transform:rotateY(90deg)_translateZ(80px)]">
-                <span className="absolute inset-0 flex items-center justify-center text-3xl font-black text-slate-900">{faceTexts.both}</span>
-              </div>
-              <div className="absolute inset-0 rounded-[26px] border border-white/24 bg-[linear-gradient(135deg,#dbe9ff,#b2c7e9_50%,#7f96ba)] shadow-[inset_0_0_30px_rgba(255,255,255,0.28),0_18px_40px_rgba(0,0,0,0.25)] [transform:rotateY(-90deg)_translateZ(80px)]">
-                <span className="absolute inset-0 flex items-center justify-center text-3xl font-black text-slate-900">{faceTexts.self}</span>
-              </div>
-              <div className="absolute inset-0 rounded-[26px] border border-white/22 bg-[linear-gradient(135deg,#ffffff,#dfe9f8_48%,#a6b8d8)] shadow-[inset_0_0_26px_rgba(255,255,255,0.25),0_18px_40px_rgba(0,0,0,0.24)] [transform:rotateX(90deg)_translateZ(80px)]" />
-              <div className="absolute inset-0 rounded-[26px] border border-black/15 bg-[linear-gradient(135deg,#6d7f9e,#3a4960)] shadow-[inset_0_0_24px_rgba(255,255,255,0.12),0_18px_40px_rgba(0,0,0,0.28)] [transform:rotateX(-90deg)_translateZ(80px)]" />
-            </div>
+        {/* Holographic scanline overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-25"
+          style={{
+            backgroundImage:
+              'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 229, 255, 0.2) 2px, rgba(0, 229, 255, 0.2) 4px)',
+          }}
+        />
+
+        {/* Screen Corner UI Brackets */}
+        <div className="absolute top-1 left-1 w-1.5 h-1.5 border-t border-l border-cyan-300/70" />
+        <div className="absolute top-1 right-1 w-1.5 h-1.5 border-t border-r border-cyan-300/70" />
+        <div className="absolute bottom-1 left-1 w-1.5 h-1.5 border-b border-l border-cyan-300/70" />
+        <div className="absolute bottom-1 right-1 w-1.5 h-1.5 border-b border-r border-cyan-300/70" />
+
+        {/* Status LED Dot */}
+        <div
+          className={`absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full ${
+            active ? 'bg-cyan-400 shadow-[0_0_6px_#00e5ff] animate-pulse' : 'bg-red-500/50'
+          }`}
+        />
+
+        {/* Neon Cyber Icon */}
+        <span
+          className="text-2xl sm:text-3xl leading-none select-none drop-shadow-[0_0_10px_rgba(0,229,255,0.6)]"
+          role="img"
+          aria-label={label}
+        >
+          {symbol}
+        </span>
+
+        {/* Mini Label */}
+        <span
+          className={`text-[9px] font-black uppercase tracking-wider mt-1 ${
+            active ? 'text-cyan-300' : 'text-slate-500'
+          }`}
+        >
+          {label}
+        </span>
+
+        {/* Used Badge */}
+        {!active && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[1px]">
+            <span className="text-[9px] font-black uppercase tracking-widest text-red-400 border border-red-500/40 px-1 py-0.5 rounded bg-red-950/60">
+              USATO
+            </span>
           </div>
-          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-center">
-            <div className="text-xs uppercase tracking-[0.38em] text-white/45">Dado 3D</div>
-            <div className="mt-2 text-[11px] uppercase tracking-[0.35em] text-white/40">click per lanciare</div>
-          </div>
-        </div>
+        )}
       </button>
     </div>
   );
 }
 
-export default function FinaleSquadre_Board() {
-  const gameData = useGameData() as { title?: string; subtitle?: string } | null;
-  const { scores, bonuses, toggleBonus } = useScores();
-  const [activeTeam, setActiveTeam] = useState<TeamId>(3);
-  const [selectedDieFace, setSelectedDieFace] = useState<DiceFace | null>(null);
-  const [dieTargetFace, setDieTargetFace] = useState<DiceFace | null>(null);
-  const [targetTeam, setTargetTeam] = useState<TeamId | null>(null);
-  const [eliminatedQuestions, setEliminatedQuestions] = useState<number[]>([]);
-  const [rolling, setRolling] = useState(false);
-  const [eliminatedMembers, setEliminatedMembers] = useState<Record<TeamId, number[]>>({ 1: [], 2: [], 3: [] });
-  const [teamNames, setTeamNames] = useState<string[]>(['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']);
+// 3D Realistic & Holographic Rolling Dice
+function HolographicDice3D({
+  rolling,
+  targetFace,
+  onRoll,
+  canRollBonus,
+  onUseBonusRoll,
+}: {
+  rolling: boolean;
+  targetFace: DiceFace | null;
+  onRoll: () => void;
+  canRollBonus: boolean;
+  onUseBonusRoll: () => void;
+}) {
+  const [rollCount, setRollCount] = useState(0);
+  const [rotation, setRotation] = useState({ x: -20, y: 30, z: -5 });
 
+  const faceAngles: Record<DiceFace, { x: number; y: number; z: number }> = useMemo(
+    () => ({
+      right: { x: 0, y: 0, z: 0 }, // Front face
+      left: { x: 0, y: 180, z: 0 }, // Back face
+      both: { x: 0, y: 90, z: 0 }, // Right face
+      self: { x: 0, y: -90, z: 0 }, // Left face
+    }),
+    []
+  );
+
+  useEffect(() => {
+    if (rolling && targetFace) {
+      const nextCount = rollCount + 1;
+      setRollCount(nextCount);
+      const angle = faceAngles[targetFace];
+      if (angle) {
+        setRotation({
+          x: angle.x + 360 * 3 * nextCount + 15,
+          y: angle.y + 360 * 4 * nextCount + 20,
+          z: angle.z + 360 * 2 * nextCount - 10,
+        });
+      }
+    } else if (!rolling && targetFace) {
+      const angle = faceAngles[targetFace];
+      if (angle) {
+        setRotation({
+          x: angle.x + 360 * 3 * rollCount,
+          y: angle.y + 360 * 4 * rollCount,
+          z: angle.z + 360 * 2 * rollCount,
+        });
+      }
+    }
+  }, [rolling, targetFace, faceAngles]);
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-3">
+      {/* 3D Cube Viewport */}
+      <div
+        onClick={onRoll}
+        className="relative w-44 h-44 cursor-pointer select-none group [perspective:1200px]"
+        title="Clicca per lanciare il dado"
+      >
+        {/* Glow backdrop */}
+        <div className="absolute inset-0 rounded-full bg-cyan-500/15 blur-2xl group-hover:bg-cyan-500/25 transition-all pointer-events-none" />
+
+        {/* 3D Cube Container */}
+        <div
+          className="relative w-full h-full [transform-style:preserve-3d] transition-transform duration-[1200ms] ease-out"
+          style={{
+            transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) rotateZ(${rotation.z}deg)`,
+          }}
+        >
+          {/* Face: RIGHT (Front - translateZ(55px)) */}
+          <div className="absolute inset-2 rounded-2xl border-2 border-cyan-400/80 bg-gradient-to-br from-slate-900 via-slate-950 to-cyan-950 flex flex-col items-center justify-center text-center p-2 shadow-[inset_0_0_20px_rgba(0,229,255,0.4),0_10px_25px_rgba(0,0,0,0.5)] [transform:translateZ(55px)]">
+            <span className="text-3xl text-cyan-400 drop-shadow-[0_0_10px_#00e5ff]">➔</span>
+            <span className="text-lg font-black tracking-widest text-white mt-1">DESTRA</span>
+            <span className="text-[9px] uppercase tracking-wider text-cyan-300/80 font-bold">BERSAGLIO</span>
+          </div>
+
+          {/* Face: LEFT (Back - rotateY(180deg) translateZ(55px)) */}
+          <div className="absolute inset-2 rounded-2xl border-2 border-blue-400/80 bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 flex flex-col items-center justify-center text-center p-2 shadow-[inset_0_0_20px_rgba(59,130,246,0.4),0_10px_25px_rgba(0,0,0,0.5)] [transform:rotateY(180deg)_translateZ(55px)]">
+            <span className="text-3xl text-blue-400 drop-shadow-[0_0_10px_#3b82f6]">⬅</span>
+            <span className="text-lg font-black tracking-widest text-white mt-1">SINISTRA</span>
+            <span className="text-[9px] uppercase tracking-wider text-blue-300/80 font-bold">BERSAGLIO</span>
+          </div>
+
+          {/* Face: BOTH (Right - rotateY(90deg) translateZ(55px)) */}
+          <div className="absolute inset-2 rounded-2xl border-2 border-amber-400/80 bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950 flex flex-col items-center justify-center text-center p-2 shadow-[inset_0_0_20px_rgba(245,158,11,0.4),0_10px_25px_rgba(0,0,0,0.5)] [transform:rotateY(90deg)_translateZ(55px)]">
+            <span className="text-2xl text-amber-400 drop-shadow-[0_0_10px_#f59e0b]">⮂ ⮃</span>
+            <span className="text-base font-black tracking-wider text-white mt-1">ENTRAMBE</span>
+            <span className="text-[9px] uppercase tracking-wider text-amber-300/80 font-bold">DOPPIA SFIDA</span>
+          </div>
+
+          {/* Face: SELF (Left - rotateY(-90deg) translateZ(55px)) */}
+          <div className="absolute inset-2 rounded-2xl border-2 border-red-400/80 bg-gradient-to-br from-slate-900 via-slate-950 to-red-950 flex flex-col items-center justify-center text-center p-2 shadow-[inset_0_0_20px_rgba(239,68,68,0.4),0_10px_25px_rgba(0,0,0,0.5)] [transform:rotateY(-90deg)_translateZ(55px)]">
+            <span className="text-3xl text-red-400 drop-shadow-[0_0_10px_#ef4444]">🎯</span>
+            <span className="text-base font-black tracking-wider text-white mt-1">SE STESSA</span>
+            <span className="text-[9px] uppercase tracking-wider text-red-300/80 font-bold">AUTOSFIDA</span>
+          </div>
+
+          {/* Top Face */}
+          <div className="absolute inset-2 rounded-2xl border border-white/20 bg-slate-900/90 [transform:rotateX(90deg)_translateZ(55px)]" />
+          {/* Bottom Face */}
+          <div className="absolute inset-2 rounded-2xl border border-white/20 bg-slate-950 [transform:rotateX(-90deg)_translateZ(55px)]" />
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={onRoll}
+          disabled={rolling}
+          className={`px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest transition-all cursor-pointer shadow-lg flex items-center gap-2 ${
+            rolling
+              ? 'bg-slate-700 text-slate-300 cursor-not-allowed opacity-75'
+              : 'bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 text-white shadow-cyan-500/25 hover:scale-105 active:scale-95 border border-cyan-300/40'
+          }`}
+        >
+          <span>🎲</span>
+          <span>{rolling ? 'Lancio in corso...' : 'Lancia Dado'}</span>
+        </button>
+
+        {canRollBonus && (
+          <button
+            type="button"
+            onClick={onUseBonusRoll}
+            disabled={rolling}
+            className="px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer animate-pulse"
+            title="Spendi il Bonus Dado per rilanciare"
+          >
+            <span>✨</span>
+            <span>Rilancia (Bonus)</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function FinaleSquadre_Board() {
+  const gameData = useGameData() as {
+    title?: string;
+    subtitle?: string;
+    sfondo?: string;
+    numeroDomande?: number;
+  } | null;
+
+  const { scores, bonuses, toggleBonus } = useScores();
+
+  // Synced States across Electron windows
+  const [activeTeam, setActiveTeam] = useSyncedState<TeamId>('playstate_finale_active_team', 3);
+  const [selectedDieFace, setSelectedDieFace] = useSyncedState<DiceFace | null>(
+    'playstate_finale_selected_face',
+    null
+  );
+  const [dieTargetFace, setDieTargetFace] = useSyncedState<DiceFace | null>(
+    'playstate_finale_target_face',
+    null
+  );
+  const [targetTeam, setTargetTeam] = useSyncedState<TeamId | 'both' | null>(
+    'playstate_finale_target_team',
+    null
+  );
+  const [eliminatedQuestions, setEliminatedQuestions] = useSyncedState<number[]>(
+    'playstate_finale_eliminated_questions',
+    []
+  );
+  const [eliminatedMembers, setEliminatedMembers] = useSyncedState<Record<TeamId, number[]>>(
+    'playstate_finale_eliminated_members',
+    { 1: [], 2: [], 3: [] }
+  );
+
+  const [rolling, setRolling] = useState(false);
+  const [teamNames, setTeamNames] = useState<string[]>(['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']);
+  const [setupConfig, setSetupConfig] = useState<any>(null);
+
+  // Load team names and setup configuration
   useEffect(() => {
     const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed?.punteggi?.nomiSquadre) {
-          setTeamNames(parsed.punteggi.nomiSquadre);
+        setSetupConfig(parsed);
+        if (parsed?.punteggi?.nomiSquadre && Array.isArray(parsed.punteggi.nomiSquadre)) {
+          setTeamNames([
+            parsed.punteggi.nomiSquadre[0] || 'SQUADRA 1',
+            parsed.punteggi.nomiSquadre[1] || 'SQUADRA 2',
+            parsed.punteggi.nomiSquadre[2] || 'SQUADRA 3',
+          ]);
         }
       } catch {}
     }
   }, []);
 
-  const members = useMemo(() => normalizeMembers(scores), [scores]);
+  // Background image (from setup, slide data, or default canyon background)
+  const bgImage =
+    gameData?.sfondo ||
+    setupConfig?.gioco5?.sfondoGenerale ||
+    '/sfondo_finale_default.jpg';
 
-  useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed.activeTeam === 1 || parsed.activeTeam === 2 || parsed.activeTeam === 3) setActiveTeam(parsed.activeTeam);
-      if (parsed.selectedDieFace === 'right' || parsed.selectedDieFace === 'left' || parsed.selectedDieFace === 'both' || parsed.selectedDieFace === 'self') setSelectedDieFace(parsed.selectedDieFace);
-      if (parsed.dieTargetFace === 'right' || parsed.dieTargetFace === 'left' || parsed.dieTargetFace === 'both' || parsed.dieTargetFace === 'self') setDieTargetFace(parsed.dieTargetFace);
-      if (parsed.targetTeam === 1 || parsed.targetTeam === 2 || parsed.targetTeam === 3 || parsed.targetTeam === null) setTargetTeam(parsed.targetTeam);
-      if (Array.isArray(parsed.eliminatedQuestions)) setEliminatedQuestions(parsed.eliminatedQuestions);
-      if (parsed.eliminatedMembers) setEliminatedMembers(parsed.eliminatedMembers);
-    } catch {}
-  }, []);
+  const totalQuestions = gameData?.numeroDomande || setupConfig?.gioco5?.numeroDomande || 15;
+  const questionNumbers = useMemo(
+    () => Array.from({ length: totalQuestions }, (_, i) => i + 1),
+    [totalQuestions]
+  );
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ activeTeam, selectedDieFace, dieTargetFace, targetTeam, eliminatedQuestions, eliminatedMembers }));
-  }, [activeTeam, selectedDieFace, dieTargetFace, targetTeam, eliminatedQuestions, eliminatedMembers]);
+  // Starting member count per team (based on ranking: 6, 5, 3)
+  const startingMembers = useMemo(() => normalizeStartingMembers(scores), [scores]);
 
+  // Dice roll handler
   const rollDice = () => {
     if (rolling) return;
     setRolling(true);
     setSelectedDieFace(null);
-    const next = DICE_FACES[Math.floor(Math.random() * DICE_FACES.length)];
-    setDieTargetFace(next);
-    setTargetTeam(null);
+    playSound('roll');
+
+    const nextFace = DICE_FACES[Math.floor(Math.random() * DICE_FACES.length)];
+    setDieTargetFace(nextFace);
+
+    // Compute target automatically
+    let resolvedTarget: TeamId | 'both' = 'both';
+    if (nextFace === 'right') {
+      resolvedTarget = getNextTeam(activeTeam, 'right');
+    } else if (nextFace === 'left') {
+      resolvedTarget = getNextTeam(activeTeam, 'left');
+    } else if (nextFace === 'self') {
+      resolvedTarget = activeTeam;
+    } else {
+      resolvedTarget = 'both';
+    }
+
     setTimeout(() => {
-      setSelectedDieFace(next);
+      setSelectedDieFace(nextFace);
+      setTargetTeam(resolvedTarget);
       setRolling(false);
+      playSound('land');
     }, 1200);
   };
 
-  const commitTarget = (teamId: TeamId) => {
-    setTargetTeam(teamId);
+  // Re-roll using the Dado bonus
+  const handleUseBonusRoll = () => {
+    const activeTeamIdx = activeTeam - 1;
+    // Consume active team's dice bonus (index 0)
+    toggleBonus(activeTeamIdx, 0);
+    rollDice();
   };
 
-  const resolveTarget = () => {
-    if (!selectedDieFace) return;
-    if (selectedDieFace === 'self') {
-      return activeTeam;
-    }
-    if (selectedDieFace === 'both') {
-      return null;
-    }
-    if (!targetTeam) return null;
-    return targetTeam;
-  };
+  const hasDiceBonusAvailable = Boolean(bonuses[activeTeam - 1]?.[0]);
 
-  const eliminatePerson = (teamId: TeamId) => {
+  // Eliminate one member from a team
+  const eliminateMember = (teamId: TeamId) => {
     setEliminatedMembers((prev) => {
-      const next = { ...prev };
-      const current = next[teamId] ?? [];
-      if (current.length >= members[teamId]) return prev;
-      next[teamId] = [...current, current.length + 1];
-      // Do NOT subtract from overall quiz points; only members of the team are eliminated in Finale
-      return next;
+      const currentList = prev[teamId] || [];
+      const maxCount = startingMembers[teamId];
+      if (currentList.length >= maxCount) return prev;
+      playSound('eliminate');
+      // Eliminate next highest active cube index
+      const remainingCubes = [1, 2, 3, 4, 5, 6]
+        .slice(0, maxCount)
+        .filter((c) => !currentList.includes(c));
+      if (remainingCubes.length === 0) return prev;
+      const toEliminate = remainingCubes[remainingCubes.length - 1];
+      return {
+        ...prev,
+        [teamId]: [...currentList, toEliminate],
+      };
     });
   };
 
-  const handleOutcome = (correct: boolean) => {
-    if (!selectedDieFace) return;
-    if (correct) {
-      if (selectedDieFace === 'both') {
-        const left = getNextTeam(activeTeam, 'left');
-        const right = getNextTeam(activeTeam, 'right');
-        eliminatePerson(left);
-        eliminatePerson(right);
+  // Restore one member
+  const restoreMember = (teamId: TeamId) => {
+    setEliminatedMembers((prev) => {
+      const currentList = prev[teamId] || [];
+      if (currentList.length === 0) return prev;
+      const nextList = [...currentList];
+      nextList.pop();
+      return {
+        ...prev,
+        [teamId]: nextList,
+      };
+    });
+  };
+
+  // Toggle specific cube omino
+  const toggleCubeOmino = (teamId: TeamId, cubeNum: number) => {
+    setEliminatedMembers((prev) => {
+      const currentList = prev[teamId] || [];
+      const exists = currentList.includes(cubeNum);
+      if (exists) {
+        // Restore
+        return {
+          ...prev,
+          [teamId]: currentList.filter((n) => n !== cubeNum),
+        };
       } else {
-        const resolved = resolveTarget();
-        if (resolved) eliminatePerson(resolved);
+        // Eliminate
+        playSound('eliminate');
+        return {
+          ...prev,
+          [teamId]: [...currentList, cubeNum],
+        };
+      }
+    });
+  };
+
+  // Challenge outcome: Correct or Wrong
+  const handleOutcome = (isCorrect: boolean) => {
+    if (!selectedDieFace) return;
+
+    if (isCorrect) {
+      playSound('correct');
+      if (selectedDieFace === 'both') {
+        const leftTeam = getNextTeam(activeTeam, 'left');
+        const rightTeam = getNextTeam(activeTeam, 'right');
+        eliminateMember(leftTeam);
+        eliminateMember(rightTeam);
+      } else if (targetTeam && targetTeam !== 'both') {
+        eliminateMember(targetTeam);
       }
     } else {
-      eliminatePerson(activeTeam);
+      playSound('wrong');
+      eliminateMember(activeTeam);
     }
   };
 
-  const isTeamSelectable = (teamId: TeamId) => {
-    if (!selectedDieFace) return false;
-    if (selectedDieFace === 'self') return teamId === activeTeam;
-    if (selectedDieFace === 'both') return teamId !== activeTeam;
-    return teamId !== activeTeam;
+  // Pass turn to next team in rotation
+  const handleNextTurn = () => {
+    const next = getNextTeam(activeTeam, 'right');
+    setActiveTeam(next);
+    setSelectedDieFace(null);
+    setDieTargetFace(null);
+    setTargetTeam(null);
   };
 
-  const removeQuestion = (number: number) => {
-    setEliminatedQuestions((prev) => (prev.includes(number) ? prev : [...prev, number].sort((a, b) => a - b)));
+  // Toggle question number used
+  const toggleQuestionNumber = (num: number) => {
+    setEliminatedQuestions((prev) =>
+      prev.includes(num) ? prev.filter((n) => n !== num) : [...prev, num].sort((a, b) => a - b)
+    );
   };
+
+  // Cube layout rows matching omini.jpg pyramid
+  const pyramidRows = [
+    { cubes: [4, 6, 5] }, // Back row
+    { cubes: [2, 3] },    // Middle row
+    { cubes: [1] },       // Front row
+  ];
 
   return (
-    <div className="relative w-full h-full overflow-hidden text-white bg-[radial-gradient(circle_at_top,_#203049,_#08111f_52%,_#04070d_100%)] font-sans">
-      <div className="absolute inset-0 opacity-40">
-        <div className="absolute -top-32 left-10 w-96 h-96 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute top-32 right-0 w-[34rem] h-[34rem] rounded-full bg-emerald-500/10 blur-3xl" />
-        <div className="absolute bottom-0 left-1/3 w-[28rem] h-[28rem] rounded-full bg-amber-500/10 blur-3xl" />
+    <div className="relative w-full h-full overflow-hidden text-white font-sans bg-black select-none">
+      {/* 16:9 Cinema Background Arena */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-700"
+        style={{ backgroundImage: `url("${assetUrl(bgImage)}")` }}
+      >
+        {/* Ambient Overlay Gradients */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050b14] via-transparent to-black/60" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_30%,_rgba(0,0,0,0.75)_100%)]" />
       </div>
 
-      <div className="relative z-10 p-8 h-full flex flex-col gap-6">
-        <header className="flex items-end justify-between gap-6">
+      {/* Water reflection ripples effect overlay */}
+      <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-[#02060d]/90 via-[#051329]/40 to-transparent pointer-events-none" />
+
+      {/* Main Interactive Stage Container */}
+      <div className="relative z-10 w-full h-full flex flex-col justify-between p-4 sm:p-6">
+        {/* Top Header & Turn Indicator */}
+        <header className="flex items-center justify-between gap-4 shrink-0 bg-black/40 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/10 shadow-2xl">
           <div>
-            <div className="text-xs uppercase tracking-[0.45em] text-white/45 mb-3">Finale Box 5</div>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tight">{gameData?.title ?? 'Sfida Finale a Squadre'}</h1>
-            <p className="mt-3 text-white/70 max-w-3xl">{gameData?.subtitle ?? 'Il turno parte dalla squadra con 3 persone. Il dado decide il bersaglio.'}</p>
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded bg-red-600/30 text-red-300 border border-red-500/40">
+                BOX 5
+              </span>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white drop-shadow-md">
+                {gameData?.title || setupConfig?.gioco5?.titolo || 'Sfida Finale a Squadre'}
+              </h1>
+            </div>
+            <p className="text-[11px] text-slate-300 mt-0.5">
+              {gameData?.subtitle || setupConfig?.gioco5?.sottotitolo || 'Il dado decide la sfida — Elimina gli omini avversari'}
+            </p>
           </div>
 
-          <div className="flex flex-wrap gap-3 justify-end">
-            {[1, 2, 3].map((t) => (
-              <button
-                key={t}
-                onClick={() => setActiveTeam(t as TeamId)}
-                className={`px-5 py-3 rounded-full border text-sm font-bold tracking-[0.2em] uppercase transition-all cursor-pointer ${activeTeam === t ? 'border-white bg-white text-black' : 'border-white/15 bg-white/5 text-white/70 hover:bg-white/10'}`}
-              >
-                Turno {teamNames[t - 1] || `S${t}`}
-              </button>
-            ))}
+          {/* Turn selector badges */}
+          <div className="flex items-center gap-2 bg-white/5 p-1.5 rounded-xl border border-white/10">
+            <span className="text-[10px] uppercase font-bold text-slate-400 px-2 tracking-wider">
+              Turno:
+            </span>
+            {([1, 2, 3] as TeamId[]).map((tId) => {
+              const meta = TEAMS_CONFIG[tId];
+              const isActive = activeTeam === tId;
+              return (
+                <button
+                  key={tId}
+                  onClick={() => {
+                    setActiveTeam(tId);
+                    setSelectedDieFace(null);
+                    setTargetTeam(null);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isActive
+                      ? `${meta.borderActive} bg-white text-black scale-105`
+                      : 'bg-white/5 text-white/70 hover:bg-white/10 border border-white/10'
+                  }`}
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: meta.colorHex }}
+                  />
+                  <span>{teamNames[tId - 1] || `S${tId}`}</span>
+                </button>
+              );
+            })}
           </div>
         </header>
 
-        <section className="grid grid-cols-1 xl:grid-cols-[1.2fr_0.9fr] gap-6 flex-1 min-h-0">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-h-0">
-            {[1, 2, 3].map((t) => (
-              <TeamPanel
-                key={t}
-                teamId={t as TeamId}
-                teamName={teamNames[t - 1] || `SQUADRA ${t}`}
-                activeTeam={activeTeam}
-                selectedFace={selectedDieFace}
-                members={members[t as TeamId]}
-                remaining={members[t as TeamId] - (eliminatedMembers[t as TeamId]?.length ?? 0)}
-                onSelectTeam={(teamId) => setActiveTeam(teamId)}
-                onEliminate={(teamId) => eliminatePerson(teamId)}
-                bonuses={bonuses[t - 1]}
-                onToggleBonus={toggleBonus}
-              />
-            ))}
+        {/* ============================================================ */}
+        {/* CENTER ARENA: The 3 Teams Stage (Left, Center, Right in order) */}
+        {/* ============================================================ */}
+        <div className="flex-1 grid grid-cols-3 gap-4 lg:gap-6 my-3 min-h-0 items-end">
+          {([1, 2, 3] as TeamId[]).map((teamId) => {
+            const meta = TEAMS_CONFIG[teamId];
+            const isActive = activeTeam === teamId;
+            const isTarget =
+              targetTeam === teamId ||
+              (targetTeam === 'both' && activeTeam !== teamId);
+            const teamMembersCount = startingMembers[teamId];
+            const teamEliminatedList = eliminatedMembers[teamId] || [];
+            const remainingCount = Math.max(0, teamMembersCount - teamEliminatedList.length);
+            const teamBonuses = bonuses[teamId - 1] || [false, false, false, false];
+
+            return (
+              <div
+                key={teamId}
+                className={`relative flex flex-col justify-between h-full rounded-3xl p-4 transition-all duration-500 border backdrop-blur-md overflow-hidden ${
+                  isActive
+                    ? 'border-white/40 bg-slate-950/60 shadow-[0_0_50px_rgba(255,255,255,0.15)] ring-2 ring-white/20'
+                    : isTarget
+                    ? 'border-red-500/80 bg-red-950/40 shadow-[0_0_40px_rgba(239,68,68,0.35)] animate-pulse'
+                    : 'border-white/10 bg-black/45'
+                }`}
+                style={{
+                  boxShadow: isActive
+                    ? `0 20px 60px rgba(0,0,0,0.6), inset 0 0 30px ${meta.colorGlow}`
+                    : undefined,
+                }}
+              >
+                {/* Active / Target Stage Banners */}
+                {isActive && (
+                  <div className="absolute top-2 right-3 z-30">
+                    <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-widest rounded-full bg-white text-black shadow-lg shadow-white/30 flex items-center gap-1.5 animate-pulse">
+                      <span className="w-2 h-2 rounded-full bg-red-600" />
+                      AL COMANDO
+                    </span>
+                  </div>
+                )}
+                {isTarget && !isActive && (
+                  <div className="absolute top-2 right-3 z-30">
+                    <span className="px-2.5 py-1 text-[10px] font-black uppercase tracking-widest rounded-full bg-red-600 text-white shadow-lg shadow-red-600/40 flex items-center gap-1.5 animate-bounce">
+                      <span>🎯</span>
+                      BERSAGLIO
+                    </span>
+                  </div>
+                )}
+
+                {/* Top Section: Hanging Cyber Bonus Monitors (Dado, Switch, Arco, Scudo) */}
+                <div className="flex flex-col items-center">
+                  <div className="grid grid-cols-4 gap-1.5 sm:gap-2 w-full justify-items-center">
+                    {BONUS_CONFIGS.map((bConfig, bIdx) => (
+                      <CyberBonusMonitor
+                        key={bConfig.key}
+                        label={bConfig.label}
+                        sublabel={bConfig.sublabel}
+                        symbol={bConfig.symbol}
+                        active={Boolean(teamBonuses[bIdx])}
+                        teamColor={meta.colorHex}
+                        teamNeon={meta.colorNeon}
+                        onToggle={() => toggleBonus(teamId - 1, bIdx)}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Team Title & Status Header */}
+                  <div className="mt-3 flex items-center justify-between w-full border-t border-white/10 pt-2.5">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-3.5 h-3.5 rounded-full shadow-[0_0_12px]"
+                        style={{
+                          backgroundColor: meta.colorHex,
+                          boxShadow: `0 0 12px ${meta.colorNeon}`,
+                        }}
+                      />
+                      <h2 className="text-lg sm:text-xl font-black tracking-wide text-white uppercase truncate max-w-[140px] sm:max-w-[200px]">
+                        {teamNames[teamId - 1] || meta.defaultName}
+                      </h2>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-white/90 bg-white/10 px-2.5 py-1 rounded-lg border border-white/15">
+                        {remainingCount} / {teamMembersCount}
+                      </span>
+                      {/* Quick manual +/- buttons */}
+                      <button
+                        type="button"
+                        onClick={() => eliminateMember(teamId)}
+                        disabled={remainingCount <= 0}
+                        className="w-6 h-6 rounded bg-red-600/30 hover:bg-red-600/60 text-red-300 font-black text-xs flex items-center justify-center border border-red-500/40 disabled:opacity-20 cursor-pointer"
+                        title="Elimina 1 omino"
+                      >
+                        -
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => restoreMember(teamId)}
+                        disabled={teamEliminatedList.length <= 0}
+                        className="w-6 h-6 rounded bg-emerald-600/30 hover:bg-emerald-600/60 text-emerald-300 font-black text-xs flex items-center justify-center border border-emerald-500/40 disabled:opacity-20 cursor-pointer"
+                        title="Ripristina 1 omino"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom Section: 3D Pyramid of Cubes & Omini (inspired by omini.jpg) */}
+                <div className="flex flex-col items-center justify-end flex-1 min-h-[220px] pb-2 pt-4 relative">
+                  {pyramidRows.map((row, rowIdx) => {
+                    const zIndexClass = rowIdx === 0 ? 'z-10' : rowIdx === 1 ? 'z-20 -mt-6' : 'z-30 -mt-6';
+                    return (
+                      <div
+                        key={rowIdx}
+                        className={`flex justify-center items-end gap-2 sm:gap-3 ${zIndexClass}`}
+                      >
+                        {row.cubes.map((cubeNum) => {
+                          const isAssigned = cubeNum <= teamMembersCount;
+                          const hasOmino = isAssigned && !teamEliminatedList.includes(cubeNum);
+
+                          return (
+                            <PedestalCube
+                              key={cubeNum}
+                              number={cubeNum}
+                              color={meta.colorHex}
+                              neonColor={meta.colorNeon}
+                              hasOmino={hasOmino}
+                              isAssigned={isAssigned}
+                              onToggle={() => {
+                                if (isAssigned) {
+                                  toggleCubeOmino(teamId, cubeNum);
+                                }
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ============================================================ */}
+        {/* BOTTOM COMMAND HUD: Dice 3D, Resolution Actions, Question Matrix */}
+        {/* ============================================================ */}
+        <footer className="bg-slate-950/80 backdrop-blur-xl border border-white/15 rounded-3xl p-4 shadow-2xl shrink-0 grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] gap-4 items-center">
+          {/* Left: 3D Holographic Dice Console */}
+          <div className="flex justify-center lg:justify-start border-b lg:border-b-0 lg:border-r border-white/10 pb-3 lg:pb-0 lg:pr-4">
+            <HolographicDice3D
+              rolling={rolling}
+              targetFace={dieTargetFace}
+              onRoll={rollDice}
+              canRollBonus={hasDiceBonusAvailable}
+              onUseBonusRoll={handleUseBonusRoll}
+            />
           </div>
 
-          <div className="flex flex-col gap-4 min-h-0">
-            <Dice3D rolling={rolling} targetFace={dieTargetFace} onRoll={rollDice} />
-
-            <div className="rounded-[2rem] border border-white/10 bg-black/18 p-4 backdrop-blur-xl">
-              <div className="text-xs uppercase tracking-[0.35em] text-white/45 mb-3">Selezione bersaglio</div>
-              <div className="mb-3 text-sm text-white/60">
-                {selectedDieFace ? `Dado: ${selectedDieFace}` : 'Lancia il dado per scegliere il tipo di sfida.'}
+          {/* Center: Target Announcement & Challenge Resolution */}
+          <div className="flex flex-col items-center justify-center gap-3 px-2">
+            {/* Holographic Target Banner */}
+            <div className="w-full max-w-xl bg-black/60 border border-cyan-500/30 rounded-2xl p-3 text-center shadow-inner flex flex-col items-center justify-center">
+              <div className="text-[10px] uppercase font-black tracking-widest text-cyan-400/80 mb-1">
+                Centrale di Sfida
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                {[1, 2, 3].map((t) => (
+              {selectedDieFace ? (
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <span className="px-3 py-1 rounded-lg bg-cyan-500/20 text-cyan-300 font-black text-sm uppercase tracking-wider border border-cyan-400/30">
+                    🎲 Dado: {selectedDieFace === 'right' ? 'DESTRA ➔' : selectedDieFace === 'left' ? '⬅ SINISTRA' : selectedDieFace === 'both' ? '⮂ ENTRAMBE' : '🎯 SE STESSA'}
+                  </span>
+                  <span className="text-slate-400">➔</span>
+                  <span className="px-3 py-1 rounded-lg bg-red-500/20 text-red-300 font-black text-sm uppercase tracking-wider border border-red-400/30 animate-pulse">
+                    🎯 Bersaglio:{' '}
+                    {targetTeam === 'both'
+                      ? 'Entrambe le altre squadre'
+                      : targetTeam
+                      ? teamNames[targetTeam - 1]
+                      : 'Nessuno'}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-xs text-slate-400 italic">
+                  Lancia il dado per determinare quale squadra sarà il bersaglio della sfida!
+                </div>
+              )}
+            </div>
+
+            {/* Outcome Buttons (Corretto, Sbagliato, Prossimo Turno) */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => handleOutcome(true)}
+                disabled={!selectedDieFace}
+                className="px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-2 cursor-pointer border border-emerald-400/40"
+              >
+                <span>✅</span>
+                <span>Risposta Esatta</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOutcome(false)}
+                disabled={!selectedDieFace}
+                className="px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/30 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-2 cursor-pointer border border-rose-400/40"
+              >
+                <span>❌</span>
+                <span>Risposta Errata</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNextTurn}
+                className="px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest bg-slate-800 hover:bg-slate-700 text-white/90 border border-white/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Passa Turno</span>
+                <span>➜</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Right: Question Matrix 1..15 */}
+          <div className="border-t lg:border-t-0 lg:border-l border-white/10 pt-3 lg:pt-0 lg:pl-4 flex flex-col justify-center">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] uppercase font-black tracking-widest text-slate-400">
+                Domande ({questionNumbers.length - eliminatedQuestions.length} rimaste)
+              </span>
+              <button
+                type="button"
+                onClick={() => setEliminatedQuestions([])}
+                className="text-[9px] uppercase font-bold text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 px-2 py-0.5 rounded border border-white/10 transition-colors cursor-pointer"
+              >
+                Reset
+              </button>
+            </div>
+
+            <div className="grid grid-cols-5 gap-1.5">
+              {questionNumbers.map((qNum) => {
+                const isEliminated = eliminatedQuestions.includes(qNum);
+                return (
                   <button
-                    key={t}
-                    disabled={!isTeamSelectable(t as TeamId)}
-                    onClick={() => commitTarget(t as TeamId)}
-                    className={`py-3 rounded-2xl border font-bold uppercase tracking-[0.2em] transition-all cursor-pointer ${
-                      targetTeam === t
-                        ? 'bg-white text-black border-white'
-                        : isTeamSelectable(t as TeamId)
-                          ? 'bg-white/5 border-white/10 text-white/75 hover:bg-white/10'
-                          : 'bg-white/3 border-white/5 text-white/20 cursor-not-allowed'
+                    key={qNum}
+                    type="button"
+                    onClick={() => toggleQuestionNumber(qNum)}
+                    className={`h-8 rounded-lg font-black text-xs transition-all cursor-pointer flex items-center justify-center ${
+                      isEliminated
+                        ? 'bg-black/60 text-white/20 border border-white/5 line-through'
+                        : 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-200 border border-cyan-400/30 hover:scale-105'
                     }`}
                   >
-                    {selectedDieFace === 'self' ? 'Te stessa' : `Sfidata ${teamNames[t - 1] || `S${t}`}`}
+                    {qNum}
                   </button>
-                ))}
-                <button
-                  onClick={() => handleOutcome(true)}
-                  className="py-3 rounded-2xl bg-emerald-400/15 border border-emerald-300/20 text-emerald-50 font-bold uppercase tracking-[0.2em] cursor-pointer hover:bg-emerald-400/25 transition-all"
-                >
-                  Corretto
-                </button>
-                <button
-                  onClick={() => handleOutcome(false)}
-                  className="py-3 rounded-2xl bg-rose-400/15 border border-rose-300/20 text-rose-50 font-bold uppercase tracking-[0.2em] cursor-pointer hover:bg-rose-400/25 transition-all"
-                >
-                  Sbagliato
-                </button>
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-white/10 bg-white/6 p-4 backdrop-blur-xl flex-1 min-h-0">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <div className="text-xs uppercase tracking-[0.35em] text-white/45">Domande in gioco</div>
-                  <div className="text-lg font-black">{QUESTION_NUMBERS.length - eliminatedQuestions.length} rimaste</div>
-                </div>
-                <button
-                  onClick={() => setEliminatedQuestions([])}
-                  className="px-3 py-2 rounded-full border border-white/10 bg-white/5 text-[11px] font-bold uppercase tracking-[0.2em] text-white/75"
-                >
-                  Reset numeri
-                </button>
-              </div>
-              <div className="grid grid-cols-10 gap-1.5">
-                {QUESTION_NUMBERS.map((n) => {
-                  const used = eliminatedQuestions.includes(n);
-                  return (
-                    <button
-                      key={n}
-                      onClick={() => removeQuestion(n)}
-                      className={`aspect-square rounded-lg border text-[10px] font-black transition-all duration-200 ${
-                        used ? 'border-white/10 bg-black/25 text-white/20 line-through' : 'border-cyan-200/15 bg-cyan-200/10 text-white hover:bg-cyan-200/20 hover:scale-105'
-                      }`}
-                    >
-                      {n}
-                    </button>
-                  );
-                })}
-              </div>
+                );
+              })}
             </div>
           </div>
-        </section>
+        </footer>
       </div>
     </div>
   );

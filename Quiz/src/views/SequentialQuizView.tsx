@@ -247,7 +247,7 @@ export function getSlideForBoxQuestion(
       data: {
         title: (setupState as any).gioco5?.titolo || 'Finale Squadre',
         subtitle: (setupState as any).gioco5?.sottotitolo || 'Box 5',
-        sfondo: (setupState as any).gioco5?.sfondoGenerale || '/sfondo_finale_default.jpg',
+        sfondo: (setupState as any).gioco5?.sfondoGenerale || '/sfondo_finale_acqua.jpg',
         numeroDomande: (setupState as any).gioco5?.numeroDomande || 15
       }
     };

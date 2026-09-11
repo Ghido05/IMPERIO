@@ -802,11 +802,14 @@ export default function FinaleSquadre_Board() {
     }
   }, []);
 
-  // Background image (from setup, slide data, or default canyon background)
-  const bgImage =
-    gameData?.sfondo ||
-    setupConfig?.gioco5?.sfondoGenerale ||
-    '/sfondo_finale_default.jpg';
+  // Background image (lagoon water matching omini.jpg, or custom upload)
+  const bgImage = useMemo(() => {
+    const raw = gameData?.sfondo || setupConfig?.gioco5?.sfondoGenerale;
+    if (!raw || raw === '/sfondo_finale_default.jpg' || raw === '/sfondo_finale_acqua.jpg') {
+      return '/sfondo_finale_acqua.jpg?v=2';
+    }
+    return raw;
+  }, [gameData?.sfondo, setupConfig?.gioco5?.sfondoGenerale]);
 
   const totalQuestions = gameData?.numeroDomande || setupConfig?.gioco5?.numeroDomande || 15;
   const questionNumbers = useMemo(

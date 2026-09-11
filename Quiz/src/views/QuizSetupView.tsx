@@ -306,7 +306,7 @@ export function getDefaultSetupState(): QuizSetupState {
     gioco5: {
       titolo: 'GIOCO 5 - Finale a Squadre',
       sottotitolo: 'Sfida con dado, omini sui cubi 3D e 4 bonus per squadra',
-      sfondoGenerale: '/sfondo_finale_default.jpg',
+      sfondoGenerale: '/sfondo_finale_acqua.jpg',
       numeroDomande: 15,
       notePresentatore: '',
     },
@@ -3244,7 +3244,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     </span>
                     <button
                       type="button"
-                      onClick={() => setState((prev) => ({ ...prev, gioco5: { ...prev.gioco5, sfondoGenerale: '/sfondo_finale_default.jpg' } }))}
+                      onClick={() => setState((prev) => ({ ...prev, gioco5: { ...prev.gioco5, sfondoGenerale: '/sfondo_finale_acqua.jpg' } }))}
                       className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[11px] bg-transparent border-0"
                     >
                       Ripristina Default
@@ -3253,7 +3253,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 ) : (
                   <input
                     type="text"
-                    placeholder="Percorso URL / immagine di sfondo (default: /sfondo_finale_default.jpg)..."
+                    placeholder="Percorso URL / immagine di sfondo (default: /sfondo_finale_acqua.jpg)..."
                     value={state.gioco5?.sfondoGenerale || ''}
                     onChange={(e) => {
                       const val = e.target.value;
@@ -3281,10 +3281,10 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               </div>
 
               {/* Thumbnail Preview */}
-              {(state.gioco5?.sfondoGenerale || '/sfondo_finale_default.jpg') && (
+              {(state.gioco5?.sfondoGenerale || '/sfondo_finale_acqua.jpg') && (
                 <div className="relative w-full h-36 rounded-lg overflow-hidden border border-white/10 bg-black/40">
                   <img
-                    src={assetUrl(state.gioco5?.sfondoGenerale || '/sfondo_finale_default.jpg')}
+                    src={assetUrl(state.gioco5?.sfondoGenerale || '/sfondo_finale_acqua.jpg')}
                     alt="Anteprima sfondo finale"
                     className="w-full h-full object-cover"
                   />

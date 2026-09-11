@@ -249,7 +249,7 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
       data: {
         title: (setup as any)?.gioco5?.titolo || 'Finale Squadre',
         subtitle: (setup as any)?.gioco5?.sottotitolo || 'Box 5',
-        sfondo: (setup as any)?.gioco5?.sfondoGenerale || '/sfondo_finale_default.jpg',
+        sfondo: (setup as any)?.gioco5?.sfondoGenerale || '/sfondo_finale_acqua.jpg',
         numeroDomande: (setup as any)?.gioco5?.numeroDomande || 15
       }
     },

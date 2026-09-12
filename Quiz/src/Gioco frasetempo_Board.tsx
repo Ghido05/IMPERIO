@@ -406,22 +406,26 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       return;
     }
 
-    // Arrow navigation for steps (Step 1: Bonus, Step 2: Sfondo e tutto il resto)
+    // Arrow navigation for reveal steps:
+    // Step 1: Punti / Bonus (o entrambi in base alla frase)
+    // Step 2: Solo lo sfondo
+    // Step 3: Indizio
+    // Step 4: Tutto il resto (Frase, 15 offerte, martelletto)
     if (e.key === 'ArrowRight') {
-      if (step < 2) {
+      if (step < 4) {
         setStep(prev => prev + 1);
         return;
       }
     }
     if (e.key === 'ArrowLeft') {
-      if (step > 0 && step <= 2 && !auctionLocked) {
+      if (step > 0 && step <= 4 && !auctionLocked) {
         setStep(prev => prev - 1);
         return;
       }
     }
 
-    // Keyboard numbers and arrows for manual bid movement (solo durante l'asta - Step >= 2)
-    if (step >= 2 && step <= 4 && !auctionLocked) {
+    // Keyboard numbers and arrows for manual bid movement (solo durante l'asta - Step >= 4)
+    if (step >= 4 && !auctionLocked) {
       if (e.key === '0') {
         setAuctionValue(10);
         return;
@@ -496,10 +500,10 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   const timerStrokeOffset = timerCircumference * (1 - timerProgress);
   const showGuessTimer = auctionLocked && letterCounter === 0 && guessTimerEndAt > 0 && timerDisplay > 0;
 
-  const showBonus = step >= 1 || revealAll;
+  const showBonusAndPoints = step >= 1 || revealAll;
   const showSfondo = (step >= 2 || revealAll) && Boolean(phrase.sfondo);
-  const showContent = step >= 2 || revealAll;
-  const showPhraseAndAuction = step >= 2 || revealAll;
+  const showIndizio = step >= 3 || revealAll;
+  const showFraseAndAsta = step >= 4 || revealAll;
 
   const rawP = (phrase as any).punti;
   const pts = (rawP !== undefined && rawP !== null && rawP !== '') ? (Number(rawP) || 0) : 0;
@@ -641,10 +645,10 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       )}
 
       {/* Frame 16:9 viewport wrapper */}
-      <div className={`relative w-full max-w-[1920px] aspect-[16/9] flex flex-col items-center justify-center px-10 py-6 transition-all duration-1000 ${showContent || showBonus ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <div className={`relative w-full max-w-[1920px] aspect-[16/9] flex flex-col items-center justify-center px-10 py-6 transition-all duration-1000 ${showBonusAndPoints ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         
         {/* Header Title Banner */}
-        <div className={`text-center mb-[1%] transition-opacity duration-500 ${showContent ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <div className={`text-center mb-[1%] transition-opacity duration-500 ${showFraseAndAsta ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           <span className="px-4 py-1 text-xs font-black bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full tracking-widest uppercase mb-2 inline-block">
             BOX 4 — ASTA A RIBASSO
           </span>
@@ -669,7 +673,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         <div className="flex-grow" />
 
         {/* Phrase Display Grid */}
-        <div className={`flex flex-wrap justify-center gap-x-[1.6%] gap-y-[1.6vw] max-w-[95%] px-10 py-8 rounded-3xl bg-black/50 backdrop-blur-sm mb-4 min-h-[180px] items-center transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none mb-0'}`}>
+        <div className={`flex flex-wrap justify-center gap-x-[1.6%] gap-y-[1.6vw] max-w-[95%] px-10 py-8 rounded-3xl bg-black/50 backdrop-blur-sm mb-4 min-h-[180px] items-center transition-all duration-500 ${showFraseAndAsta ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none mb-0'}`}>
           {words.map((word, wIdx) => (
             <div key={wIdx} className="flex gap-[0.3vw]">
               {word.map((t, tIdx) => (
@@ -693,7 +697,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         </div>
 
         {/* Called Letters list + reveal/error buttons */}
-        <div className={`flex items-center justify-center gap-4 mb-4 flex-wrap transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden pointer-events-none'}`}>
+        <div className={`flex items-center justify-center gap-4 mb-4 flex-wrap transition-all duration-500 ${showFraseAndAsta ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden pointer-events-none'}`}>
           {calledLetters.length > 0 && (
             <div className="flex items-center gap-2 animate-fade-in bg-zinc-900/60 border border-white/5 px-4 py-1.5 rounded-full text-xs">
               <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px]">Lettere Chiamate:</span>
@@ -738,7 +742,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         <div className="flex-grow" />
 
         {/* Descending Auction Bar */}
-        <div className={`w-[90%] max-w-[1200px] mb-6 transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none'}`}>
+        <div className={`w-[90%] max-w-[1200px] mb-6 transition-all duration-500 ${showFraseAndAsta ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none'}`}>
           <div className="grid gap-2.5 w-full" style={{ gridTemplateColumns: 'repeat(15, minmax(0, 1fr))' }}>
             {auctionSteps.map((stepNum) => {
               const isActive = auctionValue === stepNum;
@@ -746,9 +750,9 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
               return (
                 <button
                   key={stepNum}
-                  disabled={!interactive || auctionLocked}
+                  disabled={!interactive || auctionLocked || !showFraseAndAsta}
                   onClick={() => {
-                    if (!interactive || auctionLocked) return;
+                    if (!interactive || auctionLocked || !showFraseAndAsta) return;
                     setAuctionValue(stepNum);
                     setLetterCounter(stepNum);
                     setAuctionLocked(true);
@@ -782,7 +786,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         </div>
 
         {/* Auction Dashboard Panel — in basso a sinistra in modo assoluto, compatto e rimpicciolito */}
-        <div className={`absolute bottom-6 left-10 flex flex-col items-center bg-zinc-950/80 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-md transition-all duration-500 z-20 ${showPhraseAndAuction ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}>
+        <div className={`absolute bottom-6 left-10 flex flex-col items-center bg-zinc-950/80 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-md transition-all duration-500 z-20 ${showFraseAndAsta ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}>
           <div className="flex items-center gap-6">
             
             {/* Letter counter (rimpicciolito, w-20 h-20) — appare dopo l'aggiudicazione */}
@@ -877,8 +881,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
           </div>
         </div>
 
-        {/* Clue Box (visible if step >= 2 or revealAll) */}
-        {showContent && (
+        {/* Clue Box (visible if step >= 3 or revealAll) */}
+        {showIndizio && (
           <div className="flex flex-col items-center gap-4 mt-2">
             {/* Clue Box */}
             <div className="bg-zinc-950/90 border-2 border-amber-500/50 rounded-2xl px-8 py-4 shadow-2xl backdrop-blur-md text-center max-w-[800px] animate-fade-in mb-2">
@@ -892,8 +896,10 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
           </div>
         )}
 
-        {/* Bonus e Punti in basso a destra (Step 1: Bonus, punti solo se > 0) */}
-        {showBonus && (hasBonus || hasPoints) && (
+        <div className="flex-grow" />
+
+        {/* Bonus e Punti in basso a destra (Step 1: Punti/Bonus o entrambi in base alla frase) */}
+        {showBonusAndPoints && (hasBonus || hasPoints) && (
           <div className="absolute bottom-6 right-10 flex items-center gap-4 z-20 animate-fade-in">
             {hasBonus && (
               <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md w-24 h-24">

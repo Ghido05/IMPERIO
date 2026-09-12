@@ -129,6 +129,28 @@ export const BussolottiOverlay: React.FC<{
     }
   }, [selectedIndex, rank, showAll]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
+        return;
+      }
+      const num = parseInt(e.key);
+      if (!isNaN(num) && num >= 1 && num <= count) {
+        if (selectedIndex === null) {
+          handleOpen(num - 1);
+        }
+      } else if ((e.key === 'Enter' || e.key === ' ') && selectedIndex !== null && (showAll || rank === 1)) {
+        onComplete();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIndex, showAll, rank, count, onComplete]);
+
   const teamName = teamNames[teamNum - 1] || `SQUADRA ${teamNum}`;
   const teamColor = teamNum === 1 ? 'text-red-500' : teamNum === 2 ? 'text-blue-500' : 'text-green-500';
 
@@ -387,7 +409,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
         setWinnersOrder([]);
       }
       
-      const bStatus = localStorage.getItem(`password_bussolotti_status_m${mancheIdx}`) || localStorage.getItem('password_bussolotti_status');
+      const bStatus = localStorage.getItem('password_bussolotti_status') || localStorage.getItem(`password_bussolotti_status_m${mancheIdx}`);
       if (bStatus && bStatus !== "null") {
         try {
           setBussolottiStatus(JSON.parse(bStatus));
@@ -396,7 +418,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
         setBussolottiStatus({ 1: 'pending', 2: 'pending', 3: 'pending' });
       }
 
-      const bActive = localStorage.getItem(`password_active_bussolotti_m${mancheIdx}`) || localStorage.getItem('password_active_bussolotti');
+      const bActive = localStorage.getItem('password_active_bussolotti') || localStorage.getItem(`password_active_bussolotti_m${mancheIdx}`);
       if (bActive !== null && bActive !== "null") {
         try {
           setActiveBussolottiRank(JSON.parse(bActive));
@@ -424,8 +446,15 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
       setActiveBussolottiRank(null);
       localStorage.setItem(`password_bussolotti_status_m${currentManche}`, JSON.stringify(initialBussolotti));
       localStorage.setItem('password_bussolotti_status', JSON.stringify(initialBussolotti));
+      localStorage.setItem(`password_active_bussolotti_m${currentManche}`, JSON.stringify(null));
       localStorage.setItem('password_active_bussolotti', JSON.stringify(null));
       localStorage.setItem('password_bussolotti_manche', currentManche.toString());
+
+      for (let r = 1; r <= 3; r++) {
+        localStorage.removeItem(`password_bussolotti_${r}_selected_idx`);
+        localStorage.removeItem(`password_bussolotti_${r}_show_all`);
+        localStorage.removeItem(`password_bussolotti_${r}_awarded`);
+      }
     }
 
     // Inizializzazione Griglia Parole deterministica per questa manche
@@ -500,14 +529,62 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
     return grid.filter(w => w.guessed && w.type === teamType);
   };
 
+  const getTeamForRank = (rank: RankType): number | null => {
+    const allTeams = [1, 2, 3];
+
+    // Caso 1: 2 o più squadre hanno preso la bomba (o tutte e 3)
+    if (excludedTeams.length >= 2) {
+      if (rank === 1) {
+        if (winnersOrder.length > 0) return winnersOrder[0];
+        const survivor = allTeams.find(t => !excludedTeams.includes(t));
+        return survivor || null;
+      }
+      if (rank === 2) {
+        return excludedTeams[1] || null;
+      }
+      if (rank === 3) {
+        return excludedTeams[0] || null;
+      }
+    }
+
+    // Caso 2: 1 squadra ha preso la bomba
+    if (excludedTeams.length === 1) {
+      const bombTeam = excludedTeams[0];
+      if (rank === 3) {
+        return bombTeam;
+      }
+      if (rank === 1) {
+        return winnersOrder[0] || null;
+      }
+      if (rank === 2) {
+        if (winnersOrder[1]) return winnersOrder[1];
+        if (winnersOrder[0]) {
+          const remaining = allTeams.find(t => t !== winnersOrder[0] && t !== bombTeam);
+          return remaining || null;
+        }
+        return null;
+      }
+    }
+
+    // Caso 3: Nessuna squadra ha preso la bomba (completamento parole standard)
+    if (rank === 1) return winnersOrder[0] || null;
+    if (rank === 2) return winnersOrder[1] || null;
+    if (rank === 3) {
+      if (winnersOrder[2]) return winnersOrder[2];
+      if (winnersOrder.length >= 2) {
+        const remaining = allTeams.find(t => !winnersOrder.includes(t));
+        return remaining || null;
+      }
+      return null;
+    }
+
+    return null;
+  };
+
   const getTeamRank = (teamNum: number): RankType | null => {
-    if (excludedTeams.includes(teamNum)) return 3;
-    const idx = winnersOrder.indexOf(teamNum);
-    if (idx === 0) return 1;
-    if (idx === 1) return 2;
-    if (idx === 2) return 3;
-    if (winnersOrder.length >= 2 && !winnersOrder.includes(teamNum)) return 3;
-    if (winnersOrder.length === 1 && excludedTeams.length > 0 && !excludedTeams.includes(teamNum) && !winnersOrder.includes(teamNum)) return 2;
+    if (getTeamForRank(1) === teamNum) return 1;
+    if (getTeamForRank(2) === teamNum) return 2;
+    if (getTeamForRank(3) === teamNum) return 3;
     return null;
   };
 
@@ -527,8 +604,9 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
     let newActiveRank = activeBussolottiRank;
     let shouldUpdate = false;
 
-    // Rank 1
-    if (winnersOrder.length > 0 && newStatus[1] === 'pending') {
+    // Rank 1 si attiva se c'è almeno una squadra vincitrice o 2 squadre colpite da bomba
+    const canStartRank1 = winnersOrder.length > 0 || excludedTeams.length >= 2;
+    if (canStartRank1 && newStatus[1] === 'pending') {
       newStatus[1] = 'active';
       newActiveRank = 1;
       shouldUpdate = true;
@@ -537,11 +615,11 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
     const isMancheOver = (winnersOrder.length >= 2) || (winnersOrder.length >= 1 && excludedTeams.length > 0) || (excludedTeams.length >= 2);
 
     if (isMancheOver) {
-      if (newStatus[1] === 'done' && newStatus[2] === 'pending') {
+      if (newStatus[1] === 'done' && newStatus[2] === 'pending' && newActiveRank !== 2) {
         newStatus[2] = 'active';
         newActiveRank = 2;
         shouldUpdate = true;
-      } else if (newStatus[2] === 'done' && newStatus[3] === 'pending') {
+      } else if (newStatus[2] === 'done' && newStatus[3] === 'pending' && newActiveRank !== 3) {
         newStatus[3] = 'active';
         newActiveRank = 3;
         shouldUpdate = true;
@@ -556,52 +634,72 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
         const timer = setTimeout(() => {
           setBussolottiStatus(newStatus);
           setActiveBussolottiRank(newActiveRank);
+          localStorage.setItem(`password_bussolotti_status_m${currentManche}`, JSON.stringify(newStatus));
           localStorage.setItem('password_bussolotti_status', JSON.stringify(newStatus));
+          localStorage.setItem(`password_active_bussolotti_m${currentManche}`, JSON.stringify(newActiveRank));
           localStorage.setItem('password_active_bussolotti', JSON.stringify(newActiveRank));
+          window.dispatchEvent(new Event('storage'));
+          window.dispatchEvent(new CustomEvent('local-storage-update', {
+            detail: { key: 'password_bussolotti_status', value: JSON.stringify(newStatus) }
+          }));
         }, 1500); // Ritardo per mostrare la medaglia prima del bussolotto
         return () => clearTimeout(timer);
       } else {
         setBussolottiStatus(newStatus);
         setActiveBussolottiRank(newActiveRank);
+        localStorage.setItem(`password_bussolotti_status_m${currentManche}`, JSON.stringify(newStatus));
         localStorage.setItem('password_bussolotti_status', JSON.stringify(newStatus));
+        localStorage.setItem(`password_active_bussolotti_m${currentManche}`, JSON.stringify(newActiveRank));
         localStorage.setItem('password_active_bussolotti', JSON.stringify(newActiveRank));
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('local-storage-update', {
+          detail: { key: 'password_bussolotti_status', value: JSON.stringify(newStatus) }
+        }));
       }
     }
-  }, [winnersOrder.length, excludedTeams.length, bussolottiStatus, activeBussolottiRank]);
+  }, [winnersOrder.length, excludedTeams.length, bussolottiStatus, activeBussolottiRank, currentManche]);
 
   const handleBussolottiComplete = () => {
     if (activeBussolottiRank) {
-      const newStatus = { ...bussolottiStatus, [activeBussolottiRank]: 'done' as BussolottiStatus };
-      setBussolottiStatus(newStatus);
-      setActiveBussolottiRank(null);
-      localStorage.setItem('password_bussolotti_status', JSON.stringify(newStatus));
-      localStorage.setItem('password_active_bussolotti', JSON.stringify(null));
-      localStorage.removeItem(`password_bussolotti_${activeBussolottiRank}_selected_idx`);
-      localStorage.removeItem(`password_bussolotti_${activeBussolottiRank}_show_all`);
-      localStorage.removeItem(`password_bussolotti_${activeBussolottiRank}_awarded`);
-    }
-  };
+      const finishedRank = activeBussolottiRank;
+      const newStatus = { ...bussolottiStatus, [finishedRank]: 'done' as BussolottiStatus };
+      
+      const isMancheOver = (winnersOrder.length >= 2) || (winnersOrder.length >= 1 && excludedTeams.length > 0) || (excludedTeams.length >= 2);
 
-  const getTeamForRank = (rank: RankType): number | null => {
-    if (rank === 1) return winnersOrder[0] || null;
-    if (rank === 2) {
-      if (winnersOrder[1]) return winnersOrder[1];
-      if (winnersOrder[0] && excludedTeams.length > 0) {
-        const remaining = [1, 2, 3].find(t => t !== winnersOrder[0] && !excludedTeams.includes(t));
-        return remaining || null;
+      let nextActiveRank: RankType | null = null;
+      if (isMancheOver) {
+        if (finishedRank === 1 && newStatus[2] === 'pending') {
+          newStatus[2] = 'active';
+          nextActiveRank = 2;
+        } else if (finishedRank === 2 && newStatus[3] === 'pending') {
+          newStatus[3] = 'active';
+          nextActiveRank = 3;
+        }
       }
-      return null;
-    }
-    if (rank === 3) {
-      if (excludedTeams.length > 0) return excludedTeams[0];
-      if (winnersOrder[2]) return winnersOrder[2];
-      if (winnersOrder.length >= 2) {
-        const remaining = [1, 2, 3].find(t => !winnersOrder.includes(t));
-        return remaining || null;
+
+      setBussolottiStatus(newStatus);
+      setActiveBussolottiRank(nextActiveRank);
+
+      localStorage.setItem(`password_bussolotti_status_m${currentManche}`, JSON.stringify(newStatus));
+      localStorage.setItem('password_bussolotti_status', JSON.stringify(newStatus));
+      localStorage.setItem(`password_active_bussolotti_m${currentManche}`, JSON.stringify(nextActiveRank));
+      localStorage.setItem('password_active_bussolotti', JSON.stringify(nextActiveRank));
+
+      localStorage.removeItem(`password_bussolotti_${finishedRank}_selected_idx`);
+      localStorage.removeItem(`password_bussolotti_${finishedRank}_show_all`);
+      localStorage.removeItem(`password_bussolotti_${finishedRank}_awarded`);
+
+      if (nextActiveRank) {
+        localStorage.removeItem(`password_bussolotti_${nextActiveRank}_selected_idx`);
+        localStorage.removeItem(`password_bussolotti_${nextActiveRank}_show_all`);
+        localStorage.removeItem(`password_bussolotti_${nextActiveRank}_awarded`);
       }
-      return null;
+
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('local-storage-update', {
+        detail: { key: 'password_bussolotti_status', value: JSON.stringify(newStatus) }
+      }));
     }
-    return null;
   };
 
   const [boardTeamNames, setBoardTeamNames] = useState<string[]>(['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']);

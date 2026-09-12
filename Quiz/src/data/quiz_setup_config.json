@@ -1,6 +1,6 @@
 {
   "gioco1": {
-    "selectedQuestion": 7,
+    "selectedQuestion": 1,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -64,7 +64,8 @@
             "indizio 4"
           ],
           "confermaAudio": "/Audio/g02m01soluzione.mp3",
-          "soluzione": "Pantheon"
+          "soluzione": "Pantheon",
+          "categoria": "Storia"
         }
       },
       "3": {
@@ -328,7 +329,7 @@
     "sfondoGenerale": ""
   },
   "gioco2": {
-    "selectedQuestion": 3,
+    "selectedQuestion": 1,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -653,7 +654,7 @@
     "selectedQuestion": 1,
     "questions": {
       "1": {
-        "sfondo": "",
+        "sfondo": "/Icone/Sfondi Password/password1.png",
         "squadra1": [
           {
             "parola": "BATMAN",
@@ -747,7 +748,7 @@
         }
       },
       "2": {
-        "sfondo": "",
+        "sfondo": "/Icone/Sfondi Password/password2.png",
         "squadra1": [
           {
             "parola": "torta di mele",
@@ -841,7 +842,7 @@
         }
       },
       "3": {
-        "sfondo": "",
+        "sfondo": "/Icone/Sfondi Password/exterior_00.webp",
         "squadra1": [
           {
             "parola": "",

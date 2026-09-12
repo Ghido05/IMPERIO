@@ -95,7 +95,7 @@ export function getSlideForBoxQuestion(
         ],
         soluzione: {
           titolo: q1.immagine.soluzione || 'Soluzione Immagine',
-          categoria: '',
+          categoria: q1.immagine.categoria || '',
           anno: '',
         },
         griglia: { colonne: 10, righe: 10, puntoFocale: { colonna: 5, riga: 5 } },

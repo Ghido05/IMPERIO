@@ -5,7 +5,87 @@ import { useSyncedState } from './hooks/useSyncedState';
 import { assetUrl } from './lib/assetUrl';
 
 export type TeamId = 1 | 2 | 3;
-export type DiceFace = 'right' | 'left' | 'both' | 'self';
+
+export type DiceFaceKey =
+  | 'zero'    // 1 faccia con numero 0
+  | 'right_1' // Faccia 1 freccia destra
+  | 'right_2' // Faccia 1 freccia destra (seconda faccia)
+  | 'left_1'  // Faccia 1 freccia sinistra
+  | 'left_2'  // Faccia 1 freccia sinistra (seconda faccia)
+  | 'double'; // 1 faccia con numero 2 e due frecce (una a dx e una a sx, una sopra l'altra)
+
+export type DiceFaceType = 'zero' | 'right' | 'left' | 'double';
+
+export interface DiceFaceMeta {
+  key: DiceFaceKey;
+  type: DiceFaceType;
+  value: number;
+  direction?: 'right' | 'left' | 'both';
+  labelShort: string;
+}
+
+export const DICE_FACES_CONFIG: Record<DiceFaceKey, DiceFaceMeta> = {
+  right_1: {
+    key: 'right_1',
+    type: 'right',
+    value: 1,
+    direction: 'right',
+    labelShort: '1 ➔',
+  },
+  left_1: {
+    key: 'left_1',
+    type: 'left',
+    value: 1,
+    direction: 'left',
+    labelShort: '1 ⬅',
+  },
+  right_2: {
+    key: 'right_2',
+    type: 'right',
+    value: 1,
+    direction: 'right',
+    labelShort: '1 ➔',
+  },
+  left_2: {
+    key: 'left_2',
+    type: 'left',
+    value: 1,
+    direction: 'left',
+    labelShort: '1 ⬅',
+  },
+  double: {
+    key: 'double',
+    type: 'double',
+    value: 2,
+    direction: 'both',
+    labelShort: '2 (⇆)',
+  },
+  zero: {
+    key: 'zero',
+    type: 'zero',
+    value: 0,
+    labelShort: '0',
+  },
+};
+
+export const DICE_FACES: DiceFaceKey[] = [
+  'right_1',
+  'left_1',
+  'right_2',
+  'left_2',
+  'double',
+  'zero',
+];
+
+export function normalizeDieFaceKey(raw: any): DiceFaceKey | null {
+  if (!raw) return null;
+  if (raw in DICE_FACES_CONFIG) return raw as DiceFaceKey;
+  if (raw === 'right') return 'right_1';
+  if (raw === 'left') return 'left_1';
+  if (raw === 'both') return 'double';
+  if (raw === 'self') return 'zero';
+  return null;
+}
 
 interface TeamVisualMeta {
   id: TeamId;
@@ -47,8 +127,6 @@ const TEAMS_CONFIG: Record<TeamId, TeamVisualMeta> = {
   },
 };
 
-const DICE_FACES: DiceFace[] = ['right', 'left', 'both', 'self'];
-
 // 4 Generic Universal Bonuses (adaptable to ANY background theme)
 const BONUS_CONFIGS = [
   { key: 'dado', label: 'DADO', sublabel: 'Rilancio', type: 'dice' },
@@ -58,7 +136,7 @@ const BONUS_CONFIGS = [
 ];
 
 // Audio synthesizer for zero-dependency sounds
-function playSound(type: 'roll' | 'land' | 'correct' | 'wrong' | 'eliminate') {
+function playSound(type: 'roll' | 'land' | 'correct' | 'wrong' | 'eliminate' | 'wipeout' | 'victory') {
   try {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return;
@@ -168,6 +246,75 @@ function playSound(type: 'roll' | 'land' | 'correct' | 'wrong' | 'eliminate') {
       bubbleGain.connect(ctx.destination);
       bubble.start(now + 0.26);
       bubble.stop(now + 0.49);
+    } else if (type === 'wipeout') {
+      // Dramatic, cinematic team wipeout sound
+      // 1. Deep sub-bass boom
+      const subOsc = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      subOsc.type = 'triangle';
+      subOsc.frequency.setValueAtTime(160, now);
+      subOsc.frequency.exponentialRampToValueAtTime(36, now + 0.7);
+      subGain.gain.setValueAtTime(0.35, now);
+      subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+      subOsc.connect(subGain);
+      subGain.connect(ctx.destination);
+      subOsc.start(now);
+      subOsc.stop(now + 0.8);
+
+      // 2. Descending cyber glitch power-down
+      const buzzOsc = ctx.createOscillator();
+      const buzzGain = ctx.createGain();
+      buzzOsc.type = 'sawtooth';
+      buzzOsc.frequency.setValueAtTime(320, now);
+      buzzOsc.frequency.exponentialRampToValueAtTime(55, now + 0.55);
+      buzzGain.gain.setValueAtTime(0.2, now);
+      buzzGain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      buzzOsc.connect(buzzGain);
+      buzzGain.connect(ctx.destination);
+      buzzOsc.start(now);
+      buzzOsc.stop(now + 0.65);
+
+      // 3. Dissonant alert hit
+      [440, 466].forEach((freq) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freq, now + 0.05);
+        gain.gain.setValueAtTime(0.08, now + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + 0.05);
+        osc.stop(now + 0.48);
+      });
+    } else if (type === 'victory') {
+      // Grand celebratory victory fanfare arpeggio
+      const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+        gain.gain.setValueAtTime(0.24, now + idx * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.65);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.12);
+        osc.stop(now + idx * 0.12 + 0.7);
+      });
+      // Golden shimmering sparkle
+      for (let s = 0; s < 10; s++) {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1200 + Math.random() * 1400, now + 0.8 + s * 0.08);
+        gain.gain.setValueAtTime(0.09, now + 0.8 + s * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8 + s * 0.08 + 0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + 0.8 + s * 0.08);
+        osc.stop(now + 0.8 + s * 0.08 + 0.22);
+      }
     }
   } catch {}
 }
@@ -616,16 +763,112 @@ function GenericBonusMonitor({
   );
 }
 
-// 3D Prominent Rolling Dice Console
+// Component to render the symbol for each face: pure numbers and arrows, NO words!
+function DiceFaceContent({ faceType }: { faceType: DiceFaceType }) {
+  if (faceType === 'zero') {
+    return (
+      <div className="flex items-center justify-center h-full w-full">
+        <span className="text-4xl font-black text-white drop-shadow-[0_0_14px_rgba(52,211,153,0.9)] tracking-tight">
+          0
+        </span>
+      </div>
+    );
+  }
+
+  if (faceType === 'right') {
+    return (
+      <div className="flex items-center justify-center gap-2 h-full w-full px-1">
+        <span className="text-3xl font-black text-white drop-shadow-[0_0_10px_rgba(0,229,255,0.9)]">
+          1
+        </span>
+        <svg
+          width="26"
+          height="20"
+          viewBox="0 0 26 20"
+          fill="none"
+          className="text-cyan-400 drop-shadow-[0_0_10px_#00e5ff]"
+        >
+          <path
+            d="M 3 10 L 22 10 M 14 3 L 22 10 L 14 17"
+            stroke="currentColor"
+            strokeWidth="3.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  if (faceType === 'left') {
+    return (
+      <div className="flex items-center justify-center gap-2 h-full w-full px-1">
+        <svg
+          width="26"
+          height="20"
+          viewBox="0 0 26 20"
+          fill="none"
+          className="text-blue-400 drop-shadow-[0_0_10px_#3b82f6]"
+        >
+          <path
+            d="M 23 10 L 4 10 M 12 3 L 4 10 L 12 17"
+            stroke="currentColor"
+            strokeWidth="3.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        <span className="text-3xl font-black text-white drop-shadow-[0_0_10px_rgba(59,130,246,0.9)]">
+          1
+        </span>
+      </div>
+    );
+  }
+
+  // Type: 'double' (Number 2 and two stacked arrows: one pointing right and one pointing left)
+  return (
+    <div className="flex items-center justify-center gap-2.5 h-full w-full px-1">
+      <span className="text-3xl font-black text-white drop-shadow-[0_0_12px_rgba(245,158,11,0.9)]">
+        2
+      </span>
+      <div className="flex flex-col items-center gap-1.5 text-amber-400 drop-shadow-[0_0_10px_#f59e0b]">
+        {/* Freccia Destra (->) */}
+        <svg width="24" height="10" viewBox="0 0 24 10" fill="none">
+          <path
+            d="M 3 5 L 20 5 M 14 1.5 L 20 5 L 14 8.5"
+            stroke="currentColor"
+            strokeWidth="2.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+        {/* Freccia Sinistra (<-) */}
+        <svg width="24" height="10" viewBox="0 0 24 10" fill="none">
+          <path
+            d="M 21 5 L 4 5 M 10 1.5 L 4 5 L 10 8.5"
+            stroke="currentColor"
+            strokeWidth="2.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// 3D Prominent Rolling Dice Console (6 3D faces without words)
 function ProminentDice3D({
   rolling,
+  isResolving = false,
   targetFace,
   onRoll,
   canRollBonus,
   onUseBonusRoll,
 }: {
   rolling: boolean;
-  targetFace: DiceFace | null;
+  isResolving?: boolean;
+  targetFace: DiceFaceKey | null;
   onRoll: () => void;
   canRollBonus: boolean;
   onUseBonusRoll: () => void;
@@ -633,12 +876,14 @@ function ProminentDice3D({
   const [rollCount, setRollCount] = useState(0);
   const [rotation, setRotation] = useState({ x: -20, y: 30, z: -5 });
 
-  const faceAngles: Record<DiceFace, { x: number; y: number; z: number }> = useMemo(
+  const faceAngles: Record<DiceFaceKey, { x: number; y: number; z: number }> = useMemo(
     () => ({
-      right: { x: 0, y: 0, z: 0 },
-      left: { x: 0, y: 180, z: 0 },
-      both: { x: 0, y: 90, z: 0 },
-      self: { x: 0, y: -90, z: 0 },
+      right_1: { x: 0, y: 0, z: 0 },
+      left_1: { x: 0, y: 180, z: 0 },
+      right_2: { x: 0, y: -90, z: 0 },
+      left_2: { x: 0, y: 90, z: 0 },
+      double: { x: -90, y: 0, z: 0 },
+      zero: { x: 90, y: 0, z: 0 },
     }),
     []
   );
@@ -650,9 +895,9 @@ function ProminentDice3D({
       const angle = faceAngles[targetFace];
       if (angle) {
         setRotation({
-          x: angle.x + 360 * 3 * nextCount + 15,
-          y: angle.y + 360 * 4 * nextCount + 20,
-          z: angle.z + 360 * 2 * nextCount - 10,
+          x: angle.x + 360 * 3 * nextCount,
+          y: angle.y + 360 * 4 * nextCount,
+          z: angle.z + 360 * 2 * nextCount,
         });
       }
     } else if (!rolling && targetFace) {
@@ -671,9 +916,11 @@ function ProminentDice3D({
     <div className="flex flex-col items-center gap-2">
       {/* 3D Cube Viewport (Clickable directly to roll) */}
       <div
-        onClick={rolling ? undefined : onRoll}
-        className="relative w-28 h-28 cursor-pointer select-none group [perspective:1000px] shrink-0 hover:scale-105 active:scale-95 transition-transform"
-        title="Clicca direttamente sul dado per lanciarlo!"
+        onClick={rolling || isResolving ? undefined : onRoll}
+        className={`relative w-28 h-28 select-none group [perspective:1000px] shrink-0 transition-transform ${
+          isResolving ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:scale-105 active:scale-95'
+        }`}
+        title={isResolving ? 'Passaggio turno in corso...' : 'Clicca direttamente sul dado per lanciarlo!'}
       >
         <div className="absolute inset-0 rounded-full bg-cyan-500/25 blur-xl group-hover:bg-cyan-500/45 transition-all pointer-events-none" />
 
@@ -683,33 +930,35 @@ function ProminentDice3D({
             transform: `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) rotateZ(${rotation.z}deg)`,
           }}
         >
-          {/* Face: RIGHT */}
-          <div className="absolute inset-1.5 rounded-2xl border-2 border-cyan-400 bg-gradient-to-br from-slate-900 via-slate-950 to-cyan-950 flex flex-col items-center justify-center text-center shadow-[inset_0_0_18px_rgba(0,229,255,0.45)] [transform:translateZ(44px)]">
-            <span className="text-2xl text-cyan-400 drop-shadow-[0_0_10px_#00e5ff]">➔</span>
-            <span className="text-xs font-black tracking-wider text-white mt-0.5">DESTRA</span>
+          {/* Face 1: RIGHT 1 (Front) -> 1 e freccia a dx */}
+          <div className="absolute inset-1.5 rounded-2xl border-2 border-cyan-400 bg-gradient-to-br from-slate-900 via-slate-950 to-cyan-950 flex items-center justify-center shadow-[inset_0_0_18px_rgba(0,229,255,0.45)] [transform:translateZ(44px)]">
+            <DiceFaceContent faceType="right" />
           </div>
 
-          {/* Face: LEFT */}
-          <div className="absolute inset-1.5 rounded-2xl border-2 border-blue-400 bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 flex flex-col items-center justify-center text-center shadow-[inset_0_0_18px_rgba(59,130,246,0.45)] [transform:rotateY(180deg)_translateZ(44px)]">
-            <span className="text-2xl text-blue-400 drop-shadow-[0_0_10px_#3b82f6]">⬅</span>
-            <span className="text-xs font-black tracking-wider text-white mt-0.5">SINISTRA</span>
+          {/* Face 2: LEFT 1 (Back) -> 1 e freccia a sx */}
+          <div className="absolute inset-1.5 rounded-2xl border-2 border-blue-400 bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 flex items-center justify-center shadow-[inset_0_0_18px_rgba(59,130,246,0.45)] [transform:rotateY(180deg)_translateZ(44px)]">
+            <DiceFaceContent faceType="left" />
           </div>
 
-          {/* Face: BOTH */}
-          <div className="absolute inset-1.5 rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950 flex flex-col items-center justify-center text-center shadow-[inset_0_0_18px_rgba(245,158,11,0.45)] [transform:rotateY(90deg)_translateZ(44px)]">
-            <span className="text-xl text-amber-400 drop-shadow-[0_0_10px_#f59e0b]">⮂ ⮃</span>
-            <span className="text-[11px] font-black tracking-wider text-white mt-0.5">ENTRAMBE</span>
+          {/* Face 3: RIGHT 2 (Right) -> 1 e freccia a dx */}
+          <div className="absolute inset-1.5 rounded-2xl border-2 border-cyan-400 bg-gradient-to-br from-slate-900 via-slate-950 to-cyan-950 flex items-center justify-center shadow-[inset_0_0_18px_rgba(0,229,255,0.45)] [transform:rotateY(90deg)_translateZ(44px)]">
+            <DiceFaceContent faceType="right" />
           </div>
 
-          {/* Face: SELF */}
-          <div className="absolute inset-1.5 rounded-2xl border-2 border-red-400 bg-gradient-to-br from-slate-900 via-slate-950 to-red-950 flex flex-col items-center justify-center text-center shadow-[inset_0_0_18px_rgba(239,68,68,0.45)] [transform:rotateY(-90deg)_translateZ(44px)]">
-            <span className="text-2xl text-red-400 drop-shadow-[0_0_10px_#ef4444]">🎯</span>
-            <span className="text-[11px] font-black tracking-wider text-white mt-0.5">SE STESSA</span>
+          {/* Face 4: LEFT 2 (Left) -> 1 e freccia a sx */}
+          <div className="absolute inset-1.5 rounded-2xl border-2 border-blue-400 bg-gradient-to-br from-slate-900 via-slate-950 to-blue-950 flex items-center justify-center shadow-[inset_0_0_18px_rgba(59,130,246,0.45)] [transform:rotateY(-90deg)_translateZ(44px)]">
+            <DiceFaceContent faceType="left" />
           </div>
 
-          {/* Top/Bottom */}
-          <div className="absolute inset-1.5 rounded-2xl border border-white/20 bg-slate-900/90 [transform:rotateX(90deg)_translateZ(44px)]" />
-          <div className="absolute inset-1.5 rounded-2xl border border-white/20 bg-slate-950 [transform:rotateX(-90deg)_translateZ(44px)]" />
+          {/* Face 5: DOUBLE (Top) -> 2 con due frecce una sopra l'altra */}
+          <div className="absolute inset-1.5 rounded-2xl border-2 border-amber-400 bg-gradient-to-br from-slate-900 via-slate-950 to-amber-950 flex items-center justify-center shadow-[inset_0_0_18px_rgba(245,158,11,0.45)] [transform:rotateX(90deg)_translateZ(44px)]">
+            <DiceFaceContent faceType="double" />
+          </div>
+
+          {/* Face 6: ZERO (Bottom) -> 0 */}
+          <div className="absolute inset-1.5 rounded-2xl border-2 border-emerald-400 bg-gradient-to-br from-slate-900 via-slate-950 to-emerald-950 flex items-center justify-center shadow-[inset_0_0_18px_rgba(52,211,153,0.45)] [transform:rotateX(-90deg)_translateZ(44px)]">
+            <DiceFaceContent faceType="zero" />
+          </div>
         </div>
       </div>
 
@@ -718,6 +967,10 @@ function ProminentDice3D({
         {rolling ? (
           <span className="text-[10px] font-black uppercase tracking-widest text-cyan-300 animate-pulse flex items-center gap-1.5 bg-cyan-950/70 border border-cyan-400/40 px-3 py-1 rounded-full">
             <span className="animate-spin">🔄</span> ROTAZIONE...
+          </span>
+        ) : isResolving ? (
+          <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 animate-pulse flex items-center gap-1.5 bg-amber-950/70 border border-amber-400/40 px-3 py-1 rounded-full">
+            <span>⏳</span> PASSAGGIO TURNO...
           </span>
         ) : (
           <button
@@ -734,8 +987,8 @@ function ProminentDice3D({
           <button
             type="button"
             onClick={onUseBonusRoll}
-            disabled={rolling}
-            className="px-3.5 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-wider bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black shadow-lg shadow-amber-500/35 hover:scale-105 active:scale-95 border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer animate-pulse"
+            disabled={rolling || isResolving}
+            className="px-3.5 py-1.5 rounded-xl font-black text-[10px] uppercase tracking-wider bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black shadow-lg shadow-amber-500/35 hover:scale-105 active:scale-95 border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer animate-pulse disabled:opacity-40 disabled:pointer-events-none"
             title="Spendi il Bonus Dado per rilanciare"
           >
             <span>✨</span>
@@ -757,17 +1010,34 @@ export default function FinaleSquadre_Board() {
 
   const { scores, bonuses, toggleBonus } = useScores();
 
-  // Synced States across Electron windows
-  const [activeTeam, setActiveTeam] = useSyncedState<TeamId>('playstate_finale_active_team', 3);
-  const [selectedDieFace, setSelectedDieFace] = useSyncedState<DiceFace | null>(
+  // Starting member count per team (based on ranking: 6, 5, 3)
+  const startingMembers = useMemo(() => normalizeStartingMembers(scores), [scores]);
+
+  // Turn Order: starts with the team with fewest points (3rd place), then 2nd place, then 1st place
+  const rankingOrder = useMemo(() => {
+    const baseOrder: TeamId[] = [3, 2, 1];
+    if (!scores || scores.length < 3) return baseOrder;
+    const sorted = scores
+      .map((score, index) => ({ teamId: (index + 1) as TeamId, score: Number(score) || 0 }))
+      .sort((a, b) => b.score - a.score);
+    // sorted[0] is 1st place, sorted[1] is 2nd place, sorted[2] is 3rd place
+    const third = sorted[2]?.teamId ?? 3;
+    const second = sorted[1]?.teamId ?? 2;
+    const first = sorted[0]?.teamId ?? 1;
+    return [third, second, first];
+  }, [scores]);
+
+  // Synced States across Electron windows (defaults to 3rd place team with fewest points)
+  const [activeTeam, setActiveTeam] = useSyncedState<TeamId>('playstate_finale_active_team', rankingOrder[0]);
+  const [selectedDieFace, setSelectedDieFace] = useSyncedState<DiceFaceKey | null>(
     'playstate_finale_selected_face',
     null
   );
-  const [dieTargetFace, setDieTargetFace] = useSyncedState<DiceFace | null>(
+  const [dieTargetFace, setDieTargetFace] = useSyncedState<DiceFaceKey | null>(
     'playstate_finale_target_face',
     null
   );
-  const [targetTeam, setTargetTeam] = useSyncedState<TeamId | 'both' | null>(
+  const [targetTeam, setTargetTeam] = useSyncedState<TeamId | 'both' | 'none' | null>(
     'playstate_finale_target_team',
     null
   );
@@ -817,29 +1087,163 @@ export default function FinaleSquadre_Board() {
     [totalQuestions]
   );
 
-  // Starting member count per team (based on ranking: 6, 5, 3)
-  const startingMembers = useMemo(() => normalizeStartingMembers(scores), [scores]);
+  // Transition timer for automatic turn progression after elimination animation
+  const [isResolving, setIsResolving] = useState(false);
+  const resolveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const [manuallySelected, setManuallySelected] = useState(false);
+  const prevRankingSigRef = useRef<string>('');
+
+  useEffect(() => {
+    return () => {
+      if (resolveTimerRef.current) {
+        clearTimeout(resolveTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Cleanup legacy dice keys or normalize if needed
+  useEffect(() => {
+    if (selectedDieFace && !(selectedDieFace in DICE_FACES_CONFIG)) {
+      setSelectedDieFace(null);
+    }
+    if (dieTargetFace && !(dieTargetFace in DICE_FACES_CONFIG)) {
+      setDieTargetFace(null);
+    }
+  }, [selectedDieFace, dieTargetFace, setSelectedDieFace, setDieTargetFace]);
+
+  // Check if any team has suffered eliminations
+  const hasEliminatedMembers = useMemo(() => {
+    return Object.values(eliminatedMembers).some((list) => list && list.length > 0);
+  }, [eliminatedMembers]);
+
+  // Track eliminated teams to trigger wipeout sound on transition
+  const prevEliminatedMapRef = useRef<Record<TeamId, boolean>>({ 1: false, 2: false, 3: false });
+
+  useEffect(() => {
+    ([1, 2, 3] as TeamId[]).forEach((tId) => {
+      const maxCount = startingMembers[tId] ?? 6;
+      const elimCount = eliminatedMembers[tId]?.length ?? 0;
+      const isEliminated = maxCount > 0 && elimCount >= maxCount;
+      const wasEliminated = prevEliminatedMapRef.current[tId];
+
+      if (isEliminated && !wasEliminated) {
+        playSound('wipeout');
+      }
+      prevEliminatedMapRef.current[tId] = isEliminated;
+    });
+  }, [eliminatedMembers, startingMembers]);
+
+  // Detect winning team (when game has started and exactly 1 team remains with omini)
+  const winningTeamId: TeamId | null = useMemo(() => {
+    if (!hasEliminatedMembers) return null;
+    const alive = ([1, 2, 3] as TeamId[]).filter((tId) => {
+      const maxC = startingMembers[tId] ?? 6;
+      const elimC = eliminatedMembers[tId]?.length ?? 0;
+      return elimC < maxC;
+    });
+    return alive.length === 1 ? alive[0] : null;
+  }, [hasEliminatedMembers, startingMembers, eliminatedMembers]);
+
+  const [dismissTrophy, setDismissTrophy] = useState(false);
+  const prevWinnerRef = useRef<TeamId | null>(null);
+
+  // Play fanfare when winner emerges
+  useEffect(() => {
+    if (winningTeamId && prevWinnerRef.current !== winningTeamId) {
+      playSound('victory');
+      setDismissTrophy(false);
+    }
+    prevWinnerRef.current = winningTeamId;
+  }, [winningTeamId]);
+
+  // Synchronize active team with 3rd place team (fewest points)
+  useEffect(() => {
+    const currentSig = rankingOrder.join('-');
+    const isFirstRun = prevRankingSigRef.current === '';
+    const rankingChanged = !isFirstRun && prevRankingSigRef.current !== currentSig;
+    prevRankingSigRef.current = currentSig;
+
+    // 1. If scores/ranking changed in this session, reset manual override and force starting team to 3rd place team
+    if (rankingChanged) {
+      setManuallySelected(false);
+      const startingTeam = rankingOrder[0];
+      setActiveTeam(startingTeam);
+      setSelectedDieFace(null);
+      setDieTargetFace(null);
+      setTargetTeam(null);
+      return;
+    }
+
+    // 2. If no omini have been eliminated yet and host has not manually clicked a team in this session,
+    // ensure activeTeam is the 3rd place team (starts first)
+    if (!hasEliminatedMembers && !manuallySelected) {
+      const startingTeam = rankingOrder[0];
+      if (activeTeam !== startingTeam) {
+        setActiveTeam(startingTeam);
+      }
+    }
+  }, [rankingOrder, activeTeam, setActiveTeam, hasEliminatedMembers, manuallySelected, setSelectedDieFace, setDieTargetFace, setTargetTeam]);
+
+  // Function to get the next team in rotation (3rd place -> 2nd place -> 1st place -> 3rd place...)
+  // Automatically prioritizes teams that still have members alive
+  const getNextTurnTeam = (currentTeam: TeamId): TeamId => {
+    const currentIndex = rankingOrder.indexOf(currentTeam);
+    const validIndex = currentIndex >= 0 ? currentIndex : 0;
+
+    for (let step = 1; step <= rankingOrder.length; step++) {
+      const candidate = rankingOrder[(validIndex + step) % rankingOrder.length];
+      const maxCount = startingMembers[candidate] ?? 6;
+      const eliminated = eliminatedMembers[candidate]?.length ?? 0;
+      if (eliminated < maxCount) {
+        return candidate;
+      }
+    }
+
+    return rankingOrder[(validIndex + 1) % rankingOrder.length];
+  };
 
   // Dice roll handler
   const rollDice = () => {
-    if (rolling) return;
+    if (rolling || isResolving) return;
     setRolling(true);
     setSelectedDieFace(null);
     playSound('roll');
 
     const nextFace = DICE_FACES[Math.floor(Math.random() * DICE_FACES.length)];
+    const faceMeta = DICE_FACES_CONFIG[nextFace];
     setDieTargetFace(nextFace);
 
-    // Compute target automatically
-    let resolvedTarget: TeamId | 'both' = 'both';
-    if (nextFace === 'right') {
-      resolvedTarget = getNextTeam(activeTeam, 'right');
-    } else if (nextFace === 'left') {
-      resolvedTarget = getNextTeam(activeTeam, 'left');
-    } else if (nextFace === 'self') {
-      resolvedTarget = activeTeam;
+    // Compute target automatically according to user rules:
+    // -> : squadra a destra
+    // <- : squadra a sinistra
+    // 2 (doppia freccia) : entrambe le altre squadre
+    // 0 : nessun bersaglio (rispondere per salvarsi)
+    const isTeamAlive = (tId: TeamId) => {
+      const maxCount = startingMembers[tId] ?? 6;
+      const elim = eliminatedMembers[tId]?.length ?? 0;
+      return elim < maxCount;
+    };
+
+    const rightTeam = getNextTeam(activeTeam, 'right');
+    const leftTeam = getNextTeam(activeTeam, 'left');
+
+    let resolvedTarget: TeamId | 'both' | 'none' = 'none';
+    if (faceMeta.type === 'right') {
+      resolvedTarget = isTeamAlive(rightTeam) ? rightTeam : (isTeamAlive(leftTeam) ? leftTeam : rightTeam);
+    } else if (faceMeta.type === 'left') {
+      resolvedTarget = isTeamAlive(leftTeam) ? leftTeam : (isTeamAlive(rightTeam) ? rightTeam : leftTeam);
+    } else if (faceMeta.type === 'double') {
+      if (isTeamAlive(rightTeam) && isTeamAlive(leftTeam)) {
+        resolvedTarget = 'both';
+      } else if (isTeamAlive(rightTeam)) {
+        resolvedTarget = rightTeam;
+      } else if (isTeamAlive(leftTeam)) {
+        resolvedTarget = leftTeam;
+      } else {
+        resolvedTarget = 'both';
+      }
     } else {
-      resolvedTarget = 'both';
+      resolvedTarget = 'none';
     }
 
     setTimeout(() => {
@@ -852,6 +1256,7 @@ export default function FinaleSquadre_Board() {
 
   // Re-roll using the Dado bonus
   const handleUseBonusRoll = () => {
+    if (isResolving) return;
     const activeTeamIdx = activeTeam - 1;
     toggleBonus(activeTeamIdx, 0);
     rollDice();
@@ -914,27 +1319,60 @@ export default function FinaleSquadre_Board() {
 
   // Challenge outcome: Correct or Wrong
   const handleOutcome = (isCorrect: boolean) => {
-    if (!selectedDieFace) return;
+    if (!selectedDieFace || isResolving) return;
+    const faceMeta = DICE_FACES_CONFIG[selectedDieFace];
+    if (!faceMeta) return;
+
+    setIsResolving(true);
 
     if (isCorrect) {
       playSound('correct');
-      if (selectedDieFace === 'both') {
-        const leftTeam = getNextTeam(activeTeam, 'left');
+      if (faceMeta.type === 'zero' || targetTeam === 'none') {
+        // Se dovesse capitare lo 0 ovviamente non accade niente,
+        // semplicemente la squadra che ha lanciato il dado risponde correttamente per salvarsi
+        // e in caso di risposta corretta non elimina nessuno delle altre squadre.
+      } else if (targetTeam === 'both') {
+        // 2 doppia freccia <-> elimina il primo omino disponibile delle altre due squadre
         const rightTeam = getNextTeam(activeTeam, 'right');
-        eliminateMember(leftTeam);
+        const leftTeam = getNextTeam(activeTeam, 'left');
         eliminateMember(rightTeam);
-      } else if (targetTeam && targetTeam !== 'both') {
+        setTimeout(() => {
+          eliminateMember(leftTeam);
+        }, 250);
+      } else if (typeof targetTeam === 'number') {
         eliminateMember(targetTeam);
+      } else if (faceMeta.type === 'right') {
+        eliminateMember(getNextTeam(activeTeam, 'right'));
+      } else if (faceMeta.type === 'left') {
+        eliminateMember(getNextTeam(activeTeam, 'left'));
       }
     } else {
+      // Risposta errata: la squadra che ha lanciato il dado non si salva ed elimina un proprio omino
       playSound('wrong');
       eliminateMember(activeTeam);
     }
+
+    // In automatico dopo che ha dato la risposta, una volta terminata l'animazione dell'eliminazione,
+    // il turno deve passare alla squadra successiva nell'ordine: 3ª -> 2ª -> 1ª
+    const animationDelay = faceMeta.type === 'double' && isCorrect ? 2000 : 1600;
+
+    resolveTimerRef.current = setTimeout(() => {
+      const next = getNextTurnTeam(activeTeam);
+      setActiveTeam(next);
+      setSelectedDieFace(null);
+      setDieTargetFace(null);
+      setTargetTeam(null);
+      setIsResolving(false);
+    }, animationDelay);
   };
 
-  // Pass turn to next team in rotation
+  // Pass turn manually to next team in rotation
   const handleNextTurn = () => {
-    const next = getNextTeam(activeTeam, 'right');
+    if (resolveTimerRef.current) {
+      clearTimeout(resolveTimerRef.current);
+    }
+    setIsResolving(false);
+    const next = getNextTurnTeam(activeTeam);
     setActiveTeam(next);
     setSelectedDieFace(null);
     setDieTargetFace(null);
@@ -1025,6 +1463,102 @@ export default function FinaleSquadre_Board() {
             opacity: 0;
           }
         }
+        @keyframes team-stamp-slam {
+          0% {
+            transform: scale(3.4) rotate(-26deg);
+            opacity: 0;
+            filter: blur(8px);
+          }
+          55% {
+            transform: scale(0.9) rotate(-6deg);
+            opacity: 1;
+            filter: blur(0);
+          }
+          75% {
+            transform: scale(1.08) rotate(-6deg);
+          }
+          100% {
+            transform: scale(1) rotate(-6deg);
+            opacity: 1;
+          }
+        }
+        @keyframes team-shockwave {
+          0% {
+            transform: scale(0.2);
+            opacity: 1;
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.9);
+          }
+          50% {
+            opacity: 0.85;
+          }
+          100% {
+            transform: scale(1.7);
+            opacity: 0;
+            box-shadow: 0 0 80px 20px rgba(239, 68, 68, 0);
+          }
+        }
+        @keyframes hazard-pulse {
+          0%, 100% {
+            opacity: 0.22;
+            background-position: 0 0;
+          }
+          50% {
+            opacity: 0.45;
+            background-position: 30px 30px;
+          }
+        }
+        @keyframes skull-glitch {
+          0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(239,68,68,0.8)); }
+          25% { transform: scale(1.15) rotate(6deg); filter: drop-shadow(0 0 16px rgba(239,68,68,1)); }
+          75% { transform: scale(0.95) rotate(-6deg); filter: drop-shadow(0 0 6px rgba(239,68,68,0.6)); }
+        }
+        @keyframes trophy-spin-grow {
+          0% {
+            transform: scale(0.05) rotate(-540deg);
+            opacity: 0;
+            filter: blur(14px);
+          }
+          65% {
+            transform: scale(1.1) rotate(12deg);
+            opacity: 1;
+            filter: blur(0);
+          }
+          85% {
+            transform: scale(0.96) rotate(-4deg);
+          }
+          100% {
+            transform: scale(1) rotate(0deg);
+            opacity: 1;
+          }
+        }
+        @keyframes trophy-glow-pulse {
+          0%, 100% {
+            transform: translateY(0);
+            filter: drop-shadow(0 0 35px rgba(250, 204, 21, 0.6)) drop-shadow(0 0 70px rgba(250, 204, 21, 0.3));
+          }
+          50% {
+            transform: translateY(-10px);
+            filter: drop-shadow(0 0 55px rgba(250, 204, 21, 0.9)) drop-shadow(0 0 95px rgba(250, 204, 21, 0.5));
+          }
+        }
+        @keyframes sunburst-spin {
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
+        }
+        @keyframes victory-banner-slide {
+          0% {
+            transform: translateY(35px);
+            opacity: 0;
+          }
+          100% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
       `}</style>
 
       {/* 100% UNTOUCHED, FULL-VIEW BACKGROUND (No black overlays or boxes!) */}
@@ -1052,41 +1586,76 @@ export default function FinaleSquadre_Board() {
             <span className="text-[10px] uppercase font-bold text-white/60 tracking-wider">
               Turno:
             </span>
-            {([1, 2, 3] as TeamId[]).map((tId) => {
+            {rankingOrder.map((tId, rankIdx) => {
               const meta = TEAMS_CONFIG[tId];
               const isActive = activeTeam === tId;
+              const isEliminated =
+                (startingMembers[tId] ?? 6) > 0 &&
+                (eliminatedMembers[tId]?.length ?? 0) >= (startingMembers[tId] ?? 6);
+              const rankLabel = rankIdx === 0 ? '🥉 3ª' : rankIdx === 1 ? '🥈 2ª' : '🥇 1ª';
               return (
                 <button
                   key={tId}
+                  disabled={isEliminated}
                   onClick={() => {
+                    if (resolveTimerRef.current) clearTimeout(resolveTimerRef.current);
+                    setIsResolving(false);
+                    setManuallySelected(true);
                     setActiveTeam(tId);
                     setSelectedDieFace(null);
+                    setDieTargetFace(null);
                     setTargetTeam(null);
                   }}
-                  className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
-                    isActive
-                      ? 'bg-white text-black scale-105 shadow-[0_0_20px_rgba(255,255,255,0.6)]'
-                      : 'bg-black/50 text-white/80 hover:bg-white/10 border border-white/15'
+                  className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                    isEliminated
+                      ? 'opacity-40 line-through cursor-not-allowed bg-red-950/40 text-red-300 border border-red-500/30'
+                      : isActive
+                      ? 'bg-white text-black scale-105 shadow-[0_0_20px_rgba(255,255,255,0.6)] ring-2 ring-cyan-400 cursor-pointer'
+                      : 'bg-black/50 text-white/80 hover:bg-white/10 border border-white/15 cursor-pointer'
                   }`}
+                  title={
+                    isEliminated
+                      ? `${teamNames[tId - 1]} è eliminata`
+                      : `Imposta manualmente il turno a ${teamNames[tId - 1]} (${rankLabel})`
+                  }
                 >
                   <span
                     className="w-2.5 h-2.5 rounded-full"
-                    style={{ backgroundColor: meta.colorHex }}
+                    style={{ backgroundColor: isEliminated ? '#ef4444' : meta.colorHex }}
                   />
+                  <span className="text-[10px] font-bold opacity-80">{rankLabel}</span>
                   <span>{teamNames[tId - 1] || `S${tId}`}</span>
+                  {isEliminated && <span className="text-[10px]">☠️</span>}
                 </button>
               );
             })}
+            {winningTeamId !== null && (
+              <button
+                type="button"
+                onClick={() => setDismissTrophy(false)}
+                className="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider text-yellow-300 bg-yellow-500/20 hover:bg-yellow-500/35 border border-yellow-400/50 transition-all cursor-pointer ml-1.5 shadow-sm flex items-center gap-1 animate-pulse"
+                title="Riapri la schermata della coppa per la squadra vincitrice"
+              >
+                <span>🏆</span>
+                <span>Coppa</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
+                if (resolveTimerRef.current) clearTimeout(resolveTimerRef.current);
+                setIsResolving(false);
+                setManuallySelected(false);
+                setDismissTrophy(false);
                 setEliminatedMembers({ 1: [], 2: [], 3: [] });
+                setEliminatedQuestions([]);
                 setSelectedDieFace(null);
                 setDieTargetFace(null);
                 setTargetTeam(null);
+                setActiveTeam(rankingOrder[0]);
               }}
               className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-white/60 hover:text-white bg-white/10 hover:bg-white/20 border border-white/15 transition-all cursor-pointer ml-1.5 shadow-sm"
-              title="Azzera lo stato degli omini e il bersaglio per iniziare una nuova manche"
+              title="Azzera lo stato degli omini, domande e dado per iniziare una nuova manche (inizia la 3ª classificata)"
             >
               🔄 Reset Omini
             </button>
@@ -1101,19 +1670,34 @@ export default function FinaleSquadre_Board() {
             const meta = TEAMS_CONFIG[teamId];
             const isActive = activeTeam === teamId;
             const isTarget =
-              targetTeam === teamId ||
-              (targetTeam === 'both' && activeTeam !== teamId);
+              targetTeam === 'both'
+                ? activeTeam !== teamId
+                : targetTeam !== 'none' && targetTeam === teamId;
             const teamMembersCount = startingMembers[teamId];
             const teamEliminatedList = eliminatedMembers[teamId] || [];
             const remainingCount = Math.max(0, teamMembersCount - teamEliminatedList.length);
+            const isEliminated = teamMembersCount > 0 && remainingCount === 0;
+
+            const aliveTeams = ([1, 2, 3] as TeamId[]).filter((tId) => {
+              const maxC = startingMembers[tId] ?? 6;
+              const elimC = eliminatedMembers[tId]?.length ?? 0;
+              return elimC < maxC;
+            });
+            const isWinner = aliveTeams.length === 1 && aliveTeams[0] === teamId;
             const teamBonuses = bonuses[teamId - 1] || [false, false, false, false];
 
             return (
               <div
                 key={teamId}
-                className="relative flex flex-col justify-center h-full transition-all duration-500"
+                className={`relative flex flex-col justify-center h-full transition-all duration-700 rounded-3xl p-1 sm:p-2 ${
+                  isEliminated
+                    ? 'grayscale-[0.85] opacity-60 hover:opacity-90 ring-1 ring-red-500/40 bg-red-950/20 shadow-[0_0_30px_rgba(239,68,68,0.2)]'
+                    : isWinner
+                    ? 'ring-2 ring-yellow-400/80 bg-yellow-500/5 shadow-[0_0_35px_rgba(234,179,8,0.25)]'
+                    : ''
+                }`}
                 style={{
-                  background: isActive ? meta.spotlightGlow : undefined,
+                  background: isActive && !isEliminated ? meta.spotlightGlow : undefined,
                 }}
               >
                 {/* Top Section: Hanging Generic Cyber Bonus Monitors */}
@@ -1132,34 +1716,95 @@ export default function FinaleSquadre_Board() {
                   </div>
 
                   {/* Sleek Floating Team Banner */}
-                  <div className="mt-3 flex items-center justify-between w-full px-2.5 py-1.5 bg-black/45 backdrop-blur-md rounded-xl border border-white/15 shadow-lg">
+                  <div
+                    className={`mt-3 flex items-center justify-between w-full px-2.5 py-1.5 backdrop-blur-md rounded-xl border shadow-lg transition-all ${
+                      isEliminated
+                        ? 'bg-red-950/70 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.4)]'
+                        : isWinner
+                        ? 'bg-yellow-950/60 border-yellow-400/70 shadow-[0_0_25px_rgba(234,179,8,0.4)]'
+                        : 'bg-black/45 border-white/15'
+                    }`}
+                  >
                     <div className="flex items-center gap-2">
                       <span
                         className="w-3 h-3 rounded-full shadow-[0_0_10px]"
                         style={{
-                          backgroundColor: meta.colorHex,
-                          boxShadow: `0 0 10px ${meta.colorNeon}`,
+                          backgroundColor: isEliminated ? '#ef4444' : meta.colorHex,
+                          boxShadow: isEliminated ? '0 0 10px #ef4444' : `0 0 10px ${meta.colorNeon}`,
                         }}
                       />
                       <h2
-                        className="text-base sm:text-lg font-black tracking-wider text-white uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] truncate max-w-[120px] sm:max-w-[170px]"
+                        className={`text-base sm:text-lg font-black tracking-wider uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] truncate max-w-[120px] sm:max-w-[170px] ${
+                          isEliminated
+                            ? 'text-red-300 line-through decoration-red-500/80 decoration-2'
+                            : 'text-white'
+                        }`}
                       >
                         {teamNames[teamId - 1] || meta.defaultName}
                       </h2>
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      {isActive && (
-                        <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-full bg-white text-black animate-pulse shadow-md">
-                          TURNO
+                      {isEliminated ? (
+                        <span
+                          className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-full bg-red-600 text-white border border-red-400/60 shadow-[0_0_14px_rgba(239,68,68,0.8)] flex items-center gap-1 animate-pulse"
+                          title="Tutti gli omini sono stati eliminati!"
+                        >
+                          <span>☠️</span>
+                          <span>ELIMINATA</span>
                         </span>
-                      )}
-                      {isTarget && !isActive && (
-                        <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-full bg-red-600 text-white animate-bounce shadow-md">
-                          TARGET
+                      ) : isWinner ? (
+                        <span
+                          className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-full bg-amber-500 text-black border border-yellow-300 shadow-[0_0_15px_rgba(234,179,8,0.9)] flex items-center gap-1 font-black animate-bounce"
+                          title="Squadra vincitrice della sfida finale!"
+                        >
+                          <span>👑</span>
+                          <span>VITTORIA!</span>
                         </span>
+                      ) : (
+                        <>
+                          {teamId === rankingOrder[0] ? (
+                            <span
+                              className="px-1.5 py-0.5 text-[9px] font-black rounded bg-amber-600/40 text-amber-200 border border-amber-500/50 shadow-sm"
+                              title="3ª classificata: inizia per prima!"
+                            >
+                              🥉 3ª (Inizia)
+                            </span>
+                          ) : teamId === rankingOrder[1] ? (
+                            <span
+                              className="px-1.5 py-0.5 text-[9px] font-black rounded bg-slate-400/30 text-slate-200 border border-slate-300/40 shadow-sm"
+                              title="2ª classificata"
+                            >
+                              🥈 2ª
+                            </span>
+                          ) : (
+                            <span
+                              className="px-1.5 py-0.5 text-[9px] font-black rounded bg-yellow-500/30 text-yellow-100 border border-yellow-400/50 shadow-sm"
+                              title="1ª classificata"
+                            >
+                              🥇 1ª
+                            </span>
+                          )}
+                          {isActive && (
+                            <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-full bg-white text-black animate-pulse shadow-md">
+                              TURNO
+                            </span>
+                          )}
+                          {isTarget && !isActive && (
+                            <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-full bg-red-600 text-white animate-bounce shadow-md">
+                              TARGET
+                            </span>
+                          )}
+                        </>
                       )}
-                      <span className="text-xs font-black text-white/95 bg-white/15 px-2 py-0.5 rounded-lg border border-white/20">
+
+                      <span
+                        className={`text-xs font-black px-2 py-0.5 rounded-lg border ${
+                          isEliminated
+                            ? 'bg-red-950/80 text-red-300 border-red-500/60 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
+                            : 'bg-white/15 text-white/95 border-white/20'
+                        }`}
+                      >
                         {remainingCount}/{teamMembersCount}
                       </span>
                       {/* Discrete +/- buttons */}
@@ -1187,6 +1832,80 @@ export default function FinaleSquadre_Board() {
 
                 {/* Center: 3D Cubes & Omini (Centered in the vertical space, floating freely over the landscape) */}
                 <div className="flex flex-col items-center justify-center flex-1 my-auto py-2 relative">
+                  {/* Complete Team Elimination Dramatic Overlay */}
+                  {isEliminated && (
+                    <div className="absolute inset-0 z-40 pointer-events-none flex flex-col items-center justify-center overflow-hidden rounded-3xl">
+                      {/* Hazard animated diagonal stripes */}
+                      <div
+                        className="absolute inset-0 opacity-25"
+                        style={{
+                          backgroundImage:
+                            'repeating-linear-gradient(45deg, rgba(239, 68, 68, 0.45) 0, rgba(239, 68, 68, 0.45) 15px, transparent 15px, transparent 30px)',
+                          animation: 'hazard-pulse 3s infinite linear',
+                        }}
+                      />
+
+                      {/* Expanding shockwave ring on wipeout */}
+                      <div
+                        className="absolute w-52 h-52 rounded-full border-4 border-red-500/80 pointer-events-none"
+                        style={{
+                          animation: 'team-shockwave 1.4s ease-out forwards',
+                        }}
+                      />
+
+                      {/* Cyber red laser cross */}
+                      <div className="absolute w-full h-[2px] bg-red-500/40 blur-xs rotate-12" />
+                      <div className="absolute w-full h-[2px] bg-red-500/40 blur-xs -rotate-12" />
+
+                      {/* Massive Dramatic "ELIMINATA" Stamp Badge */}
+                      <div
+                        className="relative flex flex-col items-center gap-1.5 px-6 py-3.5 rounded-2xl bg-black/92 border-3 border-red-500 shadow-[0_0_45px_rgba(239,68,68,0.9)] backdrop-blur-xl"
+                        style={{
+                          animation: 'team-stamp-slam 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+                        }}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span
+                            className="text-3xl"
+                            style={{ animation: 'skull-glitch 2s infinite ease-in-out' }}
+                          >
+                            ☠️
+                          </span>
+                          <div className="flex flex-col items-center">
+                            <span className="text-2xl sm:text-3xl font-black uppercase tracking-widest text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.95)]">
+                              ELIMINATA
+                            </span>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-red-300/95 bg-red-950/90 px-2.5 py-0.5 rounded border border-red-500/40 -mt-0.5 text-center">
+                              Tutta la squadra {meta.colorName} è affondata
+                            </span>
+                          </div>
+                          <span
+                            className="text-3xl"
+                            style={{ animation: 'skull-glitch 2s infinite ease-in-out' }}
+                          >
+                            ☠️
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Victory Celebration Overlay for Sole Survivor */}
+                  {isWinner && (
+                    <div className="absolute inset-0 z-40 pointer-events-none flex flex-col items-center justify-center overflow-hidden rounded-3xl">
+                      <div
+                        className="relative flex flex-col items-center gap-1 px-6 py-3 rounded-2xl bg-black/85 border-2 border-yellow-400 shadow-[0_0_35px_rgba(234,179,8,0.85)] backdrop-blur-xl animate-bounce"
+                      >
+                        <span className="text-3xl">👑</span>
+                        <span className="text-xl sm:text-2xl font-black uppercase tracking-widest text-yellow-300 drop-shadow-[0_0_12px_rgba(234,179,8,0.95)]">
+                          VINCITRICE!
+                        </span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-yellow-100 bg-yellow-900/70 px-2 py-0.5 rounded border border-yellow-400/50">
+                          ULTIMA SQUADRA IN GIOCO
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   {pyramidRows.map((row, rowIdx) => {
                     const zIndexClass = rowIdx === 0 ? 'z-10' : rowIdx === 1 ? 'z-20 -mt-6' : 'z-30 -mt-6';
                     return (
@@ -1231,6 +1950,7 @@ export default function FinaleSquadre_Board() {
           <div className="flex justify-center md:justify-start border-b md:border-b-0 md:border-r border-white/15 pb-3 md:pb-0 md:pr-4">
             <ProminentDice3D
               rolling={rolling}
+              isResolving={isResolving}
               targetFace={dieTargetFace}
               onRoll={rollDice}
               canRollBonus={hasDiceBonusAvailable}
@@ -1242,21 +1962,44 @@ export default function FinaleSquadre_Board() {
           <div className="flex flex-col items-center justify-center gap-3 px-2">
             {/* Target Banner (Enlarged and high-contrast) */}
             <div className="w-full bg-black/60 border border-cyan-400/50 rounded-2xl px-4 py-2 text-center flex flex-wrap items-center justify-center gap-3 shadow-inner">
-              {selectedDieFace ? (
-                <>
-                  <span className="px-3 py-1 rounded-lg bg-cyan-500/30 text-cyan-200 font-black text-sm uppercase tracking-wider border border-cyan-400/50 shadow-[0_0_15px_rgba(0,229,255,0.25)]">
-                    🎲 Dado: {selectedDieFace === 'right' ? 'DESTRA ➔' : selectedDieFace === 'left' ? '⬅ SINISTRA' : selectedDieFace === 'both' ? '⮂ ENTRAMBE' : '🎯 SE STESSA'}
-                  </span>
-                  <span className="text-white/50 text-base">➔</span>
-                  <span className="px-3 py-1 rounded-lg bg-red-500/30 text-red-200 font-black text-sm uppercase tracking-wider border border-red-400/50 shadow-[0_0_15px_rgba(239,68,68,0.25)] animate-pulse">
-                    🎯 Bersaglio:{' '}
-                    {targetTeam === 'both'
-                      ? 'Entrambe le altre squadre'
-                      : targetTeam
-                      ? teamNames[targetTeam - 1]
-                      : 'Nessuno'}
-                  </span>
-                </>
+              {selectedDieFace && DICE_FACES_CONFIG[selectedDieFace] ? (
+                (() => {
+                  const meta = DICE_FACES_CONFIG[selectedDieFace];
+                  return (
+                    <>
+                      <span className="px-3 py-1 rounded-lg bg-cyan-500/30 text-cyan-200 font-black text-sm uppercase tracking-wider border border-cyan-400/50 shadow-[0_0_15px_rgba(0,229,255,0.25)] flex items-center gap-2">
+                        <span>🎲 Dado:</span>
+                        <span className="text-base text-white">{meta.labelShort}</span>
+                      </span>
+                      <span className="text-white/50 text-base">➔</span>
+                      {meta.type === 'zero' ? (
+                        <span className="px-3 py-1 rounded-lg bg-emerald-500/30 text-emerald-200 font-black text-sm uppercase tracking-wider border border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.25)] flex items-center gap-1.5">
+                          <span>🛡️ Salvezza:</span>
+                          <span>Nessun bersaglio (Rispondi esatto per salvarti)</span>
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-lg bg-red-500/30 text-red-200 font-black text-sm uppercase tracking-wider border border-red-400/50 shadow-[0_0_15px_rgba(239,68,68,0.25)] animate-pulse flex items-center gap-1.5">
+                          <span>🎯 Bersaglio:</span>
+                          <span>
+                            {targetTeam === 'both'
+                              ? 'Entrambe le altre squadre (1 omino a testa)'
+                              : typeof targetTeam === 'number'
+                              ? `${teamNames[targetTeam - 1]} (1 omino)`
+                              : 'Nessuno'}
+                          </span>
+                        </span>
+                      )}
+
+                      {/* Transizione automatica in corso dopo l'animazione */}
+                      {isResolving && (
+                        <span className="px-3 py-1 rounded-lg bg-amber-500/30 text-amber-200 font-black text-xs uppercase tracking-wider border border-amber-400/50 shadow-[0_0_15px_rgba(245,158,11,0.3)] animate-pulse flex items-center gap-1.5">
+                          <span>⏳</span>
+                          <span>Eliminazione... passaggio turno</span>
+                        </span>
+                      )}
+                    </>
+                  );
+                })()
               ) : (
                 <div className="text-sm font-semibold text-white/70 italic">
                   Lancia il dado per determinare il bersaglio della sfida!
@@ -1269,7 +2012,7 @@ export default function FinaleSquadre_Board() {
               <button
                 type="button"
                 onClick={() => handleOutcome(true)}
-                disabled={!selectedDieFace}
+                disabled={!selectedDieFace || isResolving}
                 className="px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/35 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-2 cursor-pointer border border-emerald-400/50"
               >
                 <span className="text-sm">✅</span>
@@ -1279,7 +2022,7 @@ export default function FinaleSquadre_Board() {
               <button
                 type="button"
                 onClick={() => handleOutcome(false)}
-                disabled={!selectedDieFace}
+                disabled={!selectedDieFace || isResolving}
                 className="px-6 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/35 hover:scale-105 active:scale-95 disabled:opacity-30 disabled:pointer-events-none transition-all flex items-center gap-2 cursor-pointer border border-rose-400/50"
               >
                 <span className="text-sm">❌</span>
@@ -1290,6 +2033,7 @@ export default function FinaleSquadre_Board() {
                 type="button"
                 onClick={handleNextTurn}
                 className="px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider bg-white/10 hover:bg-white/20 text-white border border-white/25 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                title="Passa subito il turno alla squadra successiva nell'ordine di classifica"
               >
                 <span>Passa Turno</span>
                 <span>➜</span>
@@ -1333,6 +2077,94 @@ export default function FinaleSquadre_Board() {
             </div>
           </div>
         </footer>
+
+        {/* Grand Victory Trophy Modal Overlay */}
+        {winningTeamId !== null && !dismissTrophy && (() => {
+          const winningMeta = TEAMS_CONFIG[winningTeamId];
+          const winningName = teamNames[winningTeamId - 1] || winningMeta.defaultName;
+
+          return (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md transition-all duration-700 select-none">
+              {/* Sunburst glowing background rotating */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+                <div
+                  className="w-[1100px] h-[1100px] rounded-full opacity-40"
+                  style={{
+                    background: `radial-gradient(circle, ${winningMeta.colorHex}45 0%, ${winningMeta.colorHex}15 45%, transparent 70%)`,
+                  }}
+                />
+                <div
+                  className="absolute w-[900px] h-[900px] opacity-25"
+                  style={{
+                    background:
+                      'conic-gradient(from 0deg, transparent 0deg, rgba(255,215,0,0.3) 15deg, transparent 30deg, rgba(255,215,0,0.3) 45deg, transparent 60deg, rgba(255,215,0,0.3) 75deg, transparent 90deg, rgba(255,215,0,0.3) 105deg, transparent 120deg, rgba(255,215,0,0.3) 135deg, transparent 150deg, rgba(255,215,0,0.3) 165deg, transparent 180deg, rgba(255,215,0,0.3) 195deg, transparent 210deg, rgba(255,215,0,0.3) 225deg, transparent 240deg, rgba(255,215,0,0.3) 255deg, transparent 270deg, rgba(255,215,0,0.3) 285deg, transparent 300deg, rgba(255,215,0,0.3) 315deg, transparent 330deg, rgba(255,215,0,0.3) 345deg, transparent 360deg)',
+                    animation: 'sunburst-spin 25s infinite linear',
+                  }}
+                />
+              </div>
+
+              {/* Trophy Container: Spins and scales up from small in center */}
+              <div
+                className="relative flex flex-col items-center justify-center z-10 max-w-2xl px-6"
+                style={{
+                  animation: 'trophy-spin-grow 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                }}
+              >
+                {/* Top celebratory header */}
+                <div
+                  className="flex flex-col items-center mb-1 text-center"
+                  style={{ animation: 'victory-banner-slide 0.8s ease-out 0.9s both' }}
+                >
+                  <span className="text-xs sm:text-sm font-black tracking-[0.3em] uppercase text-yellow-300 drop-shadow-[0_0_12px_rgba(250,204,21,0.8)] bg-black/60 px-5 py-1.5 rounded-full border border-yellow-400/40">
+                    🏆 SQUADRA VINCITRICE 🏆
+                  </span>
+                </div>
+
+                {/* 3D Golden Trophy */}
+                <div
+                  className="relative flex flex-col items-center justify-center my-1"
+                  style={{ animation: 'trophy-glow-pulse 3s infinite ease-in-out 1.6s' }}
+                >
+                  {/* Trophy image */}
+                  <img
+                    src={assetUrl('/Icone/finale/trofeo_vittoria.png')}
+                    alt="Coppa della Vittoria"
+                    className="w-[340px] sm:w-[420px] md:w-[460px] h-auto object-contain pointer-events-none drop-shadow-[0_15px_35px_rgba(0,0,0,0.8)]"
+                  />
+                </div>
+
+                {/* Big Team Name and Color Announcement Below */}
+                <div
+                  className="flex flex-col items-center mt-2 text-center"
+                  style={{ animation: 'victory-banner-slide 0.8s ease-out 1.1s both' }}
+                >
+                  <h2
+                    className="text-3xl sm:text-4xl md:text-5xl font-black uppercase tracking-widest drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]"
+                    style={{
+                      color: winningMeta.colorHex,
+                      textShadow: `0 0 25px ${winningMeta.colorNeon}, 0 0 40px ${winningMeta.colorHex}`,
+                    }}
+                  >
+                    {winningName}
+                  </h2>
+                  <span className="text-xs sm:text-sm font-bold uppercase tracking-[0.25em] text-white/80 mt-1.5">
+                    HA TRIONFATO NELLA SFIDA FINALE!
+                  </span>
+                </div>
+
+                {/* Discrete button to minimize/close trophy overlay */}
+                <button
+                  type="button"
+                  onClick={() => setDismissTrophy(true)}
+                  className="mt-6 px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all cursor-pointer shadow-lg hover:scale-105"
+                  title="Chiudi per vedere il tabellone completo"
+                >
+                  Chiudi / Mostra Tabellone ✕
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

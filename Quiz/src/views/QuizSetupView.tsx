@@ -16,6 +16,7 @@ export interface Gioco1ImmagineData {
   immagineJpg: string;   // jpg image url / base64
   indizi: string[];      // 4 text clues
   confermaAudio: string; // confirmation audio mp3
+  categoria?: string;    // categoria
   soluzione: string;     // solution text
   grigliaSeme?: number;  // seed per la generazione deterministica della griglia
 }
@@ -147,6 +148,7 @@ export function createDefaultGioco1Question(): Gioco1Question {
       immagineJpg: '',
       indizi: ['', '', '', ''],
       confermaAudio: '',
+      categoria: '',
       soluzione: '',
     },
     sfondo: '',
@@ -890,6 +892,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
         sectionsHtml += `<div class="slide-block">
           <div class="slide-num">Domanda ${i} — Tipo: Immagine</div>
           <table>
+            ${im.categoria ? `<tr><th>Categoria</th><td>${im.categoria}</td></tr>` : ''}
             <tr><th>Soluzione</th><td>${im.soluzione || '—'}</td></tr>
             ${(im.indizi || []).map((ind, j) => `<tr><th>Indizio ${j + 1}</th><td>${ind || '—'}</td></tr>`).join('')}
             <tr><th>Immagine</th><td>${fileLabel(im.immagineJpg)}</td></tr>
@@ -1881,23 +1884,49 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   </div>
                 </div>
 
-                {/* Solution Text */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Soluzione dell'Immagine:
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Es. Colosseo / Monna Lisa..."
-                    value={currentQ1.immagine.soluzione}
-                    onChange={(e) =>
-                      updateQ1((prev) => ({
-                        ...prev,
-                        immagine: { ...prev.immagine, soluzione: e.target.value },
-                      }))
-                    }
-                    className="w-full bg-[#141417] border border-white/10 rounded px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
-                  />
+                {/* Categoria e Soluzione dell'Immagine */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Categoria dell'Immagine:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Es. Personaggio mitologico / Città / Film..."
+                      value={currentQ1.immagine.categoria || ''}
+                      onChange={(e) =>
+                        updateQ1((prev) => ({
+                          ...prev,
+                          immagine: { ...prev.immagine, categoria: e.target.value },
+                        }))
+                      }
+                      className="w-full bg-[#141417] border border-white/10 rounded px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
+                    />
+                    <span className="block text-[10px] text-slate-500 mt-0.5">
+                      Mostrata nel rettangolo che copre la soluzione prima dello svelamento
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Soluzione dell'Immagine:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Es. Telemaco / Colosseo..."
+                      value={currentQ1.immagine.soluzione}
+                      onChange={(e) =>
+                        updateQ1((prev) => ({
+                          ...prev,
+                          immagine: { ...prev.immagine, soluzione: e.target.value },
+                        }))
+                      }
+                      className="w-full bg-[#141417] border border-white/10 rounded px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
+                    />
+                    <span className="block text-[10px] text-slate-500 mt-0.5">
+                      Nome segreto svelato alla fine
+                    </span>
+                  </div>
                 </div>
               </div>
             )}

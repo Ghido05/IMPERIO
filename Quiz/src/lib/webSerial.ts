@@ -1,14 +1,30 @@
 // WebSocket Manager for ESP32 Wi-Fi Buzzer Integration
 // Automatically connects to the ESP32 WebSocket server on port 81.
 // Supports auto-discovery via local network subnet scan and manual IP configuration.
+// Includes manual Pause/Resume control and retry limitation (max 2 attempts).
 
 let ws: WebSocket | null = null;
 let isOpened = false;
 let isSearching = false;
 let shouldReconnect = false;
 let currentBuzzerIp = '192.168.1.97';
+let retryCount = 0;
+export const MAX_RETRIES = 2; // Prova al massimo 2 volte prima di fermarsi
+let isPaused = false;
+let reconnectTimer: any = null;
 
-type StatusListener = (connected: boolean, ip: string, isSearching: boolean) => void;
+if (typeof window !== 'undefined') {
+  isPaused = localStorage.getItem('buzzer_search_paused') === 'true';
+}
+
+export type StatusListener = (
+  connected: boolean, 
+  ip: string, 
+  isSearching: boolean, 
+  isPaused: boolean, 
+  retryCount: number
+) => void;
+
 const statusListeners = new Set<StatusListener>();
 const dataListeners = new Set<(line: string) => void>();
 
@@ -30,9 +46,19 @@ export function setBuzzerIp(ip: string): void {
   }
 }
 
+export function isSearchPaused(): boolean {
+  return isPaused;
+}
+
+export function getRetryCount(): number {
+  return retryCount;
+}
+
 function notifyStatus() {
   const ip = getBuzzerIp();
-  statusListeners.forEach((listener) => listener(isOpened, ip, isSearching));
+  statusListeners.forEach((listener) => 
+    listener(isOpened, ip, isSearching, isPaused, retryCount)
+  );
 }
 
 function notifyData(line: string) {
@@ -90,6 +116,7 @@ function attachSocketListeners(socket: WebSocket, ip: string) {
   ws = socket;
   isOpened = true;
   isSearching = false;
+  retryCount = 0;
   setBuzzerIp(ip);
   notifyStatus();
 
@@ -107,13 +134,17 @@ function attachSocketListeners(socket: WebSocket, ip: string) {
     ws = null;
     notifyStatus();
 
-    if (shouldReconnect) {
-      console.log('Riconnessione automatica in corso tra 3 secondi...');
-      setTimeout(() => {
-        if (shouldReconnect && !isOpened) {
-          connectSerial();
+    if (shouldReconnect && !isPaused && retryCount < MAX_RETRIES) {
+      retryCount++;
+      console.log(`Riconnessione automatica in corso (tentativo ${retryCount}/${MAX_RETRIES})...`);
+      reconnectTimer = setTimeout(() => {
+        if (shouldReconnect && !isPaused && !isOpened) {
+          connectSerial(undefined, false);
         }
       }, 3000);
+    } else {
+      shouldReconnect = false;
+      notifyStatus();
     }
   };
 
@@ -122,7 +153,27 @@ function attachSocketListeners(socket: WebSocket, ip: string) {
   };
 }
 
-export async function connectSerial(targetIp?: string): Promise<boolean> {
+export async function connectSerial(targetIp?: string, isManual = false): Promise<boolean> {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
+  if (isManual) {
+    isPaused = false;
+    retryCount = 0;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('buzzer_search_paused', 'false');
+    }
+  }
+
+  if (isPaused) {
+    console.log('Ricerca pulsantiera in pausa. Ignorato tentativo di scansione automatica.');
+    isSearching = false;
+    notifyStatus();
+    return false;
+  }
+
   if (isOpened && ws && ws.readyState === WebSocket.OPEN) {
     return true;
   }
@@ -135,6 +186,13 @@ export async function connectSerial(targetIp?: string): Promise<boolean> {
 
   // 1. Prova prima l'IP specificato o salvato
   const firstAttempt = await trySingleWebSocket(ipToTry, 1800);
+  if (!shouldReconnect || isPaused) {
+    if (firstAttempt) { try { firstAttempt.close(); } catch (e) { /* ignore */ } }
+    isSearching = false;
+    notifyStatus();
+    return false;
+  }
+
   if (firstAttempt) {
     attachSocketListeners(firstAttempt, ipToTry);
     console.log(`Pulsantiera Wi-Fi connessa con successo a ${ipToTry}:81!`);
@@ -147,9 +205,22 @@ export async function connectSerial(targetIp?: string): Promise<boolean> {
   if (typeof window !== 'undefined' && (window as any).electron?.findBuzzerIp) {
     try {
       const foundIp = await (window as any).electron.findBuzzerIp(ipToTry);
+      if (!shouldReconnect || isPaused) {
+        isSearching = false;
+        notifyStatus();
+        return false;
+      }
+
       if (foundIp && foundIp !== ipToTry) {
         console.log(`Pulsantiera trovata sulla rete all'indirizzo ${foundIp}! Connessione in corso...`);
         const secondAttempt = await trySingleWebSocket(foundIp, 2000);
+        if (!shouldReconnect || isPaused) {
+          if (secondAttempt) { try { secondAttempt.close(); } catch (e) { /* ignore */ } }
+          isSearching = false;
+          notifyStatus();
+          return false;
+        }
+
         if (secondAttempt) {
           attachSocketListeners(secondAttempt, foundIp);
           console.log(`Pulsantiera Wi-Fi connessa a ${foundIp}:81 (IP aggiornato e salvato)!`);
@@ -163,28 +234,41 @@ export async function connectSerial(targetIp?: string): Promise<boolean> {
 
   isSearching = false;
   isOpened = false;
+  retryCount++;
   notifyStatus();
 
-  // Se la riconnessione automatica è attiva, riprova dopo una breve pausa
-  if (shouldReconnect) {
-    setTimeout(() => {
-      if (shouldReconnect && !isOpened) {
-        connectSerial();
+  // Riprova solo se non è in pausa e non ha superato il limite di tentativi (MAX_RETRIES)
+  if (shouldReconnect && !isPaused && retryCount < MAX_RETRIES) {
+    console.log(`Tentativo ${retryCount}/${MAX_RETRIES} fallito. Nuovo tentativo tra 4 secondi...`);
+    reconnectTimer = setTimeout(() => {
+      if (shouldReconnect && !isPaused && !isOpened) {
+        connectSerial(targetIp, false);
       }
     }, 4000);
+  } else {
+    console.log(`Raggiunto limite tentativi (${retryCount}/${MAX_RETRIES}). Ricerca automatica fermata.`);
+    shouldReconnect = false;
+    notifyStatus();
   }
 
   return false;
 }
 
 export async function searchAndConnectBuzzer(): Promise<boolean> {
+  isPaused = false;
+  retryCount = 0;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('buzzer_search_paused', 'false');
+  }
+
   if (typeof window !== 'undefined' && (window as any).electron?.findBuzzerIp) {
     isSearching = true;
     notifyStatus();
     try {
       const foundIp = await (window as any).electron.findBuzzerIp();
+      if (!shouldReconnect && isPaused) return false;
       if (foundIp) {
-        return await connectSerial(foundIp);
+        return await connectSerial(foundIp, true);
       }
     } catch (e) {
       console.error(e);
@@ -193,12 +277,21 @@ export async function searchAndConnectBuzzer(): Promise<boolean> {
       notifyStatus();
     }
   }
-  return await connectSerial();
+  return await connectSerial(undefined, true);
 }
 
-export async function disconnectSerial() {
+export async function pauseOrStopSearch(): Promise<void> {
+  isPaused = true;
   shouldReconnect = false;
   isSearching = false;
+  retryCount = 0;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('buzzer_search_paused', 'true');
+  }
   if (ws) {
     try {
       ws.close();
@@ -207,6 +300,20 @@ export async function disconnectSerial() {
   }
   isOpened = false;
   notifyStatus();
+  console.log('Ricerca pulsantiera Wi-Fi messa in PAUSA');
+}
+
+export async function resumeOrStartSearch(): Promise<boolean> {
+  isPaused = false;
+  retryCount = 0;
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('buzzer_search_paused', 'false');
+  }
+  return await connectSerial(undefined, true);
+}
+
+export async function disconnectSerial(): Promise<void> {
+  await pauseOrStopSearch();
 }
 
 export async function sendSerialReset() {
@@ -229,7 +336,7 @@ export function isSerialConnected(): boolean {
 
 export function subscribeSerialStatus(callback: StatusListener): () => void {
   statusListeners.add(callback);
-  callback(isOpened, getBuzzerIp(), isSearching);
+  callback(isOpened, getBuzzerIp(), isSearching, isPaused, retryCount);
   return () => {
     statusListeners.delete(callback);
   };

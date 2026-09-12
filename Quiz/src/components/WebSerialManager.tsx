@@ -7,7 +7,10 @@ import {
   sendSerialReset,
   getBuzzerIp,
   setBuzzerIp,
-  searchAndConnectBuzzer
+  searchAndConnectBuzzer,
+  pauseOrStopSearch,
+  resumeOrStartSearch,
+  isSearchPaused
 } from '../lib/webSerial';
 
 interface WebSerialManagerProps {
@@ -19,6 +22,8 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
   const [connected, setConnected] = useState(false);
   const [buzzerIp, setBuzzerIpState] = useState(getBuzzerIp());
   const [isSearching, setIsSearching] = useState(false);
+  const [isPaused, setIsPaused] = useState(isSearchPaused());
+  const [retryCount, setRetryCount] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [customIp, setCustomIp] = useState(getBuzzerIp());
   const [assignedTeam, setAssignedTeam] = useState<string | null>(null);
@@ -26,15 +31,19 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
 
   // 1. Subscribe to serial connection status changes and auto-connect on mount
   useEffect(() => {
-    const unsubscribe = subscribeSerialStatus((status, ip, searching) => {
+    const unsubscribe = subscribeSerialStatus((status, ip, searching, paused, retries) => {
       setConnected(status);
       setBuzzerIpState(ip);
       setCustomIp(ip);
       setIsSearching(searching);
+      setIsPaused(paused);
+      setRetryCount(retries);
     });
 
-    // Auto-connect on startup
-    connectSerial();
+    // Auto-connect on startup only if not paused
+    if (!isSearchPaused()) {
+      connectSerial();
+    }
 
     return unsubscribe;
   }, []);
@@ -179,8 +188,10 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
   const handleConnectionToggle = async () => {
     if (connected) {
       await disconnectSerial();
+    } else if (isSearching) {
+      await pauseOrStopSearch();
     } else {
-      await connectSerial();
+      await resumeOrStartSearch();
     }
   };
 
@@ -211,6 +222,8 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
                 ? 'bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse' 
                 : isSearching
                 ? 'bg-amber-400 shadow-[0_0_8px_#f59e0b] animate-ping'
+                : isPaused
+                ? 'bg-gray-500'
                 : 'bg-red-500'
             }`} 
           />
@@ -218,7 +231,9 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
             {connected 
               ? `Wi-Fi: OK (${buzzerIp})` 
               : isSearching 
-              ? 'Ricerca Wi-Fi...' 
+              ? `Ricerca (${retryCount + 1}/2)...` 
+              : isPaused
+              ? 'Wi-Fi: IN PAUSA'
               : 'Wi-Fi: OFF'}
           </span>
         </div>
@@ -226,17 +241,22 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
         <button
           type="button"
           onClick={handleConnectionToggle}
-          disabled={isSearching}
           className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded transition-all cursor-pointer ${
             connected 
               ? 'text-red-400 bg-red-950/20 hover:bg-red-950/40 border border-red-900/30' 
               : isSearching
-              ? 'text-amber-400 bg-amber-950/20 border border-amber-900/30 opacity-70 cursor-wait'
+              ? 'text-amber-400 bg-amber-950/20 hover:bg-amber-950/40 border border-amber-900/30'
               : 'text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-900/30'
           }`}
-          title={connected ? "Scollega la pulsantiera Wi-Fi" : "Connetti alla pulsantiera Wi-Fi ESP32"}
+          title={
+            connected 
+              ? "Scollega la pulsantiera Wi-Fi" 
+              : isSearching 
+              ? "Metti in pausa la ricerca automatica" 
+              : "Avvia ricerca/connessione pulsantiera"
+          }
         >
-          {connected ? 'Scollega' : isSearching ? 'Ricerca...' : 'Collega'}
+          {connected ? 'Scollega' : isSearching ? '⏸️ Pausa' : '▶️ Cerca'}
         </button>
 
         <button
@@ -282,8 +302,33 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
                 </div>
               </div>
 
+              <div className="flex items-center justify-between p-2 bg-black/30 rounded border border-white/5">
+                <div>
+                  <div className="text-[11px] font-bold text-white">Ricerca automatica</div>
+                  <div className="text-[10px] text-white/50">Ferma o riattiva i tentativi di ricerca Wi-Fi</div>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (isPaused) {
+                      await resumeOrStartSearch();
+                    } else {
+                      await pauseOrStopSearch();
+                    }
+                  }}
+                  className={`px-2 py-1 text-xs font-bold rounded cursor-pointer transition-colors ${
+                    isPaused 
+                      ? 'bg-amber-600/30 text-amber-300 border border-amber-500/40 hover:bg-amber-600/50' 
+                      : 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-600/50'
+                  }`}
+                >
+                  {isPaused ? '▶️ Riattiva' : '⏸️ Metti in Pausa'}
+                </button>
+              </div>
+
               <div className="text-[10px] text-white/50 bg-black/20 p-2.5 rounded border border-white/5 space-y-1">
                 <p>• La pulsantiera comunica via WebSocket sulla porta <strong>81</strong>.</p>
+                <p>• La ricerca automatica effettua fino a <strong>2 tentativi</strong> prima di fermarsi.</p>
                 <p>• Se l'indirizzo IP cambia (DHCP del router), clicca <strong>"Scansiona Rete"</strong> per individuarlo automaticamente.</p>
               </div>
 

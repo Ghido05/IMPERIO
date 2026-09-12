@@ -96,65 +96,140 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
   const isPlayingStemsRef = React.useRef(false);
   const isFadingOutRef = React.useRef(false);
 
+  // Funzione di utilità per fermare e zittire istantaneamente e completamente tutti gli stems
+  const stopAndMuteAllStems = React.useCallback(() => {
+    isPlayingStemsRef.current = false;
+    Object.values(audiosRef.current).forEach(a => {
+      try {
+        a.pause();
+        a.currentTime = 0;
+        a.volume = 0;
+        a.muted = true;
+      } catch (e) {
+        console.warn("Errore stop stem:", e);
+      }
+    });
+  }, []);
+
   // Inizializza gli audio stems e l'audio finale
   useEffect(() => {
     if (!interactive) return;
-    // Stems (iniziano mutati)
-    gameData.elementi.forEach((el: any) => {
-      if ((el as any).audio) {
-        const audio = new Audio(assetUrl((el as any).audio));
+
+    // Ferma eventuali tracce precedenti
+    stopAndMuteAllStems();
+    if (finalAudioRef.current) {
+      try {
+        finalAudioRef.current.pause();
+        finalAudioRef.current.currentTime = 0;
+        finalAudioRef.current.removeAttribute('src');
+        finalAudioRef.current.load();
+      } catch (e) {}
+      finalAudioRef.current = null;
+    }
+
+    // Stems (iniziano rigorosamente mutati e con volume 0)
+    const newAudios: Record<number, HTMLAudioElement> = {};
+    (gameData.elementi || []).forEach((el: any) => {
+      if (el?.audio) {
+        const audio = new Audio(assetUrl(el.audio));
         audio.loop = false; // NON ripartono automaticamente alla fine
-        audio.volume = 0;  // Partono tutti mutati
-        audiosRef.current[el.posizione] = audio;
+        audio.volume = 0;   // Partono tutti mutati
+        audio.muted = true;
+        newAudios[el.posizione] = audio;
       }
     });
+    audiosRef.current = newAudios;
 
-    // Canzone finale
+    // Canzone finale della soluzione
     if ((gameData as any).canzoneFinale) {
-      finalAudioRef.current = new Audio(assetUrl((gameData as any).canzoneFinale));
+      const finAudio = new Audio(assetUrl((gameData as any).canzoneFinale));
+      finAudio.loop = false;
+      finAudio.volume = 1;
+      finAudio.muted = false;
+      finalAudioRef.current = finAudio;
     }
 
     return () => {
+      stopAndMuteAllStems();
       Object.values(audiosRef.current).forEach(a => {
-        a.pause();
-        a.removeAttribute('src');
+        try {
+          a.removeAttribute('src');
+          a.load();
+        } catch (e) {}
       });
+      audiosRef.current = {};
       if (finalAudioRef.current) {
-        finalAudioRef.current.pause();
-        finalAudioRef.current.removeAttribute('src');
+        try {
+          finalAudioRef.current.pause();
+          finalAudioRef.current.currentTime = 0;
+          finalAudioRef.current.removeAttribute('src');
+          finalAudioRef.current.load();
+        } catch (e) {}
+        finalAudioRef.current = null;
       }
     };
-  }, []);
+  }, [interactive, slideId, (gameData as any).canzoneFinale, gameData.elementi, stopAndMuteAllStems]);
 
-  // Smuta gli stems in base ai clue rivelati (solo se la soluzione non è attiva)
+  // Smuta gli stems in base ai clue rivelati (SOLO se la soluzione NON è attiva)
   useEffect(() => {
-    if (showSolution) return;
+    if (!interactive) return;
+
+    if (showSolution) {
+      // Se la soluzione è attiva, NESSUNO stem deve mai avere volume > 0 o suonare
+      stopAndMuteAllStems();
+      return;
+    }
+
+    // Altrimenti, abilita il volume solo degli indizi svelati e silenzia gli altri
     Object.keys(revealed).forEach(key => {
       const clue = Number(key);
-      if (revealed[clue] && audiosRef.current[clue]) {
-        if (!isFadingOutRef.current) {
-          audiosRef.current[clue].volume = 1;
+      const stemAudio = audiosRef.current[clue];
+      if (stemAudio) {
+        if (revealed[clue]) {
+          if (!isFadingOutRef.current) {
+            stemAudio.muted = false;
+            stemAudio.volume = 1;
+          }
+        } else {
+          stemAudio.volume = 0;
+          stemAudio.muted = true;
         }
       }
     });
-  }, [revealed, showSolution]);
+  }, [revealed, showSolution, interactive, stopAndMuteAllStems]);
 
   // Quando viene mostrata la soluzione, ferma tutti gli stems e riproduce solo la canzone finale
   useEffect(() => {
-    if (showSolution && interactive) {
-      Object.values(audiosRef.current).forEach(a => {
-        a.pause();
-        a.currentTime = 0;
-      });
-      isPlayingStemsRef.current = false;
+    if (!interactive) return;
 
-      if (finalAudioRef.current && finalAudioRef.current.paused) {
-        finalAudioRef.current.currentTime = 0;
-        finalAudioRef.current.volume = 1;
-        finalAudioRef.current.play().catch(err => console.log("Errore riproduzione canzone finale:", err));
+    if (showSolution) {
+      // 1. ZITTISCI E FERMA ALL'ISTANTE TUTTI GLI STEMS
+      stopAndMuteAllStems();
+
+      // 2. Riproduci ESCLUSIVAMENTE la canzone finale della soluzione (singola istanza pulita)
+      if (finalAudioRef.current) {
+        try {
+          finalAudioRef.current.currentTime = 0;
+          finalAudioRef.current.muted = false;
+          finalAudioRef.current.volume = 1;
+          const p = finalAudioRef.current.play();
+          if (p !== undefined) {
+            p.catch(err => console.log("Errore riproduzione canzone finale:", err));
+          }
+        } catch (err) {
+          console.log("Errore riproduzione canzone finale:", err);
+        }
+      }
+    } else {
+      // Se la soluzione viene nascosta/resettata, ferma la canzone finale
+      if (finalAudioRef.current) {
+        try {
+          finalAudioRef.current.pause();
+          finalAudioRef.current.currentTime = 0;
+        } catch (e) {}
       }
     }
-  }, [showSolution, interactive]);
+  }, [showSolution, interactive, stopAndMuteAllStems]);
 
   const getPhraseStyle = (clue: number, isRevealed: boolean) => {
     if (!isRevealed) return "bg-white/5 border border-white/10";
@@ -248,6 +323,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
 
       const key = e.key;
       if (key >= '1' && key <= '7') {
+        if (showSolution) return; // Non avviare né toccare gli stems se la soluzione è già attiva
         const numKey = Number(key);
         if (!revealed[numKey]) {
           const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
@@ -265,12 +341,10 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
           setLatestClue(numKey);
         }
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
-        // Tasto Soluzione: Ferma e resetta tutti gli stems immediatamente
-        Object.values(audiosRef.current).forEach(a => {
-          a.pause();
-          a.currentTime = 0;
-        });
-        isPlayingStemsRef.current = false;
+        if (showSolution) return; // Evita esecuzioni multiple se già svelata
+
+        // Ferma e silenzia all'istante e completamente tutti gli stems
+        stopAndMuteAllStems();
 
         // Svela tutte le 7 risposte della lista
         const allRevealedObj: Record<number, boolean> = {};
@@ -279,34 +353,36 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
         }
         setRevealed(allRevealedObj);
 
-        // Mostra la soluzione
+        // Mostra la soluzione: l'effetto dedicato showSolution farà partire ESCLUSIVAMENTE la traccia finale
         setShowSolution(true);
-
-        // Fai partire solo l'audio della soluzione
-        if (finalAudioRef.current && interactive) {
-          finalAudioRef.current.currentTime = 0;
-          finalAudioRef.current.volume = 1;
-          finalAudioRef.current.play().catch(err => console.log("Errore riproduzione canzone finale:", err));
-        }
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
         setShowError(true);
       } else if (key.toLowerCase() === 't') {
         setShowTitle(true);
       } else if (key.toLowerCase() === 'm') {
-        // Riavvia tutti gli stems dall'inizio (e anche la canzone finale se sta suonando)
-        if (!showSolution) {
-          Object.values(audiosRef.current).forEach(a => {
-            a.currentTime = 0;
-            if (a.paused) {
-              const p = a.play();
-              if (p !== undefined) p.catch(err => console.log("Errore play stem:", err));
+        if (showSolution) {
+          // Se la soluzione è attiva, il tasto M controlla solo la canzone finale (Play/Pausa)
+          if (finalAudioRef.current) {
+            if (finalAudioRef.current.paused) {
+              finalAudioRef.current.play().catch(err => console.log("Errore play finale:", err));
+            } else {
+              finalAudioRef.current.pause();
             }
-          });
-          isPlayingStemsRef.current = true;
-        }
-        
-        if (finalAudioRef.current && !finalAudioRef.current.paused) {
-          finalAudioRef.current.currentTime = 0;
+          }
+        } else {
+          // Se la soluzione non è attiva, alterna avvio/stop degli stems
+          if (isPlayingStemsRef.current) {
+            stopAndMuteAllStems();
+          } else {
+            Object.values(audiosRef.current).forEach(a => {
+              a.currentTime = 0;
+              if (a.paused) {
+                const p = a.play();
+                if (p !== undefined) p.catch(err => console.log("Errore play stem:", err));
+              }
+            });
+            isPlayingStemsRef.current = true;
+          }
         }
       }
     };
@@ -314,7 +390,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, scores, revealed, questionNum, addScore, showSolution]);
+  }, [interactive, scores, revealed, questionNum, addScore, showSolution, stopAndMuteAllStems]);
 
   const rankingMarkers = [
     { value: 7, top: "34.070%" }, // Giallo (1 indizio)

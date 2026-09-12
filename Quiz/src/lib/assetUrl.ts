@@ -77,9 +77,15 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   'porto_frecce_rosso.png': '/Icone/Bonus/porto_frecce_rosso.png',
   'porto_scudo_rosso.png': '/Icone/Bonus/porto_scudo_rosso.png',
   'porto_frecce_grigio.png': '/Icone/Bonus/porto_frecce_grigio.png',
-  // Sfondi
+  // Sfondi e Finale
   'sfondo_finale_acqua.jpg': '/sfondo_finale_acqua.jpg',
   'sfondo_finale_default.jpg': '/sfondo_finale_default.jpg',
+  'trofeo_vittoria.png': '/Icone/finale/trofeo_vittoria.png',
+  'coppa.png': '/coppa.png',
+  // Sfondi Password
+  'password1.png': '/Icone/Sfondi Password/password1.png',
+  'password2.png': '/Icone/Sfondi Password/password2.png',
+  'exterior_00.webp': '/Icone/Sfondi Password/exterior_00.webp',
 };
 
 export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): string | null {

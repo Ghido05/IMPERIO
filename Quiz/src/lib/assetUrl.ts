@@ -36,7 +36,7 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   'g02m01soluzione.mp3': '/Audio/soluzioni a conferma/g02m01soluzione.mp3',
   'g02m03soluzione.mp3': '/Audio/soluzioni a conferma/g02m03soluzione.mp3',
   'g02m05soluzione.mp3': '/Audio/soluzioni a conferma/g02m05soluzione.mp3',
-  // Immagini
+  // Immagini e Icone nessuno_img
   '1_3_telemaco.jpeg': '/Icone/nessuno_img/1_3_telemaco.jpeg',
   'images.jpeg': '/Icone/nessuno_img/1_3_telemaco.jpeg',
   '4_1_route66.jpg': '/Icone/nessuno_img/4_1_route66.jpg',
@@ -48,6 +48,35 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   'Categoria.svg': '/Icone/nessuno_img/Categoria.svg',
   'Indizio.svg': '/Icone/nessuno_img/Indizio.svg',
   'Icona indizio.svg': '/Icone/nessuno_img/Icona indizio.svg',
+  // Icone nessuno_musicale (Gioco 1 e Classifica Musicale)
+  'Pentagramma.svg': '/Icone/nessuno_musicale/Pentagramma.svg',
+  'Primo indizio.svg': '/Icone/nessuno_musicale/Primo indizio.svg',
+  'Secondo indizio.svg': '/Icone/nessuno_musicale/Secondo indizio.svg',
+  'Terzo indizio.svg': '/Icone/nessuno_musicale/Terzo indizio.svg',
+  'Quarto indizio.svg': '/Icone/nessuno_musicale/Quarto indizio.svg',
+  'Nota1.svg': '/Icone/nessuno_musicale/Nota1.svg',
+  'Nota2.svg': '/Icone/nessuno_musicale/Nota2.svg',
+  'Nota3.svg': '/Icone/nessuno_musicale/Nota3.svg',
+  'Nota4.svg': '/Icone/nessuno_musicale/Nota4.svg',
+  'Chitarra.svg': '/Icone/nessuno_musicale/Chitarra.svg',
+  'Chitarra elettrica.svg': '/Icone/nessuno_musicale/Chitarra elettrica.svg',
+  'Batteria.svg': '/Icone/nessuno_musicale/Batteria.svg',
+  'Violino.svg': '/Icone/nessuno_musicale/Violino.svg',
+  'Flauto.svg': '/Icone/nessuno_musicale/Flauto.svg',
+  'Icona di base.svg': '/Icone/nessuno_musicale/Icona di base.svg',
+  // Icone Bonus
+  'porto_scudo_verde.png': '/Icone/Bonus/porto_scudo_verde.png',
+  'porto_arco_rosso.png': '/Icone/Bonus/porto_arco_rosso.png',
+  'porto_frecce_verde.png': '/Icone/Bonus/porto_frecce_verde.png',
+  'porto_frecce_blu.png': '/Icone/Bonus/porto_frecce_blu.png',
+  'porto_scudo_blu.png': '/Icone/Bonus/porto_scudo_blu.png',
+  'porto_scudo_grigio.png': '/Icone/Bonus/porto_scudo_grigio.png',
+  'porto_arco_grigio.png': '/Icone/Bonus/porto_arco_grigio.png',
+  'porto_arco_blu.png': '/Icone/Bonus/porto_arco_blu.png',
+  'porto_arco_verde.png': '/Icone/Bonus/porto_arco_verde.png',
+  'porto_frecce_rosso.png': '/Icone/Bonus/porto_frecce_rosso.png',
+  'porto_scudo_rosso.png': '/Icone/Bonus/porto_scudo_rosso.png',
+  'porto_frecce_grigio.png': '/Icone/Bonus/porto_frecce_grigio.png',
   // Sfondi
   'sfondo_finale_acqua.jpg': '/sfondo_finale_acqua.jpg',
   'sfondo_finale_default.jpg': '/sfondo_finale_default.jpg',
@@ -56,6 +85,15 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
 export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): string | null {
   if (!rawNameOrPath || typeof rawNameOrPath !== 'string') return null;
   let clean = rawNameOrPath.trim();
+
+  // Se è già un percorso valido con cartelle (es. Icone/..., Audio/..., ecc.)
+  // e NON è un idb:// o data:, non deve essere riscritto!
+  if (!clean.startsWith('idb://') && !clean.startsWith('data:')) {
+    if (clean.includes('/') || clean.includes('\\')) {
+      return null;
+    }
+  }
+
   if (clean.startsWith('idb://')) {
     const match = clean.match(/[?&]name=([^&]+)/);
     if (match) {
@@ -78,18 +116,6 @@ export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): 
     if (key.toLowerCase() === lowerFileName) {
       return p;
     }
-  }
-
-  // Fallback automatico dinamico per immagini in public/Icone/nessuno_img/
-  if (/\.(jpg|jpeg|png|webp|svg)$/i.test(fileName)) {
-    return `/Icone/nessuno_img/${fileName}`;
-  }
-  // Fallback automatico dinamico per audio
-  if (/\.(mp3|wav|ogg|m4a)$/i.test(fileName)) {
-    if (fileName.toLowerCase().includes('soluzione')) {
-      return `/Audio/soluzioni a conferma/${fileName}`;
-    }
-    return `/Audio/strumenti/${fileName}`;
   }
 
   return null;

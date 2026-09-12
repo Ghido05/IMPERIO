@@ -968,13 +968,27 @@
         "notePresentatore": "❓ Domanda Curiosità sulla Route 66 Domanda: Nel suo capolavoro letterario del 1939 \"Furore\" (The Grapes of Wrath), lo scrittore John Steinbeck descrive la migrazione della famiglia Joad verso ovest durante la Grande Depressione. In questo romanzo, Steinbeck coniò per la Route 66 un celebre soprannome che è rimasto nella storia. Quale? Opzioni: A) L'Arteria d'America B) La Via della Speranza C) La Strada Madre D) Il Nastro d'Asfalto Risposta corretta: C) La Strada Madre (The Mother Road). \"L'11 novembre 2026 celebriamo i 100 anni dalla nascita della Route 66, inaugurata ufficialmente nel 1926. Questa leggendaria autostrada, lunga originariamente quasi 4.000 chilometri, tagliava l'America in diagonale collegando Chicago a Santa Monica, in California, attraversando ben 8 Stati. Anche se nel 1985 è stata ufficialmente cancellata dalle mappe del sistema autostradale americano (sostituita dalle più veloci Interstate), il suo spirito non è mai morto. Oggi, i tratti sopravvissuti formano la 'Historic Route 66'. Festeggiare il suo centenario non significa solo celebrare un pezzo di asfalto, ma omaggiare il simbolo per eccellenza della libertà, dell'avventura e del classico viaggio on the road americano.\""
       },
       {
-        "testo": "DIGA DI ASSUAN",
-        "sfondo": "",
-        "lettereVisibili": [],
-        "indizio": "",
+        "testo": "PER CAUSA SUA I TEMPLI DI ABU SIMBEL FURONO SPOSTATI",
+        "sfondo": "idb://file_1789134626721_h34pod0?name=4_2_digaAssuan.jpg",
+        "lettereVisibili": [
+          1,
+          5,
+          8,
+          11,
+          14,
+          21,
+          24,
+          26,
+          31,
+          40,
+          42,
+          46,
+          51
+        ],
+        "indizio": "ANNI '60, DIGA DI ASSUAN",
         "bonus": "dado",
         "punti": 0,
-        "notePresentatore": ""
+        "notePresentatore": "Negli anni '60 la costruzione dell'imponente Diga di Assuan creò un enorme bacino artificiale che rischiava di sommergere per sempre i templi di Abu Simbel. Per salvarli, l'UNESCO compì un vero miracolo ingegneristico, smontando e ricostruendo l'intero complesso blocco per blocco più in alto!"
       },
       {
         "testo": "L' ITALIANO LUCA PARMITANO PARTECIPERà ALLA MISSIONE SPAZIALE",

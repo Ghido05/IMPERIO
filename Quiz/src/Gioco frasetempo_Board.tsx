@@ -42,9 +42,9 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   // Synced states specific to the current phrase index
   const [tokens, setTokens] = useSyncedState<string[]>(`${phrasePrefix}_tokens`, []);
   const [revealed, setRevealed] = useSyncedState<boolean>(`${phrasePrefix}_revealed`, false);
-  const [auctionValue, setAuctionValue] = useSyncedState<number>(`${phrasePrefix}_auction_value`, 10);
+  const [auctionValue, setAuctionValue] = useSyncedState<number>(`${phrasePrefix}_auction_value`, 15);
   const [auctionLocked, setAuctionLocked] = useSyncedState<boolean>(`${phrasePrefix}_auction_locked`, false);
-  const [letterCounter, setLetterCounter] = useSyncedState<number>(`${phrasePrefix}_letter_counter`, 10);
+  const [letterCounter, setLetterCounter] = useSyncedState<number>(`${phrasePrefix}_letter_counter`, 15);
   const [calledLetters, setCalledLetters] = useSyncedState<string[]>(`${phrasePrefix}_called_letters`, []);
   const [wrongLetter, setWrongLetter] = useSyncedState<string | null>(`${phrasePrefix}_wrong_letter`, null);
   const [guessTimerEndAt, setGuessTimerEndAt] = useSyncedState<number>(`${phrasePrefix}_guess_timer_end`, 0);
@@ -247,9 +247,9 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     const initialTokens = targets.map((t, tokenIndex) => (isPhraseLetterToken(t) ? (visible.has(tokenIndex) ? t : '_') : t));
     localStorage.setItem(`${phrasePrefix}_tokens`, JSON.stringify(initialTokens));
     localStorage.setItem(`${phrasePrefix}_called_letters`, JSON.stringify([]));
-    localStorage.setItem(`${phrasePrefix}_auction_value`, '10');
+    localStorage.setItem(`${phrasePrefix}_auction_value`, '15');
     localStorage.setItem(`${phrasePrefix}_auction_locked`, 'false');
-    localStorage.setItem(`${phrasePrefix}_letter_counter`, '10');
+    localStorage.setItem(`${phrasePrefix}_letter_counter`, '15');
     localStorage.setItem(`${phrasePrefix}_wrong_letter`, 'null');
     localStorage.setItem(`${phrasePrefix}_guess_timer_end`, '0');
     localStorage.setItem(`${phrasePrefix}_step`, '0');
@@ -392,9 +392,9 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       const initialTokens = targetTokens.map((t, tokenIndex) => (isPhraseLetterToken(t) ? (visible.has(tokenIndex) ? t : '_') : t));
       setTokens(initialTokens);
       setCalledLetters([]);
-      setAuctionValue(10);
+      setAuctionValue(15);
       setAuctionLocked(false);
-      setLetterCounter(10);
+      setLetterCounter(15);
       setRevealed(false);
       setWrongLetter(null);
       setGuessTimerEndAt(0);
@@ -435,7 +435,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         return;
       }
       if (e.key === 'ArrowUp') {
-        setAuctionValue(prev => Math.min(10, prev + 1));
+        setAuctionValue(prev => Math.min(15, prev + 1));
         return;
       }
       if (e.key === 'Enter') {
@@ -489,7 +489,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   });
   if (currentWord.length > 0) words.push(currentWord);
 
-  const auctionSteps = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+  const auctionSteps = [15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
   const timerRadius = 54;
   const timerCircumference = 2 * Math.PI * timerRadius;
   const timerProgress = guessTimerEndAt > 0 ? timerDisplay / 10 : 0;
@@ -739,7 +739,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
 
         {/* Descending Auction Bar */}
         <div className={`w-[90%] max-w-[1200px] mb-6 transition-all duration-500 ${showPhraseAndAuction ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none'}`}>
-          <div className="grid grid-cols-10 gap-2.5 w-full">
+          <div className="grid gap-2.5 w-full" style={{ gridTemplateColumns: 'repeat(15, minmax(0, 1fr))' }}>
             {auctionSteps.map((stepNum) => {
               const isActive = auctionValue === stepNum;
               const isWinningBid = auctionLocked && isActive;

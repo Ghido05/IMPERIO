@@ -411,37 +411,44 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     // Step 2: Solo lo sfondo
     // Step 3: Indizio
     // Step 4: Tutto il resto (Frase, 15 offerte, martelletto)
-    if (e.key === 'ArrowRight') {
-      if (step < 4) {
+    // Step 0-3: Avanzamento/regresso degli step di rivelazione
+    if (step < 4) {
+      if (e.key === 'ArrowRight') {
         setStep(prev => prev + 1);
         return;
       }
-    }
-    if (e.key === 'ArrowLeft') {
-      if (step > 0 && step <= 4 && !auctionLocked) {
-        setStep(prev => prev - 1);
-        return;
+      if (e.key === 'ArrowLeft') {
+        if (step > 0 && !auctionLocked) {
+          setStep(prev => prev - 1);
+          return;
+        }
       }
     }
 
-    // Keyboard numbers and arrows for manual bid movement (solo durante l'asta - Step >= 4)
+    // Step 4+: Movimento dell'asta con le sole freccette (senza numeri), avanti e indietro da 15 a 1
     if (step >= 4 && !auctionLocked) {
-      if (e.key === '0') {
-        setAuctionValue(10);
-        return;
-      }
-      if (/[1-9]/.test(e.key)) {
-        setAuctionValue(parseInt(e.key));
-        return;
-      }
-      if (e.key === 'ArrowDown') {
+      // Freccia Giù o Freccia Destra: scende da 15 verso 1 (avanti lungo l'asta a ribasso)
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         setAuctionValue(prev => Math.max(1, prev - 1));
         return;
       }
+
+      // Freccia Su o Freccia Sinistra: sale da 1 verso 15 (indietro lungo l'asta)
       if (e.key === 'ArrowUp') {
         setAuctionValue(prev => Math.min(15, prev + 1));
         return;
       }
+      if (e.key === 'ArrowLeft') {
+        if (auctionValue < 15) {
+          setAuctionValue(prev => Math.min(15, prev + 1));
+        } else {
+          // Se siamo già a 15, Freccia Sinistra permette di tornare indietro allo Step 3
+          setStep(3);
+        }
+        return;
+      }
+
+      // Invio: conferma e aggiudica l'offerta corrente
       if (e.key === 'Enter') {
         setAuctionLocked(true);
         setLetterCounter(auctionValue);

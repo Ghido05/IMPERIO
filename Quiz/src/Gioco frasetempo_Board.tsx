@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { useSyncedState } from './hooks/useSyncedState';
-import { assetUrl } from './lib/assetUrl';
+import { assetUrl, sanitizeSetupStateWithKnownAssets } from './lib/assetUrl';
 import { getPhraseLetter, isPhraseLetterToken, normalizeFraseTempoItem, parsePhraseTokens } from './lib/fraseTempoUtils';
 import { useScores } from './context/ScoreContext';
 
@@ -65,7 +65,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
     if (saved) {
       try {
-        setSetupState(JSON.parse(saved));
+        setSetupState(sanitizeSetupStateWithKnownAssets(JSON.parse(saved)));
       } catch (e) {
         console.error('Error parsing setup state:', e);
       }

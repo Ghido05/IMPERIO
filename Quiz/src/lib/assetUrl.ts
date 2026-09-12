@@ -40,6 +40,8 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   '1_3_telemaco.jpeg': '/Icone/nessuno_img/1_3_telemaco.jpeg',
   'images.jpeg': '/Icone/nessuno_img/1_3_telemaco.jpeg',
   '4_1_route66.jpg': '/Icone/nessuno_img/4_1_route66.jpg',
+  '4_2_digaAssuan.jpg': '/Icone/nessuno_img/4_2_digaAssuan.jpg',
+  '4_2_digaassuan.jpg': '/Icone/nessuno_img/4_2_digaAssuan.jpg',
   '4_3_ArtemisIII.jpg': '/Icone/nessuno_img/4_3_ArtemisIII.jpg',
   'Prova.png': '/Icone/nessuno_img/Prova.png',
   'Cornice immagine.svg': '/Icone/nessuno_img/Cornice immagine.svg',
@@ -77,6 +79,19 @@ export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): 
       return p;
     }
   }
+
+  // Fallback automatico dinamico per immagini in public/Icone/nessuno_img/
+  if (/\.(jpg|jpeg|png|webp|svg)$/i.test(fileName)) {
+    return `/Icone/nessuno_img/${fileName}`;
+  }
+  // Fallback automatico dinamico per audio
+  if (/\.(mp3|wav|ogg|m4a)$/i.test(fileName)) {
+    if (fileName.toLowerCase().includes('soluzione')) {
+      return `/Audio/soluzioni a conferma/${fileName}`;
+    }
+    return `/Audio/strumenti/${fileName}`;
+  }
+
   return null;
 }
 

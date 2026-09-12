@@ -3,6 +3,105 @@ import { dataURItoBlob, getLargeFile } from './idbStore';
 export const idbBlobUrlCache = new Map<string, string>();
 export const idbNameCache = new Map<string, string>();
 
+export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
+  // Audio Strumenti
+  'g01m07s01 elettronico - payphone.mp3': '/Audio/strumenti/g01m07s01 elettronico - payphone.mp3',
+  'g01m07s02 chitarra - payphone.mp3': '/Audio/strumenti/g01m07s02 chitarra - payphone.mp3',
+  'g01m07s03 piano - payphone.mp3': '/Audio/strumenti/g01m07s03 piano - payphone.mp3',
+  'g01m07s04 basso - payphone.mp3': '/Audio/strumenti/g01m07s04 basso - payphone.mp3',
+  'g01m07s05 flauto - payphone.mp3': '/Audio/strumenti/g01m07s05 flauto - payphone.mp3',
+  'g02m01s01 batteria - ossessione.mp3': '/Audio/strumenti/g02m01s01 batteria - ossessione.mp3',
+  'g02m01s02basso-ossessione.mp3': '/Audio/strumenti/g02m01s02basso-ossessione.mp3',
+  'g02m01s03 chitarra acustica 1 e elettronica.mp3': '/Audio/strumenti/g02m01s03 chitarra acustica 1 e elettronica.mp3',
+  'g02m01s04chitarra.mp3': '/Audio/strumenti/g02m01s04chitarra.mp3',
+  'g02m01s05 classic elettric piano.mp3': '/Audio/strumenti/g02m01s05 classic elettric piano.mp3',
+  'g02m01s06-coro.mp3': '/Audio/strumenti/g02m01s06-coro.mp3',
+  'g02m01s07-tastiera.mp3': '/Audio/strumenti/g02m01s07-tastiera.mp3',
+  'g02m03s01 violino.mp3': '/Audio/strumenti/g02m03s01 violino.mp3',
+  'g02m03s02 basso.mp3': '/Audio/strumenti/g02m03s02 basso.mp3',
+  'g02m03s03 chitarra acustica siamo uguali.mp3': '/Audio/strumenti/g02m03s03 chitarra acustica siamo uguali.mp3',
+  'g02m03s04 elettrico siamo uguali.mp3': '/Audio/strumenti/g02m03s04 elettrico siamo uguali.mp3',
+  'g02m03s05 piano siamo uguali.mp3': '/Audio/strumenti/g02m03s05 piano siamo uguali.mp3',
+  'g02m03s06 tastiera siamo uguali.mp3': '/Audio/strumenti/g02m03s06 tastiera siamo uguali.mp3',
+  'g02m03s07fluato siamo uguali.mp3': '/Audio/strumenti/g02m03s07fluato siamo uguali.mp3',
+  'g02m05s01 batteria.mp3': '/Audio/strumenti/g02m05s01 batteria.mp3',
+  'g02m05s02 tastiera.mp3': '/Audio/strumenti/g02m05s02 tastiera.mp3',
+  'g02m05s03 basso.mp3': '/Audio/strumenti/g02m05s03 basso.mp3',
+  'g02m05s04 tastiera2.mp3': '/Audio/strumenti/g02m05s04 tastiera2.mp3',
+  'g02m05s05 ottone.mp3': '/Audio/strumenti/g02m05s05 ottone.mp3',
+  'g02m05s06 soft square lead .mp3': '/Audio/strumenti/g02m05s06 soft square lead .mp3',
+  'g02m05s07 organo dontstop.mp3': '/Audio/strumenti/g02m05s07 organo dontstop.mp3',
+  // Audio Soluzioni
+  'g01m07soluzione.mp3': '/Audio/soluzioni a conferma/g01m07soluzione.mp3',
+  'g02m01soluzione.mp3': '/Audio/soluzioni a conferma/g02m01soluzione.mp3',
+  'g02m03soluzione.mp3': '/Audio/soluzioni a conferma/g02m03soluzione.mp3',
+  'g02m05soluzione.mp3': '/Audio/soluzioni a conferma/g02m05soluzione.mp3',
+  // Immagini
+  '1_3_telemaco.jpeg': '/Icone/nessuno_img/1_3_telemaco.jpeg',
+  'images.jpeg': '/Icone/nessuno_img/1_3_telemaco.jpeg',
+  '4_1_route66.jpg': '/Icone/nessuno_img/4_1_route66.jpg',
+  '4_3_ArtemisIII.jpg': '/Icone/nessuno_img/4_3_ArtemisIII.jpg',
+  'Prova.png': '/Icone/nessuno_img/Prova.png',
+  'Cornice immagine.svg': '/Icone/nessuno_img/Cornice immagine.svg',
+  'Categoria.svg': '/Icone/nessuno_img/Categoria.svg',
+  'Indizio.svg': '/Icone/nessuno_img/Indizio.svg',
+  'Icona indizio.svg': '/Icone/nessuno_img/Icona indizio.svg',
+  // Sfondi
+  'sfondo_finale_acqua.jpg': '/sfondo_finale_acqua.jpg',
+  'sfondo_finale_default.jpg': '/sfondo_finale_default.jpg',
+};
+
+export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): string | null {
+  if (!rawNameOrPath || typeof rawNameOrPath !== 'string') return null;
+  let clean = rawNameOrPath.trim();
+  if (clean.startsWith('idb://')) {
+    const match = clean.match(/[?&]name=([^&]+)/);
+    if (match) {
+      try {
+        clean = decodeURIComponent(match[1]);
+      } catch {
+        clean = match[1];
+      }
+    } else {
+      clean = clean.replace('idb://', '').split('?')[0];
+    }
+  }
+  const parts = clean.split(/[/\\]/);
+  const fileName = parts[parts.length - 1];
+  if (KNOWN_PUBLIC_ASSETS[fileName]) {
+    return KNOWN_PUBLIC_ASSETS[fileName];
+  }
+  const lowerFileName = fileName.toLowerCase();
+  for (const [key, p] of Object.entries(KNOWN_PUBLIC_ASSETS)) {
+    if (key.toLowerCase() === lowerFileName) {
+      return p;
+    }
+  }
+  return null;
+}
+
+export function sanitizeSetupStateWithKnownAssets<T>(obj: T): T {
+  if (!obj) return obj;
+  if (typeof obj === 'string') {
+    if (obj.startsWith('idb://')) {
+      const known = findKnownPublicAsset(obj);
+      if (known) return known as unknown as T;
+    }
+    return obj;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(item => sanitizeSetupStateWithKnownAssets(item)) as unknown as T;
+  }
+  if (typeof obj === 'object') {
+    const result: any = {};
+    for (const [k, v] of Object.entries(obj)) {
+      result[k] = sanitizeSetupStateWithKnownAssets(v);
+    }
+    return result;
+  }
+  return obj;
+}
+
 export async function preloadAllLargeFiles(): Promise<void> {
   try {
     const { initDB, getLargeFile } = await import('./idbStore');
@@ -47,6 +146,13 @@ export async function preloadAllLargeFiles(): Promise<void> {
 export function assetUrl(path: string | undefined | null): string {
   if (!path) return '';
   let trimmed = path.trim();
+
+  // Fallback istantaneo a file locali noti nel repository
+  const knownAsset = findKnownPublicAsset(trimmed);
+  if (knownAsset) {
+    trimmed = knownAsset;
+  }
+
   if (trimmed.startsWith('idb://')) {
     const cached = idbBlobUrlCache.get(trimmed);
     if (cached) return cached;

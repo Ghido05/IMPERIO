@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { assetUrl, idbNameCache } from '../lib/assetUrl';
+import { assetUrl, idbNameCache, findKnownPublicAsset, sanitizeSetupStateWithKnownAssets } from '../lib/assetUrl';
 import { saveSetupStateDb, loadSetupStateDb } from '../lib/quizDb';
 import { createDefaultFraseTempoItem, isPhraseLetterToken, normalizeFraseTempoItem, parsePhraseTokens, type FraseTempoItem } from '../lib/fraseTempoUtils';
 
@@ -558,6 +558,10 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
         try {
           const { getLargeFile } = await import('../lib/idbStore');
           for (const key of idbKeys) {
+            // Se il file esiste nei file bundle noti del progetto, non considerarlo mancante
+            if (findKnownPublicAsset(key)) {
+              continue;
+            }
             const cleanKey = key.replace('idb://', '').split('?')[0];
             const fileData = await getLargeFile(cleanKey);
             if (!fileData) {
@@ -581,7 +585,6 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     const trimmed = val.trim();
     
     if (trimmed.startsWith('idb://')) {
-      const isMissing = missingFiles.has(trimmed);
       let name = 'File locale';
       try {
         const match = trimmed.match(/[?&]name=([^&]+)/);
@@ -602,6 +605,12 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
         label = '🖼️ Immagine';
       }
       
+      // Se il file è presente tra gli asset noti del repository
+      if (findKnownPublicAsset(trimmed)) {
+        return { label, size: 'Sistema', name };
+      }
+
+      const isMissing = missingFiles.has(trimmed);
       if (isMissing) {
         return { label: '⚠️ ASSENTE', size: 'NON TROVATO LOCALE (ricarica)', name };
       }
@@ -682,6 +691,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
       }
 
       if (loadedState) {
+        loadedState = sanitizeSetupStateWithKnownAssets(loadedState);
         setState({
           gioco1: {
             selectedQuestion: loadedState.gioco1?.selectedQuestion || 1,
@@ -740,6 +750,14 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     setState(prev => {
       const frasi = [...(prev.gioco4?.frasi || [])];
       frasi[idx] = { ...normalizeFraseTempoItem(frasi[idx] || ''), sfondo };
+      return { ...prev, gioco4: { ...prev.gioco4, frasi } };
+    });
+  };
+
+  const handleGioco4ConfermaAudioChange = (idx: number, confermaAudio: string) => {
+    setState(prev => {
+      const frasi = [...(prev.gioco4?.frasi || [])];
+      frasi[idx] = { ...normalizeFraseTempoItem(frasi[idx] || ''), confermaAudio };
       return { ...prev, gioco4: { ...prev.gioco4, frasi } };
     });
   };
@@ -1033,9 +1051,11 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
   const handleSave = async () => {
     try {
-      await saveSetupStateDb(state);
+      const cleanState = sanitizeSetupStateWithKnownAssets(state);
+      setState(cleanState);
+      await saveSetupStateDb(cleanState);
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanState));
       } catch (e) {
         console.warn('LocalStorage limit reached, saved safely to IndexedDB:', e);
       }
@@ -1043,7 +1063,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
       const isElectron = (window as any).electron !== undefined;
       if (isElectron) {
         try {
-          await (window as any).electron.writeSetupFile(state);
+          await (window as any).electron.writeSetupFile(cleanState);
           console.log("[Setup] Salvato con successo nel file JSON condiviso.");
         } catch (err) {
           console.error("[Setup] Errore nel salvataggio su file condiviso:", err);
@@ -1052,7 +1072,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
       if ((window as any).electron?.broadcastState) {
         (window as any).electron.broadcastState({
-          setupStateUpdate: state,
+          setupStateUpdate: cleanState,
         });
       }
       showToast('✅ Configurazioni salvate e sincronizzate nel file di progetto!');
@@ -3070,8 +3090,9 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   )}
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-0 md:pl-[76px]">
+                    {/* Sfondo Immagine */}
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">Sfondo della frase</label>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">🖼️ Sfondo della frase</label>
                       <div className="flex gap-2">
                         {frase.sfondo?.startsWith('data:') || frase.sfondo?.startsWith('idb://') ? (
                           <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
@@ -3108,23 +3129,65 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                         )}
                       </div>
                     </div>
+
+                    {/* Canzone a Conferma / Stacchetto MP3 */}
                     <div>
-                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">Lettere già visibili</label>
-                      <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto">
-                        {tokens.map((token, tokenIndex) => token.trim() && isPhraseLetterToken(token) ? (
-                          <button
-                            key={tokenIndex}
-                            type="button"
-                            title={`Posizione ${tokenIndex + 1}`}
-                            onClick={() => toggleGioco4VisibleLetter(idx, tokenIndex)}
-                            className={`w-7 h-7 rounded border text-xs font-black transition-colors ${frase.lettereVisibili?.includes(tokenIndex) ? 'bg-cyan-400 border-cyan-200 text-black' : 'bg-black/40 border-white/15 text-white/60 hover:border-cyan-400/60'}`}
-                          >
-                            {token[0]}
-                          </button>
-                        ) : null)}
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">🎵 Canzone a Conferma / Stacchetto</label>
+                      <div className="flex gap-2">
+                        {frase.confermaAudio?.startsWith('data:') || frase.confermaAudio?.startsWith('idb://') ? (
+                          <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                            <span className="text-emerald-400 font-medium truncate max-w-[150px]">
+                              {formatBase64Info(frase.confermaAudio)?.name || 'Caricato'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleGioco4ConfermaAudioChange(idx, '')}
+                              className="text-red-400 hover:text-red-300 font-semibold cursor-pointer ml-2 text-[10px] bg-transparent border-0"
+                            >
+                              Rimuovi
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <input
+                              type="text"
+                              value={frase.confermaAudio || ''}
+                              onChange={(e) => handleGioco4ConfermaAudioChange(idx, e.target.value)}
+                              placeholder="URL o file MP3 stacchetto..."
+                              className="min-w-0 flex-1 bg-black/40 border border-white/15 rounded-lg px-2.5 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500"
+                            />
+                            <label className="px-2.5 py-2 text-[11px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0">
+                              🎵 Sfoglia MP3
+                              <input
+                                type="file"
+                                accept="audio/*"
+                                className="hidden"
+                                onChange={(e) => handleFileUpload(e, (base64) => handleGioco4ConfermaAudioChange(idx, base64))}
+                              />
+                            </label>
+                          </>
+                        )}
                       </div>
-                      <p className="text-[10px] text-slate-500 mt-1">Clicca le singole lettere da mostrare all’avvio.</p>
                     </div>
+                  </div>
+
+                  {/* Lettere già visibili */}
+                  <div className="pl-0 md:pl-[76px] pt-2 border-t border-white/5">
+                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">Lettere già visibili all'avvio</label>
+                    <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto">
+                      {tokens.map((token, tokenIndex) => token.trim() && isPhraseLetterToken(token) ? (
+                        <button
+                          key={tokenIndex}
+                          type="button"
+                          title={`Posizione ${tokenIndex + 1}`}
+                          onClick={() => toggleGioco4VisibleLetter(idx, tokenIndex)}
+                          className={`w-7 h-7 rounded border text-xs font-black transition-colors ${frase.lettereVisibili?.includes(tokenIndex) ? 'bg-cyan-400 border-cyan-200 text-black' : 'bg-black/40 border-white/15 text-white/60 hover:border-cyan-400/60'}`}
+                        >
+                          {token[0]}
+                        </button>
+                      ) : null)}
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1">Clicca le singole lettere da mostrare all’avvio.</p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pl-0 md:pl-[76px] pt-2 border-t border-white/5">

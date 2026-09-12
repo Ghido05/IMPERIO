@@ -1,6 +1,7 @@
 export interface FraseTempoItem {
   testo: string;
   sfondo?: string;
+  confermaAudio?: string;
   lettereVisibili?: number[];
   indizio?: string;
   bonus?: string;
@@ -38,11 +39,12 @@ export function parsePhraseTokens(frase: string): string[] {
 
 export function normalizeFraseTempoItem(raw: string | FraseTempoItem): FraseTempoItem {
   if (typeof raw === 'string') {
-    return { testo: raw, sfondo: '', lettereVisibili: [], indizio: '', bonus: '', punti: 1000, notePresentatore: '' };
+    return { testo: raw, sfondo: '', confermaAudio: '', lettereVisibili: [], indizio: '', bonus: '', punti: 1000, notePresentatore: '' };
   }
   return {
     testo: raw.testo ?? '',
     sfondo: raw.sfondo ?? '',
+    confermaAudio: raw.confermaAudio ?? '',
     lettereVisibili: Array.isArray(raw.lettereVisibili) ? raw.lettereVisibili : [],
     indizio: raw.indizio ?? '',
     bonus: raw.bonus ?? '',
@@ -57,5 +59,5 @@ export function normalizeFraseTempoList(raw: unknown): FraseTempoItem[] {
 }
 
 export function createDefaultFraseTempoItem(testo = ''): FraseTempoItem {
-  return { testo, sfondo: '', lettereVisibili: [] };
+  return { testo, sfondo: '', confermaAudio: '', lettereVisibili: [] };
 }

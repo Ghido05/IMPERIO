@@ -20,6 +20,7 @@ import type { Slide } from '../App';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import { useSyncedState } from '../hooks/useSyncedState';
 import WebSerialManager from '../components/WebSerialManager';
+import { sanitizeSetupStateWithKnownAssets } from '../lib/assetUrl';
 
 type PresenterViewMode = 'setup' | 'quiz' | 'welcome' | 'editor';
 
@@ -331,26 +332,43 @@ export default function PresenterView() {
   // Generate slides when viewMode turns to 'editor'
   useEffect(() => {
     if (viewMode === 'editor') {
-      try {
-        const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
-        let setupState: QuizSetupState;
-        if (saved) {
-          setupState = JSON.parse(saved);
-        } else {
-          setupState = getDefaultSetupState();
-        }
-        
-        const generated = buildSlidesFromSetup(setupState);
-        setSlides(generated);
-        if (generated.length > 0) {
-          // Keep active slide if still valid, otherwise reset to first
-          if (!activeSlideId || !generated.some(s => s.id === activeSlideId)) {
-            setActiveSlideId(generated[0].id);
+      const loadEditorSlides = async () => {
+        try {
+          const isElectron = (window as any).electron !== undefined;
+          let loaded: any = null;
+          if (isElectron) {
+            try {
+              const fromShared = await (window as any).electron.readSetupFile();
+              if (fromShared) {
+                loaded = fromShared;
+              }
+            } catch (err) {
+              console.warn('Errore lettura da file condiviso:', err);
+            }
           }
+          if (!loaded) {
+            const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
+            if (saved) {
+              loaded = JSON.parse(saved);
+            } else {
+              loaded = getDefaultSetupState();
+            }
+          }
+          
+          const setupState = sanitizeSetupStateWithKnownAssets(loaded);
+          const generated = buildSlidesFromSetup(setupState);
+          setSlides(generated);
+          if (generated.length > 0) {
+            // Keep active slide if still valid, otherwise reset to first
+            if (!activeSlideId || !generated.some(s => s.id === activeSlideId)) {
+              setActiveSlideId(generated[0].id);
+            }
+          }
+        } catch (e) {
+          console.error('Errore nel caricamento delle impostazioni setup:', e);
         }
-      } catch (e) {
-        console.error('Errore nel caricamento delle impostazioni setup:', e);
-      }
+      };
+      loadEditorSlides();
     }
   }, [viewMode]);
 

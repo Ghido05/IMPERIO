@@ -866,10 +866,11 @@ export default function FinaleSquadre_Board() {
       const maxCount = startingMembers[teamId];
       if (currentList.length >= maxCount) return prev;
       playSound('eliminate');
-      const remainingCubes = [1, 2, 3, 4, 5, 6]
-        .slice(0, maxCount)
-        .filter((c) => !currentList.includes(c));
-      const toEliminate = remainingCubes[0]; // Elimination strictly begins from 1 in order (1 -> 2 -> 3 -> 4 -> 5 -> 6)
+      const startCube = 7 - maxCount; // e.g. for maxCount=3: startCube=4; for maxCount=5: startCube=2; for maxCount=6: startCube=1
+      const assignedCubes = [1, 2, 3, 4, 5, 6].filter((c) => c >= startCube);
+      const remainingCubes = assignedCubes.filter((c) => !currentList.includes(c));
+      const toEliminate = remainingCubes[0]; // Elimination strictly begins from lowest assigned up to 6
+      if (toEliminate === undefined) return prev;
       return {
         ...prev,
         [teamId]: [...currentList, toEliminate],
@@ -1076,6 +1077,19 @@ export default function FinaleSquadre_Board() {
                 </button>
               );
             })}
+            <button
+              type="button"
+              onClick={() => {
+                setEliminatedMembers({ 1: [], 2: [], 3: [] });
+                setSelectedDieFace(null);
+                setDieTargetFace(null);
+                setTargetTeam(null);
+              }}
+              className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-white/60 hover:text-white bg-white/10 hover:bg-white/20 border border-white/15 transition-all cursor-pointer ml-1.5 shadow-sm"
+              title="Azzera lo stato degli omini e il bersaglio per iniziare una nuova manche"
+            >
+              🔄 Reset Omini
+            </button>
           </div>
         </header>
 
@@ -1181,7 +1195,7 @@ export default function FinaleSquadre_Board() {
                         className={`flex justify-center items-end gap-2 sm:gap-3.5 ${zIndexClass}`}
                       >
                         {row.cubes.map((cubeNum) => {
-                          const isAssigned = cubeNum <= teamMembersCount;
+                          const isAssigned = cubeNum > (6 - teamMembersCount);
                           const hasOmino = isAssigned && !teamEliminatedList.includes(cubeNum);
 
                           return (

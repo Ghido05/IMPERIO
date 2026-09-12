@@ -308,6 +308,18 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     }
   }, [revealed, calledLetters, targetTokens, auctionLocked, setCalledLetters, setLetterCounter, setTokens, setWrongLetter, playErrorSound]);
 
+  // Audio ref for stacchetto / confirmation song
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, [index, phrasePrefix]);
+
   const handleCorrectGuess = useCallback(() => {
     if (revealed) return;
     setShowSuccess(true);
@@ -318,12 +330,29 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     setTokens([...targetTokens]);
     setStep(7);
 
+    // Riproduzione Canzone di Conferma / Stacchetto se presente
+    if (phrase.confermaAudio) {
+      const resolved = assetUrl(phrase.confermaAudio);
+      if (resolved) {
+        try {
+          if (!audioRef.current || audioRef.current.src !== resolved) {
+            if (audioRef.current) audioRef.current.pause();
+            audioRef.current = new Audio(resolved);
+          }
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch(e => console.log('Autoplay stacchetto:', e));
+        } catch (err) {
+          console.error('Errore riproduzione stacchetto:', err);
+        }
+      }
+    }
+
     // Award scores
     if (winningTeamIndex !== null && !scoreAwarded) {
       awardPointsAndBonus(winningTeamIndex);
       setScoreAwarded(true);
     }
-  }, [revealed, targetTokens, winningTeamIndex, scoreAwarded, awardPointsAndBonus, setStep, setTokens, setRevealed, setShowSuccess, playTone]);
+  }, [revealed, targetTokens, phrase.confermaAudio, winningTeamIndex, scoreAwarded, awardPointsAndBonus, setStep, setTokens, setRevealed, setShowSuccess, playTone]);
 
   const handleWrongGuess = useCallback(() => {
     if (revealed) return;
@@ -355,6 +384,10 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
 
     // Backspace / Delete to clear/reset tokens
     if (e.key === 'Backspace' || e.key === 'Delete') {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       const visible = new Set(phrase.lettereVisibili || []);
       const initialTokens = targetTokens.map((t, tokenIndex) => (isPhraseLetterToken(t) ? (visible.has(tokenIndex) ? t : '_') : t));
       setTokens(initialTokens);
@@ -373,22 +406,22 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       return;
     }
 
-    // Arrow navigation for steps
+    // Arrow navigation for steps (Step 1: Bonus, Step 2: Sfondo e tutto il resto)
     if (e.key === 'ArrowRight') {
-      if (step < 3) {
+      if (step < 2) {
         setStep(prev => prev + 1);
         return;
       }
     }
     if (e.key === 'ArrowLeft') {
-      if (step > 0 && step <= 3 && !auctionLocked) {
+      if (step > 0 && step <= 2 && !auctionLocked) {
         setStep(prev => prev - 1);
         return;
       }
     }
 
-    // Keyboard numbers and arrows for manual bid movement (solo durante l'asta - Step 3)
-    if (step === 3 && !auctionLocked) {
+    // Keyboard numbers and arrows for manual bid movement (solo durante l'asta - Step >= 2)
+    if (step >= 2 && step <= 4 && !auctionLocked) {
       if (e.key === '0') {
         setAuctionValue(10);
         return;
@@ -463,15 +496,32 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   const timerStrokeOffset = timerCircumference * (1 - timerProgress);
   const showGuessTimer = auctionLocked && letterCounter === 0 && guessTimerEndAt > 0 && timerDisplay > 0;
 
-  const showContent = step >= 1 || revealAll;
-  const showPhraseAndAuction = step >= 3 || revealAll;
+  const showBonus = step >= 1 || revealAll;
+  const showSfondo = (step >= 2 || revealAll) && Boolean(phrase.sfondo);
+  const showContent = step >= 2 || revealAll;
+  const showPhraseAndAuction = step >= 2 || revealAll;
+
+  const rawP = (phrase as any).punti;
+  const pts = (rawP !== undefined && rawP !== null && rawP !== '') ? (Number(rawP) || 0) : 0;
+  const hasBonus = Boolean(phrase.bonus && typeof phrase.bonus === 'string' && phrase.bonus.trim() !== '');
+  const hasPoints = pts > 0;
 
   return (
     <div 
       data-asset-refresh={assetRefresh} 
       className={`relative w-full min-h-screen bg-black text-white flex items-center justify-center overflow-hidden select-none transition-transform duration-100 ${showError ? 'animate-shake' : ''}`} 
-      style={{ backgroundImage: phrase.sfondo ? `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.72)), url("${assetUrl(phrase.sfondo)}")` : undefined, backgroundSize: 'cover', backgroundPosition: 'center' }}
     >
+      {/* Sfondo dinamico con dissolvenza (Step >= 2) */}
+      <div 
+        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-700 pointer-events-none z-0 ${
+          showSfondo ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{
+          backgroundImage: phrase.sfondo
+            ? `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.72)), url("${assetUrl(phrase.sfondo)}")`
+            : undefined,
+        }}
+      />
       {/* Overlay Errore (Sfondo Rosso + X Gigante) */}
       {showError && (
         <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center">
@@ -591,10 +641,10 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       )}
 
       {/* Frame 16:9 viewport wrapper */}
-      <div className={`relative w-full max-w-[1920px] aspect-[16/9] flex flex-col items-center justify-center px-10 py-6 transition-all duration-1000 ${showContent ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <div className={`relative w-full max-w-[1920px] aspect-[16/9] flex flex-col items-center justify-center px-10 py-6 transition-all duration-1000 ${showContent || showBonus ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         
         {/* Header Title Banner */}
-        <div className="text-center mb-[1%]">
+        <div className={`text-center mb-[1%] transition-opacity duration-500 ${showContent ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
           <span className="px-4 py-1 text-xs font-black bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full tracking-widest uppercase mb-2 inline-block">
             BOX 4 — ASTA A RIBASSO
           </span>
@@ -827,8 +877,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
           </div>
         </div>
 
-        {/* Clue Box (visible if step >= 1) */}
-        {step >= 1 && (
+        {/* Clue Box (visible if step >= 2 or revealAll) */}
+        {showContent && (
           <div className="flex flex-col items-center gap-4 mt-2">
             {/* Clue Box */}
             <div className="bg-zinc-950/90 border-2 border-amber-500/50 rounded-2xl px-8 py-4 shadow-2xl backdrop-blur-md text-center max-w-[800px] animate-fade-in mb-2">
@@ -842,25 +892,23 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
           </div>
         )}
 
-        {/* Permanent Points & Bonus in basso a destra per tutta la durata del gioco */}
-        {step >= 2 && (
-          <div className="absolute bottom-6 right-10 flex items-center gap-4 z-20">
-            {phrase.bonus && typeof phrase.bonus === 'string' && phrase.bonus.trim() !== '' && (
-              <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md w-24 h-24 animate-fade-in">
+        {/* Bonus e Punti in basso a destra (Step 1: Bonus, punti solo se > 0) */}
+        {showBonus && (hasBonus || hasPoints) && (
+          <div className="absolute bottom-6 right-10 flex items-center gap-4 z-20 animate-fade-in">
+            {hasBonus && (
+              <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md w-24 h-24">
                 <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-1.5">BONUS</span>
-                <span className="text-3xl animate-pulse">{getBonusDisplayEmoji(phrase.bonus)}</span>
+                <span className="text-3xl animate-pulse">{getBonusDisplayEmoji(phrase.bonus || '')}</span>
               </div>
             )}
-            <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md min-w-[100px] h-24 animate-fade-in">
-              <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-1.5">PUNTI</span>
-              <span className="text-3xl font-black text-white tabular-nums">
-                {(() => {
-                  const rawP = (phrase as any).punti;
-                  const pts = (rawP !== undefined && rawP !== null && rawP !== '') ? (Number(rawP) || 0) : 0;
-                  return pts.toLocaleString('it-IT');
-                })()}
-              </span>
-            </div>
+            {hasPoints && (
+              <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md min-w-[100px] h-24 animate-fade-in">
+                <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-1.5">PUNTI</span>
+                <span className="text-3xl font-black text-white tabular-nums">
+                  {pts.toLocaleString('it-IT')}
+                </span>
+              </div>
+            )}
           </div>
         )}
 

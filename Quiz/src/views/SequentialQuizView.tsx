@@ -17,6 +17,7 @@ import { useSyncedState } from '../hooks/useSyncedState';
 import { cloneDefaultData } from '../lib/defaultGameData';
 import { triggerFadeOutBroadcast } from '../lib/audioTracker';
 import WebSerialManager from '../components/WebSerialManager';
+import { sanitizeSetupStateWithKnownAssets } from '../lib/assetUrl';
 
 export function getSlideForBoxQuestion(
   setupState: QuizSetupState,
@@ -427,21 +428,38 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
     }));
   }, [activeBox, activeQuestion]);
 
-  // Load configuration from IndexedDB & LocalStorage on mount
+  // Load configuration from Shared File, IndexedDB & LocalStorage on mount
   useEffect(() => {
     async function loadData() {
-      const fromDb = await loadSetupStateDb();
-      if (fromDb) {
-        setSetupState(fromDb);
-      } else {
-        const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
-        if (saved) {
-          try {
-            setSetupState(JSON.parse(saved));
-          } catch (e) {
-            console.error('Error parsing local setup:', e);
+      const isElectron = (window as any).electron !== undefined;
+      let loaded: any = null;
+      if (isElectron) {
+        try {
+          const fromSharedFile = await (window as any).electron.readSetupFile();
+          if (fromSharedFile) {
+            loaded = fromSharedFile;
+          }
+        } catch (err) {
+          console.warn('Errore lettura dev setup file:', err);
+        }
+      }
+      if (!loaded) {
+        const fromDb = await loadSetupStateDb();
+        if (fromDb) {
+          loaded = fromDb;
+        } else {
+          const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
+          if (saved) {
+            try {
+              loaded = JSON.parse(saved);
+            } catch (e) {
+              console.error('Error parsing local setup:', e);
+            }
           }
         }
+      }
+      if (loaded) {
+        setSetupState(sanitizeSetupStateWithKnownAssets(loaded));
       }
     }
     loadData();
@@ -460,7 +478,7 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
     if (isElectron) {
       unsubscribe = (window as any).electron.onStateUpdate((state: any) => {
         if (state && state.setupStateUpdate) {
-          setSetupState(state.setupStateUpdate);
+          setSetupState(sanitizeSetupStateWithKnownAssets(state.setupStateUpdate));
         }
       });
     }

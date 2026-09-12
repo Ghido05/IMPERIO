@@ -944,6 +944,7 @@
       {
         "testo": "CENTENARIO DELLA MITICA STRADA CHE COLLEGA CHICAGO A SANTA MONICA",
         "sfondo": "/Icone/nessuno_img/4_1_route66.jpg",
+        "confermaAudio": "",
         "lettereVisibili": [
           1,
           6,
@@ -970,6 +971,7 @@
       {
         "testo": "PER CAUSA SUA I TEMPLI DI ABU SIMBEL FURONO SPOSTATI",
         "sfondo": "idb://file_1789134626721_h34pod0?name=4_2_digaAssuan.jpg",
+        "confermaAudio": "",
         "lettereVisibili": [
           1,
           5,
@@ -993,6 +995,7 @@
       {
         "testo": "L' ITALIANO LUCA PARMITANO PARTECIPERà ALLA MISSIONE SPAZIALE",
         "sfondo": "/Icone/nessuno_img/4_3_ArtemisIII.jpg",
+        "confermaAudio": "",
         "lettereVisibili": [
           4,
           9,
@@ -1017,6 +1020,7 @@
       {
         "testo": "NON Ce N'è PER NESSUNO, la libertà",
         "sfondo": "",
+        "confermaAudio": "",
         "lettereVisibili": [],
         "indizio": "",
         "bonus": "",
@@ -1028,7 +1032,10 @@
   },
   "gioco5": {
     "titolo": "Gioco 5",
-    "note": "Modulo Gioco 5 (in arrivo)"
+    "sottotitolo": "Sfida con dado, omini sui cubi 3D e 4 bonus per squadra",
+    "sfondoGenerale": "/sfondo_finale_acqua.jpg",
+    "numeroDomande": 15,
+    "notePresentatore": ""
   },
   "punteggi": {
     "sfondo": "",

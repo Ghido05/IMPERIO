@@ -1,6 +1,6 @@
 {
   "gioco1": {
-    "selectedQuestion": 1,
+    "selectedQuestion": 6,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -166,7 +166,7 @@
         }
       },
       "6": {
-        "tipo": "canzone",
+        "tipo": "immagine",
         "canzone": {
           "audioFiles": [
             "",
@@ -194,7 +194,7 @@
             ""
           ],
           "confermaAudio": "",
-          "soluzione": ""
+          "soluzione": "STELE DI ROSETTA"
         }
       },
       "7": {
@@ -1019,7 +1019,7 @@
         "notePresentatore": "❓A seguito dei drastici cambiamenti annunciati nel 2026, quale sarà il vero obiettivo della missione Artemis III della NASA (posticipata al 2027)?\nA) Atterrare sul Polo Sud lunare B) Testare l'attracco con i lander lunari nell'orbita terrestre C) Sorvolare Marte\nRisposta corretta: B) Testare l'attracco con i lander lunari nell'orbita terrestre. \nL'atterraggio sulla Luna avverrà con Artemis IV nel 2028.\n"
       },
       {
-        "testo": "NON Ce N'è PER NESSUNO, la libertà",
+        "testo": "PRINCIPESSA KATE IN VISITA A REGGIO EMILIA",
         "sfondo": "",
         "confermaAudio": "",
         "lettereVisibili": [],
@@ -1027,6 +1027,60 @@
         "bonus": "",
         "punti": 1000,
         "notePresentatore": ""
+      },
+      {
+        "testo": "",
+        "sfondo": "",
+        "confermaAudio": "",
+        "lettereVisibili": [],
+        "indizio": "",
+        "bonus": "",
+        "punti": 1000,
+        "notePresentatore": ""
+      },
+      {
+        "testo": "L' ESPLORATORE SCOZZESE SCOPRì LE CASCATE VITTORIA",
+        "sfondo": "idb://file_1789404056029_dep8cmo?name=4_6_Livingstone.jpg",
+        "confermaAudio": "",
+        "lettereVisibili": [
+          6,
+          12,
+          16,
+          21,
+          28,
+          31,
+          37,
+          39,
+          45,
+          47
+        ],
+        "indizio": "1855, AFRICA CENTRALE",
+        "bonus": "arco",
+        "punti": 3000,
+        "notePresentatore": "Il 16 novembre 1855, nel cuore inesplorato dell'Africa centrale, David Livingstone divenne il primo europeo a scorgere le maestose cascate del fiume Zambesi. Decise di omaggiare la sovrana britannica ribattezzandole 'Cascate Vittoria'.\""
+      },
+      {
+        "testo": "DANTE E VIRGILIO INCONTRANO IL TRADITORE CONTE UGOLINO",
+        "sfondo": "idb://file_1789405650153_qa7wekj?name=4_7_Ugolino.jpg",
+        "confermaAudio": "idb://file_1789405859682_gubjgkq?name=4_7_Pedro_Carra.mp3",
+        "lettereVisibili": [
+          4,
+          6,
+          9,
+          15,
+          20,
+          26,
+          28,
+          35,
+          39,
+          45,
+          49,
+          53
+        ],
+        "indizio": "1300, LAGO DI COCITO",
+        "bonus": "",
+        "punti": 1000,
+        "notePresentatore": "Nel nono cerchio dell'Inferno, imprigionato nel ghiaccio perenne del lago di Cocito, Dante si imbatte nel Conte Ugolino della Gherardesca. Condannato per tradimento politico, Ugolino è protagonista di uno degli episodi più tragici dell'intero poema: morì di inedia rinchiuso in una torre pisana insieme ai suoi figli e nipoti. Nell'Inferno dantesco è costretto al gelo eterno, condannato a sfogare la sua rabbia contro l'arcivescovo che lo aveva imprigionato.\nSe avete una memoria di ferro per la letteratura, avrete notato che c'è una piccola 'licenza poetica' nell'immagine che vi abbiamo mostrato. Nel testo originale della Divina Commedia, infatti, il Conte Ugolino non si trova affatto da solo nel ghiaccio. È condannato a stare nella stessa buca insieme al suo acerrimo nemico e carceriere, l'Arcivescovo Ruggieri. Per la precisione, Ugolino è posizionato sopra di lui e gli azzanna in eterno la nuca in quello che Dante definisce un fiero pasto. Nell'immagine, Ruggieri è stato provvidenzialmente omesso per non rendere la scena troppo macabra!"
       }
     ],
     "sfondoGenerale": ""

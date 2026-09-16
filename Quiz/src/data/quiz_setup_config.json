@@ -1,16 +1,16 @@
 {
   "gioco1": {
-    "selectedQuestion": 5,
+    "selectedQuestion": 1,
     "questions": {
       "1": {
         "tipo": "canzone",
         "canzone": {
           "audioFiles": [
-            "/Audio/canzone_1.mp3",
-            "/Audio/canzone_2.mp3",
-            "/Audio/canzone_3.mp3",
-            "/Audio/canzone_4.mp3",
-            "/Audio/canzone_5.mp3"
+            "/Audio/strumenti/g01m01s01batteria_lamorenonmibasta.mp3",
+            "/Audio/strumenti/g01m01s02chitarra_lamorenonmibasta.mp3",
+            "/Audio/strumenti/g01m01s03piano_lamorenonmibasta.mp3",
+            "/Audio/strumenti/g01m01s04chelettrica_lamorenonmibasta.mp3",
+            "/Audio/strumenti/g01m01s05flauto_lamorenonmibasta.mp3"
           ],
           "indizi": [
             "ind 1",
@@ -18,9 +18,9 @@
             "ind 3",
             "ind 4"
           ],
-          "soluzioneAudio": "",
-          "titolo": "Ossessione",
-          "anno": "Samurai Jay - 2026"
+          "soluzioneAudio": "/Audio/soluzioni a conferma/g01m01soluzione.mp3",
+          "titolo": "L'AMORE NON MI BASTA",
+          "anno": "EMMA MARRONE - 2016"
         },
         "immagine": {
           "immagineJpg": "",

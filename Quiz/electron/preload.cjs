@@ -39,4 +39,7 @@ contextBridge.exposeInMainWorld('electron', {
     return () => ipcRenderer.removeListener('ipad-connection-status', subscription);
   },
   findBuzzerIp: (currentIp) => ipcRenderer.invoke('find-buzzer-ip', currentIp),
+  checkEsp32Status: (ip) => ipcRenderer.invoke('check-esp32-status', ip),
+  esp32Leggi: (ip) => ipcRenderer.invoke('esp32-leggi', ip),
+  esp32Sblocca: (ip) => ipcRenderer.invoke('esp32-sblocca', ip),
 });

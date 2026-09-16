@@ -17,6 +17,7 @@ import { useSyncedState } from '../hooks/useSyncedState';
 import { cloneDefaultData } from '../lib/defaultGameData';
 import { triggerFadeOutBroadcast } from '../lib/audioTracker';
 import WebSerialManager from '../components/WebSerialManager';
+import { sendSerialReset } from '../lib/webSerial';
 import { sanitizeSetupStateWithKnownAssets } from '../lib/assetUrl';
 
 export function getSlideForBoxQuestion(
@@ -507,6 +508,7 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
   const maxQuestionsForBox = activeBox === 1 ? 10 : activeBox === 2 ? 6 : activeBox === 3 ? 3 : 1;
 
   const handleNext = () => {
+    sendSerialReset();
     if (activeQuestion < maxQuestionsForBox) {
       setActiveQuestion(activeQuestion + 1);
     } else if (activeBox < 5) {
@@ -516,6 +518,7 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
   };
 
   const handlePrev = () => {
+    sendSerialReset();
     if (activeQuestion > 1) {
       setActiveQuestion(activeQuestion - 1);
     } else if (activeBox > 1) {
@@ -584,6 +587,7 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
                 key={boxNum}
                 type="button"
                 onClick={() => {
+                  sendSerialReset();
                   setActiveBox(boxNum);
                   setActiveQuestion(1);
                 }}
@@ -610,7 +614,10 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
                     <button
                       key={idx}
                       type="button"
-                      onClick={() => setActivePhraseIndex(idx)}
+                      onClick={() => {
+                        sendSerialReset();
+                        setActivePhraseIndex(idx);
+                      }}
                       className={`w-7 h-7 text-xs font-bold rounded-md flex items-center justify-center transition-all ${
                         activePhraseIndex === idx
                           ? 'bg-amber-500 text-black shadow'
@@ -630,7 +637,10 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
                     <button
                       key={qNum}
                       type="button"
-                      onClick={() => setActiveQuestion(qNum)}
+                      onClick={() => {
+                        sendSerialReset();
+                        setActiveQuestion(qNum);
+                      }}
                       className={`w-7 h-7 text-xs font-bold rounded-md flex items-center justify-center transition-all ${
                         activeQuestion === qNum
                           ? 'bg-amber-500 text-black shadow'

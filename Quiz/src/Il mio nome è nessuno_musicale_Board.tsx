@@ -4,6 +4,7 @@ import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
 import ScoreAssigner from './components/ScoreAssigner';
+import { sendSerialReset } from './lib/webSerial';
 
 // ============================================================================
 // Layout esportato da Figma e reso Responsivo con Navigazione a Frecce e Audio
@@ -238,6 +239,11 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
     setBookedTeam(null); // Consolidate the booking into official point assignment
   };
 
+  const handleCancelBooking = () => {
+    setBookedTeam(null);
+    sendSerialReset();
+  };
+
   const handleResetPoints = () => {
     if (assignedTeam !== null) {
       const pts = getPointsForStep(lockedStep ?? step);
@@ -246,6 +252,7 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
     }
     setLockedStep(null);
     setBookedTeam(null); // Clear booking flag
+    sendSerialReset();
   };
 
   const displayedPoints = lockedStep !== null ? getPointsForStep(lockedStep) : getPointsForStep(step);
@@ -567,15 +574,35 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
               </span>
             </div>
 
+            {/* Banner visivo squadra prenotata al buzzer */}
+            {bookedTeam !== null && assignedTeam === null && (
+              <div className={`my-1.5 px-5 py-2 rounded-2xl border-2 shadow-2xl flex items-center gap-3 animate-pulse ${
+                bookedTeam === 1
+                  ? 'bg-red-950/90 border-red-500 text-red-200 shadow-[0_0_25px_rgba(239,68,68,0.6)]'
+                  : bookedTeam === 2
+                  ? 'bg-blue-950/90 border-blue-500 text-blue-200 shadow-[0_0_25px_rgba(59,130,246,0.6)]'
+                  : 'bg-emerald-950/90 border-emerald-500 text-emerald-200 shadow-[0_0_25px_rgba(16,185,129,0.6)]'
+              }`}>
+                <span className="text-xl">⚡</span>
+                <span className="font-black text-sm md:text-base uppercase tracking-wider">
+                  {teamNames[bookedTeam - 1] || `SQUADRA ${bookedTeam}`} SI È PRENOTATA!
+                </span>
+                {interactive && (
+                  <button
+                    type="button"
+                    onClick={handleCancelBooking}
+                    className="ml-2 px-2.5 py-1 text-[10px] font-black uppercase rounded-lg bg-white/20 hover:bg-red-500 hover:text-white text-white transition-all cursor-pointer border border-white/30"
+                    title="Annulla prenotazione e riarma pulsantiera hardware"
+                  >
+                    ✕ Sblocca / Errata
+                  </button>
+                )}
+              </div>
+            )}
+
             {/* Assegnatore di Punteggio per il Relatore */}
             {interactive && (
               <div className="mt-1 flex flex-col items-center gap-1.5">
-                {bookedTeam !== null && assignedTeam === null && (
-                  <span className="text-amber-400 font-black text-[11px] animate-pulse uppercase tracking-wider mb-1">
-                    ⚡ {teamNames[bookedTeam - 1] || `SQUADRA ${bookedTeam}`} PRENOTATA!
-                  </span>
-                )}
-
                 {assignedTeam === null ? (
                   <ScoreAssigner
                     points={displayedPoints}
@@ -599,13 +626,6 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
             {!interactive && assignedTeam !== null && (
               <div className="bg-emerald-500/20 border border-emerald-500/30 px-6 py-2 rounded-full text-xs font-bold text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.2)] animate-pulse">
                 ✓ RISPOSTA ESATTA: {teamNames[assignedTeam - 1] || `SQUADRA ${assignedTeam}`} (+{displayedPoints.toLocaleString('it-IT')} pt)
-              </div>
-            )}
-
-            {/* Mostra la prenotazione in corso sullo schermo pubblico */}
-            {!interactive && bookedTeam !== null && assignedTeam === null && (
-              <div className="bg-amber-500/20 border border-amber-500/30 px-6 py-1.5 rounded-full text-xs font-bold text-amber-300 shadow-[0_0_15px_rgba(245,158,11,0.2)] animate-pulse">
-                ⚡ IN PRENOTAZIONE: {teamNames[bookedTeam - 1] || `SQUADRA ${bookedTeam}`}
               </div>
             )}
           </div>

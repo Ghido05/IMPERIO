@@ -539,79 +539,84 @@ ipcMain.handle('get-all-ip-addresses', () => {
   };
 });
 
-function checkPort(host, port = 81, timeout = 600) {
+const FIXED_BUZZER_IP = '192.168.1.142';
+
+async function findBuzzerIp(_preferredIp) {
+  // IP fisso per la pulsantiera ESP32: ws://192.168.1.142:81
+  // Rimossa la scansione dinamica della sottorete (.1 - .254) per velocizzare l'avvio
+  return FIXED_BUZZER_IP;
+}
+
+ipcMain.handle('find-buzzer-ip', async (_event, _currentIp) => {
+  return await findBuzzerIp();
+});
+
+ipcMain.handle('check-esp32-status', async (_event, ip) => {
+  const targetIp = ip || FIXED_BUZZER_IP;
   return new Promise((resolve) => {
-    const socket = new net.Socket();
-    socket.setTimeout(timeout);
-    socket.once('connect', () => {
-      socket.destroy();
-      resolve(host);
-    });
-    socket.once('timeout', () => {
-      socket.destroy();
-      resolve(null);
-    });
-    socket.once('error', () => {
-      socket.destroy();
-      resolve(null);
-    });
-    socket.connect(port, host);
-  });
-}
-
-async function findBuzzerIp(preferredIp) {
-  // 1. Prova l'IP fornito/salvato
-  if (preferredIp) {
-    const ok = await checkPort(preferredIp, 81, 700);
-    if (ok) return ok;
-  }
-
-  // 2. Prova host mDNS e IP tipici (es. Access Point ESP32 o IP recenti)
-  const commonHosts = [
-    '192.168.1.97',
-    '192.168.1.65',
-    '192.168.4.1', // Default Access Point ESP32
-    'esp32.local',
-    'imperio-buzzer.local',
-    'pulsantiera.local'
-  ];
-
-  for (const host of commonHosts) {
-    if (host !== preferredIp) {
-      const ok = await checkPort(host, 81, 400);
-      if (ok) return ok;
-    }
-  }
-
-  // 3. Scansione rapida della sottorete locale (porta 81)
-  const interfaces = getAllIpAddresses();
-  for (const iface of interfaces) {
-    const parts = iface.address.split('.');
-    if (parts.length === 4) {
-      const prefix = `${parts[0]}.${parts[1]}.${parts[2]}.`;
-      const candidates = [];
-      for (let i = 1; i <= 254; i++) {
-        const ip = `${prefix}${i}`;
-        if (ip !== iface.address) {
-          candidates.push(ip);
+    const req = http.get(`http://${targetIp}/status`, { timeout: 2000 }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          resolve(true);
+        } else {
+          resolve(false);
         }
-      }
+      });
+    });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
+    req.on('error', () => {
+      resolve(false);
+    });
+  });
+});
 
-      // Esegui in blocchi concorrenti da 50 socket
-      for (let i = 0; i < candidates.length; i += 50) {
-        const chunk = candidates.slice(i, i + 50);
-        const results = await Promise.all(chunk.map(ip => checkPort(ip, 81, 600)));
-        const found = results.find(Boolean);
-        if (found) return found;
-      }
-    }
-  }
+ipcMain.handle('esp32-leggi', async (_event, ip) => {
+  const targetIp = ip || FIXED_BUZZER_IP;
+  return new Promise((resolve) => {
+    const req = http.get(`http://${targetIp}/leggi`, { timeout: 400 }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode === 200) {
+          resolve(data.trim().toLowerCase());
+        } else {
+          resolve(null);
+        }
+      });
+    });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(null);
+    });
+    req.on('error', () => {
+      resolve(null);
+    });
+  });
+});
 
-  return null;
-}
-
-ipcMain.handle('find-buzzer-ip', async (event, currentIp) => {
-  return await findBuzzerIp(currentIp);
+ipcMain.handle('esp32-sblocca', async (_event, ip) => {
+  const targetIp = ip || FIXED_BUZZER_IP;
+  return new Promise((resolve) => {
+    const req = http.get(`http://${targetIp}/sblocca`, { timeout: 1500 }, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        resolve(res.statusCode === 200);
+      });
+    });
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
+    req.on('error', () => {
+      resolve(false);
+    });
+  });
 });
 
 app.whenReady().then(() => {

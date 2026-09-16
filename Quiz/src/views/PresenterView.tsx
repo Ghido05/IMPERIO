@@ -20,6 +20,7 @@ import type { Slide } from '../App';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import { useSyncedState } from '../hooks/useSyncedState';
 import WebSerialManager from '../components/WebSerialManager';
+import { sendSerialReset } from '../lib/webSerial';
 import { sanitizeSetupStateWithKnownAssets } from '../lib/assetUrl';
 
 type PresenterViewMode = 'setup' | 'quiz' | 'welcome' | 'editor';
@@ -540,6 +541,7 @@ export default function PresenterView() {
   };
 
   const goToNextSlide = () => {
+    sendSerialReset();
     const currentIndex = slides.findIndex(s => s.id === activeSlideId);
     if (currentIndex !== -1 && currentIndex < slides.length - 1) {
       setActiveSlideId(slides[currentIndex + 1].id);
@@ -547,6 +549,7 @@ export default function PresenterView() {
   };
 
   const goToPrevSlide = () => {
+    sendSerialReset();
     const currentIndex = slides.findIndex(s => s.id === activeSlideId);
     if (currentIndex !== -1 && currentIndex > 0) {
       setActiveSlideId(slides[currentIndex - 1].id);
@@ -556,6 +559,7 @@ export default function PresenterView() {
   const handleResetPlaystate = () => {
     if (!activeSlideId) return;
     if (confirm("Vuoi azzerare lo stato di gioco di questa slide? Tutti gli elementi svelati, punti e timer verranno ripristinati.")) {
+      sendSerialReset();
       const isPasswordGame = activeSlideId.includes('password');
       const defaultValues: Record<string, any> = {
         step: 0,

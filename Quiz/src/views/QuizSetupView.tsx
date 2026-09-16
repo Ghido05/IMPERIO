@@ -1096,6 +1096,26 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     reader.onload = async (event) => {
       if (event.target?.result) {
         const base64 = event.target.result as string;
+        // 1. Se siamo in Electron, salviamo DIRETTAMENTE il file fisico nella cartella public/
+        // per avere percorsi puliti (/Audio/..., /Icone/...) compatibili su qualsiasi PC senza idb://
+        const isElectron = (window as any).electron !== undefined;
+        if (isElectron && (window as any).electron?.saveAssetFile) {
+          try {
+            const res = await (window as any).electron.saveAssetFile({
+              fileName: file.name,
+              base64
+            });
+            if (res?.success && res?.publicUrl) {
+              console.log(`[Setup] File salvato fisicamente in public: ${res.publicUrl}`);
+              onLoad(res.publicUrl);
+              showToast(`✅ File salvato in cartella pubblica: ${file.name}`);
+              return;
+            }
+          } catch (electronErr) {
+            console.warn('[Setup] Fallback su IndexedDB:', electronErr);
+          }
+        }
+
         const id = 'file_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
         
         try {
@@ -1118,7 +1138,6 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           const first100 = base64.substring(0, 100);
           localStorage.setItem('filename_' + first100, file.name);
           
-          const isElectron = (window as any).electron !== undefined;
           if (isElectron) {
             (window as any).electron.broadcastState({
               newIndexedDBFile: { id, fileName: file.name, base64 }

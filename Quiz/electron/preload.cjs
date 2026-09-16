@@ -42,4 +42,5 @@ contextBridge.exposeInMainWorld('electron', {
   checkEsp32Status: (ip) => ipcRenderer.invoke('check-esp32-status', ip),
   esp32Leggi: (ip) => ipcRenderer.invoke('esp32-leggi', ip),
   esp32Sblocca: (ip) => ipcRenderer.invoke('esp32-sblocca', ip),
+  saveAssetFile: (payload) => ipcRenderer.invoke('save-asset-file', payload),
 });

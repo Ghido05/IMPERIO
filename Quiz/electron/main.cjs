@@ -255,6 +255,46 @@ ipcMain.handle('write-setup-file', async (event, data) => {
   return { success };
 });
 
+ipcMain.handle('save-asset-file', async (_event, { fileName, base64, category }) => {
+  try {
+    const publicDir = path.join(__dirname, '../public');
+    let targetSubdir = '';
+    const lowerName = fileName.toLowerCase();
+    
+    if (category === 'audio_strumenti' || lowerName.includes('strument')) {
+      targetSubdir = 'Audio/strumenti';
+    } else if (category === 'audio_soluzione' || lowerName.includes('soluzion')) {
+      targetSubdir = 'Audio/soluzioni a conferma';
+    } else if (category === 'audio_stacchetto' || lowerName.includes('stacchett')) {
+      targetSubdir = 'Audio/stacchetto';
+    } else if (lowerName.endsWith('.mp3') || lowerName.endsWith('.wav') || lowerName.endsWith('.ogg')) {
+      targetSubdir = 'Audio/strumenti';
+    } else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.png') || lowerName.endsWith('.webp')) {
+      targetSubdir = 'Icone/nessuno_img';
+    } else {
+      targetSubdir = 'Icone';
+    }
+
+    const fullTargetDir = path.join(publicDir, targetSubdir);
+    if (!fs.existsSync(fullTargetDir)) {
+      fs.mkdirSync(fullTargetDir, { recursive: true });
+    }
+
+    const cleanFileName = path.basename(fileName);
+    const targetFilePath = path.join(fullTargetDir, cleanFileName);
+
+    const base64Data = base64.replace(/^data:[^;]+;base64,/, '');
+    fs.writeFileSync(targetFilePath, Buffer.from(base64Data, 'base64'));
+
+    const publicUrl = `/${targetSubdir}/${cleanFileName}`;
+    console.log(`[AssetSaver] File salvato in cartella pubblica: ${targetFilePath} -> ${publicUrl}`);
+    return { success: true, publicUrl };
+  } catch (err) {
+    console.error('[AssetSaver] Errore salvataggio asset:', err);
+    return { success: false, error: err.message };
+  }
+});
+
 let localServer;
 let wss;
 const clients = new Set();

@@ -359,18 +359,27 @@ export function isBuzzerPollingActive(): boolean {
  * Singola verifica dello stato hardware con notifica immediata dei listener UI
  */
 export async function pollHardwareOnce(): Promise<boolean> {
+  if (isSearching) {
+    return isOpened;
+  }
   isSearching = true;
   notifyStatus();
 
-  const connected = await checkHardwareStatus(2000);
-  isSearching = false;
-
-  if (isOpened !== connected) {
-    isOpened = connected;
-    console.log(`[ESP32] Stato connessione hardware: ${connected ? 'Hardware Connesso' : 'Hardware Disconnesso'}`);
+  try {
+    const connected = await checkHardwareStatus(2000);
+    if (isOpened !== connected) {
+      isOpened = connected;
+      console.log(`[ESP32] Stato connessione hardware: ${connected ? 'Hardware Connesso' : 'Hardware Disconnesso'}`);
+    }
+    return connected;
+  } catch (err) {
+    console.error('[ESP32] Errore verifica hardware:', err);
+    isOpened = false;
+    return false;
+  } finally {
+    isSearching = false;
+    notifyStatus();
   }
-  notifyStatus();
-  return connected;
 }
 
 /**
@@ -381,9 +390,6 @@ export function startHardwarePolling(intervalMs = 2500) {
     clearInterval(pollTimer);
     pollTimer = null;
   }
-
-  // Controllo immediato all'avvio
-  pollHardwareOnce();
 
   // Polling periodico dello stato
   pollTimer = setInterval(async () => {
@@ -471,4 +477,5 @@ export function subscribeSerialData(callback: (line: string) => void): () => voi
 // Avvio automatico del polling stato all'importazione del modulo se non in pausa
 if (typeof window !== 'undefined' && !isPaused) {
   startHardwarePolling();
+  pollHardwareOnce();
 }

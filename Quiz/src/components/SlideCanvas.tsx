@@ -78,8 +78,8 @@ export default function SlideCanvas({
         style={{ width: thumbWidth, height: thumbHeight }}
       >
         <div className="pointer-events-none" style={stageStyle}>
-          <GameDataProvider data={data}>
-            <SlideRenderer type={slide.type} interactive={false} revealAll={revealAll} />
+          <GameDataProvider key={slide.id} data={data}>
+            <SlideRenderer key={slide.id} type={slide.type} interactive={false} revealAll={revealAll} />
           </GameDataProvider>
         </div>
       </div>
@@ -87,12 +87,12 @@ export default function SlideCanvas({
   }
 
   const stageContent = (
-    <GameDataProvider data={data}>
+    <GameDataProvider key={slide.id} data={data}>
       <div
         className={interactive ? 'relative' : 'relative pointer-events-none'}
         style={{ width: STAGE_W, height: STAGE_H }}
       >
-        <SlideRenderer type={slide.type} interactive={interactive} revealAll={revealAll} />
+        <SlideRenderer key={slide.id} type={slide.type} interactive={interactive} revealAll={revealAll} />
       </div>
     </GameDataProvider>
   );

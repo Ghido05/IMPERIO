@@ -34,11 +34,13 @@ const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false }) => 
     );
   }
 
+  if (!isVisible && !revealAll) {
+    return null;
+  }
+
   return (
     <div 
-      className={`absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md transition-all duration-1000 ${
-        isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
-      }`}
+      className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md animate-fade-in"
     >
       <div className="relative group flex flex-col items-center">
         {/* Bagliore retrostante purple-blue */}

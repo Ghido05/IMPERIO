@@ -164,12 +164,12 @@ const Solution: React.FC<{ isVisible: boolean; revealAll?: boolean }> = ({ isVis
     );
   }
 
+  if (!isVisible && !revealAll) {
+    return null;
+  }
+
   return (
-  <div 
-    className={`absolute inset-0 z-50 flex flex-col items-center justify-center transition-all duration-1000 ${
-      isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'
-    }`}
-  >
+    <div className="absolute inset-0 z-50 flex flex-col items-center justify-center animate-fade-in">
     <div className="relative group flex flex-col items-center">
       {/* Bagliore retrostante */}
       <div className="absolute -inset-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition duration-1000"></div>

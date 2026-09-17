@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   connectSerial, 
   disconnectSerial, 
@@ -6,7 +6,7 @@ import {
   sendSerialReset,
   getBuzzerIp,
   setBuzzerIp,
-  searchAndConnectBuzzer,
+  checkHardwareStatus,
   pauseOrStopSearch,
   resumeOrStartSearch,
   isSearchPaused,
@@ -33,6 +33,17 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
   const [bookedTeam, setBookedTeam] = useState<string | null>(null);
   const [teamNames, setTeamNames] = useState<string[]>(['Squadra Rossa', 'Squadra Blu', 'Squadra Verde']);
   const [isUnlocking, setIsUnlocking] = useState(false);
+
+  // Feedback immediato (0ms) per il clic dell'utente
+  const [localSearching, setLocalSearching] = useState(false);
+  const [searchFeedback, setSearchFeedback] = useState<'idle' | 'success' | 'failed'>('idle');
+  const searchFeedbackTimer = useRef<any>(null);
+
+  // Feedback esplicito per la verifica nel modal impostazioni
+  const [modalStatus, setModalStatus] = useState<'idle' | 'testing' | 'ok' | 'fail'>('idle');
+  const [modalMessage, setModalMessage] = useState<string>('');
+
+  const isActuallySearching = isSearching || localSearching;
 
   // Load team names from setup config
   useEffect(() => {
@@ -214,6 +225,15 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
     };
   }, [activeSlideId, bookedTeam, assignedTeam]);
 
+  // Cleanup timer feedback on unmount
+  useEffect(() => {
+    return () => {
+      if (searchFeedbackTimer.current) {
+        clearTimeout(searchFeedbackTimer.current);
+      }
+    };
+  }, []);
+
   // Sblocco manuale e riarmo hardware
   const handleManualUnlock = async () => {
     setIsUnlocking(true);
@@ -238,13 +258,56 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
     setIsUnlocking(false);
   };
 
-  const handleConnectionToggle = async () => {
+  // Cerca / Connetti / Scollega con feedback immediato a 0ms
+  const handleSearchOrToggle = async () => {
+    if (searchFeedbackTimer.current) {
+      clearTimeout(searchFeedbackTimer.current);
+      searchFeedbackTimer.current = null;
+    }
+
     if (connected) {
+      setSearchFeedback('idle');
       await disconnectSerial();
-    } else if (isSearching) {
-      await pauseOrStopSearch();
     } else {
-      await resumeOrStartSearch();
+      // Feedback immediato nel frame del clic
+      setLocalSearching(true);
+      setSearchFeedback('idle');
+      try {
+        const ok = await connectSerial(customIp.trim(), true);
+        setLocalSearching(false);
+        if (ok) {
+          setSearchFeedback('success');
+          searchFeedbackTimer.current = setTimeout(() => setSearchFeedback('idle'), 2500);
+        } else {
+          setSearchFeedback('failed');
+          searchFeedbackTimer.current = setTimeout(() => setSearchFeedback('idle'), 3000);
+        }
+      } catch (_e) {
+        setLocalSearching(false);
+        setSearchFeedback('failed');
+        searchFeedbackTimer.current = setTimeout(() => setSearchFeedback('idle'), 3000);
+      }
+    }
+  };
+
+  // Verifica diretta e test nel modal impostazioni
+  const handleModalVerify = async () => {
+    setModalStatus('testing');
+    const target = customIp.trim() || '192.168.1.142';
+    setModalMessage(`Verifica su http://${target}/status...`);
+    try {
+      const ok = await checkHardwareStatus(2500);
+      if (ok) {
+        setModalStatus('ok');
+        setModalMessage(`✅ Hardware ESP32 risponde correttamente (HTTP 200)!`);
+        await connectSerial(target, true);
+      } else {
+        setModalStatus('fail');
+        setModalMessage(`❌ Nessuna risposta da http://${target}. Verifica alimentazione e Wi-Fi.`);
+      }
+    } catch (err: any) {
+      setModalStatus('fail');
+      setModalMessage(`❌ Errore connessione: ${err?.message || 'timeout'}`);
     }
   };
 
@@ -253,12 +316,19 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
     if (customIp.trim()) {
       setBuzzerIp(customIp.trim());
       setShowSettings(false);
-      await connectSerial(customIp.trim(), true);
+      setLocalSearching(true);
+      setSearchFeedback('idle');
+      try {
+        const ok = await connectSerial(customIp.trim(), true);
+        setLocalSearching(false);
+        setSearchFeedback(ok ? 'success' : 'failed');
+        searchFeedbackTimer.current = setTimeout(() => setSearchFeedback('idle'), ok ? 2500 : 3000);
+      } catch (_e) {
+        setLocalSearching(false);
+        setSearchFeedback('failed');
+        searchFeedbackTimer.current = setTimeout(() => setSearchFeedback('idle'), 3000);
+      }
     }
-  };
-
-  const handleSearchNetwork = async () => {
-    await searchAndConnectBuzzer();
   };
 
   // Determina nome e colore della squadra attualmente prenotata
@@ -270,20 +340,33 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
   return (
     <>
       <div className="flex items-center gap-2 bg-[#1e1e1e] border border-white/10 px-2.5 py-1 rounded-md shrink-0 select-none">
+        {/* Badge Stato Hardware */}
         <div 
           className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
-          onClick={() => setShowSettings(true)}
-          title={`Pulsantiera Wi-Fi: ${connected ? 'Connessa' : 'Disconnessa'} (http://${buzzerIp})`}
+          onClick={() => {
+            setShowSettings(true);
+            setModalStatus('idle');
+            setModalMessage('');
+          }}
+          title={`Pulsantiera Hardware ESP32: ${connected ? 'Connessa' : isActuallySearching ? 'Ricerca in corso...' : 'Disconnessa'} (http://${buzzerIp})`}
         >
           <span 
             className={`w-2.5 h-2.5 rounded-full transition-colors duration-300 ${
               connected 
                 ? 'bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse' 
+                : isActuallySearching
+                ? 'bg-amber-400 shadow-[0_0_8px_#f59e0b] animate-ping'
                 : 'bg-red-500 shadow-[0_0_6px_#ef4444]'
             }`} 
           />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-white/80">
-            {connected ? 'Wi-Fi: OK' : 'Wi-Fi: OFF'}
+          <span className={`text-[10px] font-bold uppercase tracking-wider ${
+            isActuallySearching ? 'text-amber-300 animate-pulse font-black' : 'text-white/80'
+          }`}>
+            {connected 
+              ? 'HARDWARE: OK' 
+              : isActuallySearching 
+              ? 'HARDWARE: CERCO...' 
+              : 'HARDWARE: OFF'}
           </span>
         </div>
 
@@ -305,29 +388,78 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
           type="button"
           onClick={handleManualUnlock}
           disabled={isUnlocking}
-          className="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all cursor-pointer disabled:opacity-50"
+          className="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all cursor-pointer disabled:opacity-50 active:scale-95 flex items-center gap-1"
           title="Invia comando /sblocca per riarmare la pulsantiera hardware"
         >
-          {isUnlocking ? '...' : '🔓 Sblocca'}
+          {isUnlocking ? (
+            <>
+              <svg className="animate-spin w-2.5 h-2.5 text-amber-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <span>Sblocco...</span>
+            </>
+          ) : (
+            <span>🔓 Sblocca</span>
+          )}
         </button>
 
+        {/* Pulsante Cerca / Connetti / Scollega con Feedback Istantaneo */}
         <button
           type="button"
-          onClick={handleConnectionToggle}
-          className={`px-1.5 py-0.5 text-[9px] font-black uppercase rounded transition-all cursor-pointer ${
-            connected 
-              ? 'text-emerald-400 bg-emerald-950/20 hover:bg-emerald-950/40 border border-emerald-900/30' 
-              : 'text-red-400 bg-red-950/20 hover:bg-red-950/40 border border-red-900/30'
+          onClick={handleSearchOrToggle}
+          disabled={isActuallySearching}
+          className={`px-2 py-0.5 text-[9px] font-black uppercase rounded transition-all cursor-pointer flex items-center gap-1 active:scale-95 select-none ${
+            isActuallySearching
+              ? 'text-amber-200 bg-amber-500/30 border border-amber-400/80 shadow-[0_0_10px_rgba(245,158,11,0.4)] animate-pulse cursor-wait'
+              : searchFeedback === 'success'
+              ? 'text-emerald-100 bg-emerald-600/50 border border-emerald-400 shadow-[0_0_10px_#10b981]'
+              : searchFeedback === 'failed'
+              ? 'text-red-100 bg-red-600/50 border border-red-400 shadow-[0_0_10px_#ef4444]'
+              : connected 
+              ? 'text-slate-300 hover:text-red-300 bg-white/5 hover:bg-red-950/30 border border-white/10 hover:border-red-900/40' 
+              : 'text-emerald-300 hover:text-emerald-200 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/40 hover:border-emerald-400 shadow-[0_0_6px_rgba(16,185,129,0.2)]'
           }`}
-          title="Verifica stato connessione hardware"
+          title={
+            isActuallySearching 
+              ? "Ricerca hardware ESP32 in corso..." 
+              : searchFeedback === 'success'
+              ? "Hardware connesso con successo!"
+              : searchFeedback === 'failed'
+              ? "Nessun hardware trovato all'indirizzo IP"
+              : connected 
+              ? "Hardware connesso. Clicca per scollegare" 
+              : "Clicca per avviare la ricerca dell'hardware ESP32"
+          }
         >
-          {connected ? 'OK' : 'Verifica'}
+          {isActuallySearching ? (
+            <>
+              <svg className="animate-spin w-2.5 h-2.5 text-amber-200" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+              </svg>
+              <span>Cerco...</span>
+            </>
+          ) : searchFeedback === 'success' ? (
+            <span>✓ Trovato!</span>
+          ) : searchFeedback === 'failed' ? (
+            <span>✕ Non trovato</span>
+          ) : connected ? (
+            <span>Scollega</span>
+          ) : (
+            <span>🔍 Cerca</span>
+          )}
         </button>
 
+        {/* Pulsante Ingranaggio Impostazioni */}
         <button
           type="button"
-          onClick={() => setShowSettings(true)}
-          className="text-white/40 hover:text-white/90 text-xs transition-colors cursor-pointer"
+          onClick={() => {
+            setShowSettings(true);
+            setModalStatus('idle');
+            setModalMessage('');
+          }}
+          className="text-white/40 hover:text-white/90 text-xs transition-colors cursor-pointer p-0.5 active:scale-95"
           title="Impostazioni Hardware ESP32"
         >
           ⚙️
@@ -399,23 +531,62 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
                 <p>• Stato attuale: <span className={connected ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>{connected ? 'Hardware Connesso' : 'Hardware Disconnesso'}</span></p>
               </div>
 
+              {/* Feedback immediato test connessione modal */}
+              {modalStatus !== 'idle' && (
+                <div className={`text-xs p-2.5 rounded border flex items-center gap-2 ${
+                  modalStatus === 'testing' 
+                    ? 'bg-amber-950/40 border-amber-500/40 text-amber-300 animate-pulse'
+                    : modalStatus === 'ok'
+                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                    : 'bg-red-950/40 border-red-500/40 text-red-300'
+                }`}>
+                  {modalStatus === 'testing' && (
+                    <svg className="animate-spin w-3.5 h-3.5 text-amber-300 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                    </svg>
+                  )}
+                  <span>{modalMessage}</span>
+                </div>
+              )}
+
               <div className="flex items-center justify-between gap-2 pt-2">
                 <div className="flex items-center gap-1.5">
                   <button
                     type="button"
-                    onClick={handleSearchNetwork}
-                    disabled={isSearching}
-                    className="px-2.5 py-1.5 bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 rounded text-xs font-semibold cursor-pointer disabled:opacity-50"
+                    onClick={handleModalVerify}
+                    disabled={modalStatus === 'testing' || isActuallySearching}
+                    className="px-2.5 py-1.5 bg-blue-600/30 hover:bg-blue-600/50 text-blue-300 border border-blue-500/40 rounded text-xs font-semibold cursor-pointer disabled:opacity-50 active:scale-95 flex items-center gap-1.5"
                   >
-                    {isSearching ? 'Verifica...' : '🔄 Verifica'}
+                    {modalStatus === 'testing' || isActuallySearching ? (
+                      <>
+                        <svg className="animate-spin w-3 h-3 text-blue-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                        <span>Verifico...</span>
+                      </>
+                    ) : (
+                      <span>🔄 Verifica</span>
+                    )}
                   </button>
                   <button
                     type="button"
                     onClick={handleManualUnlock}
                     disabled={isUnlocking}
-                    className="px-2.5 py-1.5 bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40 rounded text-xs font-semibold cursor-pointer disabled:opacity-50"
+                    className="px-2.5 py-1.5 bg-amber-600/30 hover:bg-amber-600/50 text-amber-300 border border-amber-500/40 rounded text-xs font-semibold cursor-pointer disabled:opacity-50 active:scale-95 flex items-center gap-1"
                   >
-                    🔓 Sblocca
+                    {isUnlocking ? (
+                      <>
+                        <svg className="animate-spin w-2.5 h-2.5 text-amber-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+                        </svg>
+                        <span>Sblocco...</span>
+                      </>
+                    ) : (
+                      <span>🔓 Sblocca</span>
+                    )}
                   </button>
                 </div>
 
@@ -429,7 +600,7 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
                   </button>
                   <button
                     type="submit"
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold shadow-xs cursor-pointer"
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold shadow-xs cursor-pointer active:scale-95"
                   >
                     Salva & Verifica
                   </button>

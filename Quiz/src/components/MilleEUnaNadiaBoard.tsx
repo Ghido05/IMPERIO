@@ -28,7 +28,10 @@ export default function MilleEUnaNadiaBoard({
 }: MilleEUnaNadiaBoardProps) {
   const [showError, setShowError] = useState(false);
   const [errorTrigger] = useSyncedState<number>('playstate_nadia_error_trigger', 0);
+  const [nadiaStep] = useSyncedState<number>('playstate_nadia_step', 0);
   const lastErrorRef = useRef(errorTrigger);
+
+  const showOptions = nadiaStep >= 1 || solutionShown;
 
   // Trigger animazione di errore (X rossa + scossa a schermo)
   useEffect(() => {
@@ -127,8 +130,10 @@ export default function MilleEUnaNadiaBoard({
             <span>Relatore:</span>
             {solutionShown ? (
               <span className="text-emerald-400 font-bold">Soluzione Mostrata</span>
+            ) : !showOptions ? (
+              <span className="text-amber-400 font-bold">Solo Domanda (▶ per Risposte)</span>
             ) : (
-              <span className="text-amber-400 font-bold">In attesa risposta</span>
+              <span className="text-blue-400 font-bold">Risposte Svelate</span>
             )}
           </div>
         )}
@@ -148,67 +153,77 @@ export default function MilleEUnaNadiaBoard({
           </div>
         </div>
 
-        {/* 3 Riquadri Risposta: A, B, C */}
-        <div className="w-full grid grid-cols-3 gap-8 mt-10">
-          {displayedOptions.map((opt) => {
-            const isThisCorrect = opt.isCorrect;
-            
-            // Stile quando la soluzione è mostrata
-            let cardBg = 'bg-[#181326]/90 hover:bg-[#201933]/90 border-white/20 text-white';
-            let letterBg = 'bg-amber-400/20 text-amber-300 border-amber-400/40';
-            let shadowClass = 'shadow-2xl shadow-black/60';
+        {/* 3 Riquadri Risposta: A, B, C (visibili solo dopo aver avanzato con le frecce) */}
+        {showOptions ? (
+          <div className="w-full grid grid-cols-3 gap-8 mt-10 animate-zoom-in">
+            {displayedOptions.map((opt) => {
+              const isThisCorrect = opt.isCorrect;
+              
+              // Stile quando la soluzione è mostrata
+              let cardBg = 'bg-[#181326]/90 hover:bg-[#201933]/90 border-white/20 text-white';
+              let letterBg = 'bg-amber-400/20 text-amber-300 border-amber-400/40';
+              let shadowClass = 'shadow-2xl shadow-black/60';
 
-            if (solutionShown) {
-              if (isThisCorrect) {
-                cardBg = 'bg-gradient-to-br from-emerald-600 to-emerald-700 border-emerald-300 text-white scale-[1.03]';
-                letterBg = 'bg-white text-emerald-800 border-white';
-                shadowClass = 'shadow-[0_0_60px_rgba(16,185,129,0.8)] ring-4 ring-emerald-400/50 animate-pulse';
-              } else {
-                cardBg = 'bg-[#120f1a]/50 border-white/5 text-white/30 scale-[0.98]';
-                letterBg = 'bg-white/5 text-white/20 border-white/10';
-                shadowClass = 'shadow-none opacity-40';
+              if (solutionShown) {
+                if (isThisCorrect) {
+                  cardBg = 'bg-gradient-to-br from-emerald-600 to-emerald-700 border-emerald-300 text-white scale-[1.03]';
+                  letterBg = 'bg-white text-emerald-800 border-white';
+                  shadowClass = 'shadow-[0_0_60px_rgba(16,185,129,0.8)] ring-4 ring-emerald-400/50 animate-pulse';
+                } else {
+                  cardBg = 'bg-[#120f1a]/50 border-white/5 text-white/30 scale-[0.98]';
+                  letterBg = 'bg-white/5 text-white/20 border-white/10';
+                  shadowClass = 'shadow-none opacity-40';
+                }
+              } else if (isPresenter && isThisCorrect) {
+                // Nel relatore evidenziamo discretamente la corretta in anticipo
+                cardBg = 'bg-[#181326]/95 border-emerald-500/70 text-white';
+                letterBg = 'bg-emerald-500/30 text-emerald-300 border-emerald-400/50';
               }
-            } else if (isPresenter && isThisCorrect) {
-              // Nel relatore evidenziamo discretamente la corretta in anticipo
-              cardBg = 'bg-[#181326]/95 border-emerald-500/70 text-white';
-              letterBg = 'bg-emerald-500/30 text-emerald-300 border-emerald-400/50';
-            }
 
-            return (
-              <div
-                key={opt.letter}
-                className={`relative flex flex-col justify-center items-center min-h-[200px] p-6 rounded-2xl border-2 backdrop-blur-md transition-all duration-500 ${cardBg} ${shadowClass}`}
-              >
-                {/* Badge Risposta Corretta discreta per il Relatore */}
-                {isPresenter && !solutionShown && isThisCorrect && (
-                  <div className="absolute top-2.5 right-3 px-2 py-0.5 rounded bg-emerald-500/30 border border-emerald-500/50 text-[10px] font-black text-emerald-300 uppercase tracking-wider">
-                    ✓ Corretta
+              return (
+                <div
+                  key={opt.letter}
+                  className={`relative flex flex-col justify-center items-center min-h-[200px] p-6 rounded-2xl border-2 backdrop-blur-md transition-all duration-500 ${cardBg} ${shadowClass}`}
+                >
+                  {/* Badge Risposta Corretta discreta per il Relatore */}
+                  {isPresenter && !solutionShown && isThisCorrect && (
+                    <div className="absolute top-2.5 right-3 px-2 py-0.5 rounded bg-emerald-500/30 border border-emerald-500/50 text-[10px] font-black text-emerald-300 uppercase tracking-wider">
+                      ✓ Corretta
+                    </div>
+                  )}
+
+                  {/* Badge Esatta quando svelata al pubblico */}
+                  {solutionShown && isThisCorrect && (
+                    <div className="absolute top-2.5 right-3 px-2.5 py-0.5 rounded-full bg-white text-emerald-800 text-xs font-black uppercase tracking-wider shadow">
+                      ✓ RISPOSTA ESATTA
+                    </div>
+                  )}
+
+                  {/* Lettera (A), (B), (C) */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <span className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-black border ${letterBg} transition-all duration-300 shadow`}>
+                      {opt.letter}
+                    </span>
+                    <span className="text-xl font-bold opacity-60">)</span>
                   </div>
-                )}
 
-                {/* Badge Esatta quando svelata al pubblico */}
-                {solutionShown && isThisCorrect && (
-                  <div className="absolute top-2.5 right-3 px-2.5 py-0.5 rounded-full bg-white text-emerald-800 text-xs font-black uppercase tracking-wider shadow">
-                    ✓ RISPOSTA ESATTA
-                  </div>
-                )}
-
-                {/* Lettera (A), (B), (C) */}
-                <div className="flex items-center gap-3 mb-3">
-                  <span className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-black border ${letterBg} transition-all duration-300 shadow`}>
-                    {opt.letter}
-                  </span>
-                  <span className="text-xl font-bold opacity-60">)</span>
+                  {/* Testo Risposta */}
+                  <p className="text-2xl lg:text-[28px] font-bold text-center leading-snug break-words max-w-full">
+                    {opt.text}
+                  </p>
                 </div>
-
-                {/* Testo Risposta */}
-                <p className="text-2xl lg:text-[28px] font-bold text-center leading-snug break-words max-w-full">
-                  {opt.text}
-                </p>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Placeholder durante la lettura della domanda */
+          <div className="w-full flex items-center justify-center mt-10 py-8 px-6 rounded-2xl bg-[#120f1a]/60 border border-amber-400/20 backdrop-blur-sm animate-pulse">
+            <div className="flex items-center gap-3 text-amber-300/60 font-black tracking-widest text-base sm:text-lg uppercase">
+              <span className="text-2xl">⏳</span>
+              <span>Lettura Domanda in Corso — Premi Freccia Destra per mostrare le opzioni di risposta</span>
+            </div>
+          </div>
+        )}
 
         {/* Banner visivo Squadra Prenotata al Buzzer */}
         {bookedTeam !== null && assignedTeam === null && (

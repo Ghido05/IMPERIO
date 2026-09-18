@@ -239,7 +239,11 @@ export function getSlideForBoxQuestion(
             sfondo: item.sfondo || setupState.gioco4.sfondoGenerale || ''
           };
         });
-    return { id: 'gioco_frase_tempo', type: 'gioco_frase_tempo', data: { ...defaultData, frasi } };
+    return { 
+      id: `box4_q${questionNum}`, 
+      type: 'gioco_frase_tempo', 
+      data: { ...defaultData, frasi, currentPhraseIndex: questionNum - 1 } 
+    };
   }
 
   if (boxNum === 5) {
@@ -310,7 +314,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     }
   }, [serverUrl]);
 
-  const [activePhraseIndex, setActivePhraseIndex] = useSyncedState<number>(`playstate_gioco_frase_tempo_index`, 0);
+  const [, setActivePhraseIndex] = useSyncedState<number>(`playstate_gioco_frase_tempo_index`, 0);
   const [maximizedPanel, setMaximizedPanel] = useState<'none' | 'left' | 'right'>('none');
 
   const [, setPasswordManche] = useState<number>(() => {
@@ -517,6 +521,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   // Stati per Mille e una Nadia
   const [nadiaActive, setNadiaActive] = useSyncedState<boolean>('playstate_nadia_active', false);
   const [, setNadiaQuestionId] = useSyncedState<string>('playstate_nadia_question_id', '');
+  const [nadiaStep, setNadiaStep] = useSyncedState<number>('playstate_nadia_step', 0);
   const [nadiaSolutionShown, setNadiaSolutionShown] = useSyncedState<boolean>('playstate_nadia_solution_shown', false);
   const [nadiaBookedTeam, setNadiaBookedTeam] = useSyncedState<number | null>('playstate_nadia_booked_team', null);
   const [nadiaAssignedTeam, setNadiaAssignedTeam] = useSyncedState<number | null>('playstate_nadia_assigned_team', null);
@@ -526,7 +531,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   const teamNames = setupState.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
 
   // Trova se per lo slot corrente (Box + Domanda/Frase) c'è una domanda di Nadia assegnata
-  const currentSlotQuestionNum = activeBox === 4 ? activePhraseIndex + 1 : activeQuestion;
+  const currentSlotQuestionNum = activeQuestion;
   const nadiaQuestionForCurrentSlot = (setupState.nadia?.domande || []).find(
     (d) => d.targetBox === activeBox && d.targetQuestion === currentSlotQuestionNum
   );
@@ -607,6 +612,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     }
 
     setNadiaQuestionId(qId);
+    setNadiaStep(0);
     setNadiaSolutionShown(false);
     setNadiaBookedTeam(null);
     setNadiaAssignedTeam(null);
@@ -620,6 +626,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
       playNadiaJingle(true);
     }
     setNadiaActive(false);
+    setNadiaStep(0);
     setNadiaSolutionShown(false);
     setNadiaBookedTeam(null);
     setNadiaAssignedTeam(null);
@@ -648,6 +655,18 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
           if (nadiaBookedTeam === null && nadiaAssignedTeam === null) {
             handleBookTeamNadia(3);
           }
+        } else if (e.key === 'ArrowRight') {
+          // Freccia Destra: fa apparire le possibili risposte per dare a tutti lo stesso tempo
+          e.preventDefault();
+          if (nadiaStep === 0) {
+            setNadiaStep(1);
+          }
+        } else if (e.key === 'ArrowLeft') {
+          // Freccia Sinistra: permette di tornare indietro a solo domanda se non svelata
+          e.preventDefault();
+          if (nadiaStep === 1 && !nadiaSolutionShown) {
+            setNadiaStep(0);
+          }
         } else if (e.key === 's' || e.key === 'S' || e.key === 'Enter') {
           setNadiaSolutionShown((prev) => !prev);
         } else if (e.key === 'e' || e.key === 'E' || e.key === 'x' || e.key === 'X') {
@@ -670,9 +689,10 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nadiaActive, nadiaBookedTeam, nadiaAssignedTeam, setNadiaSolutionShown]);
+  }, [nadiaActive, nadiaStep, setNadiaStep, nadiaBookedTeam, nadiaAssignedTeam, nadiaSolutionShown, setNadiaSolutionShown]);
 
-  const maxQuestionsForBox = activeBox === 1 ? 10 : activeBox === 2 ? 6 : activeBox === 3 ? 3 : 1;
+  const numBox4Questions = Math.max(1, (setupState.gioco4?.frasi && setupState.gioco4.frasi.length > 0) ? setupState.gioco4.frasi.length : 2);
+  const maxQuestionsForBox = activeBox === 1 ? 10 : activeBox === 2 ? 6 : activeBox === 3 ? 3 : activeBox === 4 ? numBox4Questions : 1;
 
   const handleNext = () => {
     sendSerialReset();
@@ -680,10 +700,18 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
       handleCloseNadia(true);
     }
     if (activeQuestion < maxQuestionsForBox) {
-      setActiveQuestion(activeQuestion + 1);
+      const nextQ = activeQuestion + 1;
+      setActiveQuestion(nextQ);
+      if (activeBox === 4) {
+        setActivePhraseIndex(nextQ - 1);
+      }
     } else if (activeBox < 5) {
-      setActiveBox(activeBox + 1);
+      const nextB = activeBox + 1;
+      setActiveBox(nextB);
       setActiveQuestion(1);
+      if (nextB === 4) {
+        setActivePhraseIndex(0);
+      }
     }
   };
 
@@ -693,12 +721,19 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
       handleCloseNadia(true);
     }
     if (activeQuestion > 1) {
-      setActiveQuestion(activeQuestion - 1);
+      const prevQ = activeQuestion - 1;
+      setActiveQuestion(prevQ);
+      if (activeBox === 4) {
+        setActivePhraseIndex(prevQ - 1);
+      }
     } else if (activeBox > 1) {
       const prevBox = activeBox - 1;
-      const prevMax = prevBox === 1 ? 10 : prevBox === 2 ? 6 : prevBox === 3 ? 3 : 1;
+      const prevMax = prevBox === 1 ? 10 : prevBox === 2 ? 6 : prevBox === 3 ? 3 : prevBox === 4 ? numBox4Questions : 1;
       setActiveBox(prevBox);
       setActiveQuestion(prevMax);
+      if (prevBox === 4) {
+        setActivePhraseIndex(prevMax - 1);
+      }
     }
   };
 
@@ -765,6 +800,9 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                   }
                   setActiveBox(boxNum);
                   setActiveQuestion(1);
+                  if (boxNum === 4) {
+                    setActivePhraseIndex(0);
+                  }
                 }}
                 className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all ${
                   activeBox === boxNum
@@ -785,7 +823,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
               <>
                 <span className="text-xs font-semibold text-white/50">Seleziona Frase:</span>
                 <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-                  {(setupState.gioco4?.frasi ?? []).map((_, idx) => (
+                  {Array.from({ length: maxQuestionsForBox }, (_, idx) => (
                     <button
                       key={idx}
                       type="button"
@@ -795,9 +833,10 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                           handleCloseNadia(true);
                         }
                         setActivePhraseIndex(idx);
+                        setActiveQuestion(idx + 1);
                       }}
                       className={`w-7 h-7 text-xs font-bold rounded-md flex items-center justify-center transition-all ${
-                        activePhraseIndex === idx
+                        activeQuestion === idx + 1
                           ? 'bg-amber-500 text-black shadow'
                           : 'bg-white/5 hover:bg-white/10 text-white/70 border border-white/5'
                       }`}
@@ -989,12 +1028,35 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                         </div>
                       )}
 
-                      {/* Barra Inferiore Controlli (Soluzione, Stacchetto, Chiudi) */}
+                      {/* Barra Inferiore Controlli (Rivelazione risposte, Soluzione, Stacchetto, Chiudi) */}
                       <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10 flex-wrap">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1 mr-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1 mr-1">
                             <span>✨</span> Mille e una Nadia
                           </span>
+
+                          {/* Pulsante Mostra / Nascondi Risposte A, B, C */}
+                          {nadiaStep === 0 ? (
+                            <button
+                              type="button"
+                              onClick={() => setNadiaStep(1)}
+                              className="px-3 py-1 text-xs font-black rounded-lg bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-300 hover:to-yellow-200 text-black shadow-lg shadow-amber-500/40 border border-amber-300 transition-all flex items-center gap-1.5 cursor-pointer animate-pulse"
+                              title="Mostra le 3 opzioni di risposta contemporaneamente (Freccia Destra ▶)"
+                            >
+                              <span>▶ Mostra Risposte A, B, C</span>
+                              <kbd className="text-[10px] bg-black/40 text-white px-1.5 py-0.5 rounded">▶</kbd>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setNadiaStep(0)}
+                              className="px-2.5 py-1 text-xs font-bold rounded-lg bg-white/10 hover:bg-white/15 text-white/70 border border-white/15 transition-all flex items-center gap-1 cursor-pointer"
+                              title="Torna a mostrare solo la domanda (Freccia Sinistra ◀)"
+                            >
+                              <span>◀ Solo Domanda</span>
+                              <kbd className="text-[9px] bg-black/40 px-1 py-0.5 rounded">◀</kbd>
+                            </button>
+                          )}
 
                           {/* Tasto Svela Soluzione */}
                           <button

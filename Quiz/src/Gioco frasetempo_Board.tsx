@@ -29,15 +29,17 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   const phrasesData = useGameData();
   const slideId = phrasesData.slideId ?? 'sandbox';
 
-  // Active phrase index
-  const [index] = useSyncedState(`playstate_${slideId}_index`, 0);
+  // Active phrase index from parent slide or synced state
+  const defaultPhraseIndex = typeof phrasesData.currentPhraseIndex === 'number' ? phrasesData.currentPhraseIndex : 0;
+  const [index] = useSyncedState(`playstate_${slideId}_index`, defaultPhraseIndex);
+  const phraseIndex = typeof phrasesData.currentPhraseIndex === 'number' ? phrasesData.currentPhraseIndex : index;
 
   // Phrase list from configuration or defaults
   const phraseList = (phrasesData.frasi ?? []).map(normalizeFraseTempoItem);
-  const phrase = normalizeFraseTempoItem(phraseList[index % Math.max(phraseList.length, 1)] || '');
+  const phrase = normalizeFraseTempoItem(phraseList[phraseIndex % Math.max(phraseList.length, 1)] || '');
 
   // Construct a unique prefix for this specific phrase index to preserve state individually
-  const phrasePrefix = `playstate_${slideId}_p${index}`;
+  const phrasePrefix = `playstate_${slideId}_p${phraseIndex}`;
 
   // Synced states specific to the current phrase index
   const [tokens, setTokens] = useSyncedState<string[]>(`${phrasePrefix}_tokens`, []);
@@ -286,8 +288,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   }, [phraseList, slideId]);
 
   useEffect(() => {
-    initGame(index);
-  }, [index, initGame]);
+    initGame(phraseIndex);
+  }, [phraseIndex, initGame]);
 
   const processLetter = useCallback((key: string) => {
     if (revealed || calledLetters.includes(key)) return;
@@ -318,7 +320,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         audioRef.current.currentTime = 0;
       }
     };
-  }, [index, phrasePrefix]);
+  }, [phraseIndex, phrasePrefix]);
 
   const handleCorrectGuess = useCallback(() => {
     if (revealed) return;
@@ -519,20 +521,19 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
 
   return (
     <div 
+      key={`${slideId}_p${phraseIndex}`}
       data-asset-refresh={assetRefresh} 
       className={`relative w-full min-h-screen bg-black text-white flex items-center justify-center overflow-hidden select-none transition-transform duration-100 ${showError ? 'animate-shake' : ''}`} 
     >
-      {/* Sfondo dinamico con dissolvenza (Step >= 2) */}
-      <div 
-        className={`absolute inset-0 bg-cover bg-center transition-opacity duration-700 pointer-events-none z-0 ${
-          showSfondo ? 'opacity-100' : 'opacity-0'
-        }`}
-        style={{
-          backgroundImage: phrase.sfondo
-            ? `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.72)), url("${assetUrl(phrase.sfondo)}")`
-            : undefined,
-        }}
-      />
+      {/* Sfondo dinamico (Step >= 2, renderizzato SOLO se showSfondo è true) */}
+      {showSfondo && phrase.sfondo && (
+        <div 
+          className="absolute inset-0 bg-cover bg-center animate-fade-in pointer-events-none z-0"
+          style={{
+            backgroundImage: `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.72)), url("${assetUrl(phrase.sfondo)}")`,
+          }}
+        />
+      )}
       {/* Overlay Errore (Sfondo Rosso + X Gigante) */}
       {showError && (
         <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center">
@@ -652,17 +653,19 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       )}
 
       {/* Frame 16:9 viewport wrapper */}
-      <div className={`relative w-full max-w-[1920px] aspect-[16/9] flex flex-col items-center justify-center px-10 py-6 transition-all duration-1000 ${showBonusAndPoints ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      <div className="relative w-full max-w-[1920px] aspect-[16/9] flex flex-col items-center justify-center px-10 py-6">
         
         {/* Header Title Banner */}
-        <div className={`text-center mb-[1%] transition-opacity duration-500 ${showFraseAndAsta ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-          <span className="px-4 py-1 text-xs font-black bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full tracking-widest uppercase mb-2 inline-block">
-            BOX 4 — ASTA A RIBASSO
-          </span>
-          <h1 className="text-[clamp(24px,3.2vw,56px)] font-black text-yellow-400 tracking-tight uppercase animate-fade-in drop-shadow-[0_2px_15px_rgba(234,179,8,0.4)]">
-            INDOVINA LA FRASE
-          </h1>
-        </div>
+        {showFraseAndAsta && (
+          <div className="text-center mb-[1%] animate-fade-in">
+            <span className="px-4 py-1 text-xs font-black bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full tracking-widest uppercase mb-2 inline-block">
+              BOX 4 — ASTA A RIBASSO
+            </span>
+            <h1 className="text-[clamp(24px,3.2vw,56px)] font-black text-yellow-400 tracking-tight uppercase drop-shadow-[0_2px_15px_rgba(234,179,8,0.4)]">
+              INDOVINA LA FRASE
+            </h1>
+          </div>
+        )}
 
         {/* Flashing Team Name Banner if winningTeamIndex !== null */}
         {winningTeamIndex !== null && (
@@ -679,214 +682,222 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
 
         <div className="flex-grow" />
 
-        {/* Phrase Display Grid */}
-        <div className={`flex flex-wrap justify-center gap-x-[1.6%] gap-y-[1.6vw] max-w-[95%] px-10 py-8 rounded-3xl bg-black/50 backdrop-blur-sm mb-4 min-h-[180px] items-center transition-all duration-500 ${showFraseAndAsta ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none mb-0'}`}>
-          {words.map((word, wIdx) => (
-            <div key={wIdx} className="flex gap-[0.3vw]">
-              {word.map((t, tIdx) => (
-                t === ' ' ? (
-                  <div key={tIdx} className="w-[2.2vw]" />
-                ) : (
-                  <div 
-                    key={tIdx} 
-                    className={`w-[clamp(42px,3.8vw,96px)] h-[clamp(60px,5.6vw,136px)] border-[5px] rounded-xl flex items-center justify-center text-[clamp(24px,3.2vw,68px)] font-black shadow-2xl transition-all duration-300
-                      ${t === '_' 
-                        ? 'bg-blue-950/40 border-blue-600/30 text-transparent shadow-black/40' 
-                        : 'bg-gradient-to-b from-blue-900 to-indigo-950 border-blue-400 text-white shadow-blue-950/50 scale-105 animate-zoom-in'
-                      }`}
-                  >
-                    {t === '_' ? '' : t}
-                  </div>
-                )
-              ))}
-            </div>
-          ))}
-        </div>
+        {/* Phrase Display Grid (Renderizzata SOLO a step >= 4) */}
+        {showFraseAndAsta && (
+          <div className="flex flex-wrap justify-center gap-x-[1.6%] gap-y-[1.6vw] max-w-[95%] px-10 py-8 rounded-3xl bg-black/50 backdrop-blur-sm mb-4 min-h-[180px] items-center animate-zoom-in">
+            {words.map((word, wIdx) => (
+              <div key={wIdx} className="flex gap-[0.3vw]">
+                {word.map((t, tIdx) => (
+                  t === ' ' ? (
+                    <div key={tIdx} className="w-[2.2vw]" />
+                  ) : (
+                    <div 
+                      key={tIdx} 
+                      className={`w-[clamp(42px,3.8vw,96px)] h-[clamp(60px,5.6vw,136px)] border-[5px] rounded-xl flex items-center justify-center text-[clamp(24px,3.2vw,68px)] font-black shadow-2xl transition-all duration-300
+                        ${t === '_' 
+                          ? 'bg-blue-950/40 border-blue-600/30 text-transparent shadow-black/40' 
+                          : 'bg-gradient-to-b from-blue-900 to-indigo-950 border-blue-400 text-white shadow-blue-950/50 scale-105 animate-zoom-in'
+                        }`}
+                    >
+                      {t === '_' ? '' : t}
+                    </div>
+                  )
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Called Letters list + reveal/error buttons */}
-        <div className={`flex items-center justify-center gap-4 mb-4 flex-wrap transition-all duration-500 ${showFraseAndAsta ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden pointer-events-none'}`}>
-          {calledLetters.length > 0 && (
-            <div className="flex items-center gap-2 animate-fade-in bg-zinc-900/60 border border-white/5 px-4 py-1.5 rounded-full text-xs">
-              <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px]">Lettere Chiamate:</span>
-              <div className="flex gap-1.5">
-                {calledLetters.map((l) => {
-                  const isCons = /[B-DF-HJ-NP-TV-Z]/.test(l);
-                  return (
-                    <span
-                      key={l}
-                      className={`w-5 h-5 flex items-center justify-center rounded font-black text-[10px] select-none
-                        ${isCons ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`}
-                    >
-                      {l}
-                    </span>
-                  );
-                })}
+        {showFraseAndAsta && (
+          <div className="flex items-center justify-center gap-4 mb-4 flex-wrap animate-fade-in">
+            {calledLetters.length > 0 && (
+              <div className="flex items-center gap-2 bg-zinc-900/60 border border-white/5 px-4 py-1.5 rounded-full text-xs">
+                <span className="text-zinc-500 font-bold uppercase tracking-wider text-[10px]">Lettere Chiamate:</span>
+                <div className="flex gap-1.5">
+                  {calledLetters.map((l) => {
+                    const isCons = /[B-DF-HJ-NP-TV-Z]/.test(l);
+                    return (
+                      <span
+                        key={l}
+                        className={`w-5 h-5 flex items-center justify-center rounded font-black text-[10px] select-none
+                          ${isCons ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'}`}
+                      >
+                        {l}
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          )}
-          {interactive && !revealed && (
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={handleCorrectGuess}
-                className="px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/35 hover:text-white transition-all shadow-lg hover:shadow-emerald-900/30 cursor-pointer"
-              >
-                Scopri soluzione (Vittoria) [Invio]
-              </button>
-              {winningTeamIndex !== null && (
+            )}
+            {interactive && !revealed && (
+              <div className="flex gap-4">
                 <button
                   type="button"
-                  onClick={handleWrongGuess}
-                  className="px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider bg-red-600/20 border border-red-500/40 text-red-300 hover:bg-red-600/35 hover:text-white transition-all shadow-lg hover:shadow-red-900/30 cursor-pointer"
+                  onClick={handleCorrectGuess}
+                  className="px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/35 hover:text-white transition-all shadow-lg hover:shadow-emerald-900/30 cursor-pointer"
                 >
-                  Errore ( \ )
+                  Scopri soluzione (Vittoria) [Invio]
                 </button>
-              )}
-            </div>
-          )}
-        </div>
+                {winningTeamIndex !== null && (
+                  <button
+                    type="button"
+                    onClick={handleWrongGuess}
+                    className="px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider bg-red-600/20 border border-red-500/40 text-red-300 hover:bg-red-600/35 hover:text-white transition-all shadow-lg hover:shadow-red-900/30 cursor-pointer"
+                  >
+                    Errore ( \ )
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex-grow" />
 
         {/* Descending Auction Bar */}
-        <div className={`w-[90%] max-w-[1200px] mb-6 transition-all duration-500 ${showFraseAndAsta ? 'opacity-100 scale-100' : 'opacity-0 scale-90 h-0 overflow-hidden pointer-events-none'}`}>
-          <div className="grid gap-2.5 w-full" style={{ gridTemplateColumns: 'repeat(15, minmax(0, 1fr))' }}>
-            {auctionSteps.map((stepNum) => {
-              const isActive = auctionValue === stepNum;
-              const isWinningBid = auctionLocked && isActive;
-              return (
-                <button
-                  key={stepNum}
-                  disabled={!interactive || auctionLocked || !showFraseAndAsta}
-                  onClick={() => {
-                    if (!interactive || auctionLocked || !showFraseAndAsta) return;
-                    setAuctionValue(stepNum);
-                    setLetterCounter(stepNum);
-                    setAuctionLocked(true);
-                    setStep(5);
-                  }}
-                  className={`relative py-3 rounded-xl border flex flex-col items-center justify-center transition-all duration-300 select-none cursor-pointer
-                    ${isWinningBid
-                      ? 'bg-gradient-to-b from-emerald-400 to-green-500 border-green-300 ring-4 ring-green-400/50 text-black scale-110 z-10 shadow-[0_0_20px_rgba(34,197,94,0.7)]'
-                      : isActive
-                        ? 'bg-gradient-to-b from-amber-400 to-yellow-500 border-yellow-300 ring-4 ring-yellow-400/50 text-black scale-110 z-10 shadow-[0_0_20px_rgba(234,179,8,0.7)]'
-                        : auctionLocked
-                          ? 'bg-zinc-950/60 border-zinc-800/60 text-zinc-600 cursor-not-allowed opacity-50'
-                          : 'bg-zinc-900/80 border-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white hover:bg-zinc-800'
-                    }`}
-                >
-                  <span className="text-2xl font-black">{stepNum}</span>
-                  {isActive && !auctionLocked && (
-                    <span className="absolute -top-3 text-[9px] font-black bg-black text-amber-400 px-2 py-0.5 rounded-full uppercase tracking-wider border border-amber-400 animate-pulse">
-                      OFFERTA
-                    </span>
-                  )}
-                  {isWinningBid && (
-                    <span className="absolute -top-3 text-[9px] font-black bg-black text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-wider border border-emerald-400">
-                      AGGIUDICATA
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Auction Dashboard Panel — in basso a sinistra in modo assoluto, compatto e rimpicciolito */}
-        <div className={`absolute bottom-6 left-10 flex flex-col items-center bg-zinc-950/80 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-md transition-all duration-500 z-20 ${showFraseAndAsta ? 'opacity-100 scale-100' : 'opacity-0 scale-90 pointer-events-none'}`}>
-          <div className="flex items-center gap-6">
-            
-            {/* Letter counter (rimpicciolito, w-20 h-20) — appare dopo l'aggiudicazione */}
-            {auctionLocked && (
-              <div className="flex flex-col items-center animate-fade-in">
-                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-400 mb-1.5">
-                  Lettere
-                </span>
-                <div className="relative">
-                  <div
-                    key={letterCounter}
-                    className={`relative w-[80px] h-[80px] rounded-xl border-2 flex flex-col items-center justify-center shadow-lg animate-counter-pop
-                      ${letterCounter === 0
-                        ? 'bg-gradient-to-b from-zinc-800 to-zinc-950 border-zinc-600 text-zinc-500'
-                        : 'bg-gradient-to-b from-indigo-600 to-blue-950 border-indigo-300 text-white shadow-indigo-950/60'
+        {showFraseAndAsta && (
+          <div className="w-[90%] max-w-[1200px] mb-6 animate-zoom-in">
+            <div className="grid gap-2.5 w-full" style={{ gridTemplateColumns: 'repeat(15, minmax(0, 1fr))' }}>
+              {auctionSteps.map((stepNum) => {
+                const isActive = auctionValue === stepNum;
+                const isWinningBid = auctionLocked && isActive;
+                return (
+                  <button
+                    key={stepNum}
+                    disabled={!interactive || auctionLocked || !showFraseAndAsta}
+                    onClick={() => {
+                      if (!interactive || auctionLocked || !showFraseAndAsta) return;
+                      setAuctionValue(stepNum);
+                      setLetterCounter(stepNum);
+                      setAuctionLocked(true);
+                      setStep(5);
+                    }}
+                    className={`relative py-3 rounded-xl border flex flex-col items-center justify-center transition-all duration-300 select-none cursor-pointer
+                      ${isWinningBid
+                        ? 'bg-gradient-to-b from-emerald-400 to-green-500 border-green-300 ring-4 ring-green-400/50 text-black scale-110 z-10 shadow-[0_0_20px_rgba(34,197,94,0.7)]'
+                        : isActive
+                          ? 'bg-gradient-to-b from-amber-400 to-yellow-500 border-yellow-300 ring-4 ring-yellow-400/50 text-black scale-110 z-10 shadow-[0_0_20px_rgba(234,179,8,0.7)]'
+                          : auctionLocked
+                            ? 'bg-zinc-950/60 border-zinc-800/60 text-zinc-600 cursor-not-allowed opacity-50'
+                            : 'bg-zinc-900/80 border-zinc-700/80 hover:border-zinc-500 text-zinc-400 hover:text-white hover:bg-zinc-800'
                       }`}
                   >
-                    <span className="text-4xl font-black leading-none drop-shadow-lg tabular-nums">
-                      {letterCounter}
-                    </span>
+                    <span className="text-2xl font-black">{stepNum}</span>
+                    {isActive && !auctionLocked && (
+                      <span className="absolute -top-3 text-[9px] font-black bg-black text-amber-400 px-2 py-0.5 rounded-full uppercase tracking-wider border border-amber-400 animate-pulse">
+                        OFFERTA
+                      </span>
+                    )}
+                    {isWinningBid && (
+                      <span className="absolute -top-3 text-[9px] font-black bg-black text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-wider border border-emerald-400">
+                        AGGIUDICATA
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Auction Dashboard Panel — in basso a sinistra in modo assoluto, compatto e rimpicciolito */}
+        {showFraseAndAsta && (
+          <div className="absolute bottom-6 left-10 flex flex-col items-center bg-zinc-950/80 border border-white/10 rounded-2xl p-4 shadow-2xl backdrop-blur-md z-20 animate-zoom-in">
+            <div className="flex items-center gap-6">
+              
+              {/* Letter counter (rimpicciolito, w-20 h-20) — appare dopo l'aggiudicazione */}
+              {auctionLocked && (
+                <div className="flex flex-col items-center animate-fade-in">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-indigo-400 mb-1.5">
+                    Lettere
+                  </span>
+                  <div className="relative">
+                    <div
+                      key={letterCounter}
+                      className={`relative w-[80px] h-[80px] rounded-xl border-2 flex flex-col items-center justify-center shadow-lg animate-counter-pop
+                        ${letterCounter === 0
+                          ? 'bg-gradient-to-b from-zinc-800 to-zinc-950 border-zinc-600 text-zinc-500'
+                          : 'bg-gradient-to-b from-indigo-600 to-blue-950 border-indigo-300 text-white shadow-indigo-950/60'
+                        }`}
+                    >
+                      <span className="text-4xl font-black leading-none drop-shadow-lg tabular-nums">
+                        {letterCounter}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Animated Auction Gavel (SVG rimpicciolito) */}
-            <div className="flex flex-col items-center justify-center relative py-1">
-              <svg width="110" height="75" viewBox="0 0 200 150" className="overflow-visible select-none pointer-events-none">
-                {/* 3D Sound Block / Base */}
-                <ellipse cx="125" cy="128" rx="40" ry="12" fill="#3d1a03" />
-                <rect x="85" y="120" width="80" height="8" fill="#3d1a03" />
-                {/* Top face of base */}
-                <ellipse cx="125" cy="120" rx="40" ry="12" fill="#78350f" stroke="#fbbf24" strokeWidth="2.5" />
-                
-                {/* Shockwave ripple ring */}
-                {strikeActive && (
-                  <ellipse 
-                    cx="125" 
-                    cy="120" 
-                    rx="40" 
-                    ry="12" 
-                    fill="none" 
-                    stroke="#fbbf24" 
-                    strokeWidth="3.5" 
-                    className="animate-ring-expand" 
-                    style={{ transformOrigin: '125px 120px' }} 
-                  />
-                )}
-
-                {/* Martelletto (Gavel) */}
-                <g 
-                  className={strikeActive ? "animate-gavel-strike" : ""} 
-                  style={{ 
-                    transformOrigin: "35px 100px", 
-                    transform: strikeActive ? "rotate(0deg)" : "rotate(-35deg)",
-                    transition: "transform 0.12s ease-out"
-                  }}
-                >
-                  {/* Wooden handle */}
-                  <line x1="35" y1="100" x2="125" y2="100" stroke="#92400e" strokeWidth="7" strokeLinecap="round" />
-                  {/* Leather Grip */}
-                  <line x1="35" y1="100" x2="65" y2="100" stroke="#451a03" strokeWidth="9" strokeLinecap="round" />
+              {/* Animated Auction Gavel (SVG rimpicciolito) */}
+              <div className="flex flex-col items-center justify-center relative py-1">
+                <svg width="110" height="75" viewBox="0 0 200 150" className="overflow-visible select-none pointer-events-none">
+                  {/* 3D Sound Block / Base */}
+                  <ellipse cx="125" cy="128" rx="40" ry="12" fill="#3d1a03" />
+                  <rect x="85" y="120" width="80" height="8" fill="#3d1a03" />
+                  {/* Top face of base */}
+                  <ellipse cx="125" cy="120" rx="40" ry="12" fill="#78350f" stroke="#fbbf24" strokeWidth="2.5" />
                   
-                  {/* Joint accent pin */}
-                  <circle cx="125" cy="100" r="4.5" fill="#fbbf24" />
+                  {/* Shockwave ripple ring */}
+                  {strikeActive && (
+                    <ellipse 
+                      cx="125" 
+                      cy="120" 
+                      rx="40" 
+                      ry="12" 
+                      fill="none" 
+                      stroke="#fbbf24" 
+                      strokeWidth="3.5" 
+                      className="animate-ring-expand" 
+                      style={{ transformOrigin: '125px 120px' }} 
+                    />
+                  )}
 
-                  {/* Gavel Head (Vertical Barrel) */}
-                  <g transform="translate(125, 100)">
-                    {/* Cylinder head body */}
-                    <rect x="-10" y="-20" width="20" height="40" rx="3" fill="#78350f" stroke="#fbbf24" strokeWidth="1.5" />
-                    {/* Top barrel face */}
-                    <ellipse cx="0" cy="-20" rx="10" ry="3.5" fill="#451a03" stroke="#fbbf24" strokeWidth="1" />
-                    {/* Bottom barrel face */}
-                    <ellipse cx="0" cy="20" rx="10" ry="3.5" fill="#78350f" stroke="#fbbf24" strokeWidth="1" />
-                    {/* Decorative Gold band */}
-                    <rect x="-10" y="-3" width="20" height="6" fill="#fbbf24" />
+                  {/* Martelletto (Gavel) */}
+                  <g 
+                    className={strikeActive ? "animate-gavel-strike" : ""} 
+                    style={{ 
+                      transformOrigin: "35px 100px", 
+                      transform: strikeActive ? "rotate(0deg)" : "rotate(-35deg)",
+                      transition: "transform 0.12s ease-out"
+                    }}
+                  >
+                    {/* Wooden handle */}
+                    <line x1="35" y1="100" x2="125" y2="100" stroke="#92400e" strokeWidth="7" strokeLinecap="round" />
+                    {/* Leather Grip */}
+                    <line x1="35" y1="100" x2="65" y2="100" stroke="#451a03" strokeWidth="9" strokeLinecap="round" />
+                    
+                    {/* Joint accent pin */}
+                    <circle cx="125" cy="100" r="4.5" fill="#fbbf24" />
+
+                    {/* Gavel Head (Vertical Barrel) */}
+                    <g transform="translate(125, 100)">
+                      {/* Cylinder head body */}
+                      <rect x="-10" y="-20" width="20" height="40" rx="3" fill="#78350f" stroke="#fbbf24" strokeWidth="1.5" />
+                      {/* Top barrel face */}
+                      <ellipse cx="0" cy="-20" rx="10" ry="3.5" fill="#451a03" stroke="#fbbf24" strokeWidth="1" />
+                      {/* Bottom barrel face */}
+                      <ellipse cx="0" cy="20" rx="10" ry="3.5" fill="#78350f" stroke="#fbbf24" strokeWidth="1" />
+                      {/* Decorative Gold band */}
+                      <rect x="-10" y="-3" width="20" height="6" fill="#fbbf24" />
+                    </g>
                   </g>
-                </g>
-              </svg>
-              
-              {/* Status badge (rimpicciolito) */}
-              <div className={`absolute -bottom-4 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border whitespace-nowrap z-10
-                ${auctionLocked
-                  ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-400'
-                  : 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400 animate-pulse'
-                }`}
-              >
-                {auctionLocked ? `${auctionValue} Lettere` : `Offerta: ${auctionValue}`}
+                </svg>
+                
+                {/* Status badge (rimpicciolito) */}
+                <div className={`absolute -bottom-4 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider border whitespace-nowrap z-10
+                  ${auctionLocked
+                    ? 'bg-emerald-400/10 border-emerald-400/30 text-emerald-400'
+                    : 'bg-yellow-400/10 border-yellow-400/30 text-yellow-400 animate-pulse'
+                  }`}
+                >
+                  {auctionLocked ? `${auctionValue} Lettere` : `Offerta: ${auctionValue}`}
+                </div>
               </div>
-            </div>
 
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Clue Box (visible if step >= 3 or revealAll) */}
         {showIndizio && (

@@ -934,34 +934,34 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                           </div>
 
                           <div className="flex items-center gap-2">
-                            {/* Tasto Risposta Corretta -> 1.000 Punti fissi */}
+                            {/* Tasto Risposta Corretta: la squadra prenotata riceve i punti e vince */}
                             <button
                               type="button"
                               onClick={() => handleAssignNadiaPoints(nadiaBookedTeam)}
                               className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-lg shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-1.5 cursor-pointer"
                             >
-                              <span>✓ Risposta Corretta (+1.000 pt)</span>
+                              <span>✓ Risposta Corretta</span>
                             </button>
 
-                            {/* Tasto Errata / Sblocca Pulsantiera */}
+                            {/* Tasto Errata / Annulla Prenotazione */}
                             <button
                               type="button"
                               onClick={() => handleCancelNadiaBooking(true)}
                               className="px-2.5 py-1 bg-red-600/30 hover:bg-red-600 text-red-200 hover:text-white border border-red-500/40 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                              title="Risposta errata: mostra X di errore e sblocca la pulsantiera per gli altri (E / X)"
+                              title="Risposta errata: mostra X di errore e annulla la prenotazione (Esc / E / X)"
                             >
-                              <span>✕ Sblocca / Errata</span>
+                              <span>✕ Risposta Errata / Sblocca</span>
                               <kbd className="text-[9px] bg-black/40 px-1 py-0.5 rounded opacity-70">Esc</kbd>
                             </button>
                           </div>
                         </div>
                       ) : nadiaAssignedTeam !== null ? (
-                        /* Punti Già Assegnati (1000 pt) */
+                        /* Risposta Convalidata */
                         <div className="flex items-center justify-between gap-3 bg-emerald-950/40 border border-emerald-500/40 px-3 py-1.5 rounded-xl">
                           <div className="flex items-center gap-2">
                             <span className="text-base">🏆</span>
                             <span className="text-xs font-black text-emerald-300 uppercase tracking-wider">
-                              +1.000 pt Assegnati a {teamNames[nadiaAssignedTeam - 1] || `Squadra ${nadiaAssignedTeam}`}
+                              Risposta Corretta Convalidata: {teamNames[nadiaAssignedTeam - 1] || `Squadra ${nadiaAssignedTeam}`}
                             </span>
                           </div>
 
@@ -970,23 +970,22 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                             onClick={handleResetNadiaPoints}
                             className="px-2.5 py-1 text-white/50 hover:text-red-400 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold uppercase transition-all cursor-pointer"
                           >
-                            ↩ Annulla Punti
+                            ↩ Annulla
                           </button>
                         </div>
                       ) : (
-                        /* Nessuno Prenotato: Tasti Rapidi Prenotazione e Assegnazione */
+                        /* Nessuno Prenotato: Tasti Rapidi per Testare la Prenotazione */
                         <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-                          {/* Tasti Rapidi Prenotazione Hardware/Manuale */}
                           <div className="flex items-center gap-1.5">
                             <span className="text-[11px] font-black uppercase text-amber-400/80 mr-1 flex items-center gap-1">
-                              <span>⚡</span> Prenota:
+                              <span>⚡</span> Test Prenota:
                             </span>
                             {[1, 2, 3].map((tNum) => (
                               <button
                                 key={tNum}
                                 type="button"
                                 onClick={() => handleBookTeamNadia(tNum)}
-                                className={`px-2 py-1 rounded text-[11px] font-black border transition-all cursor-pointer flex items-center gap-1 ${
+                                className={`px-2.5 py-1 rounded text-[11px] font-black border transition-all cursor-pointer flex items-center gap-1 ${
                                   tNum === 1
                                     ? 'bg-red-500/15 hover:bg-red-500/30 text-red-300 border-red-500/30'
                                     : tNum === 2
@@ -999,32 +998,9 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                               </button>
                             ))}
                           </div>
-
-                          <div className="h-4 w-px bg-white/10" />
-
-                          {/* Assegna Diretti +1.000 pt */}
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] font-semibold text-white/40 mr-1">
-                              +1.000 pt diretti:
-                            </span>
-                            {[1, 2, 3].map((tNum) => (
-                              <button
-                                key={tNum}
-                                type="button"
-                                onClick={() => handleAssignNadiaPoints(tNum)}
-                                className={`px-2 py-1 rounded text-[11px] font-black border transition-all cursor-pointer ${
-                                  tNum === 1
-                                    ? 'bg-red-600/20 hover:bg-red-600 text-white border-red-500/40'
-                                    : tNum === 2
-                                    ? 'bg-blue-600/20 hover:bg-blue-600 text-white border-blue-500/40'
-                                    : 'bg-emerald-600/20 hover:bg-emerald-600 text-white border-emerald-500/40'
-                                }`}
-                                title={`Assegna subito 1000 punti a ${teamNames[tNum - 1]}`}
-                              >
-                                +1.000 S{tNum}
-                              </button>
-                            ))}
-                          </div>
+                          <span className="text-[11px] text-white/40 italic">
+                            In attesa di prenotazione al buzzer...
+                          </span>
                         </div>
                       )}
 

@@ -261,7 +261,7 @@ export default function MilleEUnaNadiaBoard({
             <div className="bg-gradient-to-r from-emerald-600 to-teal-600 border-2 border-emerald-300 px-8 py-3.5 rounded-full flex items-center gap-3 shadow-[0_0_40px_rgba(16,185,129,0.5)]">
               <span className="text-3xl">🏆</span>
               <span className="font-black text-2xl uppercase tracking-wider text-white">
-                RISPOSTA ESATTA: {teamNames[assignedTeam - 1] || `SQUADRA ${assignedTeam}`} (+1.000 pt)
+                RISPOSTA ESATTA: {teamNames[assignedTeam - 1] || `SQUADRA ${assignedTeam}`}
               </span>
             </div>
           </div>

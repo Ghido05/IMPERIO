@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import SlideCanvas from '../components/SlideCanvas';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import PresenterPreviewPanel from '../components/PresenterPreviewPanel';
 import QRCode from 'qrcode';
-import { ScoreProvider } from '../context/ScoreContext';
+import { ScoreProvider, useScores } from '../context/ScoreContext';
 import type { Slide } from '../App';
 import { normalizeFraseTempoItem } from '../lib/fraseTempoUtils';
 import {
@@ -18,7 +18,7 @@ import { cloneDefaultData } from '../lib/defaultGameData';
 import { triggerFadeOutBroadcast } from '../lib/audioTracker';
 import WebSerialManager from '../components/WebSerialManager';
 import { sendSerialReset } from '../lib/webSerial';
-import { sanitizeSetupStateWithKnownAssets } from '../lib/assetUrl';
+import { sanitizeSetupStateWithKnownAssets, assetUrl } from '../lib/assetUrl';
 
 export function getSlideForBoxQuestion(
   setupState: QuizSetupState,
@@ -263,6 +263,15 @@ interface SequentialQuizViewProps {
 }
 
 export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewProps) {
+  return (
+    <ScoreProvider>
+      <SequentialQuizContent onGoToSetup={onGoToSetup} />
+    </ScoreProvider>
+  );
+}
+
+function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
+  const { addScore } = useScores();
   const [setupState, setSetupState] = useState<QuizSetupState>(getDefaultSetupState());
   const [showLegend, setShowLegend] = useState(false);
   const [activeBox, setActiveBox] = useState<number>(1);
@@ -505,10 +514,159 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
 
 
 
+  // Stati per Mille e una Nadia
+  const [nadiaActive, setNadiaActive] = useSyncedState<boolean>('playstate_nadia_active', false);
+  const [, setNadiaQuestionId] = useSyncedState<string>('playstate_nadia_question_id', '');
+  const [nadiaSolutionShown, setNadiaSolutionShown] = useSyncedState<boolean>('playstate_nadia_solution_shown', false);
+  const [nadiaBookedTeam, setNadiaBookedTeam] = useSyncedState<number | null>('playstate_nadia_booked_team', null);
+  const [nadiaAssignedTeam, setNadiaAssignedTeam] = useSyncedState<number | null>('playstate_nadia_assigned_team', null);
+  const nadiaAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const teamNames = setupState.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
+
+  // Trova se per lo slot corrente (Box + Domanda/Frase) c'è una domanda di Nadia assegnata
+  const currentSlotQuestionNum = activeBox === 4 ? activePhraseIndex + 1 : activeQuestion;
+  const nadiaQuestionForCurrentSlot = (setupState.nadia?.domande || []).find(
+    (d) => d.targetBox === activeBox && d.targetQuestion === currentSlotQuestionNum
+  );
+
+  const playNadiaJingle = (isExit = false) => {
+    if (!setupState.nadia?.musicaStacchetto) return;
+    try {
+      if (nadiaAudioRef.current) {
+        nadiaAudioRef.current.pause();
+        nadiaAudioRef.current.currentTime = 0;
+      }
+      const audio = new Audio(assetUrl(setupState.nadia.musicaStacchetto));
+      nadiaAudioRef.current = audio;
+      audio.play().catch((err) => console.log(`Autoplay stacchetto ${isExit ? 'uscita' : 'ingresso'}:`, err));
+    } catch (e) {
+      console.warn('Errore esecuzione stacchetto audio:', e);
+    }
+  };
+
+  const handleAssignNadiaPoints = (teamNum: number) => {
+    if (nadiaAssignedTeam !== null) return;
+    // Quando c'è Mille e una Nadia la risposta corretta dà SEMPRE 1000 punti
+    addScore(teamNum - 1, 1000);
+    setNadiaAssignedTeam(teamNum);
+    setNadiaBookedTeam(null);
+    setNadiaSolutionShown(true);
+    sendSerialReset();
+  };
+
+  const handleResetNadiaPoints = () => {
+    if (nadiaAssignedTeam !== null) {
+      addScore(nadiaAssignedTeam - 1, -1000);
+      setNadiaAssignedTeam(null);
+      setNadiaBookedTeam(null);
+      sendSerialReset();
+    }
+  };
+
+  const handleCancelNadiaBooking = () => {
+    setNadiaBookedTeam(null);
+    sendSerialReset();
+  };
+
+  const handleBookTeamNadia = (teamNum: number) => {
+    if (nadiaAssignedTeam === null && nadiaBookedTeam === null) {
+      setNadiaBookedTeam(teamNum);
+    }
+  };
+
+  const handleTriggerNadia = () => {
+    if (!nadiaQuestionForCurrentSlot) return;
+    const qId = nadiaQuestionForCurrentSlot.id;
+    const orderKey = `playstate_nadia_order_${qId}`;
+
+    // Calcoliamo la permutazione [0, 1, 2] se non già memorizzata
+    let order = [0, 1, 2];
+    const saved = localStorage.getItem(orderKey);
+    if (!saved) {
+      // Fisher-Yates shuffle casuale
+      order = [0, 1, 2].sort(() => Math.random() - 0.5);
+      localStorage.setItem(orderKey, JSON.stringify(order));
+      window.dispatchEvent(new CustomEvent('local-storage-update', {
+        detail: { key: orderKey, value: JSON.stringify(order) }
+      }));
+      if ((window as any).electron?.broadcastState) {
+        (window as any).electron.broadcastState({
+          localStorageUpdate: { key: orderKey, value: JSON.stringify(order) }
+        });
+      }
+    }
+
+    setNadiaQuestionId(qId);
+    setNadiaSolutionShown(false);
+    setNadiaBookedTeam(null);
+    setNadiaAssignedTeam(null);
+    setNadiaActive(true);
+    sendSerialReset();
+    playNadiaJingle(false);
+  };
+
+  const handleCloseNadia = (playExitSound = true) => {
+    if (playExitSound) {
+      playNadiaJingle(true);
+    }
+    setNadiaActive(false);
+    setNadiaSolutionShown(false);
+    setNadiaBookedTeam(null);
+    setNadiaAssignedTeam(null);
+    sendSerialReset();
+  };
+
+  // Scorciatoie da tastiera per Nadia
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
+        return;
+      }
+      if (nadiaActive) {
+        if (e.key === '1') {
+          if (nadiaBookedTeam === null && nadiaAssignedTeam === null) {
+            handleBookTeamNadia(1);
+          }
+        } else if (e.key === '2') {
+          if (nadiaBookedTeam === null && nadiaAssignedTeam === null) {
+            handleBookTeamNadia(2);
+          }
+        } else if (e.key === '3') {
+          if (nadiaBookedTeam === null && nadiaAssignedTeam === null) {
+            handleBookTeamNadia(3);
+          }
+        } else if (e.key === 's' || e.key === 'S' || e.key === 'Enter') {
+          setNadiaSolutionShown((prev) => !prev);
+        } else if (e.key === 'Escape') {
+          if (nadiaBookedTeam !== null) {
+            handleCancelNadiaBooking();
+          } else {
+            handleCloseNadia(true);
+          }
+        } else if (e.key === 'm' || e.key === 'M') {
+          playNadiaJingle(false);
+        } else if (e.key === 'Backspace' || e.key === 'x' || e.key === 'X') {
+          if (nadiaBookedTeam !== null) {
+            handleCancelNadiaBooking();
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [nadiaActive, nadiaBookedTeam, nadiaAssignedTeam, setNadiaSolutionShown]);
+
   const maxQuestionsForBox = activeBox === 1 ? 10 : activeBox === 2 ? 6 : activeBox === 3 ? 3 : 1;
 
   const handleNext = () => {
     sendSerialReset();
+    if (nadiaActive) {
+      handleCloseNadia(true);
+    }
     if (activeQuestion < maxQuestionsForBox) {
       setActiveQuestion(activeQuestion + 1);
     } else if (activeBox < 5) {
@@ -519,6 +677,9 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
 
   const handlePrev = () => {
     sendSerialReset();
+    if (nadiaActive) {
+      handleCloseNadia(true);
+    }
     if (activeQuestion > 1) {
       setActiveQuestion(activeQuestion - 1);
     } else if (activeBox > 1) {
@@ -530,8 +691,7 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
   };
 
   return (
-    <ScoreProvider>
-      <div className="flex flex-col h-screen w-full bg-[#121214] text-white overflow-hidden font-sans">
+    <div className="flex flex-col h-screen w-full bg-[#121214] text-white overflow-hidden font-sans">
         {/* Navigation Header */}
         <header className="h-14 flex items-center px-6 border-b border-white/10 bg-[#18181b] shrink-0 justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -588,6 +748,9 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
                 type="button"
                 onClick={() => {
                   sendSerialReset();
+                  if (nadiaActive) {
+                    handleCloseNadia(true);
+                  }
                   setActiveBox(boxNum);
                   setActiveQuestion(1);
                 }}
@@ -616,6 +779,9 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
                       type="button"
                       onClick={() => {
                         sendSerialReset();
+                        if (nadiaActive) {
+                          handleCloseNadia(true);
+                        }
                         setActivePhraseIndex(idx);
                       }}
                       className={`w-7 h-7 text-xs font-bold rounded-md flex items-center justify-center transition-all ${
@@ -639,6 +805,9 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
                       type="button"
                       onClick={() => {
                         sendSerialReset();
+                        if (nadiaActive) {
+                          handleCloseNadia(true);
+                        }
                         setActiveQuestion(qNum);
                       }}
                       className={`w-7 h-7 text-xs font-bold rounded-md flex items-center justify-center transition-all ${
@@ -681,6 +850,184 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
               title={`BOX ${activeBox} — Domanda #${activeQuestion}`}
               onToggleMaximize={() => setMaximizedPanel(maximizedPanel === 'left' ? 'none' : 'left')}
               isMaximized={maximizedPanel === 'left'}
+              footer={
+                nadiaQuestionForCurrentSlot ? (
+                  !nadiaActive ? (
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleTriggerNadia}
+                        className="px-5 py-2 text-xs font-black rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 hover:from-amber-400 hover:via-orange-400 hover:to-rose-400 text-black shadow-lg shadow-amber-500/30 border border-amber-300 transition-all flex items-center gap-2 cursor-pointer transform hover:scale-[1.02] active:scale-[0.98] animate-pulse"
+                      >
+                        <span className="text-sm">✨</span>
+                        <span>Richiama Mille e una Nadia</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="bg-[#18181b]/95 border border-white/20 rounded-2xl p-2.5 shadow-2xl backdrop-blur-md flex flex-col gap-2 max-w-2xl w-full">
+                      {/* Sezione Stato / Prenotazione / Assegnazione */}
+                      {nadiaBookedTeam !== null && nadiaAssignedTeam === null ? (
+                        /* Squadra Prenotata al Buzzer */
+                        <div className="flex items-center justify-between gap-3 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base animate-pulse">⚡</span>
+                            <span className={`text-xs font-black uppercase tracking-wider px-2 py-0.5 rounded border ${
+                              nadiaBookedTeam === 1
+                                ? 'bg-red-500/20 text-red-300 border-red-500/50'
+                                : nadiaBookedTeam === 2
+                                ? 'bg-blue-500/20 text-blue-300 border-blue-500/50'
+                                : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
+                            }`}>
+                              {teamNames[nadiaBookedTeam - 1] || `Squadra ${nadiaBookedTeam}`} Prenotata
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {/* Tasto Risposta Corretta -> 1.000 Punti fissi */}
+                            <button
+                              type="button"
+                              onClick={() => handleAssignNadiaPoints(nadiaBookedTeam)}
+                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-lg shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <span>✓ Risposta Corretta (+1.000 pt)</span>
+                            </button>
+
+                            {/* Tasto Errata / Sblocca Pulsantiera */}
+                            <button
+                              type="button"
+                              onClick={handleCancelNadiaBooking}
+                              className="px-2.5 py-1 bg-red-600/30 hover:bg-red-600 text-red-200 hover:text-white border border-red-500/40 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                              title="Risposta errata: sblocca la pulsantiera hardware per gli altri"
+                            >
+                              <span>✕ Sblocca / Errata</span>
+                              <kbd className="text-[9px] bg-black/40 px-1 py-0.5 rounded opacity-70">Esc</kbd>
+                            </button>
+                          </div>
+                        </div>
+                      ) : nadiaAssignedTeam !== null ? (
+                        /* Punti Già Assegnati (1000 pt) */
+                        <div className="flex items-center justify-between gap-3 bg-emerald-950/40 border border-emerald-500/40 px-3 py-1.5 rounded-xl">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">🏆</span>
+                            <span className="text-xs font-black text-emerald-300 uppercase tracking-wider">
+                              +1.000 pt Assegnati a {teamNames[nadiaAssignedTeam - 1] || `Squadra ${nadiaAssignedTeam}`}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={handleResetNadiaPoints}
+                            className="px-2.5 py-1 text-white/50 hover:text-red-400 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold uppercase transition-all cursor-pointer"
+                          >
+                            ↩ Annulla Punti
+                          </button>
+                        </div>
+                      ) : (
+                        /* Nessuno Prenotato: Tasti Rapidi Prenotazione e Assegnazione */
+                        <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
+                          {/* Tasti Rapidi Prenotazione Hardware/Manuale */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-black uppercase text-amber-400/80 mr-1 flex items-center gap-1">
+                              <span>⚡</span> Prenota:
+                            </span>
+                            {[1, 2, 3].map((tNum) => (
+                              <button
+                                key={tNum}
+                                type="button"
+                                onClick={() => handleBookTeamNadia(tNum)}
+                                className={`px-2 py-1 rounded text-[11px] font-black border transition-all cursor-pointer flex items-center gap-1 ${
+                                  tNum === 1
+                                    ? 'bg-red-500/15 hover:bg-red-500/30 text-red-300 border-red-500/30'
+                                    : tNum === 2
+                                    ? 'bg-blue-500/15 hover:bg-blue-500/30 text-blue-300 border-blue-500/30'
+                                    : 'bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/30'
+                                }`}
+                              >
+                                <span>{teamNames[tNum - 1] || `S${tNum}`}</span>
+                                <kbd className="text-[9px] bg-black/40 px-1 rounded opacity-70">{tNum}</kbd>
+                              </button>
+                            ))}
+                          </div>
+
+                          <div className="h-4 w-px bg-white/10" />
+
+                          {/* Assegna Diretti +1.000 pt */}
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[11px] font-semibold text-white/40 mr-1">
+                              +1.000 pt diretti:
+                            </span>
+                            {[1, 2, 3].map((tNum) => (
+                              <button
+                                key={tNum}
+                                type="button"
+                                onClick={() => handleAssignNadiaPoints(tNum)}
+                                className={`px-2 py-1 rounded text-[11px] font-black border transition-all cursor-pointer ${
+                                  tNum === 1
+                                    ? 'bg-red-600/20 hover:bg-red-600 text-white border-red-500/40'
+                                    : tNum === 2
+                                    ? 'bg-blue-600/20 hover:bg-blue-600 text-white border-blue-500/40'
+                                    : 'bg-emerald-600/20 hover:bg-emerald-600 text-white border-emerald-500/40'
+                                }`}
+                                title={`Assegna subito 1000 punti a ${teamNames[tNum - 1]}`}
+                              >
+                                +1.000 S{tNum}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Barra Inferiore Controlli (Soluzione, Stacchetto, Chiudi) */}
+                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1 mr-2">
+                            <span>✨</span> Mille e una Nadia
+                          </span>
+
+                          {/* Tasto Svela Soluzione */}
+                          <button
+                            type="button"
+                            onClick={() => setNadiaSolutionShown((prev) => !prev)}
+                            className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all flex items-center gap-1.5 cursor-pointer ${
+                              nadiaSolutionShown
+                                ? 'bg-emerald-600 text-white border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                                : 'bg-white/5 hover:bg-white/10 text-white/80 border-white/10'
+                            }`}
+                          >
+                            <span>{nadiaSolutionShown ? '✓ Risposta Svelata' : '👁️ Svela Risposta Corretta'}</span>
+                            <kbd className="text-[9px] bg-black/40 px-1 py-0.5 rounded border border-white/20">S</kbd>
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {/* Tasto Riascolta Stacchetto */}
+                          {setupState.nadia?.musicaStacchetto && (
+                            <button
+                              type="button"
+                              onClick={() => playNadiaJingle(false)}
+                              className="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all flex items-center gap-1 cursor-pointer"
+                              title="Riproduci stacchetto musicale (M)"
+                            >
+                              <span>🎵 Stacchetto</span>
+                              <kbd className="text-[9px] bg-black/40 px-1 py-0.5 rounded opacity-70">M</kbd>
+                            </button>
+                          )}
+
+                          {/* Tasto Chiudi Nadia */}
+                          <button
+                            type="button"
+                            onClick={() => handleCloseNadia(true)}
+                            className="px-2.5 py-1 text-xs font-bold rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 transition-all flex items-center gap-1 cursor-pointer"
+                            title="Chiudi Mille e una Nadia e torna al gioco (Esc)"
+                          >
+                            <span>✕ Chiudi Nadia</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                ) : null
+              }
             >
               <SlideCanvas
                 slide={
@@ -690,6 +1037,8 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
                 }
                 interactive
                 viewportMode="none"
+                nadiaSetup={setupState.nadia}
+                isPresenter={true}
               />
             </PresenterPreviewPanel>
           )}
@@ -704,8 +1053,8 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
             </PresenterPreviewPanel>
           )}
         </div>
-      </div>
-      {showLegend && (
+
+        {showLegend && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-[#1e1e24] border border-white/10 rounded-2xl w-full max-w-4xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
             <header className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#282830]">
@@ -844,6 +1193,36 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
                     </li>
                   </ul>
                 </div>
+
+                {/* Gruppo 6: Mille e una Nadia */}
+                <div className="space-y-3 bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-4 rounded-xl border border-amber-500/20 md:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black uppercase text-amber-300 tracking-wider flex items-center gap-1.5">
+                      ✨ Mille e una Nadia (Risposta Esatta: SEMPRE 1.000 pt)
+                    </h3>
+                    <span className="text-[10px] font-bold text-amber-300/80 bg-amber-400/20 px-2 py-0.5 rounded-full border border-amber-400/30">
+                      Buzzer Hardware ESP32 & iPad abilitati
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="flex items-center justify-between gap-2 bg-black/30 p-2.5 rounded-lg border border-white/5">
+                      <span className="text-xs">Prenota Squadra</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-amber-300 rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">1 - 3</kbd>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 bg-black/30 p-2.5 rounded-lg border border-white/5">
+                      <span className="text-xs">Svela Risposta Corretta</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-amber-300 rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">S / Invio</kbd>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 bg-black/30 p-2.5 rounded-lg border border-white/5">
+                      <span className="text-xs">Sblocca Buzzer / Errata</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-amber-300 rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">Esc / Canc</kbd>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 bg-black/30 p-2.5 rounded-lg border border-white/5">
+                      <span className="text-xs">Riascolta Stacchetto</span>
+                      <kbd className="px-2 py-0.5 bg-neutral-800 text-amber-300 rounded border border-neutral-700 text-xs font-mono font-bold shrink-0">M</kbd>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             
@@ -916,6 +1295,6 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
           </div>
         </div>
       )}
-    </ScoreProvider>
+    </div>
   );
 }

@@ -88,6 +88,36 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
   const handleBookingEvent = useCallback((teamColor: BookingTeam, playerNum: number) => {
     if (!activeSlideId) return;
 
+    const isNadiaActive = localStorage.getItem('playstate_nadia_active') === 'true';
+    if (isNadiaActive) {
+      const nadiaBookedKey = 'playstate_nadia_booked_team';
+      const nadiaAssignedKey = 'playstate_nadia_assigned_team';
+      let currentNadiaBooked = localStorage.getItem(nadiaBookedKey);
+      let currentNadiaAssigned = localStorage.getItem(nadiaAssignedKey);
+      if (currentNadiaBooked === 'null' || currentNadiaBooked === '') currentNadiaBooked = null;
+      if (currentNadiaAssigned === 'null' || currentNadiaAssigned === '') currentNadiaAssigned = null;
+
+      if (!currentNadiaBooked && !currentNadiaAssigned) {
+        localStorage.setItem(nadiaBookedKey, playerNum.toString());
+        window.dispatchEvent(new CustomEvent('local-storage-update', {
+          detail: { key: nadiaBookedKey, value: playerNum.toString() }
+        }));
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: nadiaBookedKey,
+          newValue: playerNum.toString()
+        }));
+        if ((window as any).electron?.broadcastState) {
+          (window as any).electron.broadcastState({
+            localStorageUpdate: { key: nadiaBookedKey, value: playerNum.toString() }
+          });
+        }
+        setBookedTeam(playerNum.toString());
+        console.log(`[WebSerialManager] Registrata prenotazione NADIA squadra ${teamColor.toUpperCase()} (${playerNum})`);
+        return;
+      }
+      return;
+    }
+
     const bookedKey = `playstate_${activeSlideId}_booked_team`;
     const assignedKey = `playstate_${activeSlideId}_assigned_team`;
     
@@ -146,15 +176,24 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
       return;
     }
 
+    const isNadiaActive = localStorage.getItem('playstate_nadia_active') === 'true';
+    const nadiaBooked = localStorage.getItem('playstate_nadia_booked_team');
+    const nadiaAssigned = localStorage.getItem('playstate_nadia_assigned_team');
+    const hasNadiaBooking = (nadiaBooked !== null && nadiaBooked !== 'null' && nadiaBooked !== '') ||
+                            (nadiaAssigned !== null && nadiaAssigned !== 'null' && nadiaAssigned !== '');
+
     // Identifica se la slide corrente supporta prenotazioni buzzer
     const isPrenotazioneGame = 
+      isNadiaActive ||
       activeSlideType === 'img' || 
       activeSlideType === 'music' || 
       activeSlideId.startsWith('box1_') || 
       activeSlideType === 'gioco_frase_tempo';
 
-    const hasActiveBooking = (bookedTeam !== null && bookedTeam !== 'null' && bookedTeam !== '') ||
-                            (assignedTeam !== null && assignedTeam !== 'null' && assignedTeam !== '');
+    const hasActiveBooking = isNadiaActive 
+      ? hasNadiaBooking 
+      : ((bookedTeam !== null && bookedTeam !== 'null' && bookedTeam !== '') ||
+         (assignedTeam !== null && assignedTeam !== 'null' && assignedTeam !== ''));
 
     // Se il quiz è pronto: gioco abilitato, hardware non in pausa, nessuna prenotazione attiva
     if (isPrenotazioneGame && !hasActiveBooking && !isPaused) {
@@ -173,8 +212,9 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
     if (!activeSlideId) return;
 
     const checkResets = () => {
-      const bookedKey = `playstate_${activeSlideId}_booked_team`;
-      const assignedKey = `playstate_${activeSlideId}_assigned_team`;
+      const isNadiaActive = localStorage.getItem('playstate_nadia_active') === 'true';
+      const bookedKey = isNadiaActive ? 'playstate_nadia_booked_team' : `playstate_${activeSlideId}_booked_team`;
+      const assignedKey = isNadiaActive ? 'playstate_nadia_assigned_team' : `playstate_${activeSlideId}_assigned_team`;
       
       let currentBooked: string | null = localStorage.getItem(bookedKey);
       let currentAssigned: string | null = localStorage.getItem(assignedKey);
@@ -201,7 +241,10 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
     const handleStorage = (e: StorageEvent) => {
       if (
         e.key === `playstate_${activeSlideId}_booked_team` || 
-        e.key === `playstate_${activeSlideId}_assigned_team`
+        e.key === `playstate_${activeSlideId}_assigned_team` ||
+        e.key === 'playstate_nadia_booked_team' ||
+        e.key === 'playstate_nadia_assigned_team' ||
+        e.key === 'playstate_nadia_active'
       ) {
         checkResets();
       }
@@ -210,7 +253,10 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
     const handleLocalUpdate = (e: any) => {
       if (
         e.detail?.key === `playstate_${activeSlideId}_booked_team` || 
-        e.detail?.key === `playstate_${activeSlideId}_assigned_team`
+        e.detail?.key === `playstate_${activeSlideId}_assigned_team` ||
+        e.detail?.key === 'playstate_nadia_booked_team' ||
+        e.detail?.key === 'playstate_nadia_assigned_team' ||
+        e.detail?.key === 'playstate_nadia_active'
       ) {
         checkResets();
       }
@@ -239,20 +285,26 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
     setIsUnlocking(true);
     await sendSerialReset();
     if (activeSlideId) {
-      const bookedKey = `playstate_${activeSlideId}_booked_team`;
-      localStorage.removeItem(bookedKey);
-      window.dispatchEvent(new CustomEvent('local-storage-update', {
-        detail: { key: bookedKey, value: null }
-      }));
-      window.dispatchEvent(new StorageEvent('storage', {
-        key: bookedKey,
-        newValue: null
-      }));
-      if ((window as any).electron?.broadcastState) {
-        (window as any).electron.broadcastState({
-          localStorageUpdate: { key: bookedKey, value: null }
-        });
-      }
+      const isNadiaActive = localStorage.getItem('playstate_nadia_active') === 'true';
+      const keysToClear = isNadiaActive 
+        ? ['playstate_nadia_booked_team', `playstate_${activeSlideId}_booked_team`]
+        : [`playstate_${activeSlideId}_booked_team`];
+
+      keysToClear.forEach(key => {
+        localStorage.removeItem(key);
+        window.dispatchEvent(new CustomEvent('local-storage-update', {
+          detail: { key, value: null }
+        }));
+        window.dispatchEvent(new StorageEvent('storage', {
+          key,
+          newValue: null
+        }));
+        if ((window as any).electron?.broadcastState) {
+          (window as any).electron.broadcastState({
+            localStorageUpdate: { key, value: null }
+          });
+        }
+      });
     }
     setBookedTeam(null);
     setIsUnlocking(false);

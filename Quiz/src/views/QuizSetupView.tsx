@@ -111,7 +111,24 @@ export interface Gioco4Setup {
   notePresentatore?: string;
 }
 
+export interface NadiaQuestionItem {
+  id: string;
+  domanda: string;
+  rispostaCorretta: string; // Opzione 1 (corretta)
+  risposta2: string; // Opzione 2 errata
+  risposta3: string; // Opzione 3 errata
+  targetBox: number; // 1..5
+  targetQuestion: number; // numero domanda o frase nel box
+}
+
+export interface NadiaSetup {
+  sfondo: string; // Sfondo unico per tutte le domande
+  musicaStacchetto: string; // Stacchetto di ingresso e uscita
+  domande: NadiaQuestionItem[]; // Domande configurate
+}
+
 export interface QuizSetupState {
+  nadia?: NadiaSetup;
   gioco1: {
     selectedQuestion: number;
     questions: Record<number, Gioco1Question>;
@@ -267,6 +284,59 @@ function normalizePunteggi(raw: any, def: PunteggiSetup): PunteggiSetup {
   };
 }
 
+export function createDefaultNadiaQuestion(box: number = 1, q: number = 1): NadiaQuestionItem {
+  return {
+    id: `nadia_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    domanda: '',
+    rispostaCorretta: '',
+    risposta2: '',
+    risposta3: '',
+    targetBox: box,
+    targetQuestion: q,
+  };
+}
+
+export function createDefaultNadiaSetup(): NadiaSetup {
+  return {
+    sfondo: '',
+    musicaStacchetto: '',
+    domande: [
+      {
+        id: 'nadia_1',
+        domanda: '',
+        rispostaCorretta: '',
+        risposta2: '',
+        risposta3: '',
+        targetBox: 1,
+        targetQuestion: 1,
+      },
+    ],
+  };
+}
+
+export function normalizeNadia(raw: any, def: NadiaSetup): NadiaSetup {
+  if (!raw || typeof raw !== 'object') return def;
+  let domande: NadiaQuestionItem[] = [];
+  if (Array.isArray(raw.domande) && raw.domande.length > 0) {
+    domande = raw.domande.map((d: any, idx: number) => ({
+      id: d.id || `nadia_${idx + 1}`,
+      domanda: d.domanda || '',
+      rispostaCorretta: d.rispostaCorretta || '',
+      risposta2: d.risposta2 || '',
+      risposta3: d.risposta3 || '',
+      targetBox: Number(d.targetBox) || 1,
+      targetQuestion: Number(d.targetQuestion) || 1,
+    }));
+  } else {
+    domande = def.domande;
+  }
+  return {
+    sfondo: raw.sfondo || '',
+    musicaStacchetto: raw.musicaStacchetto || '',
+    domande,
+  };
+}
+
 export function getDefaultSetupState(): QuizSetupState {
   const q1: Record<number, Gioco1Question> = {};
   for (let i = 1; i <= 10; i++) {
@@ -284,6 +354,7 @@ export function getDefaultSetupState(): QuizSetupState {
   }
 
   return {
+    nadia: createDefaultNadiaSetup(),
     gioco1: {
       selectedQuestion: 1,
       questions: q1,
@@ -695,6 +766,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
       if (loadedState) {
         loadedState = sanitizeSetupStateWithKnownAssets(loadedState);
         setState({
+          nadia: normalizeNadia(loadedState.nadia, def.nadia!),
           gioco1: {
             selectedQuestion: loadedState.gioco1?.selectedQuestion || 1,
             questions: { ...def.gioco1.questions, ...loadedState.gioco1?.questions },
@@ -864,6 +936,27 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     };
 
     let sectionsHtml = '';
+
+    // ── MILLE E UNA NADIA ────────────────────────────────────────────────────
+    if (state.nadia?.domande && state.nadia.domande.length > 0) {
+      const validNadia = state.nadia.domande.filter(d => d.domanda || d.rispostaCorretta);
+      if (validNadia.length > 0) {
+        sectionsHtml += `<section class="game-section">
+          <h2>✨ MILLE E UNA NADIA — Evento Speciale</h2>`;
+        validNadia.forEach((nd, idx) => {
+          sectionsHtml += `<div class="slide-block">
+            <div class="slide-num">Domanda Nadia #${idx + 1} — Attiva in: BOX ${nd.targetBox} Domanda #${nd.targetQuestion}</div>
+            <table>
+              <tr><th>Domanda</th><td><strong>${nd.domanda || '—'}</strong></td></tr>
+              <tr style="background:#e8f5e9"><th>Risposta Corretta</th><td style="color:#2e7d32;font-weight:bold">✓ ${nd.rispostaCorretta || '—'}</td></tr>
+              <tr><th>Risposta Errata 1</th><td>${nd.risposta2 || '—'}</td></tr>
+              <tr><th>Risposta Errata 2</th><td>${nd.risposta3 || '—'}</td></tr>
+            </table>
+          </div>`;
+        });
+        sectionsHtml += `</section>`;
+      }
+    }
 
     // ── GIOCO 1 ──────────────────────────────────────────────────────────────
     sectionsHtml += `<section class="game-section">
@@ -1154,6 +1247,49 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     reader.readAsDataURL(file);
   };
 
+  // Mille e una Nadia getters & setters
+  const [selectedNadiaIdx, setSelectedNadiaIdx] = useState(0);
+  const [nadiaAudioPlaying, setNadiaAudioPlaying] = useState(false);
+  const nadiaAudioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  const nadiaData = state.nadia || createDefaultNadiaSetup();
+  const currentNadiaQ = nadiaData.domande[selectedNadiaIdx] || nadiaData.domande[0] || createDefaultNadiaQuestion();
+
+  const updateNadia = (updater: (prev: NadiaSetup) => NadiaSetup) => {
+    setState((prev) => ({
+      ...prev,
+      nadia: updater(prev.nadia || createDefaultNadiaSetup()),
+    }));
+  };
+
+  const updateCurrentNadiaQ = (updater: (prev: NadiaQuestionItem) => NadiaQuestionItem) => {
+    updateNadia((prev) => {
+      const newDomande = [...prev.domande];
+      const validIdx = Math.min(selectedNadiaIdx, Math.max(0, newDomande.length - 1));
+      newDomande[validIdx] = updater(newDomande[validIdx] || createDefaultNadiaQuestion());
+      return { ...prev, domande: newDomande };
+    });
+  };
+
+  const toggleNadiaAudio = (src: string) => {
+    if (!src) return;
+    if (nadiaAudioPlaying && nadiaAudioRef.current) {
+      nadiaAudioRef.current.pause();
+      nadiaAudioRef.current.currentTime = 0;
+      setNadiaAudioPlaying(false);
+      return;
+    }
+    if (nadiaAudioRef.current) {
+      nadiaAudioRef.current.pause();
+    }
+    const audio = new Audio(assetUrl(src));
+    nadiaAudioRef.current = audio;
+    audio.play()
+      .then(() => setNadiaAudioPlaying(true))
+      .catch((err) => console.warn('Errore riproduzione audio setup:', err));
+    audio.onended = () => setNadiaAudioPlaying(false);
+  };
+
   // Box 1 Question & Data getters/setters
   const currentQ1Num = state.gioco1.selectedQuestion;
   const currentQ1 = state.gioco1.questions[currentQ1Num] || createDefaultGioco1Question();
@@ -1322,6 +1458,403 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             <span className="px-3 py-1 text-xs rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-medium">
               Pronto per la modifica
             </span>
+          </div>
+        </div>
+
+        {/* ==================== BOX: MILLE E UNA NADIA ==================== */}
+        <div className="bg-[#1a1726] rounded-2xl border-2 border-amber-500/40 p-6 flex flex-col shadow-2xl shadow-amber-950/30 space-y-6">
+          {/* Box Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-500/20 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-600 p-[2px] shadow-lg shadow-orange-500/20 shrink-0">
+                <div className="w-full h-full bg-[#160e22] rounded-[10px] flex items-center justify-center text-amber-400 text-lg font-black">
+                  ✨
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-orange-200 to-yellow-100 tracking-wide">
+                  Mille e una Nadia
+                </h3>
+                <p className="text-xs text-amber-200/70">
+                  Evento speciale intermedio richiamabile durante le domande prescelte del quiz
+                </p>
+              </div>
+            </div>
+            <span className="px-3 py-1 text-xs font-extrabold uppercase tracking-wider rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0 self-start sm:self-auto">
+              ✨ Evento Speciale
+            </span>
+          </div>
+
+          {/* Riga Superiore: Sfondo Unico & Musica Stacchetto */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* 1. Box Sfondo Unico */}
+            <div className="bg-[#120f1e] p-4 rounded-xl border border-amber-500/20 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🖼️ Sfondo Unico per Tutte le Domande</span>
+                </label>
+                <span className="text-[10px] text-white/40">Condiviso per tutte le domande</span>
+              </div>
+              <div className="flex items-center gap-2 bg-[#1c182d] p-2 rounded-lg border border-white/10">
+                {nadiaData.sfondo?.startsWith('data:') || nadiaData.sfondo?.startsWith('idb://') ? (
+                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                    <span className="text-amber-300 font-medium truncate max-w-[200px]">
+                      {formatBase64Info(nadiaData.sfondo)?.name || 'Sfondo caricato'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => updateNadia((prev) => ({ ...prev, sfondo: '' }))}
+                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-xs bg-transparent border-0"
+                    >
+                      Rimuovi
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="URL / percorso relativo sfondo unico (es. /sfondo_nadia.jpg)..."
+                    value={nadiaData.sfondo || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      updateNadia((prev) => ({ ...prev, sfondo: val }));
+                    }}
+                    className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
+                  />
+                )}
+                <label className="px-3 py-1.5 text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded cursor-pointer shrink-0 text-center transition-all">
+                  🖼️ Sfoglia
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileUpload(e, (base64) =>
+                        updateNadia((prev) => ({ ...prev, sfondo: base64 }))
+                      )
+                    }
+                  />
+                </label>
+              </div>
+              {nadiaData.sfondo && (
+                <div className="mt-2 w-full h-24 rounded-lg overflow-hidden border border-white/10 relative">
+                  <img
+                    src={assetUrl(nadiaData.sfondo)}
+                    alt="Anteprima sfondo Nadia"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-1 right-2 text-[10px] text-white/70 bg-black/60 px-2 py-0.5 rounded">
+                    Anteprima Sfondo
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Box Musica Stacchetto */}
+            <div className="bg-[#120f1e] p-4 rounded-xl border border-amber-500/20 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🎵 Musica Stacchetto (Ingresso & Uscita)</span>
+                </label>
+                <span className="text-[10px] text-white/40">Suona all'apertura e al passaggio domanda</span>
+              </div>
+              <div className="flex items-center gap-2 bg-[#1c182d] p-2 rounded-lg border border-white/10">
+                {nadiaData.musicaStacchetto?.startsWith('data:') || nadiaData.musicaStacchetto?.startsWith('idb://') ? (
+                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                    <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                      {formatBase64Info(nadiaData.musicaStacchetto)?.name || 'Audio stacchetto'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => updateNadia((prev) => ({ ...prev, musicaStacchetto: '' }))}
+                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-xs bg-transparent border-0"
+                    >
+                      Rimuovi
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="URL / percorso relativo stacchetto (es. /Audio/stacchetto.mp3)..."
+                    value={nadiaData.musicaStacchetto || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      updateNadia((prev) => ({ ...prev, musicaStacchetto: val }));
+                    }}
+                    className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
+                  />
+                )}
+                <label className="px-3 py-1.5 text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded cursor-pointer shrink-0 text-center transition-all">
+                  📁 Sfoglia
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileUpload(e, (base64) =>
+                        updateNadia((prev) => ({ ...prev, musicaStacchetto: base64 }))
+                      )
+                    }
+                  />
+                </label>
+              </div>
+              {nadiaData.musicaStacchetto && (
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleNadiaAudio(nadiaData.musicaStacchetto)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border flex items-center gap-1.5 transition-all cursor-pointer ${
+                      nadiaAudioPlaying
+                        ? 'bg-red-500/20 border-red-500 text-red-300 animate-pulse'
+                        : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30'
+                    }`}
+                  >
+                    {nadiaAudioPlaying ? '⏹ Interrompi Prova' : '▶ Ascolta Stacchetto'}
+                  </button>
+                  <span className="text-[11px] text-white/50">
+                    {nadiaAudioPlaying ? 'In riproduzione...' : 'Pronto per la verifica audio'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Sezione Domande di Mille e una Nadia */}
+          <div className="bg-[#120f1e] p-5 rounded-xl border border-amber-500/20 space-y-5">
+            {/* Header Domande con selettore Scheda e Tasto Aggiungi */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
+                  📋 Domande dell'evento ({nadiaData.domande.length})
+                </span>
+                <span className="text-[11px] text-white/40">
+                  — Seleziona la scheda per configurare domanda, risposte e abbinamento
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextQNum = nadiaData.domande.length + 1;
+                    const newQ = createDefaultNadiaQuestion(1, Math.min(nextQNum, 10));
+                    updateNadia((prev) => ({
+                      ...prev,
+                      domande: [...prev.domande, newQ],
+                    }));
+                    setSelectedNadiaIdx(nadiaData.domande.length);
+                  }}
+                  className="px-3 py-1 text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  ➕ Aggiungi Domanda
+                </button>
+                {nadiaData.domande.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`Vuoi eliminare la Domanda #${selectedNadiaIdx + 1} di Nadia?`)) {
+                        updateNadia((prev) => {
+                          const updated = prev.domande.filter((_, i) => i !== selectedNadiaIdx);
+                          return { ...prev, domande: updated };
+                        });
+                        setSelectedNadiaIdx((prev) => Math.max(0, prev - 1));
+                      }
+                    }}
+                    className="px-2.5 py-1 text-xs font-semibold bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 rounded-lg transition-all cursor-pointer"
+                    title="Elimina questa domanda"
+                  >
+                    🗑️ Elimina
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Pills Selettore Domanda Nadia */}
+            <div className="flex items-center gap-2 overflow-x-auto py-1">
+              {nadiaData.domande.map((d, idx) => (
+                <button
+                  key={d.id || idx}
+                  type="button"
+                  onClick={() => setSelectedNadiaIdx(idx)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all shrink-0 flex items-center gap-1.5 ${
+                    selectedNadiaIdx === idx
+                      ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
+                      : 'bg-[#1c182d] text-white/70 hover:text-white border-white/10 hover:bg-[#25203b]'
+                  }`}
+                >
+                  <span>Domanda #{idx + 1}</span>
+                  <span className="text-[10px] opacity-75 font-normal">
+                    (Box {d.targetBox} D#{d.targetQuestion})
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Form per la domanda selezionata */}
+            <div className="space-y-4 pt-2">
+              {/* Selezione Domanda del Quiz associata */}
+              <div className="bg-[#1a162b] p-4 rounded-xl border border-amber-500/30 space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <label className="text-xs font-bold text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
+                    <span>🎯 In quale domanda del Quiz avverrà questo evento?</span>
+                  </label>
+                  <span className="text-[11px] text-white/50">
+                    Durante questa domanda apparirà il tasto per richiamare Mille e una Nadia
+                  </span>
+                </div>
+                <select
+                  value={`${currentNadiaQ.targetBox}_${currentNadiaQ.targetQuestion}`}
+                  onChange={(e) => {
+                    const [b, q] = e.target.value.split('_').map(Number);
+                    updateCurrentNadiaQ((prev) => ({
+                      ...prev,
+                      targetBox: b,
+                      targetQuestion: q,
+                    }));
+                  }}
+                  className="w-full bg-[#120f1e] border border-amber-500/40 rounded-lg px-3 py-2.5 text-xs font-bold text-white focus:outline-none focus:border-amber-400"
+                >
+                  <optgroup label="BOX 1 — Il mio nome è nessuno (10 Domande)">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                      <option key={`1_${n}`} value={`1_${n}`}>
+                        BOX 1 — Domanda #{n}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="BOX 2 — Classifiche (6 Domande)">
+                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                      <option key={`2_${n}`} value={`2_${n}`}>
+                        BOX 2 — Domanda #{n}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="BOX 3 — Password Squadre & Prescelti (3 Manches)">
+                    {[1, 2, 3].map((n) => (
+                      <option key={`3_${n}`} value={`3_${n}`}>
+                        BOX 3 — Manche #{n}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="BOX 4 — Frase Tempo (Frasi)">
+                    {[1, 2, 3, 4].map((n) => (
+                      <option key={`4_${n}`} value={`4_${n}`}>
+                        BOX 4 — Frase #{n}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="BOX 5 — Finale Squadre">
+                    <option value="5_1">BOX 5 — Finale a Squadre</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              {/* Riquadro Testo Domanda */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-slate-200">
+                  📝 Riquadro Domanda:
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Inserisci qui il testo della domanda per Mille e una Nadia..."
+                  value={currentNadiaQ.domanda || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    updateCurrentNadiaQ((prev) => ({ ...prev, domanda: val }));
+                  }}
+                  className="w-full bg-[#161224] border border-white/15 rounded-xl p-3 text-xs sm:text-sm font-medium text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400 leading-relaxed shadow-inner"
+                />
+              </div>
+
+              {/* 3 Riquadri Risposte */}
+              <div className="space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <label className="text-xs font-bold text-slate-200">
+                    🎯 3 Riquadri Opzioni di Risposta:
+                  </label>
+                  <span className="text-[11px] text-amber-300/80 font-medium">
+                    (Nel gioco verranno mischiate casualmente con A, B, C)
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                  {/* Riquadro 1: Corretta */}
+                  <div className="bg-[#121c16] border-2 border-emerald-500/60 rounded-xl p-3.5 space-y-2 shadow-lg shadow-emerald-950/30">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-emerald-500/30 border border-emerald-400 flex items-center justify-center text-[11px]">1</span>
+                        Risposta Corretta
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40">
+                        ESATTA
+                      </span>
+                    </div>
+                    <textarea
+                      rows={2}
+                      placeholder="Inserisci qui l'opzione CORRETTA..."
+                      value={currentNadiaQ.rispostaCorretta || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateCurrentNadiaQ((prev) => ({ ...prev, rispostaCorretta: val }));
+                      }}
+                      className="w-full bg-black/40 border border-emerald-500/40 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400 font-semibold"
+                    />
+                    <p className="text-[10px] text-emerald-300/70">
+                      Questo riquadro contiene la risposta esatta che verrà svelata durante la manche.
+                    </p>
+                  </div>
+
+                  {/* Riquadro 2: Errata 1 */}
+                  <div className="bg-[#161324] border border-white/10 rounded-xl p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-[11px]">2</span>
+                        Risposta Errata
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-white/5 text-white/40 text-[10px] font-bold border border-white/10">
+                        ERRATA
+                      </span>
+                    </div>
+                    <textarea
+                      rows={2}
+                      placeholder="Inserisci qui una risposta errata..."
+                      value={currentNadiaQ.risposta2 || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateCurrentNadiaQ((prev) => ({ ...prev, risposta2: val }));
+                      }}
+                      className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      Seconda opzione alternativa (falsa).
+                    </p>
+                  </div>
+
+                  {/* Riquadro 3: Errata 2 */}
+                  <div className="bg-[#161324] border border-white/10 rounded-xl p-3.5 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-[11px]">3</span>
+                        Risposta Errata
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-white/5 text-white/40 text-[10px] font-bold border border-white/10">
+                        ERRATA
+                      </span>
+                    </div>
+                    <textarea
+                      rows={2}
+                      placeholder="Inserisci qui un'altra risposta errata..."
+                      value={currentNadiaQ.risposta3 || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateCurrentNadiaQ((prev) => ({ ...prev, risposta3: val }));
+                      }}
+                      className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
+                    />
+                    <p className="text-[10px] text-slate-400">
+                      Terza opzione alternativa (falsa).
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

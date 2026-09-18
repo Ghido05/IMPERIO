@@ -152,6 +152,18 @@ function IpadContent() {
         return;
       }
 
+      // Se Nadia è attiva
+      const isNadiaActive = localStorage.getItem('playstate_nadia_active') === 'true';
+      if (isNadiaActive) {
+        const nadiaBooked = localStorage.getItem('playstate_nadia_booked_team');
+        if (nadiaBooked && nadiaBooked !== 'null') {
+          setBookedTeam(parseInt(nadiaBooked, 10));
+          return;
+        }
+        setBookedTeam(null);
+        return;
+      }
+
       // Se siamo nel box 4 (Frase con tempo)
       if (activeBox === 4 || (currentSlideId && currentSlideId.includes('frase'))) {
         const winTeamVal = localStorage.getItem(`playstate_box4_winning_team`);

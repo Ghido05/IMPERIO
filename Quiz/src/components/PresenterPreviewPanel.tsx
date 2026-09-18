@@ -37,16 +37,18 @@ export default function PresenterPreviewPanel({
           <div className="w-20" />
         )}
       </div>
-      <div className="flex-1 min-h-0 w-full flex items-center justify-center bg-[#2b2b2b] p-2">
+      <div className="flex-1 min-h-0 w-full flex items-center justify-center bg-[#2b2b2b] p-2 relative">
         <div className="relative w-full max-h-full aspect-video overflow-hidden bg-black rounded-md shadow-inner">
           <StageViewport mode="fit">{children}</StageViewport>
         </div>
+        {footer && (
+          <div className="absolute bottom-2 inset-x-0 flex justify-center pointer-events-none z-30 px-3">
+            <div className="pointer-events-auto">
+              {footer}
+            </div>
+          </div>
+        )}
       </div>
-      {footer && (
-        <div className="shrink-0 flex justify-center py-2.5 px-3 bg-[#2b2b2b] border-t border-white/10">
-          {footer}
-        </div>
-      )}
     </div>
   );
 }

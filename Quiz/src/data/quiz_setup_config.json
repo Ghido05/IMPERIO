@@ -1,4 +1,19 @@
 {
+  "nadia": {
+    "sfondo": "/Icone/nessuno_img/password1.png",
+    "musicaStacchetto": "",
+    "domande": [
+      {
+        "id": "nadia_1",
+        "domanda": "Nel suo capolavoro letterario del 1939 \"Furore\" (The Grapes of Wrath), lo scrittore John Steinbeck descrive la migrazione della famiglia Joad verso ovest durante la Grande Depressione. In questo romanzo, Steinbeck coniò per la Route 66 un celebre soprannome che è rimasto nella storia. Quale?",
+        "rispostaCorretta": "La strada madre",
+        "risposta2": "L'arteria d'America",
+        "risposta3": "La bretella lungo la vita",
+        "targetBox": 4,
+        "targetQuestion": 1
+      }
+    ]
+  },
   "gioco1": {
     "selectedQuestion": 1,
     "questions": {

@@ -520,6 +520,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   const [nadiaSolutionShown, setNadiaSolutionShown] = useSyncedState<boolean>('playstate_nadia_solution_shown', false);
   const [nadiaBookedTeam, setNadiaBookedTeam] = useSyncedState<number | null>('playstate_nadia_booked_team', null);
   const [nadiaAssignedTeam, setNadiaAssignedTeam] = useSyncedState<number | null>('playstate_nadia_assigned_team', null);
+  const [, setNadiaErrorTrigger] = useSyncedState<number>('playstate_nadia_error_trigger', 0);
   const nadiaAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const teamNames = setupState.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
@@ -529,6 +530,11 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   const nadiaQuestionForCurrentSlot = (setupState.nadia?.domande || []).find(
     (d) => d.targetBox === activeBox && d.targetQuestion === currentSlotQuestionNum
   );
+
+  const triggerNadiaError = () => {
+    const timestamp = Date.now();
+    setNadiaErrorTrigger(timestamp);
+  };
 
   const playNadiaJingle = (isExit = false) => {
     if (!setupState.nadia?.musicaStacchetto) return;
@@ -564,7 +570,10 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     }
   };
 
-  const handleCancelNadiaBooking = () => {
+  const handleCancelNadiaBooking = (withError = false) => {
+    if (withError) {
+      triggerNadiaError();
+    }
     setNadiaBookedTeam(null);
     sendSerialReset();
   };
@@ -641,17 +650,20 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
           }
         } else if (e.key === 's' || e.key === 'S' || e.key === 'Enter') {
           setNadiaSolutionShown((prev) => !prev);
+        } else if (e.key === 'e' || e.key === 'E' || e.key === 'x' || e.key === 'X') {
+          // Segnala Errore con grande X rossa + scossa
+          handleCancelNadiaBooking(true);
         } else if (e.key === 'Escape') {
           if (nadiaBookedTeam !== null) {
-            handleCancelNadiaBooking();
+            handleCancelNadiaBooking(true);
           } else {
             handleCloseNadia(true);
           }
         } else if (e.key === 'm' || e.key === 'M') {
           playNadiaJingle(false);
-        } else if (e.key === 'Backspace' || e.key === 'x' || e.key === 'X') {
+        } else if (e.key === 'Backspace') {
           if (nadiaBookedTeam !== null) {
-            handleCancelNadiaBooking();
+            handleCancelNadiaBooking(true);
           }
         }
       }
@@ -895,9 +907,9 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                             {/* Tasto Errata / Sblocca Pulsantiera */}
                             <button
                               type="button"
-                              onClick={handleCancelNadiaBooking}
+                              onClick={() => handleCancelNadiaBooking(true)}
                               className="px-2.5 py-1 bg-red-600/30 hover:bg-red-600 text-red-200 hover:text-white border border-red-500/40 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer"
-                              title="Risposta errata: sblocca la pulsantiera hardware per gli altri"
+                              title="Risposta errata: mostra X di errore e sblocca la pulsantiera per gli altri (E / X)"
                             >
                               <span>✕ Sblocca / Errata</span>
                               <kbd className="text-[9px] bg-black/40 px-1 py-0.5 rounded opacity-70">Esc</kbd>

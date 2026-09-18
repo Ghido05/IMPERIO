@@ -1,5 +1,7 @@
+import { useState, useEffect, useRef } from 'react';
 import { assetUrl } from '../lib/assetUrl';
 import type { NadiaQuestionItem, NadiaSetup } from '../views/QuizSetupView';
+import { useSyncedState } from '../hooks/useSyncedState';
 
 interface MilleEUnaNadiaBoardProps {
   nadiaSetup: NadiaSetup;
@@ -24,6 +26,20 @@ export default function MilleEUnaNadiaBoard({
   teamNames = ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'],
   onCancelBooking,
 }: MilleEUnaNadiaBoardProps) {
+  const [showError, setShowError] = useState(false);
+  const [errorTrigger] = useSyncedState<number>('playstate_nadia_error_trigger', 0);
+  const lastErrorRef = useRef(errorTrigger);
+
+  // Trigger animazione di errore (X rossa + scossa a schermo)
+  useEffect(() => {
+    if (errorTrigger && errorTrigger !== lastErrorRef.current) {
+      lastErrorRef.current = errorTrigger;
+      setShowError(true);
+      const timer = setTimeout(() => setShowError(false), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [errorTrigger]);
+
   // Le 3 opzioni originali: [0: corretta, 1: risposta2, 2: risposta3]
   const rawOptions = [
     { text: question.rispostaCorretta || 'Risposta Corretta', isCorrect: true, originalIndex: 0 },
@@ -41,7 +57,7 @@ export default function MilleEUnaNadiaBoard({
   const bgImage = nadiaSetup.sfondo ? assetUrl(nadiaSetup.sfondo) : null;
 
   return (
-    <div className="absolute inset-0 z-50 w-full h-full select-none overflow-hidden flex flex-col items-center justify-between p-12 bg-black">
+    <div className={`absolute inset-0 z-50 w-full h-full select-none overflow-hidden flex flex-col items-center justify-between p-12 bg-black transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}>
       {/* Sfondo Unico */}
       {bgImage ? (
         <div
@@ -54,6 +70,36 @@ export default function MilleEUnaNadiaBoard({
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#1b0a2a] via-[#090814] to-[#12081f]">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-500/15 via-transparent to-transparent" />
+        </div>
+      )}
+
+      {/* Sfondo Verde Trionfale quando la risposta è corretta / svelata */}
+      {solutionShown && (
+        <div className="absolute inset-0 z-[2] pointer-events-none transition-opacity duration-700 animate-in fade-in">
+          {/* Flash verde all'impatto */}
+          <div className="absolute inset-0 animate-flash-green" />
+          {/* Overlay verde smeraldo a tutta schermata */}
+          <div className="absolute inset-0 bg-gradient-to-b from-emerald-950/70 via-emerald-900/60 to-[#061e12]/90 backdrop-blur-[1px]" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-emerald-500/35 via-teal-600/15 to-transparent animate-pulse" />
+        </div>
+      )}
+
+      {/* Overlay di Errore: Flash Rosso + Grande X Centrale Rossa */}
+      {showError && (
+        <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center">
+          <div className="absolute inset-0 animate-flash-red" />
+          <svg 
+            className="w-[42%] max-w-[480px] h-auto text-red-600 drop-shadow-[0_0_60px_rgba(220,38,38,0.95)] animate-error-x" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="4" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
         </div>
       )}
 
@@ -90,7 +136,11 @@ export default function MilleEUnaNadiaBoard({
 
       {/* Riquadro Centrale: Domanda */}
       <main className="relative z-10 w-full max-w-[1540px] flex-1 flex flex-col justify-center items-center py-6">
-        <div className="w-full bg-[#120e1e]/85 border-2 border-amber-400/50 rounded-3xl p-10 shadow-[0_15px_50px_rgba(0,0,0,0.8),0_0_35px_rgba(245,158,11,0.2)] backdrop-blur-md transition-all duration-300">
+        <div className={`w-full bg-[#120e1e]/85 border-2 rounded-3xl p-10 backdrop-blur-md transition-all duration-500 ${
+          solutionShown 
+            ? 'border-emerald-400/80 shadow-[0_15px_50px_rgba(0,0,0,0.8),0_0_45px_rgba(16,185,129,0.4)]' 
+            : 'border-amber-400/50 shadow-[0_15px_50px_rgba(0,0,0,0.8),0_0_35px_rgba(245,158,11,0.2)]'
+        }`}>
           <div className="flex items-center justify-center">
             <p className="text-white text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-center leading-snug tracking-wide drop-shadow-md">
               {question.domanda || 'Domanda di Mille e una Nadia non impostata nel Setup'}

@@ -50,6 +50,7 @@ export default function SlideCanvas({
   const [nadiaSolutionShown] = useSyncedState<boolean>('playstate_nadia_solution_shown', false);
   const [nadiaBookedTeam, setNadiaBookedTeam] = useSyncedState<number | null>('playstate_nadia_booked_team', null);
   const [nadiaAssignedTeam] = useSyncedState<number | null>('playstate_nadia_assigned_team', null);
+  const [, setNadiaErrorTrigger] = useSyncedState<number>('playstate_nadia_error_trigger', 0);
   const [nadiaShuffledOrder] = useSyncedState<[number, number, number]>(
     `playstate_nadia_order_${nadiaQuestionId}`,
     [0, 1, 2]
@@ -161,6 +162,7 @@ export default function SlideCanvas({
             assignedTeam={nadiaAssignedTeam}
             teamNames={localSetup?.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']}
             onCancelBooking={() => {
+              setNadiaErrorTrigger(Date.now());
               setNadiaBookedTeam(null);
               sendSerialReset();
             }}

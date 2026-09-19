@@ -13,6 +13,7 @@ interface MilleEUnaNadiaBoardProps {
   assignedTeam?: number | null;
   teamNames?: string[];
   onCancelBooking?: () => void;
+  onOptionClick?: (origIdx: number, isCorrect: boolean) => void;
 }
 
 export default function MilleEUnaNadiaBoard({
@@ -25,13 +26,18 @@ export default function MilleEUnaNadiaBoard({
   assignedTeam = null,
   teamNames = ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'],
   onCancelBooking,
+  onOptionClick,
 }: MilleEUnaNadiaBoardProps) {
   const [showError, setShowError] = useState(false);
   const [errorTrigger] = useSyncedState<number>('playstate_nadia_error_trigger', 0);
   const [nadiaStep] = useSyncedState<number>('playstate_nadia_step', 0);
+  const [eliminatedOptions] = useSyncedState<number[]>('playstate_nadia_eliminated_options', []);
   const lastErrorRef = useRef(errorTrigger);
 
-  const showOptions = nadiaStep >= 1 || solutionShown;
+  const showQuestion = nadiaStep >= 1 || solutionShown;
+  const showOptionA = nadiaStep >= 2 || solutionShown;
+  const showOptionB = nadiaStep >= 3 || solutionShown;
+  const showOptionC = nadiaStep >= 4 || solutionShown;
 
   // Trigger animazione di errore (X rossa + scossa a schermo)
   useEffect(() => {
@@ -54,6 +60,7 @@ export default function MilleEUnaNadiaBoard({
   const letters = ['A', 'B', 'C'];
   const displayedOptions = shuffledOrder.map((origIdx, slotIdx) => ({
     letter: letters[slotIdx],
+    visible: slotIdx === 0 ? showOptionA : slotIdx === 1 ? showOptionB : showOptionC,
     ...rawOptions[origIdx],
   }));
 
@@ -64,7 +71,7 @@ export default function MilleEUnaNadiaBoard({
       {/* Sfondo Unico */}
       {bgImage ? (
         <div
-          className="absolute inset-0 bg-cover bg-center transition-all duration-700"
+          className="absolute inset-0 bg-contain bg-center bg-no-repeat transition-all duration-700"
           style={{ backgroundImage: `url("${bgImage}")` }}
         >
           {/* Overlay scuro soffuso per garantire contrasto e leggibilità */}
@@ -130,10 +137,10 @@ export default function MilleEUnaNadiaBoard({
             <span>Relatore:</span>
             {solutionShown ? (
               <span className="text-emerald-400 font-bold">Soluzione Mostrata</span>
-            ) : !showOptions ? (
-              <span className="text-amber-400 font-bold">Solo Domanda (▶ per Risposte)</span>
+            ) : !showQuestion ? (
+              <span className="text-amber-400 font-bold">Solo Sfondo (▶ per Domanda)</span>
             ) : (
-              <span className="text-blue-400 font-bold">Risposte Svelate</span>
+              <span className="text-blue-400 font-bold">Domanda Svelata</span>
             )}
           </div>
         )}
@@ -145,7 +152,7 @@ export default function MilleEUnaNadiaBoard({
           solutionShown 
             ? 'border-emerald-400/80 shadow-[0_15px_50px_rgba(0,0,0,0.8),0_0_45px_rgba(16,185,129,0.4)]' 
             : 'border-amber-400/50 shadow-[0_15px_50px_rgba(0,0,0,0.8),0_0_35px_rgba(245,158,11,0.2)]'
-        }`}>
+        } ${showQuestion ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-8 pointer-events-none'}`}>
           <div className="flex items-center justify-center">
             <p className="text-white text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-center leading-snug tracking-wide drop-shadow-md">
               {question.domanda || 'Domanda di Mille e una Nadia non impostata nel Setup'}
@@ -154,15 +161,17 @@ export default function MilleEUnaNadiaBoard({
         </div>
 
         {/* 3 Riquadri Risposta: A, B, C (visibili solo dopo aver avanzato con le frecce) */}
-        {showOptions ? (
-          <div className="w-full grid grid-cols-3 gap-8 mt-10 animate-zoom-in">
-            {displayedOptions.map((opt) => {
-              const isThisCorrect = opt.isCorrect;
+        <div className={`w-full grid grid-cols-3 gap-8 mt-10 transition-all duration-500 ${showQuestion ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+          {displayedOptions.map((opt) => {
+            const isThisCorrect = opt.isCorrect;
               
               // Stile quando la soluzione è mostrata
               let cardBg = 'bg-[#181326]/90 hover:bg-[#201933]/90 border-white/20 text-white';
               let letterBg = 'bg-amber-400/20 text-amber-300 border-amber-400/40';
               let shadowClass = 'shadow-2xl shadow-black/60';
+
+              const isEliminated = eliminatedOptions.includes(opt.originalIndex);
+              const canClick = isPresenter && bookedTeam !== null && !isEliminated && !solutionShown;
 
               if (solutionShown) {
                 if (isThisCorrect) {
@@ -174,16 +183,28 @@ export default function MilleEUnaNadiaBoard({
                   letterBg = 'bg-white/5 text-white/20 border-white/10';
                   shadowClass = 'shadow-none opacity-40';
                 }
+              } else if (isEliminated) {
+                cardBg = 'bg-[#120f1a]/30 border-red-500/10 text-white/30';
+                letterBg = 'bg-red-500/5 text-red-500/30 border-red-500/20';
+                shadowClass = 'shadow-none opacity-50 pointer-events-none grayscale';
               } else if (isPresenter && isThisCorrect) {
                 // Nel relatore evidenziamo discretamente la corretta in anticipo
-                cardBg = 'bg-[#181326]/95 border-emerald-500/70 text-white';
+                cardBg = 'bg-[#181326]/95 border-emerald-500/70 text-white hover:bg-[#251d38]/90 hover:border-emerald-400';
                 letterBg = 'bg-emerald-500/30 text-emerald-300 border-emerald-400/50';
+              } else if (isPresenter && bookedTeam !== null) {
+                cardBg = 'bg-[#181326]/90 border-white/30 text-white hover:bg-[#2a2240] hover:border-amber-400/60 cursor-pointer';
+                letterBg = 'bg-amber-400/20 text-amber-300 border-amber-400/40';
               }
 
               return (
                 <div
                   key={opt.letter}
-                  className={`relative flex flex-col justify-center items-center min-h-[200px] p-6 rounded-2xl border-2 backdrop-blur-md transition-all duration-500 ${cardBg} ${shadowClass}`}
+                  onClick={() => {
+                    if (canClick && onOptionClick) {
+                      onOptionClick(opt.originalIndex, isThisCorrect);
+                    }
+                  }}
+                  className={`relative flex flex-col justify-center items-center min-h-[200px] p-6 rounded-2xl border-2 backdrop-blur-md transition-all duration-500 ${cardBg} ${shadowClass} ${opt.visible ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'}`}
                 >
                   {/* Badge Risposta Corretta discreta per il Relatore */}
                   {isPresenter && !solutionShown && isThisCorrect && (
@@ -199,12 +220,11 @@ export default function MilleEUnaNadiaBoard({
                     </div>
                   )}
 
-                  {/* Lettera (A), (B), (C) */}
-                  <div className="flex items-center gap-3 mb-3">
+                  {/* Lettera A, B, C (senza parentesi) */}
+                  <div className="flex items-center justify-center mb-3">
                     <span className={`w-12 h-12 rounded-xl flex items-center justify-center text-2xl font-black border ${letterBg} transition-all duration-300 shadow`}>
                       {opt.letter}
                     </span>
-                    <span className="text-xl font-bold opacity-60">)</span>
                   </div>
 
                   {/* Testo Risposta */}
@@ -215,15 +235,7 @@ export default function MilleEUnaNadiaBoard({
               );
             })}
           </div>
-        ) : (
-          /* Placeholder durante la lettura della domanda */
-          <div className="w-full flex items-center justify-center mt-10 py-8 px-6 rounded-2xl bg-[#120f1a]/60 border border-amber-400/20 backdrop-blur-sm animate-pulse">
-            <div className="flex items-center gap-3 text-amber-300/60 font-black tracking-widest text-base sm:text-lg uppercase">
-              <span className="text-2xl">⏳</span>
-              <span>Lettura Domanda in Corso — Premi Freccia Destra per mostrare le opzioni di risposta</span>
-            </div>
-          </div>
-        )}
+
 
         {/* Banner visivo Squadra Prenotata al Buzzer */}
         {bookedTeam !== null && assignedTeam === null && (

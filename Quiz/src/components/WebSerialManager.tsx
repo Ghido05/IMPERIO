@@ -94,10 +94,23 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
       const nadiaAssignedKey = 'playstate_nadia_assigned_team';
       let currentNadiaBooked = localStorage.getItem(nadiaBookedKey);
       let currentNadiaAssigned = localStorage.getItem(nadiaAssignedKey);
+      let nadiaStep = parseInt(localStorage.getItem('playstate_nadia_step') || '0', 10);
+      let nadiaSolutionShown = localStorage.getItem('playstate_nadia_solution_shown') === 'true';
+
+      let excludedTeams: number[] = [];
+      try {
+        const excl = localStorage.getItem('playstate_nadia_excluded_teams');
+        if (excl) excludedTeams = JSON.parse(excl);
+      } catch (e) {}
+
+      if (excludedTeams.includes(playerNum)) {
+        return; // Squadra esclusa per questa domanda (ha sbagliato)
+      }
+
       if (currentNadiaBooked === 'null' || currentNadiaBooked === '') currentNadiaBooked = null;
       if (currentNadiaAssigned === 'null' || currentNadiaAssigned === '') currentNadiaAssigned = null;
 
-      if (!currentNadiaBooked && !currentNadiaAssigned) {
+      if (!currentNadiaBooked && !currentNadiaAssigned && nadiaStep >= 4 && !nadiaSolutionShown) {
         localStorage.setItem(nadiaBookedKey, playerNum.toString());
         window.dispatchEvent(new CustomEvent('local-storage-update', {
           detail: { key: nadiaBookedKey, value: playerNum.toString() }

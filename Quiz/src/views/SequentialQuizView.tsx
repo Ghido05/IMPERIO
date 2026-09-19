@@ -512,6 +512,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
       (window as any).electron.broadcastState({
         activeSlideId: activeSlide.id,
         activeSlide,
+        nadiaSetup: setupState.nadia,
       });
     }
   }, [activeSlide, activeBox, activeQuestion]);
@@ -526,6 +527,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   const [nadiaBookedTeam, setNadiaBookedTeam] = useSyncedState<number | null>('playstate_nadia_booked_team', null);
   const [nadiaAssignedTeam, setNadiaAssignedTeam] = useSyncedState<number | null>('playstate_nadia_assigned_team', null);
   const [, setNadiaErrorTrigger] = useSyncedState<number>('playstate_nadia_error_trigger', 0);
+  const [nadiaExcludedTeams, setNadiaExcludedTeams] = useSyncedState<number[]>('playstate_nadia_excluded_teams', []);
   const nadiaAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const teamNames = setupState.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
@@ -584,7 +586,8 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   };
 
   const handleBookTeamNadia = (teamNum: number) => {
-    if (nadiaAssignedTeam === null && nadiaBookedTeam === null) {
+    if (nadiaExcludedTeams.includes(teamNum)) return;
+    if (nadiaAssignedTeam === null && nadiaBookedTeam === null && nadiaStep >= 4 && !nadiaSolutionShown) {
       setNadiaBookedTeam(teamNum);
     }
   };
@@ -617,8 +620,60 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     setNadiaBookedTeam(null);
     setNadiaAssignedTeam(null);
     setNadiaActive(true);
+    // Clear eliminated options
+    localStorage.removeItem('playstate_nadia_eliminated_options');
+    window.dispatchEvent(new CustomEvent('local-storage-update', {
+      detail: { key: 'playstate_nadia_eliminated_options', value: '[]' }
+    }));
+    // Clear excluded teams
+    localStorage.removeItem('playstate_nadia_excluded_teams');
+    window.dispatchEvent(new CustomEvent('local-storage-update', {
+      detail: { key: 'playstate_nadia_excluded_teams', value: '[]' }
+    }));
+
+    if ((window as any).electron?.broadcastState) {
+      (window as any).electron.broadcastState({
+        localStorageUpdate: { key: 'playstate_nadia_eliminated_options', value: '[]' }
+      });
+      (window as any).electron.broadcastState({
+        localStorageUpdate: { key: 'playstate_nadia_excluded_teams', value: '[]' }
+      });
+    }
+
     sendSerialReset();
     playNadiaJingle(false);
+  };
+
+  const handleNadiaOptionClick = (origIdx: number, isCorrect: boolean) => {
+    if (nadiaBookedTeam === null) return;
+    if (isCorrect) {
+      handleAssignNadiaPoints(nadiaBookedTeam);
+    } else {
+      const teamToExclude = nadiaBookedTeam;
+      handleCancelNadiaBooking(true);
+      
+      const savedElim = localStorage.getItem('playstate_nadia_eliminated_options');
+      const currentElim = savedElim ? JSON.parse(savedElim) : [];
+      const nextElim = [...currentElim, origIdx];
+      localStorage.setItem('playstate_nadia_eliminated_options', JSON.stringify(nextElim));
+      window.dispatchEvent(new CustomEvent('local-storage-update', {
+        detail: { key: 'playstate_nadia_eliminated_options', value: JSON.stringify(nextElim) }
+      }));
+      
+      const savedExcl = localStorage.getItem('playstate_nadia_excluded_teams');
+      const currentExcl = savedExcl ? JSON.parse(savedExcl) : [];
+      const nextExcl = [...currentExcl, teamToExclude];
+      setNadiaExcludedTeams(nextExcl);
+
+      if ((window as any).electron?.broadcastState) {
+        (window as any).electron.broadcastState({
+          localStorageUpdate: { key: 'playstate_nadia_eliminated_options', value: JSON.stringify(nextElim) }
+        });
+        (window as any).electron.broadcastState({
+          localStorageUpdate: { key: 'playstate_nadia_excluded_teams', value: JSON.stringify(nextExcl) }
+        });
+      }
+    }
   };
 
   const handleCloseNadia = (playExitSound = true) => {
@@ -656,16 +711,16 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
             handleBookTeamNadia(3);
           }
         } else if (e.key === 'ArrowRight') {
-          // Freccia Destra: fa apparire le possibili risposte per dare a tutti lo stesso tempo
+          // Freccia Destra: fa apparire domanda e poi le singole risposte
           e.preventDefault();
-          if (nadiaStep === 0) {
-            setNadiaStep(1);
+          if (nadiaStep < 4) {
+            setNadiaStep(nadiaStep + 1);
           }
         } else if (e.key === 'ArrowLeft') {
-          // Freccia Sinistra: permette di tornare indietro a solo domanda se non svelata
+          // Freccia Sinistra: permette di tornare indietro
           e.preventDefault();
-          if (nadiaStep === 1 && !nadiaSolutionShown) {
-            setNadiaStep(0);
+          if (nadiaStep > 0 && !nadiaSolutionShown) {
+            setNadiaStep(nadiaStep - 1);
           }
         } else if (e.key === 's' || e.key === 'S' || e.key === 'Enter') {
           setNadiaSolutionShown((prev) => !prev);
@@ -1089,6 +1144,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                 viewportMode="none"
                 nadiaSetup={setupState.nadia}
                 isPresenter={true}
+                onNadiaOptionClick={handleNadiaOptionClick}
               />
             </PresenterPreviewPanel>
           )}

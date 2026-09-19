@@ -21,6 +21,7 @@ interface SlideCanvasProps {
   revealAll?: boolean;
   nadiaSetup?: NadiaSetup;
   isPresenter?: boolean;
+  onNadiaOptionClick?: (origIdx: number, isCorrect: boolean) => void;
 }
 
 export default function SlideCanvas({
@@ -33,6 +34,7 @@ export default function SlideCanvas({
   revealAll = false,
   nadiaSetup,
   isPresenter = false,
+  onNadiaOptionClick,
 }: SlideCanvasProps) {
   const [, setTick] = useState(0);
   const [localSetup, setLocalSetup] = useState<QuizSetupState | null>(() => {
@@ -166,6 +168,7 @@ export default function SlideCanvas({
               setNadiaBookedTeam(null);
               sendSerialReset();
             }}
+            onOptionClick={onNadiaOptionClick}
           />
         )}
       </div>

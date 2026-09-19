@@ -1,6 +1,6 @@
 {
   "nadia": {
-    "sfondo": "/Icone/nessuno_img/password1.png",
+    "sfondo": "/Icone/nessuno_img/1001Nadia.jpeg",
     "musicaStacchetto": "",
     "domande": [
       {
@@ -666,10 +666,10 @@
     "sfondoGenerale": ""
   },
   "gioco3": {
-    "selectedQuestion": 1,
+    "selectedQuestion": 2,
     "questions": {
       "1": {
-        "sfondo": "/Icone/Sfondi Password/password1.png",
+        "sfondo": "/Icone/nessuno_img/3_1_superereoi.png",
         "squadra1": [
           {
             "parola": "BATMAN",
@@ -763,7 +763,7 @@
         }
       },
       "2": {
-        "sfondo": "/Icone/Sfondi Password/password2.png",
+        "sfondo": "/Icone/nessuno_img/3_2_dolci.png",
         "squadra1": [
           {
             "parola": "torta di mele",

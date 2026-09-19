@@ -5,13 +5,19 @@ import { ScoreProvider } from '../context/ScoreContext';
 
 export default function GamesView() {
   const [activeSlide, setActiveSlide] = useState<Slide | null>(null);
+  const [nadiaSetup, setNadiaSetup] = useState<any>(null);
 
   useEffect(() => {
     const isElectron = (window as any).electron !== undefined;
     if (isElectron) {
-      const unsubscribe = (window as any).electron.onStateUpdate((state: { activeSlide?: Slide | null }) => {
+      const unsubscribe = (window as any).electron.onStateUpdate((state: { activeSlide?: Slide | null, setupStateUpdate?: any, nadiaSetup?: any }) => {
         if (state.activeSlide !== undefined) {
           setActiveSlide(state.activeSlide);
+        }
+        if (state.nadiaSetup !== undefined) {
+          setNadiaSetup(state.nadiaSetup);
+        } else if (state.setupStateUpdate?.nadia) {
+          setNadiaSetup(state.setupStateUpdate.nadia);
         }
       });
       return unsubscribe;
@@ -23,6 +29,7 @@ export default function GamesView() {
       <div className="fixed inset-0 bg-black overflow-hidden">
         {activeSlide ? (
           <SlideCanvas
+            nadiaSetup={nadiaSetup}
             slide={
               activeSlide.type === 'password_prescelti'
                 ? { ...activeSlide, type: 'password_squadre' }

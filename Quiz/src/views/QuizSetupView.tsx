@@ -298,7 +298,7 @@ export function createDefaultNadiaQuestion(box: number = 1, q: number = 1): Nadi
 
 export function createDefaultNadiaSetup(): NadiaSetup {
   return {
-    sfondo: '',
+    sfondo: '/Icone/sfondi/1001Nadia.jpg',
     musicaStacchetto: '',
     domande: [
       {
@@ -330,8 +330,12 @@ export function normalizeNadia(raw: any, def: NadiaSetup): NadiaSetup {
   } else {
     domande = def.domande;
   }
+  let sfondo = raw.sfondo || def.sfondo || '';
+  if (!sfondo || sfondo.includes('1001Nadia') || sfondo.includes('nessuno_img') || sfondo.startsWith('idb://')) {
+    sfondo = '/Icone/sfondi/1001Nadia.jpg';
+  }
   return {
-    sfondo: raw.sfondo || '',
+    sfondo,
     musicaStacchetto: raw.musicaStacchetto || '',
     domande,
   };

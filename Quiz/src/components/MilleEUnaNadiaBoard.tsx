@@ -64,18 +64,18 @@ export default function MilleEUnaNadiaBoard({
     ...rawOptions[origIdx],
   }));
 
-  const bgImage = nadiaSetup.sfondo ? assetUrl(nadiaSetup.sfondo) : null;
+  const bgImage = assetUrl(nadiaSetup?.sfondo || '/Icone/sfondi/1001Nadia.jpg');
 
   return (
     <div className={`absolute inset-0 z-50 w-full h-full select-none overflow-hidden flex flex-col items-center justify-between p-12 bg-black transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}>
       {/* Sfondo Unico */}
       {bgImage ? (
         <div
-          className="absolute inset-0 bg-contain bg-center bg-no-repeat transition-all duration-700"
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat transition-all duration-700"
           style={{ backgroundImage: `url("${bgImage}")` }}
         >
           {/* Overlay scuro soffuso per garantire contrasto e leggibilità */}
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px]" />
+          <div className="absolute inset-0 bg-black/40" />
         </div>
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-[#1b0a2a] via-[#090814] to-[#12081f]">

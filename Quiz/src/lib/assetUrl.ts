@@ -77,6 +77,9 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   'porto_frecce_rosso.png': '/Icone/Bonus/porto_frecce_rosso.png',
   'porto_scudo_rosso.png': '/Icone/Bonus/porto_scudo_rosso.png',
   'porto_frecce_grigio.png': '/Icone/Bonus/porto_frecce_grigio.png',
+  // Sfondi Nadia
+  '1001Nadia.jpg': '/Icone/sfondi/1001Nadia.jpg',
+  '1001Nadia.jpeg': '/Icone/sfondi/1001Nadia.jpg',
   // Sfondi e Finale
   'sfondo_finale_acqua.jpg': '/sfondo_finale_acqua.jpg',
   'sfondo_finale_default.jpg': '/sfondo_finale_default.jpg',
@@ -130,6 +133,9 @@ export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): 
 export function sanitizeSetupStateWithKnownAssets<T>(obj: T): T {
   if (!obj) return obj;
   if (typeof obj === 'string') {
+    if (obj.includes('1001Nadia')) {
+      return '/Icone/sfondi/1001Nadia.jpg' as unknown as T;
+    }
     if (obj.startsWith('idb://')) {
       const known = findKnownPublicAsset(obj);
       if (known) return known as unknown as T;
@@ -193,6 +199,11 @@ export async function preloadAllLargeFiles(): Promise<void> {
 export function assetUrl(path: string | undefined | null): string {
   if (!path) return '';
   let trimmed = path.trim();
+
+  // Reindirizzamento garantito per lo sfondo unico di Nadia (con cache-buster)
+  if (trimmed.includes('1001Nadia')) {
+    trimmed = '/Icone/sfondi/1001Nadia.jpg?v=1920_v2';
+  }
 
   // Fallback istantaneo a file locali noti nel repository
   const knownAsset = findKnownPublicAsset(trimmed);

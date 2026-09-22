@@ -16,3 +16,6 @@ __pycache__/
 # Application Builds
 App-Builds/
 *.dmg
+
+# Local Backups
+*VECCHIA*

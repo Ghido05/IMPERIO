@@ -15,7 +15,7 @@
     ]
   },
   "gioco1": {
-    "selectedQuestion": 1,
+    "selectedQuestion": 2,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -28,10 +28,10 @@
             "/Audio/strumenti/g01m01s05flauto_lamorenonmibasta.mp3"
           ],
           "indizi": [
-            "ind 1",
-            "ind 2",
-            "ind 3",
-            "ind 4"
+            "PIUTTOSTO ESIGENTE COME RICHIESTA L’UNICITÀ DELLA PASSIONE SPODESTA",
+            "COL PROPRIO COGNOME SI DÀ UN TONO LA CANTANTE IRROMPE COME UN TUONO",
+            "LEI SI GIUSTIFICA: “SONO DISONESTA” MA CHE CONSIDERAZIONE È MAI QUESTA?",
+            "DOPO 10 ANNI TORNATA DI MODA ORA LA RISPOSTA ARRIVA DA SOLA"
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g01m01soluzione.mp3",
           "titolo": "L'AMORE NON MI BASTA",
@@ -71,16 +71,17 @@
           "anno": ""
         },
         "immagine": {
-          "immagineJpg": "/Icone/nessuno_img/Prova.png",
+          "immagineJpg": "/Icone/nessuno_img/1_2_telemaco.jpeg",
           "indizi": [
             "indizio 1",
-            "indizio 2",
-            "indizio 3",
-            "indizio 4"
+            "CONSIGLIATO DA ATENA SI METTE ALLA RICERCA DI BUONA LENA",
+            "TUTTO D’UN PEZZO SENZA TATUAGGIO DELL’ODISSEA È UN PERSONAGGIO",
+            "AGILE E SVELTO COME UN ANTILOPE FIGLIO DI ULISSE E PENELOPE"
           ],
           "confermaAudio": "/Audio/g02m01soluzione.mp3",
-          "soluzione": "Pantheon",
-          "categoria": "Storia"
+          "soluzione": "TELEMACO",
+          "categoria": "PERSONAGGIO",
+          "grigliaSeme": 435724
         }
       },
       "3": {
@@ -104,7 +105,7 @@
           "anno": ""
         },
         "immagine": {
-          "immagineJpg": "/Icone/nessuno_img/1_3_telemaco.jpeg",
+          "immagineJpg": "",
           "indizi": [
             "Uomo forte di destini forti, di cui cronos determinerà le sorti",
             "indizio 2 poi ci penso",

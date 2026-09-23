@@ -296,7 +296,7 @@
           ],
           "soluzioneAudio": "",
           "titolo": "PERDUTAMENTE",
-          "anno": "ACHILLE LAURO - "
+          "anno": "ACHILLE LAURO - 2025"
         },
         "immagine": {
           "immagineJpg": "",
@@ -346,7 +346,7 @@
     "sfondoGenerale": "/Icone/nessuno_img/sfondo_finale_default.jpg"
   },
   "gioco2": {
-    "selectedQuestion": 5,
+    "selectedQuestion": 2,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -438,22 +438,23 @@
         },
         "immagine": {
           "lista10": [
-            "CACCIAVITE",
-            "MARTELLI",
-            "PINZE",
-            "METRO",
-            "CHIAVI INGLESI",
-            "NASTRO ISOLANTE O ADESIVO",
-            "TAGLIERINO O FORBICI",
-            "LIVELLA A BOLLA",
-            "CHIAVI A BRUGOLA",
-            "VITI O CHIODI"
+            "❤️  CUORE ROSSO",
+            "😭 FACCINA CHE PIANGE A DIROTTO",
+            "🔥 FUOCO ",
+            "🥹 FACCINA COMMOSSA",
+            "✅ SPUNTA VERDE",
+            "😲 FACCINA STUPITA",
+            "✨ STELLINE",
+            "😩 FACCINA STANCA",
+            "👀 OCCHI",
+            "💀 TESCHIO"
           ],
-          "immagineJpg": "",
-          "soluzioneAudio": "",
-          "soluzioneTesto": "",
-          "domanda": "10 oggetti più presenti nella cassetta degli attrezzi"
-        }
+          "immagineJpg": "/Icone/nessuno_img/2_2_faraonamitrata.jpeg",
+          "soluzioneAudio": "/Audio/strumenti/Samba do Brasil_[cut_17sec].mp3",
+          "soluzioneTesto": "FARAONA",
+          "domanda": "10 EMOTICON PIÙ UTILIZZATE A LIVELLO GLOBALE"
+        },
+        "notePresentatore": "CATEGORIA(MANCA LO SPAZIO):ANIMALE.\nRIPORTA SKYTG24 CHE EMOJIPEDIA, IL MOTORE DI RICERCA CHE MONITORA L'UTILIZZO DELLE FACCINE, HA STILATO LA LISTA DI FACCINE PIÙ USATE NEL 2026."
       },
       "3": {
         "tipo": "canzone",

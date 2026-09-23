@@ -15,7 +15,7 @@
     ]
   },
   "gioco1": {
-    "selectedQuestion": 2,
+    "selectedQuestion": 9,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -78,14 +78,15 @@
             "TUTTO D’UN PEZZO SENZA TATUAGGIO DELL’ODISSEA È UN PERSONAGGIO",
             "AGILE E SVELTO COME UN ANTILOPE FIGLIO DI ULISSE E PENELOPE"
           ],
-          "confermaAudio": "/Audio/g02m01soluzione.mp3",
+          "confermaAudio": "",
           "soluzione": "TELEMACO",
           "categoria": "PERSONAGGIO",
           "grigliaSeme": 435724
-        }
+        },
+        "sfondo": ""
       },
       "3": {
-        "tipo": "immagine",
+        "tipo": "canzone",
         "canzone": {
           "audioFiles": [
             "",
@@ -100,9 +101,9 @@
             "",
             ""
           ],
-          "soluzioneAudio": "",
-          "titolo": "",
-          "anno": ""
+          "soluzioneAudio": "/Audio/soluzioni a conferma/g01m03soluzione.mp3",
+          "titolo": "WRECKING BALL",
+          "anno": "MILEY CYRUS - 2013"
         },
         "immagine": {
           "immagineJpg": "",
@@ -115,10 +116,10 @@
           "confermaAudio": "",
           "soluzione": "Telemaco "
         },
-        "notePresentatore": "Locandina film \"The Odissey\""
+        "notePresentatore": ""
       },
       "4": {
-        "tipo": "canzone",
+        "tipo": "immagine",
         "canzone": {
           "audioFiles": [
             "",
@@ -230,8 +231,8 @@
             ""
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g01m07soluzione.mp3",
-          "titolo": "Payphone",
-          "anno": "Maroon 5 ft. Wiz Khalifa - 2012"
+          "titolo": "PAYPHONE",
+          "anno": "MAROON 5 FT. WIZ KHALIFA - 2012"
         },
         "immagine": {
           "immagineJpg": "",
@@ -246,7 +247,7 @@
         }
       },
       "8": {
-        "tipo": "canzone",
+        "tipo": "immagine",
         "canzone": {
           "audioFiles": [
             "",
@@ -281,11 +282,11 @@
         "tipo": "canzone",
         "canzone": {
           "audioFiles": [
-            "",
-            "",
-            "",
-            "",
-            ""
+            "/Audio/strumenti/g01m09s01piano-perdutamente.mp3",
+            "/Audio/strumenti/g01m09s02chitarra-perdutamente.mp3",
+            "/Audio/strumenti/g01m09s03coro-perdutamente.mp3",
+            "/Audio/strumenti/g01m09s04viola-perdutamente.mp3",
+            "/Audio/strumenti/g01m09s05flauto-perdutamente.mp3"
           ],
           "indizi": [
             "",
@@ -294,8 +295,8 @@
             ""
           ],
           "soluzioneAudio": "",
-          "titolo": "",
-          "anno": ""
+          "titolo": "PERDUTAMENTE",
+          "anno": "ACHILLE LAURO - "
         },
         "immagine": {
           "immagineJpg": "",
@@ -310,7 +311,7 @@
         }
       },
       "10": {
-        "tipo": "canzone",
+        "tipo": "immagine",
         "canzone": {
           "audioFiles": [
             "",
@@ -342,10 +343,10 @@
         }
       }
     },
-    "sfondoGenerale": ""
+    "sfondoGenerale": "/Icone/nessuno_img/sfondo_finale_default.jpg"
   },
   "gioco2": {
-    "selectedQuestion": 1,
+    "selectedQuestion": 5,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -378,10 +379,10 @@
             ""
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g02m01soluzione.mp3",
-          "titolo": "Ossessione",
+          "titolo": "OSSESSIONE",
           "info": "2026",
           "domanda": "Nazioni con più lettere nel nome corrente in Italiano",
-          "artista": "Samurai Jay"
+          "artista": "SAMURAI JAY"
         },
         "immagine": {
           "lista10": [
@@ -485,9 +486,9 @@
             ""
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g02m03soluzione.mp3",
-          "titolo": "Siamo uguali",
+          "titolo": "SIAMO UGUALI",
           "info": "2015",
-          "artista": "Lorenzo fragola"
+          "artista": "LORENZO FRAGOLA"
         },
         "immagine": {
           "lista10": [
@@ -563,22 +564,22 @@
         "tipo": "canzone",
         "canzone": {
           "audioFiles": [
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            ""
+            "/Audio/strumenti/g02m05s01 batteria.mp3",
+            "/Audio/strumenti/g02m05s02 tastiera.mp3",
+            "/Audio/strumenti/g02m05s03 basso.mp3",
+            "/Audio/strumenti/g02m05s04 tastiera2.mp3",
+            "/Audio/strumenti/g02m05s05 ottone.mp3",
+            "/Audio/strumenti/g02m05s06 soft square lead .mp3",
+            "/Audio/strumenti/g02m05s07 organo dontstop.mp3"
           ],
           "risposte": [
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            ""
+            "BBB",
+            "III",
+            "PPP",
+            "DDD",
+            "SSS",
+            "RRR",
+            "HHH"
           ],
           "indizi": [
             "",
@@ -589,9 +590,10 @@
             "",
             ""
           ],
-          "soluzioneAudio": "",
-          "titolo": "",
-          "info": ""
+          "soluzioneAudio": "/Audio/soluzioni a conferma/g02m05soluzione.mp3",
+          "titolo": "DON'T STOP THE MUSIC",
+          "info": "?",
+          "artista": "RIHAN?"
         },
         "immagine": {
           "lista10": [
@@ -983,7 +985,7 @@
         "indizio": "11 NOVEMBRE 2026, ROUTE 66",
         "bonus": "",
         "punti": 3000,
-        "notePresentatore": "❓ Domanda Curiosità sulla Route 66 Domanda: Nel suo capolavoro letterario del 1939 \"Furore\" (The Grapes of Wrath), lo scrittore John Steinbeck descrive la migrazione della famiglia Joad verso ovest durante la Grande Depressione. In questo romanzo, Steinbeck coniò per la Route 66 un celebre soprannome che è rimasto nella storia. Quale? Opzioni: A) L'Arteria d'America B) La Via della Speranza C) La Strada Madre D) Il Nastro d'Asfalto Risposta corretta: C) La Strada Madre (The Mother Road). \"L'11 novembre 2026 celebriamo i 100 anni dalla nascita della Route 66, inaugurata ufficialmente nel 1926. Questa leggendaria autostrada, lunga originariamente quasi 4.000 chilometri, tagliava l'America in diagonale collegando Chicago a Santa Monica, in California, attraversando ben 8 Stati. Anche se nel 1985 è stata ufficialmente cancellata dalle mappe del sistema autostradale americano (sostituita dalle più veloci Interstate), il suo spirito non è mai morto. Oggi, i tratti sopravvissuti formano la 'Historic Route 66'. Festeggiare il suo centenario non significa solo celebrare un pezzo di asfalto, ma omaggiare il simbolo per eccellenza della libertà, dell'avventura e del classico viaggio on the road americano.\""
+        "notePresentatore": "❓MILLE E UNA NADIA \n\"L'11 novembre 2026 celebriamo i 100 anni dalla nascita della Route 66, inaugurata ufficialmente nel 1926. Questa leggendaria autostrada, lunga originariamente quasi 4.000 chilometri, tagliava l'America in diagonale collegando Chicago a Santa Monica, in California, attraversando ben 8 Stati. Anche se nel 1985 è stata ufficialmente cancellata dalle mappe del sistema autostradale americano (sostituita dalle più veloci Interstate), il suo spirito non è mai morto. Oggi, i tratti sopravvissuti formano la 'Historic Route 66'. Festeggiare il suo centenario non significa solo celebrare un pezzo di asfalto, ma omaggiare il simbolo per eccellenza della libertà, dell'avventura e del classico viaggio on the road americano.\""
       },
       {
         "testo": "PER CAUSA SUA I TEMPLI DI ABU SIMBEL FURONO SPOSTATI",
@@ -1109,7 +1111,7 @@
     "notePresentatore": ""
   },
   "punteggi": {
-    "sfondo": "",
+    "sfondo": "/Icone/nessuno_img/sfondo_finale_acqua.jpg",
     "nomiSquadre": [
       "PORTO",
       "MARMIROLO",

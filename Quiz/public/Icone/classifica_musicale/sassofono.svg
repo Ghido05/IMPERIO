@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <!-- Saxophone Gold Brass Gradient -->
+    <linearGradient id="saxBrass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef9c3"/>
+      <stop offset="30%" stop-color="#fde047"/>
+      <stop offset="60%" stop-color="#f59e0b"/>
+      <stop offset="90%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+    <!-- Bell Radial Gradient -->
+    <radialGradient id="saxBell" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="50%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="saxShadow" x="-10%" y="-10%" width="125%" height="125%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="1" dy="3" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#saxShadow)">
+    <!-- FLOATING JAZZ NOTES & ACCENTS (Top Right) -->
+    <g transform="translate(68, 14)">
+      <path d="M6 6 L16 3 L16 14 M6 6 L6 17" stroke="url(#saxBrass)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <ellipse cx="4" cy="17" rx="3.5" ry="2.5" fill="url(#saxBrass)" transform="rotate(-20 4 17)"/>
+      <ellipse cx="14" cy="14" rx="3.5" ry="2.5" fill="url(#saxBrass)" transform="rotate(-20 14 14)"/>
+    </g>
+
+    <!-- SAXOPHONE BODY -->
+    <!-- Mouthpiece & Neck (Chiver) -->
+    <!-- Black Ebonite Mouthpiece with Gold Ligature -->
+    <rect x="36" y="8" width="7" height="5" rx="1.5" fill="#0f172a" stroke="url(#saxBrass)" stroke-width="1"/>
+    <rect x="38" y="9.5" width="2.5" height="3" fill="#fef08a"/>
+    <!-- Curved Brass Neck Tube -->
+    <path d="M38 12 C32 12 28 17 28 24 L28 32" stroke="url(#saxBrass)" stroke-width="5" stroke-linecap="round" fill="none"/>
+    <path d="M38 12 C32 12 28 17 28 24 L28 32" stroke="#fef08a" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+
+    <!-- Conical Body Tube (Descending) -->
+    <path d="M28 32 L34 62 C34 72 38 82 50 82 C64 82 68 70 68 60 L68 46" 
+          stroke="url(#saxBrass)" stroke-width="8.5" stroke-linecap="round" fill="none"/>
+    <path d="M28 32 L34 62 C34 72 38 82 50 82 C64 82 68 70 68 60 L68 46" 
+          stroke="#fef08a" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+
+    <!-- Flared Bell opening on the right -->
+    <path d="M62 48 C62 38 68 32 78 28 C85 36 84 46 72 54 Z" 
+          fill="url(#saxBell)" stroke="url(#saxBrass)" stroke-width="2.8" stroke-linejoin="round"/>
+    <ellipse cx="76" cy="35" rx="8" ry="4.5" fill="url(#saxBrass)" stroke="#fef08a" stroke-width="2" transform="rotate(-30 76 35)"/>
+    <ellipse cx="76" cy="35" rx="4.5" ry="2.2" fill="#78350f" transform="rotate(-30 76 35)"/>
+
+    <!-- Key Cups & Pearl Touches on Body -->
+    <circle cx="31" cy="38" r="2.8" fill="#f8fafc" stroke="url(#saxBrass)" stroke-width="1.4"/>
+    <circle cx="31" cy="38" r="1.2" fill="url(#saxBrass)"/>
+
+    <circle cx="32.5" cy="44" r="2.8" fill="#f8fafc" stroke="url(#saxBrass)" stroke-width="1.4"/>
+    <circle cx="32.5" cy="44" r="1.2" fill="url(#saxBrass)"/>
+
+    <circle cx="34" cy="50" r="2.8" fill="#f8fafc" stroke="url(#saxBrass)" stroke-width="1.4"/>
+    <circle cx="34" cy="50" r="1.2" fill="url(#saxBrass)"/>
+
+    <circle cx="35.5" cy="56" r="2.8" fill="#f8fafc" stroke="url(#saxBrass)" stroke-width="1.4"/>
+    <circle cx="35.5" cy="56" r="1.2" fill="url(#saxBrass)"/>
+
+    <!-- Bell Tone Hole Keys -->
+    <circle cx="50" cy="70" r="3.5" fill="#f8fafc" stroke="url(#saxBrass)" stroke-width="1.4"/>
+    <circle cx="50" cy="70" r="1.5" fill="url(#saxBrass)"/>
+
+    <circle cx="58" cy="67" r="3.5" fill="#f8fafc" stroke="url(#saxBrass)" stroke-width="1.4"/>
+    <circle cx="58" cy="67" r="1.5" fill="url(#saxBrass)"/>
+
+    <!-- Articulated Connecting Rods -->
+    <line x1="36" y1="36" x2="40" y2="60" stroke="#fef08a" stroke-width="1.5"/>
+  </g>
+</svg>

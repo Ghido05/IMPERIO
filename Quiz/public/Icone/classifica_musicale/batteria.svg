@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <!-- Bass Drum Shell Gradient (Lacquered Cherry) -->
+    <radialGradient id="bdShell" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#b91c1c"/>
+      <stop offset="70%" stop-color="#7f1d1d"/>
+      <stop offset="100%" stop-color="#450a0a"/>
+    </radialGradient>
+    <!-- Drumhead Gradient -->
+    <radialGradient id="drumHead" cx="48%" cy="46%" r="52%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="80%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </radialGradient>
+    <!-- Gold Hardware Gradient -->
+    <linearGradient id="goldMetal" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#f59e0b"/>
+      <stop offset="80%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+    <!-- Cymbal Bronze Gradient -->
+    <radialGradient id="cymbalGold" cx="45%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#fef9c3"/>
+      <stop offset="30%" stop-color="#fbbf24"/>
+      <stop offset="70%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#92400e"/>
+    </radialGradient>
+    <!-- Chrome Stand Gradient -->
+    <linearGradient id="chromeMetal" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#94a3b8"/>
+      <stop offset="50%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#64748b"/>
+    </linearGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="3" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <!-- CRASH CYMBAL (Top Right) -->
+    <!-- Cymbal Stand -->
+    <line x1="74" y1="26" x2="78" y2="76" stroke="url(#chromeMetal)" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="78" y1="76" x2="68" y2="92" stroke="url(#chromeMetal)" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="78" y1="76" x2="88" y2="92" stroke="url(#chromeMetal)" stroke-width="2.2" stroke-linecap="round"/>
+    <!-- Angled Cymbal Disc -->
+    <g transform="rotate(-15 74 24)">
+      <ellipse cx="74" cy="24" rx="18" ry="5.5" fill="url(#cymbalGold)" stroke="#fef08a" stroke-width="1"/>
+      <ellipse cx="74" cy="24" rx="14" ry="4" fill="none" stroke="#b45309" stroke-width="0.7" opacity="0.6"/>
+      <ellipse cx="74" cy="24" rx="4.5" ry="1.8" fill="#fef08a" stroke="#78350f" stroke-width="0.8"/>
+    </g>
+
+    <!-- HI-HAT CYMBALS (Left) -->
+    <!-- Stand -->
+    <line x1="22" y1="32" x2="22" y2="76" stroke="url(#chromeMetal)" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="22" y1="76" x2="12" y2="92" stroke="url(#chromeMetal)" stroke-width="2.2" stroke-linecap="round"/>
+    <line x1="22" y1="76" x2="30" y2="92" stroke="url(#chromeMetal)" stroke-width="2.2" stroke-linecap="round"/>
+    <!-- Bottom Cymbal -->
+    <ellipse cx="22" cy="36" rx="15" ry="4.5" fill="url(#cymbalGold)" stroke="#b45309" stroke-width="0.8"/>
+    <!-- Top Cymbal (slanted slightly) -->
+    <ellipse cx="22" cy="34" rx="15" ry="4.5" fill="url(#cymbalGold)" stroke="#fef08a" stroke-width="1.2"/>
+    <ellipse cx="22" cy="34" rx="3.5" ry="1.4" fill="#fef08a" stroke="#78350f" stroke-width="0.8"/>
+    <circle cx="22" cy="31" r="1.5" fill="url(#chromeMetal)"/>
+
+    <!-- BASS DRUM (Center Big Drum) -->
+    <!-- Drum Shell Rim Background -->
+    <circle cx="50" cy="62" r="26" fill="url(#bdShell)" stroke="url(#goldMetal)" stroke-width="3"/>
+    <!-- Drumhead -->
+    <circle cx="50" cy="62" r="23" fill="url(#drumHead)"/>
+    <!-- Inner Sound Accent Ring -->
+    <circle cx="50" cy="62" r="19" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="3 3"/>
+    <!-- Center Logo Badge (Gold Shield / Star) -->
+    <circle cx="50" cy="62" r="7.5" fill="url(#bdShell)" stroke="url(#goldMetal)" stroke-width="1.5"/>
+    <polygon points="50,57 52,61 56,62 53,64 54,68 50,65 46,68 47,64 44,62 48,61" fill="url(#goldMetal)"/>
+    <!-- Tuning Lug Claws around Bass Drum Rim -->
+    <circle cx="26" cy="50" r="2" fill="url(#goldMetal)"/>
+    <circle cx="26" cy="74" r="2" fill="url(#goldMetal)"/>
+    <circle cx="50" cy="38" r="2" fill="url(#goldMetal)"/>
+    <circle cx="74" cy="50" r="2" fill="url(#goldMetal)"/>
+    <circle cx="74" cy="74" r="2" fill="url(#goldMetal)"/>
+    <!-- Bass Drum Heavy Spurs / Legs -->
+    <path d="M28 72 L16 88 L14 87" stroke="url(#chromeMetal)" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <circle cx="14" cy="87" r="2.5" fill="#1e293b"/>
+    <path d="M72 72 L84 88 L86 87" stroke="url(#chromeMetal)" stroke-width="3" stroke-linecap="round" fill="none"/>
+    <circle cx="86" cy="87" r="2.5" fill="#1e293b"/>
+
+    <!-- RACK TOMS (Mounted on Bass Drum) -->
+    <!-- Left Tom -->
+    <g transform="rotate(-8 39 36)">
+      <rect x="32" y="32" width="16" height="11" rx="2" fill="url(#bdShell)" stroke="url(#goldMetal)" stroke-width="1.5"/>
+      <ellipse cx="40" cy="32" rx="8" ry="3.5" fill="url(#drumHead)" stroke="url(#goldMetal)" stroke-width="1.2"/>
+    </g>
+    <!-- Right Tom -->
+    <g transform="rotate(8 61 36)">
+      <rect x="53" y="32" width="17" height="12" rx="2" fill="url(#bdShell)" stroke="url(#goldMetal)" stroke-width="1.5"/>
+      <ellipse cx="61.5" cy="32" rx="8.5" ry="3.8" fill="url(#drumHead)" stroke="url(#goldMetal)" stroke-width="1.2"/>
+    </g>
+
+    <!-- SNARE DRUM (Middle Left) -->
+    <g transform="rotate(-5 26 52)">
+      <rect x="18" y="48" width="16" height="8" rx="1.5" fill="url(#chromeMetal)" stroke="url(#goldMetal)" stroke-width="1.2"/>
+      <ellipse cx="26" cy="48" rx="8" ry="3.2" fill="url(#drumHead)" stroke="url(#goldMetal)" stroke-width="1.2"/>
+    </g>
+
+    <!-- CROSSED WOODEN DRUMSTICKS (Foreground) -->
+    <!-- Left-to-Right Stick -->
+    <line x1="20" y1="20" x2="52" y2="52" stroke="#d97706" stroke-width="3.2" stroke-linecap="round"/>
+    <line x1="20" y1="20" x2="52" y2="52" stroke="#fde68a" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="19" cy="19" r="2.2" fill="#fbbf24"/>
+    <!-- Right-to-Left Stick -->
+    <line x1="72" y1="20" x2="40" y2="52" stroke="#b45309" stroke-width="3.2" stroke-linecap="round"/>
+    <line x1="72" y1="20" x2="40" y2="52" stroke="#fde68a" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="73" cy="19" r="2.2" fill="#fbbf24"/>
+  </g>
+</svg>

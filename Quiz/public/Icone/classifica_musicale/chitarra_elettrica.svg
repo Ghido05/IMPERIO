@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <!-- Candy Apple Red Metallic Gradient -->
+    <radialGradient id="electricRed" cx="55%" cy="65%" r="60%">
+      <stop offset="0%" stop-color="#f87171"/>
+      <stop offset="35%" stop-color="#ef4444"/>
+      <stop offset="70%" stop-color="#b91c1c"/>
+      <stop offset="100%" stop-color="#450a0a"/>
+    </radialGradient>
+    <!-- Gold Gradient -->
+    <linearGradient id="egGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#f59e0b"/>
+      <stop offset="85%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+    <!-- Chrome Metal -->
+    <linearGradient id="egChrome" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#e2e8f0"/>
+      <stop offset="50%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#94a3b8"/>
+    </linearGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="egShadow" x="-10%" y="-10%" width="125%" height="125%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="1" dy="3" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#egShadow)" transform="rotate(-38 50 50)">
+    <!-- 6 IN-LINE TUNERS (Headstock) -->
+    <circle cx="43" cy="6" r="1.8" fill="url(#egGold)" stroke="#fef08a" stroke-width="0.7"/>
+    <circle cx="43" cy="9.5" r="1.8" fill="url(#egGold)" stroke="#fef08a" stroke-width="0.7"/>
+    <circle cx="43" cy="13" r="1.8" fill="url(#egGold)" stroke="#fef08a" stroke-width="0.7"/>
+    <circle cx="43" cy="16.5" r="1.8" fill="url(#egGold)" stroke="#fef08a" stroke-width="0.7"/>
+    <circle cx="43" cy="20" r="1.8" fill="url(#egGold)" stroke="#fef08a" stroke-width="0.7"/>
+    <circle cx="43" cy="23.5" r="1.8" fill="url(#egGold)" stroke="#fef08a" stroke-width="0.7"/>
+
+    <!-- Sharp Electric Headstock -->
+    <path d="M47 5 L53 5 L54 24 L47 24 Z" fill="url(#electricRed)" stroke="url(#egGold)" stroke-width="1.4"/>
+    <polygon points="50,7 52,12 50,11 48,12" fill="url(#egGold)"/>
+
+    <!-- Maple Neck & Rosewood Fretboard -->
+    <rect x="47.5" y="24" width="5" height="30" fill="#fef3c7" stroke="url(#egGold)" stroke-width="1.2"/>
+    <!-- Frets and Inlays -->
+    <line x1="47.5" y1="29" x2="52.5" y2="29" stroke="#78350f" stroke-width="0.9"/>
+    <line x1="47.5" y1="34" x2="52.5" y2="34" stroke="#78350f" stroke-width="0.9"/>
+    <circle cx="50" cy="36.5" r="1" fill="#f8fafc"/>
+    <line x1="47.5" y1="39" x2="52.5" y2="39" stroke="#78350f" stroke-width="0.9"/>
+    <line x1="47.5" y1="44" x2="52.5" y2="44" stroke="#78350f" stroke-width="0.9"/>
+    <circle cx="50" cy="46.5" r="1" fill="#f8fafc"/>
+    <line x1="47.5" y1="49" x2="52.5" y2="49" stroke="#78350f" stroke-width="0.9"/>
+
+    <!-- Double Cutaway Solid Body with Sharp Horns (Stratocaster) -->
+    <path d="M46 52 C39 44 35 49 39 58 C41 62 37 68 37 77 C38 88 45 93 55 92 C65 91 69 82 67 73 C66 64 64 61 66 56 C68 49 63 46 57 52 Z" 
+          fill="url(#electricRed)" stroke="url(#egGold)" stroke-width="2.5" stroke-linejoin="round"/>
+
+    <!-- Pearloid Pickguard -->
+    <path d="M44 60 C40 66 41 76 46 82 C53 85 57 82 57 73 C57 65 52 58 45 58 Z" 
+          fill="#f8fafc" fill-opacity="0.9" stroke="url(#egGold)" stroke-width="1.2"/>
+
+    <!-- 3 Chrome Pickups -->
+    <rect x="47" y="60" width="7" height="2.8" rx="0.8" fill="#1e293b" stroke="url(#egChrome)" stroke-width="0.8"/>
+    <rect x="47" y="65" width="7" height="2.8" rx="0.8" fill="#1e293b" stroke="url(#egChrome)" stroke-width="0.8"/>
+    <rect x="47" y="70" width="7" height="2.8" rx="0.8" fill="#1e293b" stroke="url(#egChrome)" stroke-width="0.8"/>
+
+    <!-- Chrome Tremolo Bridge & Whammy Bar -->
+    <rect x="47.5" y="77" width="6" height="4" rx="0.8" fill="url(#egGold)" stroke="#ffffff" stroke-width="0.8"/>
+    <line x1="52" y1="78" x2="59" y2="85" stroke="url(#egChrome)" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="60" cy="86" r="1.5" fill="#f8fafc"/>
+
+    <!-- Gold Knobs -->
+    <circle cx="56" cy="78" r="1.8" fill="url(#egGold)" stroke="#ffffff" stroke-width="0.6"/>
+    <circle cx="54" cy="83" r="1.8" fill="url(#egGold)" stroke="#ffffff" stroke-width="0.6"/>
+
+    <!-- 6 Steel Strings -->
+    <line x1="48" y1="6" x2="48" y2="78" stroke="#f8fafc" stroke-width="0.6"/>
+    <line x1="48.8" y1="6" x2="48.8" y2="78" stroke="#f8fafc" stroke-width="0.6"/>
+    <line x1="49.6" y1="6" x2="49.6" y2="78" stroke="#f8fafc" stroke-width="0.6"/>
+    <line x1="50.4" y1="6" x2="50.4" y2="78" stroke="#f8fafc" stroke-width="0.6"/>
+    <line x1="51.2" y1="6" x2="51.2" y2="78" stroke="#f8fafc" stroke-width="0.6"/>
+    <line x1="52" y1="6" x2="52" y2="78" stroke="#f8fafc" stroke-width="0.6"/>
+  </g>
+
+  <!-- Electric Energy Flash / Lightning Accent (Top Right) -->
+  <path d="M74 18 L68 28 L76 26 L70 38" stroke="url(#egGold)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="76" cy="16" r="2" fill="#fef08a"/>
+</svg>

@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <!-- Vintage Chrome Grille Gradient -->
+    <linearGradient id="micChrome" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#475569"/>
+      <stop offset="30%" stop-color="#94a3b8"/>
+      <stop offset="60%" stop-color="#ffffff"/>
+      <stop offset="90%" stop-color="#cbd5e1"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+    <!-- Gold Hardware Gradient -->
+    <linearGradient id="micGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#f59e0b"/>
+      <stop offset="85%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+    <!-- Acoustic Mesh Dark Blue -->
+    <linearGradient id="micAcoustic" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="50%" stop-color="#0369a1"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="micShadow" x="-10%" y="-10%" width="125%" height="125%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="1" dy="3" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#micShadow)">
+    <!-- SOUNDWAVE AURA & MUSICAL VIBRATIONS -->
+    <!-- Left Soundwaves -->
+    <path d="M22 28 C16 35 16 45 22 52" stroke="url(#micGold)" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    <path d="M15 20 C6 32 6 58 15 70" stroke="url(#micGold)" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 3" fill="none" opacity="0.8"/>
+
+    <!-- Right Floating Melody Notes -->
+    <g transform="translate(68, 18) scale(0.9)">
+      <path d="M8 8 L18 4 L18 16 M8 8 L8 20" stroke="url(#micGold)" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+      <ellipse cx="5" cy="20" rx="4" ry="3" fill="url(#micGold)" transform="rotate(-20 5 20)"/>
+      <ellipse cx="15" cy="16" rx="4" ry="3" fill="url(#micGold)" transform="rotate(-20 15 16)"/>
+    </g>
+
+    <!-- HEAVY VINTAGE STAND BASE -->
+    <!-- Cast Iron Base Platform -->
+    <ellipse cx="50" cy="88" rx="26" ry="7" fill="#0f172a" stroke="url(#micGold)" stroke-width="2.5"/>
+    <ellipse cx="50" cy="86" rx="18" ry="4.5" fill="#1e293b" stroke="url(#micGold)" stroke-width="1.2"/>
+    
+    <!-- Chrome Stand Shaft & Clutch Knob -->
+    <line x1="50" y1="58" x2="50" y2="86" stroke="url(#micChrome)" stroke-width="5" stroke-linecap="round"/>
+    <rect x="46" y="68" width="8" height="5" rx="1.5" fill="url(#micGold)" stroke="#fef08a" stroke-width="0.8"/>
+
+    <!-- SWIVEL CRADLE MOUNT (U-Bracket) -->
+    <path d="M30 42 C30 62 70 62 70 42" stroke="url(#micGold)" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+    <!-- Swivel Pivot Knobs -->
+    <circle cx="30" cy="42" r="3" fill="url(#micGold)" stroke="#fef08a" stroke-width="0.8"/>
+    <circle cx="70" cy="42" r="3" fill="url(#micGold)" stroke="#fef08a" stroke-width="0.8"/>
+
+    <!-- MICROPHONE CAPSULE (Vintage Shure 55 / Studio Ribbon Style) -->
+    <!-- Inner Dark Acoustic Mesh -->
+    <rect x="36" y="16" width="28" height="38" rx="14" fill="url(#micAcoustic)" stroke="url(#micGold)" stroke-width="2.5"/>
+
+    <!-- Polished Chrome Grille Frame & Horizontal Ribs -->
+    <line x1="38" y1="24" x2="62" y2="24" stroke="url(#micChrome)" stroke-width="2"/>
+    <line x1="36" y1="31" x2="64" y2="31" stroke="url(#micChrome)" stroke-width="2.5"/>
+    <line x1="36" y1="38" x2="64" y2="38" stroke="url(#micChrome)" stroke-width="2.5"/>
+    <line x1="38" y1="45" x2="62" y2="45" stroke="url(#micChrome)" stroke-width="2"/>
+
+    <!-- Central Vertical Pillar Ridge -->
+    <line x1="50" y1="16" x2="50" y2="54" stroke="url(#micChrome)" stroke-width="3.5"/>
+    <line x1="50" y1="16" x2="50" y2="54" stroke="#ffffff" stroke-width="1.2"/>
+
+    <!-- Horizontal Gold Center Band -->
+    <rect x="35" y="33" width="30" height="4" fill="url(#micGold)" stroke="#fef08a" stroke-width="0.6"/>
+  </g>
+</svg>

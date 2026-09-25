@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <!-- Acoustic Soundboard Spruce Gradient -->
+    <radialGradient id="acousticSpruce" cx="50%" cy="65%" r="55%">
+      <stop offset="0%" stop-color="#fef3c7"/>
+      <stop offset="45%" stop-color="#fde68a"/>
+      <stop offset="75%" stop-color="#d97706"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </radialGradient>
+    <!-- Gold Gradient -->
+    <linearGradient id="acGold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#f59e0b"/>
+      <stop offset="85%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+    <!-- Dark Wood Gradient -->
+    <linearGradient id="rosewood" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#451a03"/>
+      <stop offset="50%" stop-color="#78350f"/>
+      <stop offset="100%" stop-color="#270e02"/>
+    </linearGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="acShadow" x="-10%" y="-10%" width="125%" height="125%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="1" dy="3" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#acShadow)" transform="rotate(-38 50 50)">
+    <!-- 3+3 ACOUSTIC TUNERS (Headstock) -->
+    <!-- 3 Left Tuners -->
+    <circle cx="43" cy="8" r="2.2" fill="url(#acGold)" stroke="#fef08a" stroke-width="0.8"/>
+    <line x1="45" y1="8" x2="47" y2="8" stroke="url(#acGold)" stroke-width="1.8"/>
+    <circle cx="43" cy="13" r="2.2" fill="url(#acGold)" stroke="#fef08a" stroke-width="0.8"/>
+    <line x1="45" y1="13" x2="47" y2="13" stroke="url(#acGold)" stroke-width="1.8"/>
+    <circle cx="43" cy="18" r="2.2" fill="url(#acGold)" stroke="#fef08a" stroke-width="0.8"/>
+    <line x1="45" y1="18" x2="47" y2="18" stroke="url(#acGold)" stroke-width="1.8"/>
+
+    <!-- 3 Right Tuners -->
+    <circle cx="57" cy="8" r="2.2" fill="url(#acGold)" stroke="#fef08a" stroke-width="0.8"/>
+    <line x1="53" y1="8" x2="55" y2="8" stroke="url(#acGold)" stroke-width="1.8"/>
+    <circle cx="57" cy="13" r="2.2" fill="url(#acGold)" stroke="#fef08a" stroke-width="0.8"/>
+    <line x1="53" y1="13" x2="55" y2="13" stroke="url(#acGold)" stroke-width="1.8"/>
+    <circle cx="57" cy="18" r="2.2" fill="url(#acGold)" stroke="#fef08a" stroke-width="0.8"/>
+    <line x1="53" y1="18" x2="55" y2="18" stroke="url(#acGold)" stroke-width="1.8"/>
+
+    <!-- Headstock Body -->
+    <path d="M47 5 L53 5 L54 21 L46 21 Z" fill="url(#rosewood)" stroke="url(#acGold)" stroke-width="1.4"/>
+    <!-- Headstock Center Inlay -->
+    <polygon points="50,9 52,14 50,13 48,14" fill="url(#acGold)"/>
+
+    <!-- Mahogany Neck -->
+    <rect x="47.5" y="21" width="5" height="28" fill="url(#rosewood)" stroke="url(#acGold)" stroke-width="1.2"/>
+    <!-- Fret Wires -->
+    <line x1="47.5" y1="26" x2="52.5" y2="26" stroke="#fef08a" stroke-width="0.9"/>
+    <line x1="47.5" y1="31" x2="52.5" y2="31" stroke="#fef08a" stroke-width="0.9"/>
+    <circle cx="50" cy="33.5" r="1" fill="#f8fafc"/>
+    <line x1="47.5" y1="36" x2="52.5" y2="36" stroke="#fef08a" stroke-width="0.9"/>
+    <line x1="47.5" y1="41" x2="52.5" y2="41" stroke="#fef08a" stroke-width="0.9"/>
+    <circle cx="50" cy="43.5" r="1" fill="#f8fafc"/>
+    <line x1="47.5" y1="46" x2="52.5" y2="46" stroke="#fef08a" stroke-width="0.9"/>
+
+    <!-- Acoustic Dreadnought Body -->
+    <path d="M47 48 C39 48 36 54 38 60 C39 65 42 68 41 71 C38 77 34 83 38 90 C43 96 57 96 62 90 C66 83 62 77 59 71 C58 68 61 65 62 60 C64 54 61 48 53 48 Z" 
+          fill="url(#acousticSpruce)" stroke="url(#acGold)" stroke-width="2.5" stroke-linejoin="round"/>
+
+    <!-- Outer Purfling Inlay Line -->
+    <path d="M48 50 C41 50 38 55 40 60 C41 64 43 67 42 70 C40 76 36 81 40 88 C44 94 56 94 60 88 C64 81 60 76 58 70 C57 67 59 64 60 60 C62 55 59 50 52 50 Z" 
+          fill="none" stroke="#78350f" stroke-width="0.9" opacity="0.7"/>
+
+    <!-- Tortoiseshell Teardrop Pickguard -->
+    <path d="M53 64 C57 66 59 73 56 76 C52 76 51 70 53 64 Z" fill="#78350f" stroke="url(#acGold)" stroke-width="0.8"/>
+
+    <!-- Ornate Rosette & Soundhole -->
+    <!-- Outer Gold Ring -->
+    <circle cx="50" cy="64" r="7.5" stroke="url(#acGold)" stroke-width="1.5" fill="none"/>
+    <!-- Middle Pattern Ring -->
+    <circle cx="50" cy="64" r="6.2" stroke="#38bdf8" stroke-width="0.8" stroke-dasharray="1.5 1" fill="none"/>
+    <!-- Inner Dark Hole -->
+    <circle cx="50" cy="64" r="5" fill="#1e1b4b" stroke="url(#acGold)" stroke-width="1"/>
+
+    <!-- Rosewood Bridge with White Pins -->
+    <path d="M44 80 C44 79 56 79 56 80 L55 83 C55 84 45 84 45 83 Z" fill="url(#rosewood)" stroke="url(#acGold)" stroke-width="1"/>
+    <!-- 6 White Bridge Pins -->
+    <circle cx="46" cy="81.5" r="0.6" fill="#f8fafc"/>
+    <circle cx="47.6" cy="81.5" r="0.6" fill="#f8fafc"/>
+    <circle cx="49.2" cy="81.5" r="0.6" fill="#f8fafc"/>
+    <circle cx="50.8" cy="81.5" r="0.6" fill="#f8fafc"/>
+    <circle cx="52.4" cy="81.5" r="0.6" fill="#f8fafc"/>
+    <circle cx="54" cy="81.5" r="0.6" fill="#f8fafc"/>
+
+    <!-- 6 Strings in Gleaming Silver -->
+    <line x1="48" y1="6" x2="46" y2="81" stroke="#f8fafc" stroke-width="0.6" opacity="0.9"/>
+    <line x1="48.8" y1="6" x2="47.6" y2="81" stroke="#f8fafc" stroke-width="0.6" opacity="0.9"/>
+    <line x1="49.6" y1="6" x2="49.2" y2="81" stroke="#f8fafc" stroke-width="0.6" opacity="0.9"/>
+    <line x1="50.4" y1="6" x2="50.8" y2="81" stroke="#f8fafc" stroke-width="0.6" opacity="0.9"/>
+    <line x1="51.2" y1="6" x2="52.4" y2="81" stroke="#f8fafc" stroke-width="0.6" opacity="0.9"/>
+    <line x1="52" y1="6" x2="54" y2="81" stroke="#f8fafc" stroke-width="0.6" opacity="0.9"/>
+  </g>
+</svg>

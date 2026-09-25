@@ -340,25 +340,112 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
 
   const getInstrumentIcon = (audioPath?: string, text?: string, frase?: string): string => {
     const combined = `${audioPath || ''} ${text || ''} ${frase || ''}`.toLowerCase();
-    if (combined.includes('batteria') || combined.includes('drum')) {
-      return 'Icone/nessuno_musicale/Batteria.svg';
+    
+    // 1. Batteria / Percussioni
+    if (combined.includes('batteria') || combined.includes('drum') || combined.includes('percuss') || combined.includes('cassa') || combined.includes('rullante')) {
+      return 'Icone/classifica_musicale/batteria.svg';
     }
-    if (combined.includes('chitarra elettrica') || combined.includes('elettr')) {
-      return 'Icone/nessuno_musicale/Chitarra elettrica.svg';
+    // 2. Basso (prima di chitarra per evitare conflitti)
+    if (combined.includes('basso') || combined.includes('bass') || combined.includes('contrabbasso')) {
+      return 'Icone/classifica_musicale/basso.svg';
     }
-    if (combined.includes('chitarra') || combined.includes('guitar') || combined.includes('acustic')) {
-      return 'Icone/nessuno_musicale/Chitarra.svg';
+    // 3. Chitarra Elettrica
+    if (
+      combined.includes('chitarra elettrica') || 
+      combined.includes('elettr') || 
+      combined.includes('electric guitar')
+    ) {
+      return 'Icone/classifica_musicale/chitarra_elettrica.svg';
     }
-    if (combined.includes('basso') || combined.includes('bass')) {
-      return 'Icone/nessuno_musicale/Chitarra.svg';
+    // 4. Chitarra Acustica / Classica / Generica
+    if (
+      combined.includes('chitarra') || 
+      combined.includes('guitar') || 
+      combined.includes('acustic') || 
+      combined.includes('acustica') ||
+      combined.includes('classica')
+    ) {
+      return 'Icone/classifica_musicale/chitarra_acustica.svg';
     }
-    if (combined.includes('flauto') || combined.includes('fluato') || combined.includes('flute')) {
-      return 'Icone/nessuno_musicale/Flauto.svg';
+    // 5. Pianoforte
+    if (
+      combined.includes('pianoforte') || 
+      combined.includes('piano') || 
+      combined.includes('grand piano') ||
+      combined.includes('pianino') ||
+      combined.includes('pfe')
+    ) {
+      return 'Icone/classifica_musicale/pianoforte.svg';
     }
-    if (combined.includes('violino') || combined.includes('violin') || combined.includes('archi') || combined.includes('viola')) {
-      return 'Icone/nessuno_musicale/Violino.svg';
+    // 6. Sintetizzatore / Tastiera / Synth
+    if (
+      combined.includes('sintetizzatore') || 
+      combined.includes('synth') || 
+      combined.includes('tastiera') || 
+      combined.includes('keyboard') || 
+      combined.includes('lead') || 
+      combined.includes('square') || 
+      combined.includes('elettronico')
+    ) {
+      return 'Icone/classifica_musicale/sintetizzatore.svg';
     }
-    return 'Icone/nessuno_musicale/Icona di base.svg';
+    // 7. Archi / Violino / Viola / Cello / Arpa
+    if (
+      combined.includes('violino') || 
+      combined.includes('archi') || 
+      combined.includes('viola') || 
+      combined.includes('violoncello') || 
+      combined.includes('cello') || 
+      combined.includes('strings') ||
+      combined.includes('arpa')
+    ) {
+      return 'Icone/classifica_musicale/archi.svg';
+    }
+    // 8. Voce / Coro / Cantato / Vocal
+    if (
+      combined.includes('voce') || 
+      combined.includes('coro') || 
+      combined.includes('canto') || 
+      combined.includes('cantato') || 
+      combined.includes('vocal') || 
+      combined.includes('voice') ||
+      combined.includes('sing') ||
+      combined.includes('coristi')
+    ) {
+      return 'Icone/classifica_musicale/voce.svg';
+    }
+    // 9. Flauto / Fiati
+    if (
+      combined.includes('flauto') || 
+      combined.includes('fluato') || 
+      combined.includes('flute') || 
+      combined.includes('ottavino') ||
+      combined.includes('fiati')
+    ) {
+      return 'Icone/classifica_musicale/flauto.svg';
+    }
+    // 10. Tromba / Ottoni / Brass
+    if (
+      combined.includes('tromba') || 
+      combined.includes('ottoni') || 
+      combined.includes('ottone') || 
+      combined.includes('brass') || 
+      combined.includes('trombone') || 
+      combined.includes('corno') ||
+      combined.includes('tuba')
+    ) {
+      return 'Icone/classifica_musicale/tromba.svg';
+    }
+    // 11. Sassofono / Sax
+    if (combined.includes('sassofono') || combined.includes('sax') || combined.includes('saxofono')) {
+      return 'Icone/classifica_musicale/sassofono.svg';
+    }
+    // 12. Organo
+    if (combined.includes('organo') || combined.includes('organ') || combined.includes('hammond')) {
+      return 'Icone/classifica_musicale/organo.svg';
+    }
+    // Default musicale
+    return 'Icone/classifica_musicale/musica_default.svg';
   };
 
   // Gestione dell'animazione di errore
@@ -521,11 +608,11 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
                     {(el as any).frase || el.testo}
                   </span>
                   {isRevealed && (
-                    <div className="w-10 h-10 flex items-center justify-center shrink-0 ml-3 bg-black/20 rounded-lg p-1.5 shadow-sm animate-zoom-in">
+                    <div className="h-[85%] max-h-[76px] aspect-square flex items-center justify-center shrink-0 ml-3 transition-transform duration-300 hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] animate-zoom-in">
                       <img
                         src={assetUrl(iconPath)}
                         alt="Strumento"
-                        className="w-full h-full object-contain filter drop-shadow"
+                        className="w-full h-full object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
                       />
                     </div>
                   )}
@@ -585,12 +672,11 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
         {rankingMarkers.map((marker) => {
           const el = gameData.elementi[marker.value - 1];
           const isRevealed = (revealed[marker.value] || revealAll);
-          const iconPath = el ? getInstrumentIcon(el.audio, el.testo, el.frase) : '';
           return (
             <React.Fragment key={marker.value}>
-              {/* Testo dell'indizio + Icona Strumento (Allineato esattamente al marker) */}
+              {/* Testo dell'indizio (Allineato e centrato esattamente al marker) */}
               <div
-                className="absolute left-[53.073%] w-[33.229%] flex items-center justify-between px-[2%]"
+                className="absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[3%]"
                 style={{
                   top: marker.top,
                   height: "4.352%"
@@ -599,15 +685,6 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
                 <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${marker.value <= 4 ? 'text-white' : 'text-[#1b1b1b]'}`}>
                   {isRevealed ? el?.testo : ""}
                 </p>
-                {isRevealed && iconPath && (
-                  <div className="w-8 h-8 flex items-center justify-center shrink-0 ml-2 animate-zoom-in">
-                    <img
-                      src={assetUrl(iconPath)}
-                      alt="Icona Strumento"
-                      className="w-full h-full object-contain filter drop-shadow opacity-90"
-                    />
-                  </div>
-                )}
               </div>
 
               {/* Marker numerico a destra */}

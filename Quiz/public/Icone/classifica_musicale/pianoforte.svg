@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <defs>
+    <!-- Ebony Piano Gloss Gradient -->
+    <linearGradient id="pianoEbony" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="40%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <!-- Gold Cast Iron Frame Gradient -->
+    <radialGradient id="pianoGold" cx="45%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#fef9c3"/>
+      <stop offset="35%" stop-color="#f59e0b"/>
+      <stop offset="75%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </radialGradient>
+    <!-- Drop Shadow Filter -->
+    <filter id="pShadow" x="-10%" y="-10%" width="125%" height="125%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="1" dy="3" stdDeviation="2.5" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#pShadow)">
+    <!-- OPEN GRAND PIANO LID (Angled up on stick) -->
+    <path d="M18 42 L62 12 L84 26 L38 56 Z" fill="url(#pianoEbony)" stroke="url(#pianoGold)" stroke-width="2.5" stroke-linejoin="round"/>
+    
+    <!-- Gold Lid Prop Stick -->
+    <line x1="56" y1="18" x2="60" y2="48" stroke="url(#pianoGold)" stroke-width="3" stroke-linecap="round"/>
+    <circle cx="56" cy="18" r="2" fill="#fef08a"/>
+
+    <!-- GRAND PIANO BODY & SOUNDBOARD CAVITY -->
+    <path d="M18 52 L62 26 C74 30 86 40 82 52 C78 60 70 64 60 64 L18 64 Z" 
+          fill="url(#pianoEbony)" stroke="url(#pianoGold)" stroke-width="2.8" stroke-linejoin="round"/>
+
+    <!-- Gold Cast-Iron Plate Harp inside soundboard cavity -->
+    <path d="M30 49 L58 32 C68 36 74 44 70 51 C66 54 62 55 58 55 L34 55 Z" 
+          fill="url(#pianoGold)" stroke="#fde047" stroke-width="1.2"/>
+    <!-- String ridges on harp plate -->
+    <line x1="38" y1="52" x2="64" y2="36" stroke="#78350f" stroke-width="1"/>
+    <line x1="42" y1="53" x2="68" y2="39" stroke="#78350f" stroke-width="1"/>
+    <line x1="46" y1="54" x2="71" y2="43" stroke="#78350f" stroke-width="1"/>
+
+    <!-- KEYBOARD SHELF / FALLBOARD -->
+    <rect x="12" y="58" width="46" height="15" rx="2" fill="url(#pianoEbony)" stroke="url(#pianoGold)" stroke-width="2.2"/>
+
+    <!-- White Keys (Ivory with 3D bevels) -->
+    <rect x="14" y="61" width="42" height="10" fill="#f8fafc" rx="1"/>
+    <!-- Key separator cuts -->
+    <line x1="18.2" y1="61" x2="18.2" y2="71" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="22.4" y1="61" x2="22.4" y2="71" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="26.6" y1="61" x2="26.6" y2="71" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="30.8" y1="61" x2="30.8" y2="71" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="35.0" y1="61" x2="35.0" y2="71" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="39.2" y1="61" x2="39.2" y2="71" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="43.4" y1="61" x2="43.4" y2="71" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="47.6" y1="61" x2="47.6" y2="71" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="51.8" y1="61" x2="51.8" y2="71" stroke="#94a3b8" stroke-width="1"/>
+
+    <!-- Black Keys (Glossy raised sharps & flats) -->
+    <rect x="16.8" y="61" width="2.4" height="6" fill="#0f172a" rx="0.5"/>
+    <rect x="21.0" y="61" width="2.4" height="6" fill="#0f172a" rx="0.5"/>
+    <rect x="29.4" y="61" width="2.4" height="6" fill="#0f172a" rx="0.5"/>
+    <rect x="33.6" y="61" width="2.4" height="6" fill="#0f172a" rx="0.5"/>
+    <rect x="37.8" y="61" width="2.4" height="6" fill="#0f172a" rx="0.5"/>
+    <rect x="46.2" y="61" width="2.4" height="6" fill="#0f172a" rx="0.5"/>
+    <rect x="50.4" y="61" width="2.4" height="6" fill="#0f172a" rx="0.5"/>
+
+    <!-- 3 GRAND PIANO LEGS & CASTER WHEELS -->
+    <!-- Front Left Leg -->
+    <line x1="16" y1="73" x2="15" y2="90" stroke="url(#pianoEbony)" stroke-width="4.5" stroke-linecap="round"/>
+    <line x1="16" y1="73" x2="15" y2="90" stroke="url(#pianoGold)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="15" cy="91" r="2.5" fill="url(#pianoGold)"/>
+
+    <!-- Front Right Leg -->
+    <line x1="54" y1="73" x2="55" y2="90" stroke="url(#pianoEbony)" stroke-width="4.5" stroke-linecap="round"/>
+    <line x1="54" y1="73" x2="55" y2="90" stroke="url(#pianoGold)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="55" cy="91" r="2.5" fill="url(#pianoGold)"/>
+
+    <!-- Rear Tail Leg -->
+    <line x1="75" y1="62" x2="75" y2="86" stroke="url(#pianoEbony)" stroke-width="4.5" stroke-linecap="round"/>
+    <line x1="75" y1="62" x2="75" y2="86" stroke="url(#pianoGold)" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="75" cy="87" r="2.5" fill="url(#pianoGold)"/>
+
+    <!-- LYRE & 3 BRASS PEDALS (Center Below Keyboard) -->
+    <line x1="33" y1="73" x2="33" y2="87" stroke="url(#pianoGold)" stroke-width="2"/>
+    <line x1="37" y1="73" x2="37" y2="87" stroke="url(#pianoGold)" stroke-width="2"/>
+    <rect x="30" y="87" width="10" height="3" rx="1" fill="url(#pianoGold)"/>
+    <circle cx="32" cy="88.5" r="1" fill="#fef08a"/>
+    <circle cx="35" cy="88.5" r="1" fill="#fef08a"/>
+    <circle cx="38" cy="88.5" r="1" fill="#fef08a"/>
+  </g>
+</svg>

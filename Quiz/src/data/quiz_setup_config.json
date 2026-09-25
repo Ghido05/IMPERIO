@@ -11,11 +11,20 @@
         "risposta3": "La bretella lungo la vita",
         "targetBox": 4,
         "targetQuestion": 1
+      },
+      {
+        "id": "nadia_1790272964098_kwak",
+        "domanda": "",
+        "rispostaCorretta": "",
+        "risposta2": "",
+        "risposta3": "",
+        "targetBox": 1,
+        "targetQuestion": 2
       }
     ]
   },
   "gioco1": {
-    "selectedQuestion": 9,
+    "selectedQuestion": 5,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -80,7 +89,7 @@
           ],
           "confermaAudio": "",
           "soluzione": "TELEMACO",
-          "categoria": "PERSONAGGIO",
+          "categoria": "PERSONAGGIO MITOLOGICO",
           "grigliaSeme": 435724
         },
         "sfondo": ""
@@ -161,7 +170,7 @@
             "idb://file_1789424608511_25ukng8?name=g01m05s05trombe_nordsudovestest.mp3"
           ],
           "indizi": [
-            "",
+            "IN OGNI DIREZIONE VUOLE ANDARE, ESISTE CIò CHE VUOL CERCARE",
             "",
             "",
             ""
@@ -1073,7 +1082,7 @@
           45,
           47
         ],
-        "indizio": "1855, AFRICA CENTRALE",
+        "indizio": "DAVID LIVINGSTONE, AFRICA CENTRALE, 1855",
         "bonus": "arco",
         "punti": 3000,
         "notePresentatore": "Il 16 novembre 1855, nel cuore inesplorato dell'Africa centrale, David Livingstone divenne il primo europeo a scorgere le maestose cascate del fiume Zambesi. Decise di omaggiare la sovrana britannica ribattezzandole 'Cascate Vittoria'.\""
@@ -1100,6 +1109,16 @@
         "bonus": "",
         "punti": 1000,
         "notePresentatore": "Nel nono cerchio dell'Inferno, imprigionato nel ghiaccio perenne del lago di Cocito, Dante si imbatte nel Conte Ugolino della Gherardesca. Condannato per tradimento politico, Ugolino è protagonista di uno degli episodi più tragici dell'intero poema: morì di inedia rinchiuso in una torre pisana insieme ai suoi figli e nipoti. Nell'Inferno dantesco è costretto al gelo eterno, condannato a sfogare la sua rabbia contro l'arcivescovo che lo aveva imprigionato.\nSe avete una memoria di ferro per la letteratura, avrete notato che c'è una piccola 'licenza poetica' nell'immagine che vi abbiamo mostrato. Nel testo originale della Divina Commedia, infatti, il Conte Ugolino non si trova affatto da solo nel ghiaccio. È condannato a stare nella stessa buca insieme al suo acerrimo nemico e carceriere, l'Arcivescovo Ruggieri. Per la precisione, Ugolino è posizionato sopra di lui e gli azzanna in eterno la nuca in quello che Dante definisce un fiero pasto. Nell'immagine, Ruggieri è stato provvidenzialmente omesso per non rendere la scena troppo macabra!"
+      },
+      {
+        "testo": "FRASE BIBBIA",
+        "sfondo": "",
+        "confermaAudio": "",
+        "lettereVisibili": [],
+        "indizio": "",
+        "bonus": "",
+        "punti": 1000,
+        "notePresentatore": ""
       }
     ],
     "sfondoGenerale": ""

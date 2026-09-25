@@ -211,6 +211,11 @@ const ClassificaBoard = ({ interactive = true, revealAll = false }: { interactiv
           const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
           addScore(targetTeamIdx, 5000);
           setIsAutoAdvancing(true);
+        } else if (isAutoAdvancing && !isGameComplete) {
+          setIsAutoAdvancing(false);
+          const allRevealed: Record<number, boolean> = {};
+          for (let i = 1; i <= 10; i++) allRevealed[i] = true;
+          setRevealed(allRevealed);
         }
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
         setShowError(true);
@@ -412,12 +417,12 @@ const ClassificaBoard = ({ interactive = true, revealAll = false }: { interactiv
         >
           {!isGameComplete ? (
              <p className="text-white font-black uppercase tracking-tight text-[clamp(14px,1.8vw,36px)] text-center leading-none">
-               Gioco Indizi
+               {gameData.categoria || (gameData as any).soluzione?.categoria || "Gioco Indizi"}
              </p>
           ) : (
-             <div className="animate-zoom-in">
+             <div className="animate-zoom-in text-center px-2">
                <p className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,40px)] text-center leading-none">
-                 SOLUZIONE
+                 {gameData.soluzioneTesto || (gameData as any).soluzione?.titolo || "SOLUZIONE"}
                </p>
              </div>
           )}

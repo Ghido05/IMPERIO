@@ -43,6 +43,7 @@ export interface Gioco2CanzoneData {
 
 export interface Gioco2ImmagineData {
   domanda: string;      // domanda mostrata nella forma viola sopra la lista
+  categoria?: string;    // categoria dell'immagine (es. Animale, Monumento, ...)
   lista10: string[];     // 10 answers/clues list
   immagineJpg: string;   // jpg image
   soluzioneAudio: string; // solution mp3
@@ -188,6 +189,7 @@ export function createDefaultGioco2Question(): Gioco2Question {
     },
     immagine: {
       domanda: '',
+      categoria: '',
       lista10: ['', '', '', '', '', '', '', '', '', ''],
       immagineJpg: '',
       soluzioneAudio: '',
@@ -1030,6 +1032,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           <div class="slide-num">Domanda ${i} — Tipo: Classifica Immagine</div>
           <table>
             <tr><th>Domanda</th><td>${im.domanda || '—'}</td></tr>
+            ${im.categoria ? `<tr><th>Categoria</th><td>${im.categoria}</td></tr>` : ''}
             <tr><th>Soluzione</th><td>${im.soluzioneTesto || '—'}</td></tr>
             ${(im.lista10 || []).map((r, j) => `<tr><th>Indizio ${j + 1}</th><td>${r || '—'}</td></tr>`).join('')}
             <tr><th>Immagine</th><td>${fileLabel(im.immagineJpg)}</td></tr>
@@ -2935,23 +2938,46 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   <span>🖼️ Setup Modalità Immagine (Lista di 10)</span>
                 </div>
 
-                {/* Domanda mostrata nella forma viola sopra la lista */}
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">
-                    Domanda della lista:
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Es. In quale ordine sono classificati?"
-                    value={currentQ2.immagine.domanda || ''}
-                    onChange={(e) =>
-                      updateQ2((prev) => ({
-                        ...prev,
-                        immagine: { ...prev.immagine, domanda: e.target.value },
-                      }))
-                    }
-                    className="w-full bg-[#141417] border border-white/10 rounded px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
-                  />
+                {/* Domanda della lista e Categoria dell'Immagine */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Domanda della lista:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Es. In quale ordine sono classificati?"
+                      value={currentQ2.immagine.domanda || ''}
+                      onChange={(e) =>
+                        updateQ2((prev) => ({
+                          ...prev,
+                          immagine: { ...prev.immagine, domanda: e.target.value },
+                        }))
+                      }
+                      className="w-full bg-[#141417] border border-white/10 rounded px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-300 mb-1">
+                      Categoria dell'Immagine:
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Es. Animale / Monumento / Personaggio..."
+                      value={currentQ2.immagine.categoria || ''}
+                      onChange={(e) =>
+                        updateQ2((prev) => ({
+                          ...prev,
+                          immagine: { ...prev.immagine, categoria: e.target.value },
+                        }))
+                      }
+                      className="w-full bg-[#141417] border border-white/10 rounded px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                    />
+                    <span className="block text-[10px] text-slate-500 mt-0.5">
+                      Mostrata nel rettangolo viola in basso prima dello svelamento della soluzione
+                    </span>
+                  </div>
                 </div>
 
                 {/* Lista dei 10 */}

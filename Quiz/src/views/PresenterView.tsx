@@ -122,9 +122,14 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
         ...defaultData,
         sfondo: sf,
         titolo: q.immagine.domanda || q.immagine.soluzioneTesto || defaultData.titolo,
+        categoria: q.immagine.categoria || defaultData.categoria || '',
         immagineSegreta: q.immagine.immagineJpg || defaultData.immagineSegreta,
         audio: q.immagine.soluzioneAudio || defaultData.audio,
         soluzioneTesto: q.immagine.soluzioneTesto || defaultData.soluzioneTesto,
+        soluzione: {
+          titolo: q.immagine.soluzioneTesto || defaultData.soluzione?.titolo || defaultData.soluzioneTesto || 'Soluzione',
+          categoria: q.immagine.categoria || defaultData.soluzione?.categoria || '',
+        },
         elementi: defaultData.elementi.map((el: any, i: number) => ({
           ...el,
           testo: q.immagine.lista10[i] || el.testo

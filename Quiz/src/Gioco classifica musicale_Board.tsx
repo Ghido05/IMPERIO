@@ -92,11 +92,21 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
   const [showError, setShowError] = useState(false);
   const [showTitle, setShowTitle] = useSyncedState(`playstate_${slideId}_showtitle`, false);
   const [showSolution, setShowSolution] = useSyncedState(`playstate_${slideId}_showsolution`, false);
+  const [isPlaying, setIsPlaying] = useSyncedState<boolean>(`playstate_${slideId}_playing`, false);
+  const [playTrigger, setPlayTrigger] = useSyncedState<number>(`playstate_${slideId}_play_trigger`, 0);
   
   const audiosRef = React.useRef<Record<number, HTMLAudioElement>>({});
   const finalAudioRef = React.useRef<HTMLAudioElement | null>(null);
   const isPlayingStemsRef = React.useRef(false);
   const isFadingOutRef = React.useRef(false);
+
+  // Stringa identificativa degli stems per evitare ri-creazioni audio a ogni re-render padre
+  const stemsAudioKey = React.useMemo(() => {
+    return (gameData.elementi || [])
+      .map((el: any) => `${el?.posizione ?? ''}:${el?.audio ?? ''}`)
+      .join('|');
+  }, [gameData.elementi]);
+  const canzoneFinaleUrl = (gameData as any).canzoneFinale || '';
 
   // Funzione di utilità per fermare e zittire istantaneamente e completamente tutti gli stems
   const stopAndMuteAllStems = React.useCallback(() => {
@@ -113,7 +123,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     });
   }, []);
 
-  // Inizializza gli audio stems e l'audio finale
+  // Inizializza gli audio stems e l'audio finale (stabile, si attiva solo al cambio slide o traccia)
   useEffect(() => {
     if (!interactive) return;
 
@@ -143,8 +153,8 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     audiosRef.current = newAudios;
 
     // Canzone finale della soluzione
-    if ((gameData as any).canzoneFinale) {
-      const finAudio = new Audio(assetUrl((gameData as any).canzoneFinale));
+    if (canzoneFinaleUrl) {
+      const finAudio = new Audio(assetUrl(canzoneFinaleUrl));
       finAudio.loop = false;
       finAudio.volume = 1;
       finAudio.muted = false;
@@ -153,6 +163,9 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
 
     return () => {
       stopAndMuteAllStems();
+      try {
+        localStorage.setItem(`playstate_${slideId}_playing`, 'false');
+      } catch (e) {}
       Object.values(audiosRef.current).forEach(a => {
         try {
           a.removeAttribute('src');
@@ -170,7 +183,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
         finalAudioRef.current = null;
       }
     };
-  }, [interactive, slideId, (gameData as any).canzoneFinale, gameData.elementi, stopAndMuteAllStems]);
+  }, [interactive, slideId, canzoneFinaleUrl, stemsAudioKey, stopAndMuteAllStems]);
 
   // Smuta gli stems in base ai clue rivelati (SOLO se la soluzione NON è attiva)
   useEffect(() => {
@@ -200,13 +213,87 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     });
   }, [revealed, showSolution, interactive, stopAndMuteAllStems]);
 
+  // Traccia l'ultimo trigger gestito per evitare di ri-eseguire trigger passati memorizzati al mount della slide
+  const lastTriggerRef = React.useRef<number>(playTrigger);
+
+  // Scatena la riproduzione sincronizzata da capo su tutti gli schermi collegati (Presenter, GamesView, ecc.)
+  useEffect(() => {
+    if (!interactive || !playTrigger || showSolution) return;
+    if (playTrigger === lastTriggerRef.current) return;
+    lastTriggerRef.current = playTrigger;
+
+    isPlayingStemsRef.current = true;
+    Object.values(audiosRef.current).forEach(a => {
+      try {
+        a.currentTime = 0;
+        const p = a.play();
+        if (p !== undefined) p.catch(err => console.log("Errore riproduzione stem trigger:", err));
+      } catch (err) {}
+    });
+  }, [playTrigger, interactive, showSolution]);
+
+  // Gestione Play / Pausa globale sincronizzata (es. comando tastiera M)
+  const isInitialMountPlayingRef = React.useRef(true);
+  useEffect(() => {
+    if (!interactive) return;
+
+    if (isInitialMountPlayingRef.current) {
+      isInitialMountPlayingRef.current = false;
+      // All'avvio della slide, non avviare autoplay anche se isPlaying era precedentemente true
+      if (isPlaying) {
+        setIsPlaying(false);
+      }
+      return;
+    }
+
+    if (showSolution) {
+      if (finalAudioRef.current) {
+        if (isPlaying) {
+          if (finalAudioRef.current.paused) {
+            finalAudioRef.current.play().catch(err => console.log("Errore play finale:", err));
+          }
+        } else {
+          finalAudioRef.current.pause();
+        }
+      }
+      return;
+    }
+
+    if (!isPlaying) {
+      isPlayingStemsRef.current = false;
+      Object.values(audiosRef.current).forEach(a => {
+        try { a.pause(); } catch (err) {}
+      });
+    } else {
+      isPlayingStemsRef.current = true;
+      Object.values(audiosRef.current).forEach(a => {
+        try {
+          if (a.ended || a.currentTime >= a.duration) {
+            a.currentTime = 0;
+          }
+          if (a.paused) {
+            const p = a.play();
+            if (p !== undefined) p.catch(err => console.log("Errore resume stem:", err));
+          }
+        } catch (err) {}
+      });
+    }
+  }, [isPlaying, interactive, showSolution, setIsPlaying]);
+
   // Quando viene mostrata la soluzione, ferma tutti gli stems e riproduce solo la canzone finale
+  const isInitialMountSolutionRef = React.useRef(true);
   useEffect(() => {
     if (!interactive) return;
 
     if (showSolution) {
       // 1. ZITTISCI E FERMA ALL'ISTANTE TUTTI GLI STEMS
       stopAndMuteAllStems();
+
+      // Evita di far ripartire la canzone finale al caricamento/ritorno sulla slide se era già stata svelata in precedenza
+      if (isInitialMountSolutionRef.current) {
+        isInitialMountSolutionRef.current = false;
+        return;
+      }
 
       // 2. Riproduci ESCLUSIVAMENTE la canzone finale della soluzione (singola istanza pulita)
       if (finalAudioRef.current) {
@@ -223,6 +310,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
         }
       }
     } else {
+      isInitialMountSolutionRef.current = false;
       // Se la soluzione viene nascosta/resettata, ferma la canzone finale
       if (finalAudioRef.current) {
         try {
@@ -332,15 +420,11 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
           const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
           addScore(targetTeamIdx, getCluePoints(numKey));
 
-          // Quando i numeri vengono premuti manualmente, riavviamo da capo tutti gli stems
-          isPlayingStemsRef.current = true;
-          Object.values(audiosRef.current).forEach(a => {
-            a.currentTime = 0;
-            const p = a.play();
-            if (p !== undefined) p.catch(err => console.log("Errore riproduzione stem:", err));
-          });
+          // Aggiorna lo stato rivelato e scatena la riproduzione sincronizzata su tutti gli schermi
           setRevealed(prev => ({ ...prev, [numKey]: true }));
           setLatestClue(numKey);
+          setPlayTrigger(Date.now());
+          setIsPlaying(true);
         }
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
         if (showSolution) return; // Evita esecuzioni multiple se già svelata
@@ -354,6 +438,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
           allRevealedObj[i] = true;
         }
         setRevealed(allRevealedObj);
+        setIsPlaying(true);
 
         // Mostra la soluzione: l'effetto dedicato showSolution farà partire ESCLUSIVAMENTE la traccia finale
         setShowSolution(true);
@@ -362,37 +447,15 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
       } else if (key.toLowerCase() === 't') {
         setShowTitle(true);
       } else if (key.toLowerCase() === 'm') {
-        if (showSolution) {
-          // Se la soluzione è attiva, il tasto M controlla solo la canzone finale (Play/Pausa)
-          if (finalAudioRef.current) {
-            if (finalAudioRef.current.paused) {
-              finalAudioRef.current.play().catch(err => console.log("Errore play finale:", err));
-            } else {
-              finalAudioRef.current.pause();
-            }
-          }
-        } else {
-          // Se la soluzione non è attiva, alterna avvio/stop degli stems
-          if (isPlayingStemsRef.current) {
-            stopAndMuteAllStems();
-          } else {
-            Object.values(audiosRef.current).forEach(a => {
-              a.currentTime = 0;
-              if (a.paused) {
-                const p = a.play();
-                if (p !== undefined) p.catch(err => console.log("Errore play stem:", err));
-              }
-            });
-            isPlayingStemsRef.current = true;
-          }
-        }
+        // Alterna Play / Pausa sincronizzato sia per gli stems che per la canzone finale
+        setIsPlaying(prev => !prev);
       }
     };
 
     if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, scores, revealed, questionNum, addScore, showSolution, stopAndMuteAllStems]);
+  }, [interactive, scores, revealed, questionNum, addScore, showSolution, stopAndMuteAllStems, setRevealed, setLatestClue, setPlayTrigger, setIsPlaying]);
 
   const rankingMarkers = [
     { value: 7, top: "34.070%" }, // Giallo (1 indizio)

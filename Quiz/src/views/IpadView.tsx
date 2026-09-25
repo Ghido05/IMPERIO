@@ -6,6 +6,7 @@ import type { Slide } from '../App';
 import SlideCanvas from '../components/SlideCanvas';
 import { ScoreProvider, useScores } from '../context/ScoreContext';
 import { formatScoreNumber } from '../lib/formatUtils';
+import { assetUrl } from '../lib/assetUrl';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -62,7 +63,14 @@ function IpadContent() {
   const [setupState, setSetupState] = useState<any>(null);
   const [bookedTeam, setBookedTeam] = useState<number | null>(null);
 
-  const { scores } = useScores();
+  const { scores, bonuses, toggleBonus } = useScores();
+
+  const IPAD_BONUS_CONFIGS = [
+    { key: 'dado', label: 'Dado', emoji: '🎲' },
+    { key: 'switch', label: 'Switch', emoji: '🔄' },
+    { key: 'arco', label: 'Arco', emoji: '🏹' },
+    { key: 'scudo', label: 'Scudo', emoji: '🛡️' },
+  ];
 
   // Carica configurazione setup per i nomi squadre reattivamente
   useEffect(() => {
@@ -241,6 +249,7 @@ function IpadContent() {
         key.startsWith('password_') || 
         key.startsWith('playstate_') || 
         key.startsWith('note_presentatore_') ||
+        key === 'imperio_quiz_scores' ||
         key === 'imperio_quiz_setup_config_v1'
       );
     };
@@ -601,6 +610,41 @@ function IpadContent() {
     }
   };
 
+  const renderTeamBonuses = (teamIdx: number, isBooked: boolean) => {
+    return (
+      <div className="flex items-center justify-center gap-1 sm:gap-1.5 mt-1 sm:mt-1.5 flex-wrap z-20">
+        {IPAD_BONUS_CONFIGS.map((bConfig, bIdx) => {
+          const isAvailable = Boolean(bonuses?.[teamIdx]?.[bIdx]);
+          const customIcon = setupState?.punteggi?.iconeBonus?.[bIdx];
+          return (
+            <button
+              key={bIdx}
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleBonus(teamIdx, bIdx);
+              }}
+              title={`${bConfig.label}: ${isAvailable ? 'Disponibile (tocca per spendere)' : 'Utilizzato / Non disponibile (tocca per assegnare)'}`}
+              className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all duration-200 border cursor-pointer active:scale-95 ${
+                isAvailable
+                  ? isBooked
+                    ? 'bg-white/40 border-white text-white shadow-md scale-105'
+                    : 'bg-amber-400/25 border-amber-300 text-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.5)] scale-100 ring-1 ring-amber-400/50'
+                  : 'bg-black/40 border-white/10 opacity-25 grayscale scale-90 hover:opacity-40'
+              }`}
+            >
+              {customIcon ? (
+                <img src={assetUrl(customIcon)} alt={bConfig.label} className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 object-contain" />
+              ) : (
+                <span className="text-xs sm:text-sm md:text-base leading-none select-none">{bConfig.emoji}</span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="w-full h-screen bg-slate-950 text-white flex flex-col overflow-hidden font-sans select-none">
       {/* CSS per Animazione di Lampeggio Buzzer Conduttore */}
@@ -634,74 +678,77 @@ function IpadContent() {
 
         {/* Squadra 3 (Verde) */}
         <div 
-          className={`h-full flex flex-col items-center justify-center border-r border-slate-950/40 p-2 sm:p-3 transition-all duration-300 ${
+          className={`h-full flex flex-col items-center justify-center border-r border-slate-950/40 p-1 sm:p-2 transition-all duration-300 ${
             isS3Booked 
               ? 'bg-emerald-500 text-white animate-ipad-blink z-10 border-4 border-white shadow-2xl' 
               : 'bg-emerald-950/70 text-emerald-100 hover:bg-emerald-900/80'
           }`}
         >
-          <span className={`text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-widest leading-none mb-1.5 transition-colors ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>
+          <span className={`text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-widest leading-none mb-1 transition-colors ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>
             🟢 {teamNames[2] || 'SQUADRA 3'}
           </span>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl sm:text-5xl md:text-6xl font-black leading-none tabular-nums tracking-tight">
+            <span className="text-2xl sm:text-4xl md:text-5xl font-black leading-none tabular-nums tracking-tight">
               {formatScoreNumber(scores?.[2] ?? 0)}
             </span>
             <span className={`text-xs sm:text-sm md:text-base font-black ${isS3Booked ? 'text-white' : 'text-emerald-400'}`}>PT</span>
           </div>
           {isS3Booked && (
-            <span className="mt-1 px-2 py-0.5 rounded bg-white text-emerald-900 text-[10px] font-black uppercase tracking-wider animate-bounce">
+            <span className="mt-0.5 px-2 py-0.5 rounded bg-white text-emerald-900 text-[9px] sm:text-[10px] font-black uppercase tracking-wider animate-bounce">
               Buzzer Prenotato!
             </span>
           )}
+          {renderTeamBonuses(2, isS3Booked)}
         </div>
 
         {/* Squadra 2 (Blu) */}
         <div 
-          className={`h-full flex flex-col items-center justify-center border-r border-slate-950/40 p-2 sm:p-3 transition-all duration-300 ${
+          className={`h-full flex flex-col items-center justify-center border-r border-slate-950/40 p-1 sm:p-2 transition-all duration-300 ${
             isS2Booked 
               ? 'bg-blue-500 text-white animate-ipad-blink z-10 border-4 border-white shadow-2xl' 
               : 'bg-blue-950/70 text-blue-100 hover:bg-blue-900/80'
           }`}
         >
-          <span className={`text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-widest leading-none mb-1.5 transition-colors ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>
+          <span className={`text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-widest leading-none mb-1 transition-colors ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>
             🔵 {teamNames[1] || 'SQUADRA 2'}
           </span>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl sm:text-5xl md:text-6xl font-black leading-none tabular-nums tracking-tight">
+            <span className="text-2xl sm:text-4xl md:text-5xl font-black leading-none tabular-nums tracking-tight">
               {formatScoreNumber(scores?.[1] ?? 0)}
             </span>
             <span className={`text-xs sm:text-sm md:text-base font-black ${isS2Booked ? 'text-white' : 'text-blue-400'}`}>PT</span>
           </div>
           {isS2Booked && (
-            <span className="mt-1 px-2 py-0.5 rounded bg-white text-blue-900 text-[10px] font-black uppercase tracking-wider animate-bounce">
+            <span className="mt-0.5 px-2 py-0.5 rounded bg-white text-blue-900 text-[9px] sm:text-[10px] font-black uppercase tracking-wider animate-bounce">
               Buzzer Prenotato!
             </span>
           )}
+          {renderTeamBonuses(1, isS2Booked)}
         </div>
 
         {/* Squadra 1 (Rosso) */}
         <div 
-          className={`h-full flex flex-col items-center justify-center p-2 sm:p-3 transition-all duration-300 ${
+          className={`h-full flex flex-col items-center justify-center p-1 sm:p-2 transition-all duration-300 ${
             isS1Booked 
               ? 'bg-red-500 text-white animate-ipad-blink z-10 border-4 border-white shadow-2xl' 
               : 'bg-red-950/70 text-red-100 hover:bg-red-900/80'
           }`}
         >
-          <span className={`text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-widest leading-none mb-1.5 transition-colors ${isS1Booked ? 'text-white' : 'text-red-400'}`}>
+          <span className={`text-[11px] sm:text-xs md:text-sm font-black uppercase tracking-widest leading-none mb-1 transition-colors ${isS1Booked ? 'text-white' : 'text-red-400'}`}>
             🔴 {teamNames[0] || 'SQUADRA 1'}
           </span>
           <div className="flex items-baseline gap-1">
-            <span className="text-3xl sm:text-5xl md:text-6xl font-black leading-none tabular-nums tracking-tight">
+            <span className="text-2xl sm:text-4xl md:text-5xl font-black leading-none tabular-nums tracking-tight">
               {formatScoreNumber(scores?.[0] ?? 0)}
             </span>
             <span className={`text-xs sm:text-sm md:text-base font-black ${isS1Booked ? 'text-white' : 'text-red-400'}`}>PT</span>
           </div>
           {isS1Booked && (
-            <span className="mt-1 px-2 py-0.5 rounded bg-white text-red-900 text-[10px] font-black uppercase tracking-wider animate-bounce">
+            <span className="mt-0.5 px-2 py-0.5 rounded bg-white text-red-900 text-[9px] sm:text-[10px] font-black uppercase tracking-wider animate-bounce">
               Buzzer Prenotato!
             </span>
           )}
+          {renderTeamBonuses(0, isS1Booked)}
         </div>
       </div>
 

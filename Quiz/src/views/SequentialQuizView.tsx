@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import SlideCanvas from '../components/SlideCanvas';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import PresenterPreviewPanel from '../components/PresenterPreviewPanel';
@@ -133,6 +133,12 @@ export function getSlideForBoxQuestion(
     } else {
       const data = {
         titolo: q2.immagine.domanda || q2.immagine.soluzioneTesto || 'Classifica Immagine',
+        categoria: q2.immagine.categoria || '',
+        soluzioneTesto: q2.immagine.soluzioneTesto || '',
+        soluzione: {
+          titolo: q2.immagine.soluzioneTesto || 'Soluzione',
+          categoria: q2.immagine.categoria || '',
+        },
         sfondo: sf,
         immagineSegreta: q2.immagine.immagineJpg || '',
         audio: q2.immagine.soluzioneAudio || '',
@@ -503,7 +509,10 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     };
   }, []);
 
-  const activeSlide = getSlideForBoxQuestion(setupState, activeBox, activeQuestion);
+  const activeSlide = useMemo(
+    () => getSlideForBoxQuestion(setupState, activeBox, activeQuestion),
+    [setupState, activeBox, activeQuestion]
+  );
 
   // Broadcast current active slide to GamesView (Public screen)
   useEffect(() => {

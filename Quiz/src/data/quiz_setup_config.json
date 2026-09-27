@@ -82,12 +82,12 @@
         "immagine": {
           "immagineJpg": "/Icone/nessuno_img/1_2_telemaco.jpeg",
           "indizi": [
-            "indizio 1",
+            "COME NOME HA \"COLUI CHE COMBATTE LONTANO\", SIGNIFICATO NON STRANO",
             "CONSIGLIATO DA ATENA SI METTE ALLA RICERCA DI BUONA LENA",
             "TUTTO D’UN PEZZO SENZA TATUAGGIO DELL’ODISSEA È UN PERSONAGGIO",
             "AGILE E SVELTO COME UN ANTILOPE FIGLIO DI ULISSE E PENELOPE"
           ],
-          "confermaAudio": "",
+          "confermaAudio": "/Audio/strumenti/1_2_Tuttoperunaragione_Benji.mp3",
           "soluzione": "TELEMACO",
           "categoria": "PERSONAGGIO MITOLOGICO",
           "grigliaSeme": 435724
@@ -170,7 +170,7 @@
             "idb://file_1789424608511_25ukng8?name=g01m05s05trombe_nordsudovestest.mp3"
           ],
           "indizi": [
-            "IN OGNI DIREZIONE VUOLE ANDARE, ESISTE CIò CHE VUOL CERCARE",
+            "IN OGNI DIREZIONE VUOLE ANDARE, ESISTE CIÒ CHE VUOL CERCARE?",
             "",
             "",
             ""

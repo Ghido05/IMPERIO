@@ -526,14 +526,22 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       className={`relative w-full min-h-screen bg-black text-white flex items-center justify-center overflow-hidden select-none transition-transform duration-100 ${showError ? 'animate-shake' : ''}`} 
     >
       {/* Sfondo dinamico (Step >= 2, renderizzato SOLO se showSfondo è true) */}
-      {showSfondo && phrase.sfondo && (
-        <div 
-          className="absolute inset-0 bg-cover bg-center animate-fade-in pointer-events-none z-0"
-          style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,.55), rgba(0,0,0,.72)), url("${assetUrl(phrase.sfondo)}")`,
-          }}
-        />
-      )}
+      {showSfondo && phrase.sfondo && (() => {
+        const isDante = phraseIndex === 6 || 
+          (typeof phrase.testo === 'string' && phrase.testo.toUpperCase().includes('DANTE')) ||
+          (typeof phrase.sfondo === 'string' && phrase.sfondo.toLowerCase().includes('dante'));
+        const overlayGradient = isDante
+          ? 'linear-gradient(rgba(0,0,0,.15), rgba(0,0,0,.25))'
+          : 'linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.45))';
+        return (
+          <div 
+            className="absolute inset-0 bg-cover bg-center animate-fade-in pointer-events-none z-0"
+            style={{
+              backgroundImage: `${overlayGradient}, url("${assetUrl(phrase.sfondo)}")`,
+            }}
+          />
+        );
+      })()}
       {/* Overlay Errore (Sfondo Rosso + X Gigante) */}
       {showError && (
         <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center">

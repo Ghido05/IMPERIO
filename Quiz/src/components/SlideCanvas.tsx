@@ -60,16 +60,26 @@ export default function SlideCanvas({
 
 
   useEffect(() => {
-    if (!nadiaSetup) {
-      try {
-        const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
-        if (saved) {
-          setLocalSetup(JSON.parse(saved));
+    const readSetup = () => {
+      if (!nadiaSetup) {
+        try {
+          const saved = localStorage.getItem('imperio_quiz_setup_config_v1');
+          if (saved) {
+            setLocalSetup(JSON.parse(saved));
+          }
+        } catch (e) {
+          console.error('Errore lettura setup in SlideCanvas:', e);
         }
-      } catch (e) {
-        console.error('Errore lettura setup in SlideCanvas:', e);
       }
-    }
+    };
+
+    readSetup();
+    window.addEventListener('storage', readSetup);
+    window.addEventListener('local-storage-update', readSetup);
+    return () => {
+      window.removeEventListener('storage', readSetup);
+      window.removeEventListener('local-storage-update', readSetup);
+    };
   }, [nadiaSetup]);
 
   const effectiveNadiaSetup = useMemo<NadiaSetup | null>(() => {

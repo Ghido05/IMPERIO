@@ -163,11 +163,11 @@
         "tipo": "canzone",
         "canzone": {
           "audioFiles": [
-            "idb://file_1789424591400_4hlkwbf?name=g01m05s01basso_nordsudovestest.mp3",
-            "idb://file_1789424595728_6csggc6?name=g01m05s02chitarra_nordsudovestest.mp3",
-            "idb://file_1789424599971_7yiuwyi?name=g01m05s03piano_nordsudovestest.mp3",
-            "idb://file_1789424604355_kc1cy5n?name=g01m05s04base_nordsudovestest.mp3",
-            "idb://file_1789424608511_25ukng8?name=g01m05s05trombe_nordsudovestest.mp3"
+            "/Audio/strumenti/g01m05s01basso_nordsudovestest.mp3",
+            "/Audio/strumenti/g01m05s02chitarra_nordsudovestest.mp3",
+            "/Audio/strumenti/g01m05s03piano_nordsudovestest.mp3",
+            "/Audio/strumenti/g01m05s04base_nordsudovestest.mp3",
+            "/Audio/strumenti/g01m05s05trombe_nordsudovestest.mp3"
           ],
           "indizi": [
             "IN OGNI DIREZIONE VUOLE ANDARE, ESISTE CIÒ CHE VUOL CERCARE?",
@@ -175,7 +175,7 @@
             "",
             ""
           ],
-          "soluzioneAudio": "idb://file_1789424618441_6us77rx?name=g01m05soluzione.mp3",
+          "soluzioneAudio": "/Audio/soluzioni a conferma/g01m05soluzione.mp3",
           "titolo": "NORD SUD OVEST EST",
           "anno": "883 - 1993"
         },
@@ -871,7 +871,7 @@
         }
       },
       "3": {
-        "sfondo": "/Icone/Sfondi Password/exterior_00.webp",
+        "sfondo": "/Icone/exterior_00.webp",
         "squadra1": [
           {
             "parola": "",
@@ -973,7 +973,7 @@
     "frasi": [
       {
         "testo": "CENTENARIO DELLA MITICA STRADA CHE COLLEGA CHICAGO A SANTA MONICA",
-        "sfondo": "/Icone/nessuno_img/4_1_route66.jpg",
+        "sfondo": "/Icone/sfondi/4_1_route66.jpg",
         "confermaAudio": "",
         "lettereVisibili": [
           1,
@@ -1000,7 +1000,7 @@
       },
       {
         "testo": "PER CAUSA SUA I TEMPLI DI ABU SIMBEL FURONO SPOSTATI",
-        "sfondo": "/Icone/nessuno_img/4_2_digaAssuan.jpg",
+        "sfondo": "/Icone/sfondi/4_2_digaAssuan.jpg",
         "confermaAudio": "",
         "lettereVisibili": [
           1,
@@ -1024,7 +1024,7 @@
       },
       {
         "testo": "L' ITALIANO LUCA PARMITANO PARTECIPERà ALLA MISSIONE SPAZIALE",
-        "sfondo": "/Icone/nessuno_img/4_3_ArtemisIII.jpg",
+        "sfondo": "/Icone/sfondi/4_3_ArtemisIII.jpg",
         "confermaAudio": "",
         "lettereVisibili": [
           4,
@@ -1069,7 +1069,7 @@
       },
       {
         "testo": "L' ESPLORATORE SCOZZESE SCOPRì LE CASCATE VITTORIA",
-        "sfondo": "idb://file_1789404056029_dep8cmo?name=4_6_Livingstone.jpg",
+        "sfondo": "/Icone/sfondi/4_6_Livingstone.jpg",
         "confermaAudio": "",
         "lettereVisibili": [
           6,
@@ -1090,8 +1090,8 @@
       },
       {
         "testo": "DANTE E VIRGILIO INCONTRANO IL TRADITORE CONTE UGOLINO",
-        "sfondo": "idb://file_1789405650153_qa7wekj?name=4_7_Ugolino.jpg",
-        "confermaAudio": "idb://file_1789405859682_gubjgkq?name=4_7_Pedro_Carra.mp3",
+        "sfondo": "/Icone/sfondi/4_7_Ugolino.jpg",
+        "confermaAudio": "/Audio/stacchetto/4_7_Pedro_Carra.mp3",
         "lettereVisibili": [
           4,
           6,

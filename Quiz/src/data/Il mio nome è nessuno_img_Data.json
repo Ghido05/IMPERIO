@@ -10,25 +10,25 @@
       "step": 1,
       "testo": "Primo indizio sull'immagine",
       "colore": "#fe7507",
-      "icona": "/Icone/nessuno_img/Icona indizio.svg"
+      "icona": ""
     },
     {
       "step": 2,
       "testo": "Secondo indizio sull'immagine",
       "colore": "#fe7507",
-      "icona": "/Icone/nessuno_img/Icona indizio.svg"
+      "icona": ""
     },
     {
       "step": 3,
       "testo": "Terzo indizio sull'immagine",
       "colore": "#fe7507",
-      "icona": "/Icone/nessuno_img/Icona indizio.svg"
+      "icona": ""
     },
     {
       "step": 4,
       "testo": "Quarto indizio sull'immagine",
       "colore": "#fe7507",
-      "icona": "/Icone/nessuno_img/Icona indizio.svg"
+      "icona": ""
     }
   ],
   "soluzione": {

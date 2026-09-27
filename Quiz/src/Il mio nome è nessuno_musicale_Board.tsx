@@ -150,6 +150,12 @@ const Solution: React.FC<{ isVisible: boolean; revealAll?: boolean }> = ({ isVis
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
+  const rawArtista = (gameData.soluzione?.artista || '').trim().replace(/^[-–—\s]+/, '').replace(/[-–—\s]+$/, '');
+  const rawAnno = (gameData.soluzione?.anno || '').trim().replace(/^[-–—\s]+/, '').replace(/[-–—\s]+$/, '');
+  const subtitle = (rawArtista && rawAnno)
+    ? (rawArtista.toLowerCase() === rawAnno.toLowerCase() ? rawArtista : `${rawArtista} - ${rawAnno}`)
+    : (rawArtista || rawAnno);
+
   if (revealAll && isVisible) {
     return (
       <div className="absolute bottom-4 left-4 z-50 px-6 py-4 rounded-2xl border border-yellow-500/30 bg-slate-900/90 backdrop-blur-lg shadow-[0_10px_30px_rgba(0,0,0,0.5)] border-l-4 border-l-yellow-500 max-w-md pointer-events-auto animate-zoom-in">
@@ -157,9 +163,11 @@ const Solution: React.FC<{ isVisible: boolean; revealAll?: boolean }> = ({ isVis
         <h2 className="text-xl font-black text-white leading-tight">
           {gameData.soluzione.titolo}
         </h2>
-        <p className="text-xs font-semibold text-slate-400 mt-0.5">
-          {gameData.soluzione.artista} - {gameData.soluzione.anno}
-        </p>
+        {subtitle && (
+          <p className="text-xs font-semibold text-slate-400 mt-0.5">
+            {subtitle}
+          </p>
+        )}
       </div>
     );
   }
@@ -182,9 +190,11 @@ const Solution: React.FC<{ isVisible: boolean; revealAll?: boolean }> = ({ isVis
           {gameData.soluzione.titolo}
         </h2>
         <div className="h-1 w-24 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto rounded-full animate-fade-in" style={{ '--animation-delay': '0.4s' } as React.CSSProperties}></div>
-        <p className="text-[clamp(1rem,2vw,1.8rem)] font-light text-white/70 tracking-[0.3em] uppercase animate-fade-up" style={{ '--animation-delay': '0.6s' } as React.CSSProperties}>
-          {gameData.soluzione.artista} - {gameData.soluzione.anno}
-        </p>
+        {subtitle && (
+          <p className="text-[clamp(1rem,2vw,1.8rem)] font-light text-white/70 tracking-[0.3em] uppercase animate-fade-up" style={{ '--animation-delay': '0.6s' } as React.CSSProperties}>
+            {subtitle}
+          </p>
+        )}
       </div>
     </div>
   </div>

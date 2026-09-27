@@ -31,19 +31,36 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   'g02m05s05 ottone.mp3': '/Audio/strumenti/g02m05s05 ottone.mp3',
   'g02m05s06 soft square lead .mp3': '/Audio/strumenti/g02m05s06 soft square lead .mp3',
   'g02m05s07 organo dontstop.mp3': '/Audio/strumenti/g02m05s07 organo dontstop.mp3',
+  'g01m05s01basso_nordsudovestest.mp3': '/Audio/strumenti/g01m05s01basso_nordsudovestest.mp3',
+  'g01m05s02chitarra_nordsudovestest.mp3': '/Audio/strumenti/g01m05s02chitarra_nordsudovestest.mp3',
+  'g01m05s03piano_nordsudovestest.mp3': '/Audio/strumenti/g01m05s03piano_nordsudovestest.mp3',
+  'g01m05s04base_nordsudovestest.mp3': '/Audio/strumenti/g01m05s04base_nordsudovestest.mp3',
+  'g01m05s05trombe_nordsudovestest.mp3': '/Audio/strumenti/g01m05s05trombe_nordsudovestest.mp3',
+  '1_2_Tuttoperunaragione_Benji.mp3': '/Audio/strumenti/1_2_Tuttoperunaragione_Benji.mp3',
+  '4_7_Pedro_Carra.mp3': '/Audio/stacchetto/4_7_Pedro_Carra.mp3',
   // Audio Soluzioni
+  'g01m01soluzione.mp3': '/Audio/soluzioni a conferma/g01m01soluzione.mp3',
+  'g01m03soluzione.mp3': '/Audio/soluzioni a conferma/g01m03soluzione.mp3',
+  'g01m05soluzione.mp3': '/Audio/soluzioni a conferma/g01m05soluzione.mp3',
   'g01m07soluzione.mp3': '/Audio/soluzioni a conferma/g01m07soluzione.mp3',
   'g02m01soluzione.mp3': '/Audio/soluzioni a conferma/g02m01soluzione.mp3',
   'g02m03soluzione.mp3': '/Audio/soluzioni a conferma/g02m03soluzione.mp3',
   'g02m05soluzione.mp3': '/Audio/soluzioni a conferma/g02m05soluzione.mp3',
-  // Immagini e Icone nessuno_img
-  '1_3_telemaco.jpeg': '/Icone/nessuno_img/1_3_telemaco.jpeg',
-  'images.jpeg': '/Icone/nessuno_img/1_3_telemaco.jpeg',
-  '4_1_route66.jpg': '/Icone/nessuno_img/4_1_route66.jpg',
-  '4_2_digaAssuan.jpg': '/Icone/nessuno_img/4_2_digaAssuan.jpg',
-  '4_2_digaassuan.jpg': '/Icone/nessuno_img/4_2_digaAssuan.jpg',
-  '4_3_ArtemisIII.jpg': '/Icone/nessuno_img/4_3_ArtemisIII.jpg',
-  'Prova.png': '/Icone/nessuno_img/Prova.png',
+  // Immagini e Icone nessuno_img / sfondi
+  '1_2_telemaco.jpeg': '/Icone/sfondi/1_2_telemaco.jpeg',
+  '1_3_telemaco.jpeg': '/Icone/sfondi/1_2_telemaco.jpeg',
+  '2_2_faraonamitrata.jpeg': '/Icone/sfondi/2_2_faraonamitrata.jpeg',
+  'faraona.jpeg': '/Icone/sfondi/2_2_faraonamitrata.jpeg',
+  '3_1_superereoi.png': '/Icone/sfondi/3_1_superereoi.png',
+  '3_2_dolci.png': '/Icone/sfondi/3_2_dolci.png',
+  'images.jpeg': '/Icone/sfondi/1_2_telemaco.jpeg',
+  '4_1_route66.jpg': '/Icone/sfondi/4_1_route66.jpg',
+  '4_2_digaAssuan.jpg': '/Icone/sfondi/4_2_digaAssuan.jpg',
+  '4_2_digaassuan.jpg': '/Icone/sfondi/4_2_digaAssuan.jpg',
+  '4_3_ArtemisIII.jpg': '/Icone/sfondi/4_3_ArtemisIII.jpg',
+  '4_6_Livingstone.jpg': '/Icone/sfondi/4_6_Livingstone.jpg',
+  '4_7_Ugolino.jpg': '/Icone/sfondi/4_7_Ugolino.jpg',
+  'Prova.png': '/Icone/sfondi/Prova.png',
   'Cornice immagine.svg': '/Icone/nessuno_img/Cornice immagine.svg',
   'Categoria.svg': '/Icone/nessuno_img/Categoria.svg',
   'Indizio.svg': '/Icone/nessuno_img/Indizio.svg',
@@ -102,7 +119,7 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   // Sfondi Password
   'password1.png': '/Icone/Sfondi Password/password1.png',
   'password2.png': '/Icone/Sfondi Password/password2.png',
-  'exterior_00.webp': '/Icone/Sfondi Password/exterior_00.webp',
+  'exterior_00.webp': '/Icone/exterior_00.webp',
 };
 
 export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): string | null {
@@ -110,8 +127,15 @@ export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): 
   let clean = rawNameOrPath.trim();
 
   // Se è già un percorso valido con cartelle (es. Icone/..., Audio/..., ecc.)
-  // e NON è un idb:// o data:, non deve essere riscritto!
+  // e NON è un idb:// o data:, non deve essere riscritto a meno che non sia un path non esistente noto!
   if (!clean.startsWith('idb://') && !clean.startsWith('data:')) {
+    if (clean.includes('exterior_00.webp')) return '/Icone/exterior_00.webp';
+    if (clean.includes('4_1_route66')) return '/Icone/sfondi/4_1_route66.jpg';
+    if (clean.includes('4_2_digaAssuan') || clean.includes('4_2_digaassuan')) return '/Icone/sfondi/4_2_digaAssuan.jpg';
+    if (clean.includes('4_3_ArtemisIII') || clean.includes('4_3_artemis')) return '/Icone/sfondi/4_3_ArtemisIII.jpg';
+    if (clean.includes('4_6_Livingstone') || clean.includes('4_6_livingstone')) return '/Icone/sfondi/4_6_Livingstone.jpg';
+    if (clean.includes('4_7_Ugolino') || clean.includes('4_7_ugolino')) return '/Icone/sfondi/4_7_Ugolino.jpg';
+    if (clean.includes('4_7_Pedro_Carra') || clean.includes('4_7_pedro_carra')) return '/Audio/stacchetto/4_7_Pedro_Carra.mp3';
     if (clean.includes('/') || clean.includes('\\')) {
       return null;
     }
@@ -150,6 +174,19 @@ export function sanitizeSetupStateWithKnownAssets<T>(obj: T): T {
     if (obj.includes('1001Nadia')) {
       return '/Icone/sfondi/1001Nadia.jpg' as unknown as T;
     }
+    if (obj.includes('4_1_route66')) return '/Icone/sfondi/4_1_route66.jpg' as unknown as T;
+    if (obj.includes('4_2_digaAssuan') || obj.includes('4_2_digaassuan')) return '/Icone/sfondi/4_2_digaAssuan.jpg' as unknown as T;
+    if (obj.includes('4_3_ArtemisIII') || obj.includes('4_3_artemis')) return '/Icone/sfondi/4_3_ArtemisIII.jpg' as unknown as T;
+    if (obj.includes('4_6_Livingstone') || obj.includes('4_6_livingstone')) return '/Icone/sfondi/4_6_Livingstone.jpg' as unknown as T;
+    if (obj.includes('4_7_Ugolino') || obj.includes('4_7_ugolino')) return '/Icone/sfondi/4_7_Ugolino.jpg' as unknown as T;
+    if (obj.includes('4_7_Pedro_Carra') || obj.includes('4_7_pedro_carra')) return '/Audio/stacchetto/4_7_Pedro_Carra.mp3' as unknown as T;
+    if (obj.includes('exterior_00.webp')) return '/Icone/exterior_00.webp' as unknown as T;
+    if (obj.includes('g01m05s01basso')) return '/Audio/strumenti/g01m05s01basso_nordsudovestest.mp3' as unknown as T;
+    if (obj.includes('g01m05s02chitarra')) return '/Audio/strumenti/g01m05s02chitarra_nordsudovestest.mp3' as unknown as T;
+    if (obj.includes('g01m05s03piano')) return '/Audio/strumenti/g01m05s03piano_nordsudovestest.mp3' as unknown as T;
+    if (obj.includes('g01m05s04base')) return '/Audio/strumenti/g01m05s04base_nordsudovestest.mp3' as unknown as T;
+    if (obj.includes('g01m05s05trombe')) return '/Audio/strumenti/g01m05s05trombe_nordsudovestest.mp3' as unknown as T;
+    if (obj.includes('g01m05soluzione')) return '/Audio/soluzioni a conferma/g01m05soluzione.mp3' as unknown as T;
     if (obj.startsWith('idb://')) {
       const known = findKnownPublicAsset(obj);
       if (known) return known as unknown as T;

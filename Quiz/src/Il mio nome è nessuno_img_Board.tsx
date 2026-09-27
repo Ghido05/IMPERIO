@@ -362,17 +362,7 @@ const GameBoard = ({ interactive = true, revealAll = false }: { interactive?: bo
                 step >= (idx * 2 + 1) || revealAll ? 'opacity-100 translate-x-0' : 'opacity-0 pointer-events-none'
               }`}
             >
-              <div className="w-[102px] h-[102px] bg-[#fe7507] border-[9px] border-[#0f2d54] rounded-full flex items-center justify-center z-10 shadow-lg flex-shrink-0">
-                {indizio.icona ? (
-                  <img
-                    src={assetUrl(indizio.icona)}
-                    alt={`Icona ${idx + 1}`}
-                    className="w-[55%] h-[55%] object-contain"
-                  />
-                ) : (
-                  <span className="text-white font-bold text-xl">{idx + 1}</span>
-                )}
-              </div>
+              <div className="w-[102px] h-[102px] bg-[#fe7507] border-[9px] border-[#0f2d54] rounded-full flex items-center justify-center z-10 shadow-lg flex-shrink-0" />
               <div className="ml-6 pl-10 pr-8 flex-1 bg-[#fe7507] border-[9px] border-[#0f2d54] rounded-[50px] flex items-center shadow-md h-[102px]">
                 <p className="text-white font-black text-[22px] leading-tight">
                   {indizio.testo}

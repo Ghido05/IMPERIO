@@ -49,8 +49,8 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
         soluzione: {
           ...defaultData.soluzione,
           titolo: q.canzone.titolo || defaultData.soluzione.titolo,
-          artista: q.canzone.anno ? `Anno ${q.canzone.anno}` : defaultData.soluzione.artista,
-          anno: q.canzone.anno || defaultData.soluzione.anno,
+          artista: (q.canzone as any).artista || '',
+          anno: q.canzone.anno || '',
           audio: q.canzone.soluzioneAudio || defaultData.soluzione.audio
         }
       };

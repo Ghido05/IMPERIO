@@ -7,16 +7,20 @@ import { useScores } from './context/ScoreContext';
 interface SolutionProps {
   isVisible: boolean;
   revealAll?: boolean;
+  onClose?: () => void;
 }
 
 // Componente per la Soluzione Finale (senza assegnazione punti e intestazioni superflue, con spazio per artista/dettagli)
-const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false }) => {
+const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false, onClose }) => {
   const gameData = useGameData();
   if (!gameData) return null;
 
   const soluzioneTitolo = (gameData as any).soluzione?.titolo || gameData.soluzioneTesto || 'Soluzione';
-  const soluzioneArtista = (gameData as any).soluzione?.artista || '';
-  const soluzioneAnno = (gameData as any).soluzione?.anno || '';
+  const rawArtista = String((gameData as any).soluzione?.artista || '').trim().replace(/^[-–—\s]+/, '').replace(/[-–—\s]+$/, '');
+  const rawAnno = String((gameData as any).soluzione?.anno || '').trim().replace(/^[-–—\s]+/, '').replace(/[-–—\s]+$/, '');
+  const subtitle = (rawArtista && rawAnno)
+    ? (rawArtista.toLowerCase() === rawAnno.toLowerCase() ? rawArtista : `${rawArtista} - ${rawAnno}`)
+    : (rawArtista || rawAnno);
 
   if (revealAll && isVisible) {
     return (
@@ -25,9 +29,9 @@ const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false }) => 
         <h2 className="text-xl font-black text-white leading-tight">
           {soluzioneTitolo}
         </h2>
-        {(soluzioneArtista || soluzioneAnno) && (
+        {subtitle && (
           <p className="text-xs font-semibold text-slate-400 mt-0.5">
-            {soluzioneArtista}{soluzioneArtista && soluzioneAnno ? ' - ' : ''}{soluzioneAnno}
+            {subtitle}
           </p>
         )}
       </div>
@@ -41,8 +45,12 @@ const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false }) => 
   return (
     <div 
       className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md animate-fade-in"
+      onClick={onClose}
     >
-      <div className="relative group flex flex-col items-center">
+      <div 
+        className="relative group flex flex-col items-center"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Bagliore retrostante purple-blue */}
         <div className="absolute -inset-10 bg-gradient-to-r from-[#792ba6] to-blue-600 rounded-full blur-3xl opacity-30 group-hover:opacity-50 transition duration-1000" />
         
@@ -56,17 +64,42 @@ const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false }) => 
           {/* Effetto luce che scorre */}
           <div className="absolute top-0 -left-[100%] w-[200%] h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 group-hover:left-[100%] transition-all duration-1000 ease-in-out" />
 
+          {/* Pulsante chiusura discreto in alto a destra */}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="absolute top-3 right-3 text-white/60 hover:text-white bg-black/40 hover:bg-black/70 rounded-full w-8 h-8 flex items-center justify-center text-xs font-black border border-white/20 transition-all z-20 cursor-pointer"
+              title="Torna alla lista (Esc / S)"
+            >
+              ✕
+            </button>
+          )}
+
           <h2 className="text-[clamp(24px,3vw,56px)] font-black text-white tracking-tight leading-tight animate-zoom-in drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
             {soluzioneTitolo}
           </h2>
 
-          {(soluzioneArtista || soluzioneAnno) && (
+          {subtitle && (
             <>
               <div className="h-[2px] w-24 bg-gradient-to-r from-[#00ff00] to-yellow-400 mx-auto rounded-full" />
               <p className="text-[clamp(14px,1.2vw,24px)] font-light text-white/70 tracking-[0.2em] uppercase animate-fade-up">
-                {soluzioneArtista}{soluzioneArtista && soluzioneAnno ? ' - ' : ''}{soluzioneAnno}
+                {subtitle}
               </p>
             </>
+          )}
+
+          {/* Pulsante per tornare esplicitamente sulla lista */}
+          {onClose && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-6 py-2.5 rounded-xl bg-white/20 hover:bg-white/30 active:scale-95 border border-white/30 text-white font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-lg inline-flex items-center gap-2 hover:shadow-cyan-500/20"
+              >
+                <span>↩</span> Torna alla lista
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -514,7 +547,11 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
           setIsPlaying(true);
         }
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
-        if (showSolution) return; // Evita esecuzioni multiple se già svelata
+        if (showSolution) {
+          // Se la soluzione è già svelata, premere S o Invio torna alla lista!
+          setShowSolution(false);
+          return;
+        }
 
         // Ferma e silenzia all'istante e completamente tutti gli stems
         stopAndMuteAllStems();
@@ -529,6 +566,11 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
 
         // Mostra la soluzione: l'effetto dedicato showSolution farà partire ESCLUSIVAMENTE la traccia finale
         setShowSolution(true);
+      } else if (key === 'Escape' || key === 'Backspace') {
+        if (showSolution) {
+          setShowSolution(false);
+          return;
+        }
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
         setShowError(true);
       } else if (key.toLowerCase() === 't') {
@@ -715,10 +757,24 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
           );
         })}
 
+        {/* Pulsante per riaprire la soluzione se chiusa e tutti gli elementi sono svelati */}
+        {!showSolution && !revealAll && Object.values(revealed).filter(Boolean).length >= 7 && (
+          <div className="absolute left-[5.052%] top-[82%] z-40">
+            <button
+              type="button"
+              onClick={() => setShowSolution(true)}
+              className="px-5 py-2.5 rounded-2xl bg-[#792ba6]/90 hover:bg-[#792ba6] text-white border-2 border-white/30 text-xs font-black uppercase tracking-wider shadow-[0_0_25px_rgba(121,43,166,0.6)] flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+            >
+              <span>🎵</span> Mostra Soluzione [S]
+            </button>
+          </div>
+        )}
+
         {/* Solution Overlay */}
         <Solution 
           isVisible={showSolution || revealAll} 
           revealAll={revealAll}
+          onClose={() => setShowSolution(false)}
         />
       </div>
     </div>

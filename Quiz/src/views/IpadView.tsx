@@ -1,5 +1,7 @@
 import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react';
 import PasswordPresceltiBoard from '../Gioco password_prescelti_Board';
+import MilleEUnaNadiaBoard from '../components/MilleEUnaNadiaBoard';
+import { useSyncedState } from '../hooks/useSyncedState';
 import { GameDataProvider } from '../context/GameDataContext';
 import { cloneDefaultData } from '../lib/defaultGameData';
 import type { Slide } from '../App';
@@ -225,7 +227,15 @@ function IpadContent() {
   // Sync state over WebSocket
   useEffect(() => {
     const wsPort = (window.location.port === '5173' || !window.location.port) ? '3001' : window.location.port;
-    const socketUrl = `ws://${window.location.hostname}:${wsPort}/ws`;
+    let deviceId = '';
+    try {
+      deviceId = sessionStorage.getItem('imperio_device_id') || '';
+      if (!deviceId) {
+        deviceId = 'ipad_' + Math.random().toString(36).slice(2, 10);
+        sessionStorage.setItem('imperio_device_id', deviceId);
+      }
+    } catch {}
+    const socketUrl = `ws://${window.location.hostname}:${wsPort}/ws${deviceId ? `?deviceId=${deviceId}` : ''}`;
     
     console.log(`iPad connecting to WebSocket: ${socketUrl}`);
     let ws: WebSocket | null = null;
@@ -429,6 +439,21 @@ function IpadContent() {
     };
   }, []);
 
+  // Stati sincronizzati per Mille e una Nadia
+  const [nadiaActive] = useSyncedState<boolean>('playstate_nadia_active', false);
+  const [nadiaQuestionId] = useSyncedState<string>('playstate_nadia_question_id', '');
+  const [nadiaSolutionShown] = useSyncedState<boolean>('playstate_nadia_solution_shown', false);
+  const [nadiaBookedTeam, setNadiaBookedTeam] = useSyncedState<number | null>('playstate_nadia_booked_team', null);
+  const [nadiaAssignedTeam] = useSyncedState<number | null>('playstate_nadia_assigned_team', null);
+  const [, setNadiaErrorTrigger] = useSyncedState<number>('playstate_nadia_error_trigger', 0);
+  const [nadiaShuffledOrder] = useSyncedState<[number, number, number]>(
+    `playstate_nadia_order_${nadiaQuestionId}`,
+    [0, 1, 2]
+  );
+
+  const effectiveNadiaSetup = setupState?.nadia || null;
+  const effectiveNadiaQuestion = (effectiveNadiaSetup?.domande || []).find((d: any) => d.id === nadiaQuestionId) || effectiveNadiaSetup?.domande?.[0] || null;
+
   // Trova la slide password_prescelti all'interno del progetto per caricarne i dati
   const presceltiSlide = slides.find(s => s.type === 'password_prescelti');
   const presceltiData = {
@@ -447,7 +472,28 @@ function IpadContent() {
 
   let mainContent = null;
 
-  if (isPasswordGame && activeSlide) {
+  if (nadiaActive && effectiveNadiaSetup && effectiveNadiaQuestion) {
+    mainContent = (
+      <div className="w-full h-full flex items-center justify-center bg-black relative overflow-hidden">
+        <div className="relative aspect-[16/9] w-full max-h-full max-w-[1920px] flex items-center justify-center">
+          <MilleEUnaNadiaBoard
+            nadiaSetup={effectiveNadiaSetup}
+            question={effectiveNadiaQuestion}
+            shuffledOrder={nadiaShuffledOrder}
+            solutionShown={nadiaSolutionShown}
+            isPresenter={true}
+            bookedTeam={nadiaBookedTeam}
+            assignedTeam={nadiaAssignedTeam}
+            teamNames={teamNames}
+            onCancelBooking={() => {
+              setNadiaErrorTrigger(Date.now());
+              setNadiaBookedTeam(null);
+            }}
+          />
+        </div>
+      </div>
+    );
+  } else if (isPasswordGame && activeSlide) {
     const passwordData = {
       ...((activeSlide.data as any) ?? presceltiData),
       slideId: activeSlide.id ?? presceltiData.slideId
@@ -460,7 +506,7 @@ function IpadContent() {
   } else if (showSolutionGames && activeSlide) {
     mainContent = (
       <div className="w-full h-full flex items-center justify-center bg-black">
-        <SlideCanvas slide={activeSlide} interactive={false} revealAll={true} />
+        <SlideCanvas slide={activeSlide} interactive={false} revealAll={true} nadiaSetup={effectiveNadiaSetup} />
       </div>
     );
   } else {
@@ -669,7 +715,7 @@ function IpadContent() {
       {/* ========================================================================= */}
       {/* 1. SEZIONE SUPERIORE: Box Punteggi e Squadre (20% altezza, 100% larghezza) */}
       {/* ========================================================================= */}
-      <div className="w-full h-[20vh] grid grid-cols-3 border-b-2 border-slate-800 bg-slate-950 shrink-0 select-none relative z-20 overflow-hidden">
+      <div className="w-full h-[20%] grid grid-cols-3 border-b-2 border-slate-800 bg-slate-950 shrink-0 select-none relative z-20 overflow-hidden">
         {/* Pillola discreta per lo stato di connessione */}
         <div className="absolute top-2 right-2 z-30 pointer-events-none flex items-center gap-1.5 bg-black/60 backdrop-blur px-2.5 py-0.5 rounded-full border border-white/10 text-[9px] font-semibold text-slate-300">
           <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
@@ -753,23 +799,23 @@ function IpadContent() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. SEZIONE CENTRALE: Grafica del Gioco con Soluzioni (70% altezza con scroll) */}
+      {/* 2. SEZIONE CENTRALE: Grafica del Gioco con Soluzioni (60% altezza)         */}
       {/* ========================================================================= */}
-      <div className="w-full h-[70vh] overflow-y-auto overflow-x-hidden relative bg-black flex flex-col items-center justify-center p-1 sm:p-2 shrink-0 touch-pan-y">
+      <div className="w-full h-[60%] overflow-hidden relative bg-black flex flex-col items-center justify-center p-1 sm:p-2 shrink-0 touch-pan-y">
         {mainContent}
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. SEZIONE INFERIORE: Note del Presentatore (10% altezza con scroll) */}
+      {/* 3. SEZIONE INFERIORE: Note del Presentatore (20% altezza)                   */}
       {/* ========================================================================= */}
-      <div className="w-full h-[10vh] border-t-2 border-slate-800 bg-[#141418] px-3 py-1.5 shrink-0 flex flex-col overflow-y-auto select-text touch-pan-y">
-        <div className="flex items-center justify-between text-[11px] font-bold text-amber-400 mb-1 shrink-0">
+      <div className="w-full h-[20%] border-t-2 border-slate-800 bg-[#141418] px-3 py-2 shrink-0 flex flex-col overflow-y-auto select-text touch-pan-y">
+        <div className="flex items-center justify-between text-[11px] font-bold text-amber-400 mb-1.5 shrink-0">
           <span className="flex items-center gap-1.5">
             <span>📝 NOTE PRESENTATORE</span>
             <span className="text-[10px] text-slate-400 font-normal">({noteContext.label})</span>
           </span>
           <span className="text-[9px] text-slate-500 font-mono">
-            {isEditingNote ? '✎ In modifica...' : 'Tocca per modificare • Scorri se lungo'}
+            {isEditingNote ? '✎ In modifica...' : 'Tocca per modificare'}
           </span>
         </div>
         <textarea
@@ -780,7 +826,7 @@ function IpadContent() {
           }}
           onBlur={handleNoteSave}
           placeholder="Nessuna nota per questa manche. Tocca qui per inserire o modificare appunti per il conduttore..."
-          className="w-full flex-1 min-h-[32px] bg-black/40 border border-white/10 rounded px-2.5 py-1 text-xs text-amber-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400/80 resize-none font-sans leading-relaxed"
+          className="w-full flex-1 min-h-[50px] bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-amber-100 placeholder:text-slate-500 focus:outline-none focus:border-amber-400/80 resize-none font-sans leading-relaxed"
         />
       </div>
     </div>

@@ -75,7 +75,7 @@ export function getSlideForBoxQuestion(
         ],
         soluzione: {
           titolo: q1.canzone.titolo || 'Titolo',
-          artista: '',
+          artista: (q1.canzone as any).artista || '',
           anno: q1.canzone.anno || '',
           audio: q1.canzone.soluzioneAudio || '',
         },
@@ -89,10 +89,10 @@ export function getSlideForBoxQuestion(
         immagineSegreta: q1.immagine.immagineJpg || '',
         audio: q1.immagine.confermaAudio || '',
         indizi: [
-          { step: 1, testo: q1.immagine.indizi[0] || '', colore: '#fe7507', icona: '/Icone/nessuno_img/Icona indizio.svg' },
-          { step: 2, testo: q1.immagine.indizi[1] || '', colore: '#fe7507', icona: '/Icone/nessuno_img/Icona indizio.svg' },
-          { step: 3, testo: q1.immagine.indizi[2] || '', colore: '#fe7507', icona: '/Icone/nessuno_img/Icona indizio.svg' },
-          { step: 4, testo: q1.immagine.indizi[3] || '', colore: '#fe7507', icona: '/Icone/nessuno_img/Icona indizio.svg' },
+          { step: 1, testo: q1.immagine.indizi[0] || '', colore: '#fe7507', icona: '' },
+          { step: 2, testo: q1.immagine.indizi[1] || '', colore: '#fe7507', icona: '' },
+          { step: 3, testo: q1.immagine.indizi[2] || '', colore: '#fe7507', icona: '' },
+          { step: 4, testo: q1.immagine.indizi[3] || '', colore: '#fe7507', icona: '' },
         ],
         soluzione: {
           titolo: q1.immagine.soluzione || 'Soluzione Immagine',

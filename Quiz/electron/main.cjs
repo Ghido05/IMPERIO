@@ -414,9 +414,10 @@ function startLocalServer() {
   localServer.on('upgrade', (request, socket, head) => {
     try {
       const host = request.headers.host || 'localhost';
-      const { pathname } = new URL(request.url, `http://${host}`);
-      if (pathname === '/ws') {
+      const parsedUrl = new URL(request.url, `http://${host}`);
+      if (parsedUrl.pathname === '/ws') {
         wss.handleUpgrade(request, socket, head, (ws) => {
+          ws.deviceId = parsedUrl.searchParams.get('deviceId') || socket.remoteAddress;
           wss.emit('connection', ws, request);
         });
       } else {
@@ -427,7 +428,18 @@ function startLocalServer() {
     }
   });
 
-  wss.on('connection', (ws) => {
+  wss.on('connection', (ws, request) => {
+    const devId = ws.deviceId || request?.socket?.remoteAddress || 'client';
+    ws.deviceId = devId;
+
+    // Chiudi eventuali connessioni socket orfane dello stesso dispositivo
+    for (const client of clients) {
+      if (client !== ws && client.deviceId === devId) {
+        try { client.close(); } catch(e){}
+        clients.delete(client);
+      }
+    }
+
     clients.add(ws);
     broadcastConnectionStatus();
     
@@ -518,9 +530,15 @@ function startLocalServer() {
 }
 
 function broadcastConnectionStatus() {
+  const uniqueDevices = new Set();
+  for (const client of clients) {
+    if (client.readyState === 1) {
+      uniqueDevices.add(client.deviceId || client._socket?.remoteAddress || 'unknown');
+    }
+  }
   const status = {
-    ipadConnected: clients.size > 0,
-    ipadCount: clients.size
+    ipadConnected: uniqueDevices.size > 0,
+    ipadCount: uniqueDevices.size
   };
   if (presenterWindow && !presenterWindow.webContents.isDestroyed()) {
     presenterWindow.webContents.send('ipad-connection-status', status);

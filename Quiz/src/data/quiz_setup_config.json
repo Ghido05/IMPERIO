@@ -24,7 +24,7 @@
     ]
   },
   "gioco1": {
-    "selectedQuestion": 5,
+    "selectedQuestion": 8,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -283,8 +283,9 @@
             "",
             ""
           ],
-          "confermaAudio": "",
-          "soluzione": ""
+          "confermaAudio": "/Audio/strumenti/1_8_thinkabouttheway.mp3",
+          "soluzione": "TAJ MAHAL",
+          "categoria": "MONUMENTO"
         }
       },
       "9": {
@@ -355,7 +356,7 @@
     "sfondoGenerale": "/Icone/nessuno_img/sfondo_finale_default.jpg"
   },
   "gioco2": {
-    "selectedQuestion": 5,
+    "selectedQuestion": 4,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -379,7 +380,7 @@
             "BOSNIA ERZEGOVINA"
           ],
           "indizi": [
-            "",
+            "OSSESIONE1",
             "",
             "",
             "",
@@ -520,7 +521,7 @@
         }
       },
       "4": {
-        "tipo": "canzone",
+        "tipo": "immagine",
         "canzone": {
           "audioFiles": [
             "",
@@ -567,8 +568,9 @@
             ""
           ],
           "immagineJpg": "",
-          "soluzioneAudio": "",
-          "soluzioneTesto": ""
+          "soluzioneAudio": "/Audio/strumenti/2_4_Angela.mp3",
+          "soluzioneTesto": "CADO DALLE NUBI",
+          "categoria": "FILM"
         }
       },
       "5": {
@@ -974,7 +976,7 @@
       {
         "testo": "CENTENARIO DELLA MITICA STRADA CHE COLLEGA CHICAGO A SANTA MONICA",
         "sfondo": "/Icone/sfondi/4_1_route66.jpg",
-        "confermaAudio": "",
+        "confermaAudio": "/Audio/strumenti/4_1_vespa.mp3",
         "lettereVisibili": [
           1,
           6,
@@ -1001,7 +1003,7 @@
       {
         "testo": "PER CAUSA SUA I TEMPLI DI ABU SIMBEL FURONO SPOSTATI",
         "sfondo": "/Icone/sfondi/4_2_digaAssuan.jpg",
-        "confermaAudio": "",
+        "confermaAudio": "/Audio/strumenti/4_2_parapapapa.mp3",
         "lettereVisibili": [
           1,
           5,
@@ -1025,7 +1027,7 @@
       {
         "testo": "L' ITALIANO LUCA PARMITANO PARTECIPERà ALLA MISSIONE SPAZIALE",
         "sfondo": "/Icone/sfondi/4_3_ArtemisIII.jpg",
-        "confermaAudio": "",
+        "confermaAudio": "/Audio/strumenti/4_3_italiano.mp3",
         "lettereVisibili": [
           4,
           9,
@@ -1070,7 +1072,7 @@
       {
         "testo": "L' ESPLORATORE SCOZZESE SCOPRì LE CASCATE VITTORIA",
         "sfondo": "/Icone/sfondi/4_6_Livingstone.jpg",
-        "confermaAudio": "",
+        "confermaAudio": "/Audio/strumenti/4_6_nevergoinghome.mp3",
         "lettereVisibili": [
           6,
           12,

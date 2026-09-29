@@ -1,7 +1,7 @@
 {
   "nadia": {
     "sfondo": "/Icone/sfondi/1001Nadia.jpg",
-    "musicaStacchetto": "",
+    "musicaStacchetto": "/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3",
     "domande": [
       {
         "id": "nadia_1",
@@ -24,7 +24,7 @@
     ]
   },
   "gioco1": {
-    "selectedQuestion": 8,
+    "selectedQuestion": 3,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -98,11 +98,11 @@
         "tipo": "canzone",
         "canzone": {
           "audioFiles": [
-            "",
-            "",
-            "",
-            "",
-            ""
+            "/Audio/strumenti/g01m03s01 elettronica - wreckingball.mp3",
+            "/Audio/strumenti/g01m03s02 tastiera - wreckingball.mp3",
+            "/Audio/strumenti/g01m03s03 chelettrica - wreckingball.mp3",
+            "/Audio/strumenti/g01m03s04 piano - wreckingball.mp3",
+            "/Audio/strumenti/g01m03s05 flauto - wreckingball.mp3"
           ],
           "indizi": [
             "",
@@ -356,7 +356,7 @@
     "sfondoGenerale": "/Icone/nessuno_img/sfondo_finale_default.jpg"
   },
   "gioco2": {
-    "selectedQuestion": 4,
+    "selectedQuestion": 3,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -556,21 +556,22 @@
         },
         "immagine": {
           "lista10": [
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            ""
+            "⚽ CALCIO",
+            "🎾 TENNIS E PADEL",
+            "🏐 PALLAVOLO",
+            "🏀 PALLACANESTRO",
+            "🎣 PESCA SPORTIVA E ATTVITÀ SUBACQUEE",
+            "🏃 ATLETICA LEGGERA",
+            "🤸 GINNASTICA",
+            "🏊 NUOTO",
+            "🥋 ARTI MARZIALI",
+            "🚴 CICLISMO"
           ],
           "immagineJpg": "",
           "soluzioneAudio": "/Audio/strumenti/2_4_Angela.mp3",
           "soluzioneTesto": "CADO DALLE NUBI",
-          "categoria": "FILM"
+          "categoria": "FILM",
+          "domanda": "10 SPORT CON PIÙ TESSERATI IN ITALIA"
         }
       },
       "5": {

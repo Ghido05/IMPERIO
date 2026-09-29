@@ -14,17 +14,26 @@
       },
       {
         "id": "nadia_1790272964098_kwak",
+        "domanda": "Tradotto dal persiano e dall'arabo, qual è il significato letterale del nome \"Taj Mahal\", l'imponente monumento in marmo bianco costruito in India dall'imperatore Shah Jahan?",
+        "rispostaCorretta": "La Corona dei Palazzi",
+        "risposta2": "Il Tempio delle Lacrime",
+        "risposta3": "La casa dell'eternità",
+        "targetBox": 1,
+        "targetQuestion": 8
+      },
+      {
+        "id": "nadia_1790712588000_qjr1",
         "domanda": "",
         "rispostaCorretta": "",
         "risposta2": "",
         "risposta3": "",
         "targetBox": 1,
-        "targetQuestion": 2
+        "targetQuestion": 3
       }
     ]
   },
   "gioco1": {
-    "selectedQuestion": 3,
+    "selectedQuestion": 8,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -171,9 +180,9 @@
           ],
           "indizi": [
             "IN OGNI DIREZIONE VUOLE ANDARE, ESISTE CIÒ CHE VUOL CERCARE?",
-            "",
-            "",
-            ""
+            "DUO SENZA DIFETTO, SOLO UNO PORTA IL BERRETTO?",
+            "QUELLO CHE SENTI NON È UN LAMENTO, LE RISPOSTE LE PORTA IL VENTO",
+            "CON UN GRINGO E UNO STRANIERO, MAX PEZZALI È FIERO"
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g01m05soluzione.mp3",
           "titolo": "NORD SUD OVEST EST",
@@ -276,17 +285,18 @@
           "anno": ""
         },
         "immagine": {
-          "immagineJpg": "",
+          "immagineJpg": "/Icone/nessuno_img/1_8_tajmahal.jpg",
           "indizi": [
-            "",
-            "",
-            "",
-            ""
+            "DEL MARMO BIANCO AMMIRI IL CANDORE, E RIMANI ACCECATO DAL SUO SPLENDORE",
+            "L'IMPERATORE MANTENNE LA PROMESSA, ONORANDO PER SEMPRE LA SUA PRINCIPESSA",
+            "UN'INESTIMABILE OPERA ORIENTALE, DALLA SIMMETRIA MONUMENTALE",
+            "CONSIDERATO DELL'INDIA IL PIù GRANDE TESORO, COSTò ANNI DI DURO LAVORO"
           ],
           "confermaAudio": "/Audio/strumenti/1_8_thinkabouttheway.mp3",
           "soluzione": "TAJ MAHAL",
           "categoria": "MONUMENTO"
-        }
+        },
+        "notePresentatore": "DOMANDA NADIA:\n\"Il nome Taj Mahal significa letteralmente 'Corona (Taj) dei palazzi (Mahal)'. In realtà, è un omaggio diretto alla donna a cui l'intero complesso è dedicato: Mumtaz Mahal, l'amatissima moglie dell'imperatore. Il suo nome significava 'L'eletta del palazzo'. Alla sua morte, avvenuta dando alla luce il loro quattordicesimo figlio, il sovrano decise di onorarne la memoria costruendo un mausoleo che fosse letteralmente il fiore all'occhiello, la 'corona', di tutta l'architettura del tempo.\"\nUna dichiarazione d'amore monumentale: Fu commissionato nel 1632 dall'imperatore indiano Shah Jahan per ospitare le spoglie dell'amatissima moglie Mumtaz Mahal, morta dando alla luce il loro quattordicesimo figlio.\nNumeri da record: Per completare questa meraviglia ci sono voluti più di 20 anni, il lavoro ininterrotto di 20.000 artigiani provenienti da tutta l'Asia e una flotta di oltre 1.000 elefanti per trasportare i blocchi di materiale.\nMagia cromatica: L'intero mausoleo è rivestito di marmo bianco tempestato di 28 tipi diversi di pietre preziose. Grazie a questa superficie, il Taj Mahal cambia colore a seconda della luce: appare rosato all'alba, bianco abbagliante a mezzogiorno e dorato o azzurrino sotto la luce della luna.\nUn'ossessione per la simmetria: Il complesso è progettato per essere perfettamente simmetrico e speculare in ogni suo dettaglio architettonico. L'unica cosa \"fuori asse\" in tutta la struttura? Le due tombe all'interno: quella della moglie riposa esattamente al centro, mentre quella dell'imperatore, aggiunta solo molti anni dopo alla sua morte, è più grande e decentrata."
       },
       "9": {
         "tipo": "canzone",
@@ -356,7 +366,7 @@
     "sfondoGenerale": "/Icone/nessuno_img/sfondo_finale_default.jpg"
   },
   "gioco2": {
-    "selectedQuestion": 3,
+    "selectedQuestion": 2,
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -465,7 +475,7 @@
           "categoria": "ANIMALE",
           "domanda": "10 EMOTICON PIÙ UTILIZZATE A LIVELLO GLOBALE"
         },
-        "notePresentatore": "RIPORTA SKYTG24 CHE EMOJIPEDIA, IL MOTORE DI RICERCA CHE MONITORA L'UTILIZZO DELLE FACCINE, HA STILATO LA LISTA DI FACCINE PIÙ USATE NEL 2026."
+        "notePresentatore": "RIPORTA SKYTG24 CHE EMOJIPEDIA, IL MOTORE DI RICERCA CHE MONITORA L'UTILIZZO DELLE FACCINE, HA STILATO LA LISTA DI FACCINE PIÙ USATE NEL 2026.\nNON ACCETTARE GALLINA (EQUIVALE AD ACCETTARE GATTO PER LA TIGRE)"
       },
       "3": {
         "tipo": "canzone",
@@ -683,7 +693,7 @@
     "sfondoGenerale": ""
   },
   "gioco3": {
-    "selectedQuestion": 2,
+    "selectedQuestion": 1,
     "questions": {
       "1": {
         "sfondo": "/Icone/nessuno_img/3_1_superereoi.png",
@@ -698,15 +708,15 @@
           {
             "parola": "TOPOLINO",
             "indizi": [
-              "2132",
-              "32342"
+              "1928",
+              "1948"
             ]
           },
           {
             "parola": "SPONGEBOB",
             "indizi": [
-              "234434",
-              "4334"
+              "TRITONI",
+              "BIKINI"
             ]
           }
         ],
@@ -721,15 +731,15 @@
           {
             "parola": "LUPO ALBERTO",
             "indizi": [
-              "34334",
-              "44334"
+              "SILVER",
+              "GOLDEN"
             ]
           },
           {
             "parola": "TEX WILLER",
             "indizi": [
-              "34344",
-              "4234"
+              "NECROMANTE",
+              "NOTTE"
             ]
           }
         ],
@@ -744,15 +754,15 @@
           {
             "parola": "SPIDERMAN",
             "indizi": [
-              "3343",
-              "43454"
+              "LONDRA",
+              "QUEENS"
             ]
           },
           {
             "parola": "GANDALF",
             "indizi": [
-              "434554\\",
-              "44354"
+              "COMPAGNIA",
+              "TORRE DI ASTRONOMIA"
             ]
           }
         ],
@@ -777,7 +787,8 @@
             "vuoto",
             "bonus"
           ]
-        }
+        },
+        "notePresentatore": "DALLA TORRE DI ASTRONOMIA CADE SILENTE (NON GANDALF)\nIL NECROMANTE è MEFISTO\nTRITONI NEL CALICE DI FUOCO VENGONO INCONTRATI DA HARRY DURANTE LA SECONDA PROVA"
       },
       "2": {
         "sfondo": "/Icone/nessuno_img/3_2_dolci.png",
@@ -1051,11 +1062,20 @@
         "notePresentatore": "❓A seguito dei drastici cambiamenti annunciati nel 2026, quale sarà il vero obiettivo della missione Artemis III della NASA (posticipata al 2027)?\nA) Atterrare sul Polo Sud lunare B) Testare l'attracco con i lander lunari nell'orbita terrestre C) Sorvolare Marte\nRisposta corretta: B) Testare l'attracco con i lander lunari nell'orbita terrestre. \nL'atterraggio sulla Luna avverrà con Artemis IV nel 2028.\n"
       },
       {
-        "testo": "PRINCIPESSA KATE IN VISITA A REGGIO EMILIA",
-        "sfondo": "",
+        "testo": "ARCHIMEDE BRUCIò LE NAVI ROMANE CON GLI SPECCHI",
+        "sfondo": "/Icone/nessuno_img/4_4_archimede.jpg",
         "confermaAudio": "",
-        "lettereVisibili": [],
-        "indizio": "",
+        "lettereVisibili": [
+          4,
+          8,
+          15,
+          21,
+          30,
+          33,
+          38,
+          46
+        ],
+        "indizio": "212 A.C., SIRACUSA",
         "bonus": "",
         "punti": 1000,
         "notePresentatore": ""

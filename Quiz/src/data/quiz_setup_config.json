@@ -45,7 +45,7 @@
     "videoSpiegazione": ""
   },
   "gioco1": {
-    "selectedQuestion": 8,
+    "selectedQuestion": 7,
     "videoSpiegazione": "",
     "questions": {
       "1": {
@@ -127,10 +127,10 @@
             "/Audio/strumenti/g01m03s05 flauto - wreckingball.mp3"
           ],
           "indizi": [
-            "",
-            "",
-            "",
-            ""
+            "IN UN VIDEO VIRALE CHE HA FATTO RUMORE, CANTANDO ESPRIME IL SUO GRANDE DOLORE",
+            "UN TEMPO IN UNA SERIE CON DOPPIA IDENTITÀ, OGGI È UNA RIBELLE DI GRAN CELEBRITÀ",
+            "SE TRADUCO IL RITORNELLO, LEI LO URLA DI SICURO: \"IO VOLEVO SOLTANTO ABBATTERE IL TUO MURO!\"",
+            "CI DONDOLA SOPRA CON GRANDE EMOZIONE, IL TITOLO IN INGLESE È \"PALLA DA DEMOLIZIONE\"!"
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g01m03soluzione.mp3",
           "titolo": "WRECKING BALL",
@@ -147,7 +147,7 @@
           "confermaAudio": "",
           "soluzione": "Telemaco "
         },
-        "notePresentatore": ""
+        "notePresentatore": "NOTA PER IL PRESENTATORE: È LA TRADUZIONE DEL VERSO \"ALL I WANTED WAS TO BREAK YOUR WALLS\""
       },
       "4": {
         "tipo": "immagine",
@@ -170,15 +170,17 @@
           "anno": ""
         },
         "immagine": {
-          "immagineJpg": "",
+          "immagineJpg": "/Icone/nessuno_img/1_4_cricchetto.jpg",
           "indizi": [
-            "",
-            "",
-            "",
-            ""
+            "IN UN FILM D'ANIMAZIONE DI GRANDE SUCCESSO, A NESSUN ESSERE UMANO L'INGRESSO È CONCESSO",
+            "A RADIATOR SPRINGS LUI HA LA SUA CASETTA, ED È IL MIGLIORE AMICO DEL GRANDE SAETTA",
+            "È UN VECCHIO CARRO ATTREZZI SENZA PIÙ VERNICE, MA CON I SUOI DENTONI È SEMPRE FELICE",
+            "PER OGNI SOCCORSO LUI CI METTE IL PETTO, IL SUO NOME ESATTO È PROPRIO..."
           ],
-          "confermaAudio": "",
-          "soluzione": ""
+          "confermaAudio": "/Audio/strumenti/1_4_bam bam.mp3",
+          "soluzione": "CRICCHETTO",
+          "categoria": "PERSONAGGIO ",
+          "grigliaSeme": 534747
         }
       },
       "5": {
@@ -256,10 +258,10 @@
             "/Audio/strumenti/g01m07s05 flauto - payphone.mp3"
           ],
           "indizi": [
-            "",
-            "",
-            "",
-            ""
+            "PARLA DI UN AMORE ORMAI GIUNTO AL FINALE, E DI UNA LUNGA CHIAMATA CHE FINISCE MALE",
+            "SUL PALCO SONO IN CINQUE A SUONARE CON GRANDE ARDORE, E IL LORO NOME INGLESE RICHIAMA UN CALDO COLORE",
+            "SE TRADUCO IL RITORNELLO, LUI LO CANTA CON DOLORE: \"HO SPESO TUTTI I MIEI SPICCIOLI PER QUESTO AMORE!\"",
+            "PER USARLO IN STRADA INSERIVI IL GETTONE, IN INGLESE È QUESTO TELEFONO PUBBLICO, FATE ATTENZIONE!"
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g01m07soluzione.mp3",
           "titolo": "PAYPHONE",
@@ -999,7 +1001,6 @@
   },
   "gioco4": {
     "titolo": "Gioco 4",
-    "videoSpiegazione": "",
     "note": "Modulo Gioco 4 (in arrivo)",
     "frasi": [
       {
@@ -1162,15 +1163,16 @@
         "notePresentatore": ""
       }
     ],
-    "sfondoGenerale": ""
+    "sfondoGenerale": "",
+    "videoSpiegazione": ""
   },
   "gioco5": {
     "titolo": "Gioco 5",
-    "videoSpiegazione": "",
     "sottotitolo": "Sfida con dado, omini sui cubi 3D e 4 bonus per squadra",
     "sfondoGenerale": "/sfondo_finale_acqua.jpg",
     "numeroDomande": 15,
-    "notePresentatore": ""
+    "notePresentatore": "",
+    "videoSpiegazione": ""
   },
   "punteggi": {
     "sfondo": "/Icone/nessuno_img/sfondo_finale_acqua.jpg",

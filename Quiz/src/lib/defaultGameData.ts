@@ -18,6 +18,9 @@ export const defaultGameDataMap: Record<Exclude<SlideType, 'empty'>, unknown> = 
   password_prescelti: defaultPasswordData,
   classifica_generale: {},
   finale_squadre: {},
+  scenetta: {},
+  video: {},
+  mappa_torneo: {},
 };
 
 export function cloneDefaultData(type: SlideType): unknown {

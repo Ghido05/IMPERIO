@@ -261,7 +261,9 @@ ipcMain.handle('save-asset-file', async (_event, { fileName, base64, category })
     let targetSubdir = '';
     const lowerName = fileName.toLowerCase();
     
-    if (category === 'audio_strumenti' || lowerName.includes('strument')) {
+    if (category === 'video' || lowerName.endsWith('.mp4') || lowerName.endsWith('.webm') || lowerName.endsWith('.mov') || lowerName.endsWith('.mkv')) {
+      targetSubdir = 'Video';
+    } else if (category === 'audio_strumenti' || lowerName.includes('strument')) {
       targetSubdir = 'Audio/strumenti';
     } else if (category === 'audio_soluzione' || lowerName.includes('soluzion')) {
       targetSubdir = 'Audio/soluzioni a conferma';

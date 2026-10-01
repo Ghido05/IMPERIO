@@ -16,7 +16,10 @@ export type SlideType =
   | 'password_squadre'
   | 'password_prescelti'
   | 'classifica_generale'
-  | 'finale_squadre';
+  | 'finale_squadre'
+  | 'scenetta'
+  | 'video'
+  | 'mappa_torneo';
 
 export interface Slide {
   id: string;

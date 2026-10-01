@@ -32,8 +32,21 @@
       }
     ]
   },
+  "box0": {
+    "scenetta": {
+      "sfondo": "",
+      "titolo": "IMPERIO VIII",
+      "sottotitolo": "I Prodromi dello Scontro",
+      "testo": "Imperio VIII è composto da 3 fasi: la prima fase è chiamata “I prodromi dello scontro”, in essa troviamo due giochi che vi permetteranno di ottenere punti. La seconda fase “La corsa agli equipaggiamenti”, formata da due giochi, è possibile ottenere oltre a punti, bonus, cioè vantaggi per il gioco finale. La fase finale “Termopili: scontro finale” nella quale si decreterà la squadra vincente.\n\nPer non delegittimare il percorso che intraprenderemo, la squadra con più punti giocherà la manche finale con 6 prescelti, la seconda, in base al divario con la prima squadra potrà giocare con 6, 5 o 4 persone secondo i delta punti che vedete riportati, l’ultima con solo 3.",
+      "notePresentatore": "Imperio VIII è composto da 3 fasi: la prima fase è chiamata “I prodromi dello scontro”, in essa troviamo due giochi che vi permetteranno di ottenere punti. La seconda fase “La corsa agli equipaggiamenti”, formata da due giochi, è possibile ottenere oltre a punti, bonus, cioè vantaggi per il gioco finale. La fase finale “Termopili: scontro finale” nella quale si decreterà la squadra vincente.\nPer non delegittimare il percorso che intraprenderemo, la squadra con più punti giocherà la manche finale con 6 prescelti, la seconda, in base al divario con la prima squadra potrà giocare con 6, 5 o 4 persone secondo i delta punti che vedete riportati, l’ultima con solo 3."
+    },
+    "videoPreSigla": "",
+    "videoSigla": "",
+    "videoSpiegazione": ""
+  },
   "gioco1": {
     "selectedQuestion": 8,
+    "videoSpiegazione": "",
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -366,7 +379,8 @@
     "sfondoGenerale": "/Icone/nessuno_img/sfondo_finale_default.jpg"
   },
   "gioco2": {
-    "selectedQuestion": 2,
+    "selectedQuestion": 3,
+    "videoSpiegazione": "",
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -510,7 +524,8 @@
           "soluzioneAudio": "/Audio/soluzioni a conferma/g02m03soluzione.mp3",
           "titolo": "SIAMO UGUALI",
           "info": "2015",
-          "artista": "LORENZO FRAGOLA"
+          "artista": "LORENZO FRAGOLA",
+          "domanda": "SUCA"
         },
         "immagine": {
           "lista10": [
@@ -694,6 +709,7 @@
   },
   "gioco3": {
     "selectedQuestion": 1,
+    "videoSpiegazione": "",
     "questions": {
       "1": {
         "sfondo": "/Icone/nessuno_img/3_1_superereoi.png",
@@ -983,6 +999,7 @@
   },
   "gioco4": {
     "titolo": "Gioco 4",
+    "videoSpiegazione": "",
     "note": "Modulo Gioco 4 (in arrivo)",
     "frasi": [
       {
@@ -1149,6 +1166,7 @@
   },
   "gioco5": {
     "titolo": "Gioco 5",
+    "videoSpiegazione": "",
     "sottotitolo": "Sfida con dado, omini sui cubi 3D e 4 bonus per squadra",
     "sfondoGenerale": "/sfondo_finale_acqua.jpg",
     "numeroDomande": 15,

@@ -11,10 +11,10 @@ export const GameDataProvider = ({ data, children }: { data: any, children: Reac
   );
 };
 
-export const useGameData = () => {
+export const useGameData = <T = any,>(): T => {
   const context = useContext(GameDataContext);
   if (context === undefined) {
     throw new Error('useGameData must be used within a GameDataProvider');
   }
-  return context;
+  return context as T;
 };

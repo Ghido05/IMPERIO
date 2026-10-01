@@ -165,11 +165,12 @@ const ClassificaGenerale_Board: React.FC = () => {
   ];
 
   const maxScore = Math.max(...scores, 10000); // Scale histogram to at least 10k
+  const isBox0 = activeBox === 0;
 
   return (
     <div
       className="relative w-[1920px] h-[1080px] bg-[#0a0a0a] text-white flex flex-col px-10 py-8 overflow-hidden font-sans"
-      style={setup?.sfondo ? { backgroundImage: `url("${assetUrl(setup.sfondo)}")`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
+      style={(!isBox0 && setup?.sfondo) ? { backgroundImage: `url("${assetUrl(setup.sfondo)}")`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
       <style>{`
         @keyframes custom-blink {
@@ -182,7 +183,7 @@ const ClassificaGenerale_Board: React.FC = () => {
       `}</style>
 
       {/* Background decoration */}
-      {!setup?.sfondo && (
+      {(!setup?.sfondo || isBox0) && (
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-600/20 blur-[120px] rounded-full" />
           <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] bg-blue-600/20 blur-[120px] rounded-full" />
@@ -194,69 +195,92 @@ const ClassificaGenerale_Board: React.FC = () => {
         Classifica Generale
       </h1>
 
-      <div className="flex-1 grid grid-cols-3 gap-10 min-h-0 px-4">
-        {teamConfigs.map((team, i) => {
-          const isBlinking = 
-            (activeBox === 2 && blinkingTeamIdx === i) ||
-            (activeBox === 1 && bookedTeamVal !== null && (bookedTeamVal - 1) === i);
-          return (
-            <div key={i} className="grid grid-rows-[auto_auto_240px_auto] h-full min-h-0 content-between">
+      {isBox0 ? (
+        /* Vista Box 0: Senza sfondo, visibili solo i nomi delle squadre e i punteggi */
+        <div className="flex-1 flex flex-col justify-center items-center px-4">
+          <div className="w-full max-w-6xl grid grid-cols-3 gap-12">
+            {teamConfigs.map((team, i) => (
               <div 
-                onClick={() => {
-                  if (activeBox === 2) {
-                    setBox2ActiveTeamIdx(i);
-                  }
-                }}
-                className={`
-                  ${team.color} w-full py-4 rounded-2xl shadow-2xl flex items-center justify-center mb-3 border-4 transition-all duration-300
-                  ${activeBox === 2 ? 'cursor-pointer hover:scale-105 active:scale-95' : ''}
-                  ${isBlinking 
-                    ? 'animate-custom-blink border-white ring-4 ring-white/50 shadow-[0_0_30px_rgba(255,255,255,0.6)]' 
-                    : 'border-white/20'}
-                `}
+                key={i} 
+                className="bg-[#18181b]/80 border-2 border-white/20 rounded-3xl p-8 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md"
               >
-                <span className="text-3xl font-black tracking-widest">{team.name}</span>
+                <div className={`${team.color} w-full py-5 rounded-2xl shadow-xl flex items-center justify-center mb-6 border-2 border-white/30`}>
+                  <span className="text-4xl font-black tracking-widest uppercase">{team.name}</span>
+                </div>
+
+                <div className="py-4">
+                  <EditableScore index={i} score={scores[i]} setScore={setScore} />
+                </div>
               </div>
-
-            <EditableScore index={i} score={scores[i]} setScore={setScore} />
-
-            <div className="w-full relative overflow-hidden min-h-[180px] my-2">
-              <div
-                className={`absolute bottom-0 left-0 w-full ${team.color} transition-all duration-1000 ease-out shadow-[0_0_40px_rgba(255,255,255,0.1)] rounded-t-3xl`}
-                style={{ height: `${(scores[i] / maxScore) * 100}%` }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                <div className="absolute top-0 left-0 w-full h-1 bg-white/40" />
-              </div>
-            </div>
-
-            <div className="w-full bg-white/5 p-6 rounded-3xl border-2 border-white/10 flex justify-center items-center gap-3 min-h-[112px]">
-              {[
-                { key: 'dado', label: 'Dado', emoji: '🎲' },
-                { key: 'switch', label: 'Switch', emoji: '🔄' },
-                { key: 'arco', label: 'Arco', emoji: '🏹' },
-                { key: 'scudo', label: 'Scudo', emoji: '🛡️' },
-              ].map((bonusMeta, bonusIdx) => {
-                const isChecked = bonuses[i]?.[bonusIdx];
-                return (
-                  <div
-                    key={bonusIdx}
-                    onClick={() => toggleBonus(i, bonusIdx)}
-                    title={bonusMeta.label}
-                    className={`w-28 h-28 rounded-2xl flex items-center justify-center transition-all duration-500 border-2 cursor-pointer
-                      ${isChecked
-                        ? `${team.color} border-white shadow-[0_0_20px_rgba(255,255,255,0.4)] scale-110`
-                        : 'bg-transparent border-white/10 opacity-20 scale-90 grayscale'}
-                    `}
-                  >
-                    <span className="text-5xl">{bonusMeta.emoji}</span>
-                  </div>
-                );
-              })}
-            </div>
+            ))}
           </div>
-        )})}
-      </div>
+        </div>
+      ) : (
+        /* Vista Normale: Istogramma completo e bonus */
+        <div className="flex-1 grid grid-cols-3 gap-10 min-h-0 px-4">
+          {teamConfigs.map((team, i) => {
+            const isBlinking = 
+              (activeBox === 2 && blinkingTeamIdx === i) ||
+              (activeBox === 1 && bookedTeamVal !== null && (bookedTeamVal - 1) === i);
+            return (
+              <div key={i} className="grid grid-rows-[auto_auto_240px_auto] h-full min-h-0 content-between">
+                <div 
+                  onClick={() => {
+                    if (activeBox === 2) {
+                      setBox2ActiveTeamIdx(i);
+                    }
+                  }}
+                  className={`
+                    ${team.color} w-full py-4 rounded-2xl shadow-2xl flex items-center justify-center mb-3 border-4 transition-all duration-300
+                    ${activeBox === 2 ? 'cursor-pointer hover:scale-105 active:scale-95' : ''}
+                    ${isBlinking 
+                      ? 'animate-custom-blink border-white ring-4 ring-white/50 shadow-[0_0_30px_rgba(255,255,255,0.6)]' 
+                      : 'border-white/20'}
+                  `}
+                >
+                  <span className="text-3xl font-black tracking-widest">{team.name}</span>
+                </div>
+
+              <EditableScore index={i} score={scores[i]} setScore={setScore} />
+
+              <div className="w-full relative overflow-hidden min-h-[180px] my-2">
+                <div
+                  className={`absolute bottom-0 left-0 w-full ${team.color} transition-all duration-1000 ease-out shadow-[0_0_40px_rgba(255,255,255,0.1)] rounded-t-3xl`}
+                  style={{ height: `${(scores[i] / maxScore) * 100}%` }}
+                >
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  <div className="absolute top-0 left-0 w-full h-1 bg-white/40" />
+                </div>
+              </div>
+
+              <div className="w-full bg-white/5 p-6 rounded-3xl border-2 border-white/10 flex justify-center items-center gap-3 min-h-[112px]">
+                {[
+                  { key: 'dado', label: 'Dado', emoji: '🎲' },
+                  { key: 'switch', label: 'Switch', emoji: '🔄' },
+                  { key: 'arco', label: 'Arco', emoji: '🏹' },
+                  { key: 'scudo', label: 'Scudo', emoji: '🛡️' },
+                ].map((bonusMeta, bonusIdx) => {
+                  const isChecked = bonuses[i]?.[bonusIdx];
+                  return (
+                    <div
+                      key={bonusIdx}
+                      onClick={() => toggleBonus(i, bonusIdx)}
+                      title={bonusMeta.label}
+                      className={`w-28 h-28 rounded-2xl flex items-center justify-center transition-all duration-500 border-2 cursor-pointer
+                        ${isChecked
+                          ? `${team.color} border-white shadow-[0_0_20px_rgba(255,255,255,0.4)] scale-110`
+                          : 'bg-transparent border-white/10 opacity-20 scale-90 grayscale'}
+                      `}
+                    >
+                      <span className="text-5xl">{bonusMeta.emoji}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )})}
+        </div>
+      )}
 
       {/* Reset button hidden for safety but accessible via keyboard or dev */}
       <div className="fixed bottom-4 right-4 opacity-5 hover:opacity-100 transition-opacity">

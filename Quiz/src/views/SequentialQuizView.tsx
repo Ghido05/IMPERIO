@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import SlideCanvas from '../components/SlideCanvas';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import PresenterPreviewPanel from '../components/PresenterPreviewPanel';
@@ -25,6 +25,94 @@ export function getSlideForBoxQuestion(
   boxNum: number,
   questionNum: number
 ): Slide {
+  if (boxNum === 0) {
+    if (questionNum === 1) {
+      return {
+        id: 'box0_scenetta',
+        type: 'scenetta',
+        data: {
+          sfondo: setupState.box0?.scenetta?.sfondo || '',
+          titolo: setupState.box0?.scenetta?.titolo || 'IMPERIO VIII',
+          sottotitolo: setupState.box0?.scenetta?.sottotitolo || 'I Prodromi dello Scontro',
+          testo: setupState.box0?.scenetta?.testo || '',
+          notePresentatore: setupState.box0?.scenetta?.notePresentatore || '',
+        },
+      };
+    }
+    if (questionNum === 2) {
+      return {
+        id: 'box0_presigla',
+        type: 'video',
+        data: {
+          src: setupState.box0?.videoPreSigla || '',
+          videoUrl: setupState.box0?.videoPreSigla || '',
+          titolo: 'VIDEO PRE-SIGLA',
+          sottotitolo: 'Imperio VIII — Pre-Sigla',
+          slideId: 'box0_presigla',
+          notePresentatore: 'Video Pre-Sigla prima dell’apertura ufficiale',
+        },
+      };
+    }
+    if (questionNum === 3) {
+      return {
+        id: 'box0_sigla',
+        type: 'video',
+        data: {
+          src: setupState.box0?.videoSigla || '',
+          videoUrl: setupState.box0?.videoSigla || '',
+          titolo: 'SIGLA UFFICIALE',
+          sottotitolo: 'Imperio VIII — Sigla di Apertura',
+          slideId: 'box0_sigla',
+          notePresentatore: 'Sigla ufficiale di inizio torneo',
+        },
+      };
+    }
+    return {
+      id: 'box0_spiegazione',
+      type: 'video',
+      data: {
+        src: setupState.box0?.videoSpiegazione || '',
+        videoUrl: setupState.box0?.videoSpiegazione || '',
+        titolo: 'VIDEO SPIEGAZIONE GENERALE',
+        sottotitolo: 'Regolamento Generale del Torneo',
+        slideId: 'box0_spiegazione',
+        notePresentatore: 'Video esplicativo del regolamento globale e delle 3 fasi',
+      },
+    };
+  }
+
+  // Mappa dell'Isola e Video Spiegazione specifico per ciascun gioco (prima della domanda 1)
+  if (questionNum === 0) {
+    const boxTitles: Record<number, string> = {
+      1: 'BOX 1 — Il mio nome è nessuno',
+      2: 'BOX 2 — Classifiche',
+      3: 'BOX 3 — Password',
+      4: 'BOX 4 — Frase Tempo',
+      5: 'BOX 5 — Termopili (Scontro Finale)',
+    };
+    const boxVideos: Record<number, string> = {
+      1: setupState.gioco1?.videoSpiegazione || '',
+      2: setupState.gioco2?.videoSpiegazione || '',
+      3: setupState.gioco3?.videoSpiegazione || '',
+      4: (setupState.gioco4 as any)?.videoSpiegazione || '',
+      5: (setupState.gioco5 as any)?.videoSpiegazione || '',
+    };
+    const currentVideo = boxVideos[boxNum] || '';
+    return {
+      id: `box${boxNum}_mappa_spiegazione`,
+      type: 'mappa_torneo',
+      data: {
+        boxNum,
+        src: currentVideo,
+        videoUrl: currentVideo,
+        titolo: `MAPPA & SPIEGAZIONE — ${boxTitles[boxNum] || `BOX ${boxNum}`}`,
+        sottotitolo: `Mappa dell'Isola e Spiegazione Regole`,
+        slideId: `box${boxNum}_mappa_spiegazione`,
+        notePresentatore: `Mappa dell'Isola e Spiegazione per ${boxTitles[boxNum] || `Box ${boxNum}`}`,
+      },
+    };
+  }
+
   if (boxNum === 1) {
     const q1 = setupState.gioco1?.questions?.[questionNum] || createDefaultGioco1Question();
     const sf = q1.sfondo || setupState.gioco1?.sfondoGenerale || '';
@@ -283,9 +371,15 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
 function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   const { addScore } = useScores();
   const [setupState, setSetupState] = useState<QuizSetupState>(getDefaultSetupState());
+  const [activeBox, setActiveBox] = useState<number>(() => {
+    const saved = localStorage.getItem('playstate_active_box');
+    return saved !== null ? parseInt(saved, 10) : 0;
+  });
+  const [activeQuestion, setActiveQuestion] = useState<number>(() => {
+    const saved = localStorage.getItem('playstate_active_question');
+    return saved !== null ? parseInt(saved, 10) : 1;
+  });
   const [showLegend, setShowLegend] = useState(false);
-  const [activeBox, setActiveBox] = useState<number>(1);
-  const [activeQuestion, setActiveQuestion] = useState<number>(1);
   const [showIpadModal, setShowIpadModal] = useState(false);
   const [serverUrl, setServerUrl] = useState('');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
@@ -334,7 +428,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
       if (stored !== null) {
         const mancheVal = parseInt(stored);
         setPasswordManche(mancheVal);
-        if (activeBox === 3 && activeQuestion !== mancheVal + 1) {
+        if (activeBox === 3 && activeQuestion > 0 && activeQuestion !== mancheVal + 1) {
           setActiveQuestion(mancheVal + 1);
         }
       }
@@ -349,7 +443,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
 
   // Sincronizza activeQuestion -> password_current_manche quando si cliccano i quadratini nel BOX 3
   useEffect(() => {
-    if (activeBox === 3) {
+    if (activeBox === 3 && activeQuestion > 0) {
       const targetManche = activeQuestion - 1;
       const stored = localStorage.getItem('password_current_manche');
       const currentStoredManche = stored ? parseInt(stored) : 0;
@@ -538,6 +632,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   const [, setNadiaErrorTrigger] = useSyncedState<number>('playstate_nadia_error_trigger', 0);
   const [nadiaExcludedTeams, setNadiaExcludedTeams] = useSyncedState<number[]>('playstate_nadia_excluded_teams', []);
   const nadiaAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [nadiaAudioPlaying, setNadiaAudioPlaying] = useState(false);
 
   const teamNames = setupState.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
 
@@ -552,20 +647,46 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     setNadiaErrorTrigger(timestamp);
   };
 
-  const playNadiaJingle = (isExit = false) => {
+  const stopNadiaAudio = useCallback(() => {
+    if (nadiaAudioRef.current) {
+      nadiaAudioRef.current.pause();
+      nadiaAudioRef.current.currentTime = 0;
+      nadiaAudioRef.current = null;
+    }
+    setNadiaAudioPlaying(false);
+  }, []);
+
+  const playNadiaJingle = useCallback(() => {
     if (!setupState.nadia?.musicaStacchetto) return;
     try {
-      if (nadiaAudioRef.current) {
-        nadiaAudioRef.current.pause();
-        nadiaAudioRef.current.currentTime = 0;
-      }
+      stopNadiaAudio();
       const audio = new Audio(assetUrl(setupState.nadia.musicaStacchetto));
+      audio.onplay = () => setNadiaAudioPlaying(true);
+      audio.onpause = () => setNadiaAudioPlaying(false);
+      audio.onended = () => setNadiaAudioPlaying(false);
       nadiaAudioRef.current = audio;
-      audio.play().catch((err) => console.log(`Autoplay stacchetto ${isExit ? 'uscita' : 'ingresso'}:`, err));
+      audio.play().catch((err) => console.log('Autoplay stacchetto:', err));
     } catch (e) {
       console.warn('Errore esecuzione stacchetto audio:', e);
     }
-  };
+  }, [setupState.nadia?.musicaStacchetto, stopNadiaAudio]);
+
+  const toggleNadiaJingle = useCallback(() => {
+    if (!setupState.nadia?.musicaStacchetto) return;
+    if (nadiaAudioRef.current && !nadiaAudioRef.current.paused) {
+      nadiaAudioRef.current.pause();
+      setNadiaAudioPlaying(false);
+    } else {
+      playNadiaJingle();
+    }
+  }, [setupState.nadia?.musicaStacchetto, playNadiaJingle]);
+
+  // Pulizia audio all'unmount della vista
+  useEffect(() => {
+    return () => {
+      stopNadiaAudio();
+    };
+  }, [stopNadiaAudio]);
 
   const handleAssignNadiaPoints = (teamNum: number) => {
     if (nadiaAssignedTeam !== null) return;
@@ -650,7 +771,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     }
 
     sendSerialReset();
-    playNadiaJingle(false);
+    playNadiaJingle();
   };
 
   const handleNadiaOptionClick = (origIdx: number, isCorrect: boolean) => {
@@ -685,17 +806,15 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     }
   };
 
-  const handleCloseNadia = (playExitSound = true) => {
-    if (playExitSound) {
-      playNadiaJingle(true);
-    }
+  const handleCloseNadia = useCallback(() => {
+    stopNadiaAudio();
     setNadiaActive(false);
     setNadiaStep(0);
     setNadiaSolutionShown(false);
     setNadiaBookedTeam(null);
     setNadiaAssignedTeam(null);
     sendSerialReset();
-  };
+  }, [stopNadiaAudio, setNadiaActive, setNadiaStep, setNadiaSolutionShown, setNadiaBookedTeam, setNadiaAssignedTeam, sendSerialReset]);
 
   // Scorciatoie da tastiera per Nadia
   useEffect(() => {
@@ -740,10 +859,10 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
           if (nadiaBookedTeam !== null) {
             handleCancelNadiaBooking(true);
           } else {
-            handleCloseNadia(true);
+            handleCloseNadia();
           }
         } else if (e.key === 'm' || e.key === 'M') {
-          playNadiaJingle(false);
+          toggleNadiaJingle();
         } else if (e.key === 'Backspace') {
           if (nadiaBookedTeam !== null) {
             handleCancelNadiaBooking(true);
@@ -753,50 +872,83 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nadiaActive, nadiaStep, setNadiaStep, nadiaBookedTeam, nadiaAssignedTeam, nadiaSolutionShown, setNadiaSolutionShown]);
+  }, [nadiaActive, nadiaStep, setNadiaStep, nadiaBookedTeam, nadiaAssignedTeam, nadiaSolutionShown, setNadiaSolutionShown, handleCloseNadia, toggleNadiaJingle]);
 
   const numBox4Questions = Math.max(1, (setupState.gioco4?.frasi && setupState.gioco4.frasi.length > 0) ? setupState.gioco4.frasi.length : 2);
-  const maxQuestionsForBox = activeBox === 1 ? 10 : activeBox === 2 ? 6 : activeBox === 3 ? 3 : activeBox === 4 ? numBox4Questions : 1;
+  const maxQuestionsForBox = activeBox === 0 ? 4 : activeBox === 1 ? 10 : activeBox === 2 ? 6 : activeBox === 3 ? 3 : activeBox === 4 ? numBox4Questions : 1;
 
   const handleNext = () => {
     sendSerialReset();
+    stopNadiaAudio();
     if (nadiaActive) {
-      handleCloseNadia(true);
+      handleCloseNadia();
     }
-    if (activeQuestion < maxQuestionsForBox) {
-      const nextQ = activeQuestion + 1;
-      setActiveQuestion(nextQ);
-      if (activeBox === 4) {
-        setActivePhraseIndex(nextQ - 1);
+    if (activeBox === 0) {
+      if (activeQuestion < 4) {
+        setActiveQuestion(activeQuestion + 1);
+      } else {
+        // Pass to Box 1, starting with Video Spiegazione (q = 0)
+        setActiveBox(1);
+        setActiveQuestion(0);
       }
-    } else if (activeBox < 5) {
-      const nextB = activeBox + 1;
-      setActiveBox(nextB);
-      setActiveQuestion(1);
-      if (nextB === 4) {
-        setActivePhraseIndex(0);
+    } else {
+      if (activeQuestion === 0) {
+        // From Video Spiegazione to Question 1
+        setActiveQuestion(1);
+        if (activeBox === 4) {
+          setActivePhraseIndex(0);
+        }
+      } else if (activeQuestion < maxQuestionsForBox) {
+        const nextQ = activeQuestion + 1;
+        setActiveQuestion(nextQ);
+        if (activeBox === 4) {
+          setActivePhraseIndex(nextQ - 1);
+        }
+      } else if (activeBox < 5) {
+        const nextB = activeBox + 1;
+        setActiveBox(nextB);
+        setActiveQuestion(0);
+        if (nextB === 4) {
+          setActivePhraseIndex(0);
+        }
       }
     }
   };
 
   const handlePrev = () => {
     sendSerialReset();
+    stopNadiaAudio();
     if (nadiaActive) {
-      handleCloseNadia(true);
+      handleCloseNadia();
     }
-    if (activeQuestion > 1) {
-      const prevQ = activeQuestion - 1;
-      setActiveQuestion(prevQ);
-      if (activeBox === 4) {
-        setActivePhraseIndex(prevQ - 1);
+    if (activeBox === 0) {
+      if (activeQuestion > 1) {
+        setActiveQuestion(activeQuestion - 1);
       }
-    } else if (activeBox > 1) {
-      const prevBox = activeBox - 1;
-      const prevMax = prevBox === 1 ? 10 : prevBox === 2 ? 6 : prevBox === 3 ? 3 : prevBox === 4 ? numBox4Questions : 1;
-      setActiveBox(prevBox);
-      setActiveQuestion(prevMax);
-      if (prevBox === 4) {
-        setActivePhraseIndex(prevMax - 1);
+    } else {
+      if (activeQuestion > 1) {
+        const prevQ = activeQuestion - 1;
+        setActiveQuestion(prevQ);
+        if (activeBox === 4) {
+          setActivePhraseIndex(prevQ - 1);
+        }
+      } else if (activeQuestion === 1) {
+        // From Question 1 back to Video Spiegazione (q = 0)
+        setActiveQuestion(0);
+      } else if (activeQuestion === 0) {
+        // From Video Spiegazione back to previous Box
+        if (activeBox === 1) {
+          setActiveBox(0);
+          setActiveQuestion(4);
+        } else {
+          const prevBox = activeBox - 1;
+          const prevMax = prevBox === 1 ? 10 : prevBox === 2 ? 6 : prevBox === 3 ? 3 : prevBox === 4 ? numBox4Questions : 1;
+          setActiveBox(prevBox);
+          setActiveQuestion(prevMax);
+          if (prevBox === 4) {
+            setActivePhraseIndex(prevMax - 1);
+          }
+        }
       }
     }
   };
@@ -853,17 +1005,18 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
 
           {/* Active Box Selector */}
           <div className="flex items-center gap-2">
-            {[1, 2, 3, 4, 5].map((boxNum) => (
+            {[0, 1, 2, 3, 4, 5].map((boxNum) => (
               <button
                 key={boxNum}
                 type="button"
                 onClick={() => {
                   sendSerialReset();
+                  stopNadiaAudio();
                   if (nadiaActive) {
-                    handleCloseNadia(true);
+                    handleCloseNadia();
                   }
                   setActiveBox(boxNum);
-                  setActiveQuestion(1);
+                  setActiveQuestion(boxNum === 0 ? 1 : 0);
                   if (boxNum === 4) {
                     setActivePhraseIndex(0);
                   }
@@ -883,18 +1036,70 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
         {/* Question Selector Sub-Header */}
         <div className="h-12 bg-[#1c1c21] border-b border-white/10 px-6 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            {activeBox === 4 ? (
+            {activeBox === 0 ? (
+              <>
+                <span className="text-xs font-semibold text-white/50">Fase Introduttiva:</span>
+                <div className="flex items-center gap-2 overflow-x-auto py-1">
+                  {[
+                    { q: 1, label: '🎭 #1 Scenetta' },
+                    { q: 2, label: '🎞️ #2 Pre-Sigla' },
+                    { q: 3, label: '🎵 #3 Sigla' },
+                    { q: 4, label: '📢 #4 Spiegazione' },
+                  ].map((item) => (
+                    <button
+                      key={item.q}
+                      type="button"
+                      onClick={() => {
+                        sendSerialReset();
+                        stopNadiaAudio();
+                        if (nadiaActive) {
+                          handleCloseNadia();
+                        }
+                        setActiveQuestion(item.q);
+                      }}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg border transition-all ${
+                        activeQuestion === item.q
+                          ? 'bg-amber-500 text-black border-amber-400 shadow'
+                          : 'bg-white/5 hover:bg-white/10 text-white/70 border-white/10'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : activeBox === 4 ? (
               <>
                 <span className="text-xs font-semibold text-white/50">Seleziona Frase:</span>
                 <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sendSerialReset();
+                      stopNadiaAudio();
+                      if (nadiaActive) {
+                        handleCloseNadia();
+                      }
+                      setActiveQuestion(0);
+                    }}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-md flex items-center gap-1 transition-all ${
+                      activeQuestion === 0
+                        ? 'bg-indigo-600 text-white border border-indigo-400 shadow'
+                        : 'bg-white/5 hover:bg-white/10 text-indigo-300 border border-white/10'
+                    }`}
+                    title="Mappa dell'Isola e Video Spiegazione prima delle frasi"
+                  >
+                    <span>🗺️ Mappa & Spiegazione</span>
+                  </button>
                   {Array.from({ length: maxQuestionsForBox }, (_, idx) => (
                     <button
                       key={idx}
                       type="button"
                       onClick={() => {
                         sendSerialReset();
+                        stopNadiaAudio();
                         if (nadiaActive) {
-                          handleCloseNadia(true);
+                          handleCloseNadia();
                         }
                         setActivePhraseIndex(idx);
                         setActiveQuestion(idx + 1);
@@ -914,14 +1119,34 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
               <>
                 <span className="text-xs font-semibold text-white/50">Seleziona Domanda:</span>
                 <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sendSerialReset();
+                      stopNadiaAudio();
+                      if (nadiaActive) {
+                        handleCloseNadia();
+                      }
+                      setActiveQuestion(0);
+                    }}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-md flex items-center gap-1 transition-all ${
+                      activeQuestion === 0
+                        ? 'bg-indigo-600 text-white border border-indigo-400 shadow'
+                        : 'bg-white/5 hover:bg-white/10 text-indigo-300 border border-white/10'
+                    }`}
+                    title="Mappa dell'Isola e Video Spiegazione del gioco prima della domanda #1"
+                  >
+                    <span>🗺️ Mappa & Spiegazione</span>
+                  </button>
                   {Array.from({ length: maxQuestionsForBox }, (_, i) => i + 1).map((qNum) => (
                     <button
                       key={qNum}
                       type="button"
                       onClick={() => {
                         sendSerialReset();
+                        stopNadiaAudio();
                         if (nadiaActive) {
-                          handleCloseNadia(true);
+                          handleCloseNadia();
                         }
                         setActiveQuestion(qNum);
                       }}
@@ -943,17 +1168,17 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
             <button
               type="button"
               onClick={handlePrev}
-              disabled={activeBox === 1 && activeQuestion === 1}
-              className="px-3 py-1 text-xs font-semibold bg-white/10 hover:bg-white/15 disabled:opacity-30 rounded text-white border border-white/10 transition-all"
+              disabled={activeBox === 0 && activeQuestion === 1}
+              className="px-3 py-1 text-xs font-semibold bg-white/10 hover:bg-white/15 disabled:opacity-30 rounded text-white border border-white/10 transition-all cursor-pointer"
             >
               ◀ Precedente
             </button>
             <button
               type="button"
               onClick={handleNext}
-              className="px-4 py-1 text-xs font-bold bg-[#d24726] hover:bg-[#e85a38] rounded text-white shadow transition-all"
+              className="px-4 py-1 text-xs font-bold bg-[#d24726] hover:bg-[#e85a38] rounded text-white shadow transition-all cursor-pointer"
             >
-              Prossima Domanda ▶
+              {activeBox === 0 ? 'Prossimo Passaggio ▶' : activeQuestion === 0 ? 'Inizia Gioco (Domanda #1) ▶' : 'Prossima Domanda ▶'}
             </button>
           </div>
         </div>
@@ -962,7 +1187,32 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
         <div className={`flex-1 gap-4 p-4 min-h-0 bg-[#0d0d0f] ${maximizedPanel === 'none' ? 'grid grid-cols-1 lg:grid-cols-2' : 'flex'}`}>
           {(maximizedPanel === 'none' || maximizedPanel === 'left') && (
             <PresenterPreviewPanel
-              title={`BOX ${activeBox} — Domanda #${activeQuestion}`}
+              title={(() => {
+                if (activeBox === 0) {
+                  if (activeQuestion === 1) return 'BOX 0 — 1. Scenetta (Regolamento & Delta Punti)';
+                  if (activeQuestion === 2) return 'BOX 0 — 2. Video Pre-Sigla';
+                  if (activeQuestion === 3) return 'BOX 0 — 3. Video Sigla Ufficiale';
+                  if (activeQuestion === 4) return 'BOX 0 — 4. Video Spiegazione Generale';
+                  return `BOX 0 — Passaggio #${activeQuestion}`;
+                }
+                if (activeQuestion === 0) {
+                  const titles: Record<number, string> = {
+                    1: 'Il mio nome è nessuno',
+                    2: 'Classifiche',
+                    3: 'Password',
+                    4: 'Frase Tempo',
+                    5: 'Termopili (Scontro Finale)',
+                  };
+                  return `BOX ${activeBox} — 🗺️ Mappa & Spiegazione (${titles[activeBox] || ''})`;
+                }
+                if (activeBox === 4) {
+                  return `BOX 4 — Frase #${activeQuestion}`;
+                }
+                if (activeBox === 5) {
+                  return `BOX 5 — Termopili (Scontro Finale)`;
+                }
+                return `BOX ${activeBox} — Domanda #${activeQuestion}`;
+              })()}
               onToggleMaximize={() => setMaximizedPanel(maximizedPanel === 'left' ? 'none' : 'left')}
               isMaximized={maximizedPanel === 'left'}
               footer={
@@ -1114,15 +1364,19 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                         </div>
 
                         <div className="flex items-center gap-2">
-                          {/* Tasto Riascolta Stacchetto */}
+                          {/* Tasto Riascolta / Pausa Stacchetto */}
                           {setupState.nadia?.musicaStacchetto && (
                             <button
                               type="button"
-                              onClick={() => playNadiaJingle(false)}
-                              className="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all flex items-center gap-1 cursor-pointer"
-                              title="Riproduci stacchetto musicale (M)"
+                              onClick={toggleNadiaJingle}
+                              className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all flex items-center gap-1 cursor-pointer ${
+                                nadiaAudioPlaying
+                                  ? 'bg-amber-500/30 text-amber-200 border-amber-400 animate-pulse'
+                                  : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border-amber-500/40'
+                              }`}
+                              title="Riproduci o metti in pausa lo stacchetto musicale (M)"
                             >
-                              <span>🎵 Stacchetto</span>
+                              <span>{nadiaAudioPlaying ? '⏸ Pausa Stacchetto' : '🎵 Stacchetto'}</span>
                               <kbd className="text-[9px] bg-black/40 px-1 py-0.5 rounded opacity-70">M</kbd>
                             </button>
                           )}
@@ -1130,7 +1384,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                           {/* Tasto Chiudi Nadia */}
                           <button
                             type="button"
-                            onClick={() => handleCloseNadia(true)}
+                            onClick={handleCloseNadia}
                             className="px-2.5 py-1 text-xs font-bold rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 transition-all flex items-center gap-1 cursor-pointer"
                             title="Chiudi Mille e una Nadia e torna al gioco (Esc)"
                           >

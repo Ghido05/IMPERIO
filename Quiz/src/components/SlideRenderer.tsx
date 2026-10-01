@@ -9,6 +9,9 @@ import PasswordSquadreBoard from '../Gioco password_squadre_Board';
 import PasswordPresceltiBoard from '../Gioco password_prescelti_Board';
 import ClassificaGeneraleBoard from '../ClassificaGenerale_Board';
 import FinaleSquadreBoard from '../FinaleSquadre_Board';
+import ScenettaBoard from '../ScenettaBoard';
+import VideoBoard from '../VideoBoard';
+import MappaTorneoBoard from '../MappaTorneoBoard';
 
 interface SlideRendererProps {
   type: SlideType;
@@ -30,6 +33,9 @@ export default function SlideRenderer({ type, interactive = true, revealAll = fa
       {type === 'password_prescelti' && <PasswordPresceltiBoard interactive={interactive} />}
       {type === 'classifica_generale' && <ClassificaGeneraleBoard />}
       {type === 'finale_squadre' && <FinaleSquadreBoard />}
+      {type === 'scenetta' && <ScenettaBoard interactive={interactive} revealAll={revealAll} />}
+      {type === 'video' && <VideoBoard interactive={interactive} revealAll={revealAll} />}
+      {type === 'mappa_torneo' && <MappaTorneoBoard interactive={interactive} revealAll={revealAll} />}
     </>
   );
 }

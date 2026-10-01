@@ -37,6 +37,7 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   'g01m05s04base_nordsudovestest.mp3': '/Audio/strumenti/g01m05s04base_nordsudovestest.mp3',
   'g01m05s05trombe_nordsudovestest.mp3': '/Audio/strumenti/g01m05s05trombe_nordsudovestest.mp3',
   '1_2_Tuttoperunaragione_Benji.mp3': '/Audio/strumenti/1_2_Tuttoperunaragione_Benji.mp3',
+  '1_8_thinkabouttheway.mp3': '/Audio/strumenti/1_8_thinkabouttheway.mp3',
   '4_7_Pedro_Carra.mp3': '/Audio/stacchetto/4_7_Pedro_Carra.mp3',
   // Audio Soluzioni
   'g01m01soluzione.mp3': '/Audio/soluzioni a conferma/g01m01soluzione.mp3',
@@ -49,6 +50,7 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   // Immagini e Icone nessuno_img / sfondi
   '1_2_telemaco.jpeg': '/Icone/sfondi/1_2_telemaco.jpeg',
   '1_3_telemaco.jpeg': '/Icone/sfondi/1_2_telemaco.jpeg',
+  '1_8_tajmahal.jpg': '/Icone/sfondi/1_8_tajmahal.jpg',
   '2_2_faraonamitrata.jpeg': '/Icone/sfondi/2_2_faraonamitrata.jpeg',
   'faraona.jpeg': '/Icone/sfondi/2_2_faraonamitrata.jpeg',
   '3_1_superereoi.png': '/Icone/sfondi/3_1_superereoi.png',
@@ -58,6 +60,7 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   '4_2_digaAssuan.jpg': '/Icone/sfondi/4_2_digaAssuan.jpg',
   '4_2_digaassuan.jpg': '/Icone/sfondi/4_2_digaAssuan.jpg',
   '4_3_ArtemisIII.jpg': '/Icone/sfondi/4_3_ArtemisIII.jpg',
+  '4_4_archimede.jpg': '/Icone/sfondi/4_4_archimede.jpg',
   '4_6_Livingstone.jpg': '/Icone/sfondi/4_6_Livingstone.jpg',
   '4_7_Ugolino.jpg': '/Icone/sfondi/4_7_Ugolino.jpg',
   'Prova.png': '/Icone/sfondi/Prova.png',

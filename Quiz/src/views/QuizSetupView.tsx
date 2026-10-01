@@ -58,12 +58,28 @@ export interface Gioco2Question {
   notePresentatore?: string;
 }
 
+export interface Box0ScenettaSetup {
+  sfondo?: string;
+  titolo?: string;
+  sottotitolo?: string;
+  testo?: string;
+  notePresentatore?: string;
+}
+
+export interface Box0Setup {
+  scenetta: Box0ScenettaSetup;
+  videoPreSigla?: string;
+  videoSigla?: string;
+  videoSpiegazione?: string;
+}
+
 export interface Gioco5Setup {
   titolo: string;
   sottotitolo?: string;
   sfondoGenerale?: string;
   numeroDomande?: number;
   notePresentatore?: string;
+  videoSpiegazione?: string;
 }
 
 export interface BoxGenericSetup {
@@ -110,6 +126,7 @@ export interface Gioco4Setup {
   frasi: FraseTempoItem[];
   sfondoGenerale?: string;
   notePresentatore?: string;
+  videoSpiegazione?: string;
 }
 
 export interface NadiaQuestionItem {
@@ -130,18 +147,22 @@ export interface NadiaSetup {
 
 export interface QuizSetupState {
   nadia?: NadiaSetup;
+  box0?: Box0Setup;
   gioco1: {
     selectedQuestion: number;
+    videoSpiegazione?: string;
     questions: Record<number, Gioco1Question>;
     sfondoGenerale?: string;
   };
   gioco2: {
     selectedQuestion: number;
+    videoSpiegazione?: string;
     questions: Record<number, Gioco2Question>;
     sfondoGenerale?: string;
   };
   gioco3: {
     selectedQuestion: number;
+    videoSpiegazione?: string;
     questions: Record<number, Gioco3Question>;
     sfondoGenerale?: string;
   };
@@ -222,6 +243,40 @@ export function createDefaultGioco3Question(): Gioco3Question {
   };
 }
 
+export const DEFAULT_BOX0_RULES = `Imperio VIII è composto da 3 fasi: la prima fase è chiamata “I prodromi dello scontro”, in essa troviamo due giochi che vi permetteranno di ottenere punti. La seconda fase “La corsa agli equipaggiamenti”, formata da due giochi, è possibile ottenere oltre a punti, bonus, cioè vantaggi per il gioco finale. La fase finale “Termopili: scontro finale” nella quale si decreterà la squadra vincente.
+Per non delegittimare il percorso che intraprenderemo, la squadra con più punti giocherà la manche finale con 6 prescelti, la seconda, in base al divario con la prima squadra potrà giocare con 6, 5 o 4 persone secondo i delta punti che vedete riportati, l’ultima con solo 3.`;
+
+export function createDefaultBox0Setup(): Box0Setup {
+  return {
+    scenetta: {
+      sfondo: '',
+      titolo: 'IMPERIO VIII',
+      sottotitolo: 'I Prodromi dello Scontro',
+      testo: DEFAULT_BOX0_RULES,
+      notePresentatore: DEFAULT_BOX0_RULES,
+    },
+    videoPreSigla: '',
+    videoSigla: '',
+    videoSpiegazione: '',
+  };
+}
+
+export function normalizeBox0(raw: any, def: Box0Setup): Box0Setup {
+  if (!raw || typeof raw !== 'object') return def;
+  return {
+    scenetta: {
+      sfondo: raw.scenetta?.sfondo || def.scenetta.sfondo || '',
+      titolo: raw.scenetta?.titolo || def.scenetta.titolo || 'IMPERIO VIII',
+      sottotitolo: raw.scenetta?.sottotitolo || def.scenetta.sottotitolo || 'I Prodromi dello Scontro',
+      testo: raw.scenetta?.testo !== undefined ? raw.scenetta.testo : def.scenetta.testo,
+      notePresentatore: raw.scenetta?.notePresentatore !== undefined ? raw.scenetta.notePresentatore : def.scenetta.notePresentatore,
+    },
+    videoPreSigla: raw.videoPreSigla || '',
+    videoSigla: raw.videoSigla || '',
+    videoSpiegazione: raw.videoSpiegazione || '',
+  };
+}
+
 function normalizeGioco3(
   raw: unknown,
   def: QuizSetupState['gioco3']
@@ -230,6 +285,7 @@ function normalizeGioco3(
   const data = raw as any;
   return {
     selectedQuestion: data.selectedQuestion || 1,
+    videoSpiegazione: data.videoSpiegazione || '',
     questions: data.questions ? { ...def.questions, ...data.questions } : def.questions,
     sfondoGenerale: data.sfondoGenerale || '',
   };
@@ -252,6 +308,7 @@ function normalizeGioco4(raw: any, def: Gioco4Setup): Gioco4Setup {
     note: raw.note || def.note,
     frasi,
     sfondoGenerale: raw.sfondoGenerale || '',
+    videoSpiegazione: raw.videoSpiegazione || '',
   };
 }
 
@@ -263,6 +320,7 @@ function normalizeGioco5(raw: any, def: Gioco5Setup): Gioco5Setup {
     sfondoGenerale: raw.sfondoGenerale !== undefined ? raw.sfondoGenerale : def.sfondoGenerale,
     numeroDomande: Number(raw.numeroDomande) || def.numeroDomande || 15,
     notePresentatore: raw.notePresentatore || '',
+    videoSpiegazione: raw.videoSpiegazione || '',
   };
 }
 
@@ -361,29 +419,35 @@ export function getDefaultSetupState(): QuizSetupState {
 
   return {
     nadia: createDefaultNadiaSetup(),
+    box0: createDefaultBox0Setup(),
     gioco1: {
       selectedQuestion: 1,
+      videoSpiegazione: '',
       questions: q1,
       sfondoGenerale: '',
     },
     gioco2: {
       selectedQuestion: 1,
+      videoSpiegazione: '',
       questions: q2,
       sfondoGenerale: '',
     },
     gioco3: {
       selectedQuestion: 1,
+      videoSpiegazione: '',
       questions: q3,
       sfondoGenerale: '',
     },
     gioco4: {
       titolo: 'Frase Tempo',
+      videoSpiegazione: '',
       note: 'Inserisci le frasi da indovinare per il gioco Frase Tempo',
       frasi: DEFAULT_FRASI_TEMPO.map((testo) => createDefaultFraseTempoItem(testo)),
       sfondoGenerale: '',
     },
     gioco5: {
       titolo: 'GIOCO 5 - Finale a Squadre',
+      videoSpiegazione: '',
       sottotitolo: 'Sfida con dado, omini sui cubi 3D e 4 bonus per squadra',
       sfondoGenerale: '/sfondo_finale_acqua.jpg',
       numeroDomande: 15,
@@ -773,13 +837,16 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
         loadedState = sanitizeSetupStateWithKnownAssets(loadedState);
         setState({
           nadia: normalizeNadia(loadedState.nadia, def.nadia!),
+          box0: normalizeBox0(loadedState.box0, def.box0!),
           gioco1: {
             selectedQuestion: loadedState.gioco1?.selectedQuestion || 1,
+            videoSpiegazione: loadedState.gioco1?.videoSpiegazione || '',
             questions: { ...def.gioco1.questions, ...loadedState.gioco1?.questions },
             sfondoGenerale: loadedState.gioco1?.sfondoGenerale || '',
           },
           gioco2: {
             selectedQuestion: loadedState.gioco2?.selectedQuestion || 1,
+            videoSpiegazione: loadedState.gioco2?.videoSpiegazione || '',
             questions: { ...def.gioco2.questions, ...loadedState.gioco2?.questions },
             sfondoGenerale: loadedState.gioco2?.sfondoGenerale || '',
           },
@@ -1865,6 +1932,380 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           </div>
         </div>
 
+        {/* ==================== BOX 0: SCENETTA, SIGLE E SPIEGAZIONE GENERALE ==================== */}
+        <div className="bg-[#181826] rounded-2xl border-2 border-indigo-500/40 p-6 flex flex-col shadow-2xl space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-500/20 pb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 p-[2px] shadow-lg shadow-indigo-500/20 shrink-0">
+                <div className="w-full h-full bg-[#120f1e] rounded-[10px] flex items-center justify-center text-indigo-300 text-lg font-black">
+                  🎬
+                </div>
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-100 tracking-wide">
+                  BOX 0 — Scenetta, Sigle e Introduzione Generale
+                </h3>
+                <p className="text-xs text-indigo-200/70">
+                  Fase introduttiva: Scenetta con regole generali e delta punti, Video Pre-Sigla, Sigla ufficiale e Spiegazione generale
+                </p>
+              </div>
+            </div>
+            <span className="px-3 py-1 text-xs font-extrabold uppercase tracking-wider rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shrink-0 self-start sm:self-auto">
+              PROLOGO & SIGLE
+            </span>
+          </div>
+
+          {/* Griglia a 4 sezioni */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 1. SCENETTA */}
+            <div className="bg-[#120f1e] p-5 rounded-xl border border-indigo-500/30 space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-2">
+                  <span>🎭</span> 1. Scenetta (Regolamento & Delta Punti)
+                </span>
+                <span className="text-[10px] text-white/50">Mostra le 3 fasi e il regolamento finale</span>
+              </div>
+
+              {/* Sfondo Dedicato Scenetta */}
+              <div>
+                <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                  🖼️ Sfondo Dedicato Scenetta:
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.box0?.scenetta?.sfondo?.startsWith('data:') || state.box0?.scenetta?.sfondo?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                        {formatBase64Info(state.box0.scenetta.sfondo)?.name || 'Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({
+                          ...prev,
+                          box0: {
+                            ...(prev.box0 || createDefaultBox0Setup()),
+                            scenetta: { ...(prev.box0?.scenetta || createDefaultBox0Setup().scenetta), sfondo: '' }
+                          }
+                        }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="URL sfondo scenetta (es. /Icone/sfondi/scenetta.jpg)..."
+                      value={state.box0?.scenetta?.sfondo || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({
+                          ...prev,
+                          box0: {
+                            ...(prev.box0 || createDefaultBox0Setup()),
+                            scenetta: { ...(prev.box0?.scenetta || createDefaultBox0Setup().scenetta), sfondo: val }
+                          }
+                        }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                    />
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🖼️ Sfoglia
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({
+                            ...prev,
+                            box0: {
+                              ...(prev.box0 || createDefaultBox0Setup()),
+                              scenetta: { ...(prev.box0?.scenetta || createDefaultBox0Setup().scenetta), sfondo: base64 }
+                            }
+                          }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Titolo e Sottotitolo */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Titolo:</label>
+                  <input
+                    type="text"
+                    value={state.box0?.scenetta?.titolo || ''}
+                    placeholder="IMPERIO VIII"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setState(prev => ({
+                        ...prev,
+                        box0: {
+                          ...(prev.box0 || createDefaultBox0Setup()),
+                          scenetta: { ...(prev.box0?.scenetta || createDefaultBox0Setup().scenetta), titolo: val }
+                        }
+                      }));
+                    }}
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Sottotitolo:</label>
+                  <input
+                    type="text"
+                    value={state.box0?.scenetta?.sottotitolo || ''}
+                    placeholder="I Prodromi dello Scontro"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setState(prev => ({
+                        ...prev,
+                        box0: {
+                          ...(prev.box0 || createDefaultBox0Setup()),
+                          scenetta: { ...(prev.box0?.scenetta || createDefaultBox0Setup().scenetta), sottotitolo: val }
+                        }
+                      }));
+                    }}
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400 font-bold"
+                  />
+                </div>
+              </div>
+
+              {/* Note Presentatore / Testo Regolamento */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[10px] font-semibold text-slate-400">
+                    📝 Note Presentatore & Regolamento:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setState(prev => ({
+                        ...prev,
+                        box0: {
+                          ...(prev.box0 || createDefaultBox0Setup()),
+                          scenetta: {
+                            ...(prev.box0?.scenetta || createDefaultBox0Setup().scenetta),
+                            notePresentatore: DEFAULT_BOX0_RULES,
+                            testo: DEFAULT_BOX0_RULES
+                          }
+                        }
+                      }));
+                      showToast('✅ Regolamento predefinito ripristinato');
+                    }}
+                    className="text-[10px] text-indigo-300 hover:text-indigo-200 underline cursor-pointer"
+                  >
+                    Ripristina testo predefinito
+                  </button>
+                </div>
+                <textarea
+                  rows={4}
+                  value={state.box0?.scenetta?.notePresentatore ?? DEFAULT_BOX0_RULES}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setState(prev => ({
+                      ...prev,
+                      box0: {
+                        ...(prev.box0 || createDefaultBox0Setup()),
+                        scenetta: {
+                          ...(prev.box0?.scenetta || createDefaultBox0Setup().scenetta),
+                          notePresentatore: val,
+                          testo: val
+                        }
+                      }
+                    }));
+                  }}
+                  className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400 leading-relaxed font-sans"
+                  placeholder="Inserisci il discorso del relatore o le regole generali..."
+                />
+              </div>
+            </div>
+
+            {/* Colonna Destra: 2. PRE-SIGLA, 3. SIGLA, 4. VIDEO SPIEGAZIONE */}
+            <div className="space-y-4">
+              {/* 2. Video Pre-Sigla */}
+              <div className="bg-[#120f1e] p-4 rounded-xl border border-indigo-500/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🎞️</span> 2. Video Pre-Sigla
+                  </span>
+                  <span className="text-[10px] text-white/40">Prima della sigla ufficiale</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.box0?.videoPreSigla?.startsWith('data:') || state.box0?.videoPreSigla?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                        🎬 {formatBase64Info(state.box0.videoPreSigla)?.name || 'Video Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({
+                          ...prev,
+                          box0: { ...(prev.box0 || createDefaultBox0Setup()), videoPreSigla: '' }
+                        }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso o URL Video Pre-Sigla (es. /Video/presigla.mp4)..."
+                      value={state.box0?.videoPreSigla || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({
+                          ...prev,
+                          box0: { ...(prev.box0 || createDefaultBox0Setup()), videoPreSigla: val }
+                        }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                    />
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎬 Sfoglia
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({
+                            ...prev,
+                            box0: { ...(prev.box0 || createDefaultBox0Setup()), videoPreSigla: base64 }
+                          }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* 3. Video Sigla */}
+              <div className="bg-[#120f1e] p-4 rounded-xl border border-indigo-500/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🎵</span> 3. Video Sigla Ufficiale
+                  </span>
+                  <span className="text-[10px] text-white/40">Sigla di apertura Imperio VIII</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.box0?.videoSigla?.startsWith('data:') || state.box0?.videoSigla?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                        🎬 {formatBase64Info(state.box0.videoSigla)?.name || 'Video Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({
+                          ...prev,
+                          box0: { ...(prev.box0 || createDefaultBox0Setup()), videoSigla: '' }
+                        }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso o URL Sigla (es. /Video/sigla.mp4)..."
+                      value={state.box0?.videoSigla || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({
+                          ...prev,
+                          box0: { ...(prev.box0 || createDefaultBox0Setup()), videoSigla: val }
+                        }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                    />
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎬 Sfoglia
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({
+                            ...prev,
+                            box0: { ...(prev.box0 || createDefaultBox0Setup()), videoSigla: base64 }
+                          }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* 4. Video Spiegazione Generale */}
+              <div className="bg-[#120f1e] p-4 rounded-xl border border-indigo-500/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>📢</span> 4. Video Spiegazione Generale
+                  </span>
+                  <span className="text-[10px] text-white/40">Video esplicativo del regolamento globale</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.box0?.videoSpiegazione?.startsWith('data:') || state.box0?.videoSpiegazione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                        🎬 {formatBase64Info(state.box0.videoSpiegazione)?.name || 'Video Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({
+                          ...prev,
+                          box0: { ...(prev.box0 || createDefaultBox0Setup()), videoSpiegazione: '' }
+                        }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso o URL Video Spiegazione Generale (es. /Video/spiegazione_generale.mp4)..."
+                      value={state.box0?.videoSpiegazione || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({
+                          ...prev,
+                          box0: { ...(prev.box0 || createDefaultBox0Setup()), videoSpiegazione: val }
+                        }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                    />
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎬 Sfoglia
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({
+                            ...prev,
+                            box0: { ...(prev.box0 || createDefaultBox0Setup()), videoSpiegazione: base64 }
+                          }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* 5 Boxes Container Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           
@@ -2038,6 +2479,56 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     </label>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Video Spiegazione Box 1 */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🎬</span> Video Spiegazione Box 1
+                </span>
+                <span className="text-[10px] text-white/50">Mostrato prima della Domanda #1</span>
+              </div>
+              <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                {state.gioco1.videoSpiegazione?.startsWith('data:') || state.gioco1.videoSpiegazione?.startsWith('idb://') ? (
+                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                    <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                      🎬 {formatBase64Info(state.gioco1.videoSpiegazione)?.name || 'Video Caricato'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, videoSpiegazione: '' } }))}
+                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                    >
+                      Rimuovi
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Percorso o URL video spiegazione (es. /Video/spiegazione_box1.mp4)..."
+                    value={state.gioco1.videoSpiegazione || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, videoSpiegazione: val } }));
+                    }}
+                    className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
+                  />
+                )}
+                <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                  🎬 Sfoglia
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileUpload(e, (base64) =>
+                        setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, videoSpiegazione: base64 } }))
+                      )
+                    }
+                  />
+                </label>
               </div>
             </div>
 
@@ -2681,6 +3172,56 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     </label>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Video Spiegazione Box 2 */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🎬</span> Video Spiegazione Box 2
+                </span>
+                <span className="text-[10px] text-white/50">Mostrato prima della Domanda #1</span>
+              </div>
+              <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                {state.gioco2.videoSpiegazione?.startsWith('data:') || state.gioco2.videoSpiegazione?.startsWith('idb://') ? (
+                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                    <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                      🎬 {formatBase64Info(state.gioco2.videoSpiegazione)?.name || 'Video Caricato'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, videoSpiegazione: '' } }))}
+                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                    >
+                      Rimuovi
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Percorso o URL video spiegazione (es. /Video/spiegazione_box2.mp4)..."
+                    value={state.gioco2.videoSpiegazione || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, videoSpiegazione: val } }));
+                    }}
+                    className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                  />
+                )}
+                <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                  🎬 Sfoglia
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileUpload(e, (base64) =>
+                        setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, videoSpiegazione: base64 } }))
+                      )
+                    }
+                  />
+                </label>
               </div>
             </div>
 
@@ -3329,6 +3870,65 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </div>
           </div>
 
+          {/* Video Spiegazione Box 3 */}
+          <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <span>🎬</span> Video Spiegazione Box 3
+              </span>
+              <span className="text-[10px] text-white/50">Mostrato prima della Manche #1</span>
+            </div>
+            <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+              {state.gioco3.videoSpiegazione?.startsWith('data:') || state.gioco3.videoSpiegazione?.startsWith('idb://') ? (
+                <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                  <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                    🎬 {formatBase64Info(state.gioco3.videoSpiegazione)?.name || 'Video Caricato'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setState(prev => ({
+                      ...prev,
+                      gioco3: { ...prev.gioco3, videoSpiegazione: '' }
+                    }))}
+                    className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                  >
+                    Rimuovi
+                  </button>
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  placeholder="Percorso o URL video spiegazione (es. /Video/spiegazione_box3.mp4)..."
+                  value={state.gioco3.videoSpiegazione || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setState(prev => ({
+                      ...prev,
+                      gioco3: { ...prev.gioco3, videoSpiegazione: val }
+                    }));
+                  }}
+                  className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                />
+              )}
+              <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                🎬 Sfoglia
+                <input
+                  type="file"
+                  accept="video/*"
+                  className="hidden"
+                  onChange={(e) =>
+                    handleFileUpload(e, (base64) =>
+                      setState(prev => ({
+                        ...prev,
+                        gioco3: { ...prev.gioco3, videoSpiegazione: base64 }
+                      }))
+                    )
+                  }
+                />
+              </label>
+            </div>
+          </div>
+
           <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-4">
             <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
               <span>🎁 Configurazione Bussolotti Bonus (Manche #{currentQ3Num})</span>
@@ -3669,6 +4269,65 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               </div>
             </div>
 
+            {/* Video Spiegazione Box 4 */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🎬</span> Video Spiegazione Box 4
+                </span>
+                <span className="text-[10px] text-white/50">Mostrato prima della Frase #1</span>
+              </div>
+              <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                {state.gioco4.videoSpiegazione?.startsWith('data:') || state.gioco4.videoSpiegazione?.startsWith('idb://') ? (
+                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                    <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                      🎬 {formatBase64Info(state.gioco4.videoSpiegazione)?.name || 'Video Caricato'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setState(prev => ({
+                        ...prev,
+                        gioco4: { ...prev.gioco4, videoSpiegazione: '' }
+                      }))}
+                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                    >
+                      Rimuovi
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Percorso o URL video spiegazione (es. /Video/spiegazione_box4.mp4)..."
+                    value={state.gioco4.videoSpiegazione || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setState(prev => ({
+                        ...prev,
+                        gioco4: { ...prev.gioco4, videoSpiegazione: val }
+                      }));
+                    }}
+                    className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500"
+                  />
+                )}
+                <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                  🎬 Sfoglia
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileUpload(e, (base64) =>
+                        setState(prev => ({
+                          ...prev,
+                          gioco4: { ...prev.gioco4, videoSpiegazione: base64 }
+                        }))
+                      )
+                    }
+                  />
+                </label>
+              </div>
+            </div>
+
             {/* Lista delle frasi */}
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
               {(state.gioco4?.frasi || []).map((rawFrase, idx) => {
@@ -3967,6 +4626,65 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Video Spiegazione Box 5 */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🎬</span> Video Spiegazione Box 5
+                </span>
+                <span className="text-[10px] text-white/50">Mostrato prima del Gioco Finale</span>
+              </div>
+              <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                {state.gioco5.videoSpiegazione?.startsWith('data:') || state.gioco5.videoSpiegazione?.startsWith('idb://') ? (
+                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                    <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                      🎬 {formatBase64Info(state.gioco5.videoSpiegazione)?.name || 'Video Caricato'}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setState(prev => ({
+                        ...prev,
+                        gioco5: { ...prev.gioco5, videoSpiegazione: '' }
+                      }))}
+                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                    >
+                      Rimuovi
+                    </button>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Percorso o URL video spiegazione (es. /Video/spiegazione_box5.mp4)..."
+                    value={state.gioco5.videoSpiegazione || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setState(prev => ({
+                        ...prev,
+                        gioco5: { ...prev.gioco5, videoSpiegazione: val }
+                      }));
+                    }}
+                    className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-red-500"
+                  />
+                )}
+                <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                  🎬 Sfoglia
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    onChange={(e) =>
+                      handleFileUpload(e, (base64) =>
+                        setState(prev => ({
+                          ...prev,
+                          gioco5: { ...prev.gioco5, videoSpiegazione: base64 }
+                        }))
+                      )
+                    }
+                  />
+                </label>
+              </div>
             </div>
 
             {/* Impostazioni Titolo, Sottotitolo e Domande */}

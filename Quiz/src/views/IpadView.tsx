@@ -525,6 +525,47 @@ function IpadContent() {
   const currentSlideId = activeSlide?.id ?? '';
 
   const getActiveNoteContext = () => {
+    // 0. Box 0: Scenetta, Sigle e Spiegazione Generale
+    if (activeBox === 0 || currentSlideId.startsWith('box0_')) {
+      let label = 'BOX 0 — Scenetta (Regole)';
+      let note = setupState?.box0?.scenetta?.notePresentatore || '';
+      if (activeQuestion === 2 || currentSlideId === 'box0_presigla') {
+        label = 'BOX 0 — Video Pre-Sigla';
+        note = 'Video Pre-Sigla prima dell’apertura ufficiale';
+      } else if (activeQuestion === 3 || currentSlideId === 'box0_sigla') {
+        label = 'BOX 0 — Video Sigla';
+        note = 'Sigla ufficiale di inizio torneo';
+      } else if (activeQuestion === 4 || currentSlideId === 'box0_spiegazione') {
+        label = 'BOX 0 — Video Spiegazione Generale';
+        note = 'Video esplicativo del regolamento globale e delle 3 fasi';
+      }
+      return {
+        box: 0,
+        question: activeQuestion,
+        label,
+        note,
+        saveKey: null
+      };
+    }
+
+    // 0b. Mappa dell'Isola e Spiegazione Gioco (prima della Domanda #1)
+    if (activeQuestion === 0 || currentSlideId.endsWith('_mappa_spiegazione') || currentSlideId.endsWith('_video_spiegazione')) {
+      const titles: Record<number, string> = {
+        1: 'Il mio nome è nessuno',
+        2: 'Classifiche',
+        3: 'Password',
+        4: 'Frase Tempo',
+        5: 'Termopili (Scontro Finale)',
+      };
+      return {
+        box: activeBox,
+        question: 0,
+        label: `BOX ${activeBox} — 🗺️ Mappa & Spiegazione (${titles[activeBox] || ''})`,
+        note: (activeSlide?.data as any)?.notePresentatore || `Mappa dell'Isola e Spiegazione per il Box ${activeBox}`,
+        saveKey: null
+      };
+    }
+
     // 1. Box 1: Il mio nome è nessuno (Domande 1-10)
     if (activeBox === 1 || currentSlideId.startsWith('box1_')) {
       const qNum = currentSlideId.startsWith('box1_q')

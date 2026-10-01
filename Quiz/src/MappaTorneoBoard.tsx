@@ -23,6 +23,8 @@ interface ZoneInfo {
   id: number;
   x: number; // percentage in 1920 width
   y: number; // percentage in 1080 height
+  zoomX: number; // focal point X for cinematic camera zoom
+  zoomY: number; // focal point Y for cinematic camera zoom
   title: string;
   phaseLabel: string;
   phaseNumber: number;
@@ -38,6 +40,8 @@ const ZONES: ZoneInfo[] = [
     id: 1,
     x: 22,
     y: 62,
+    zoomX: 22,
+    zoomY: 54,
     title: 'IL MIO NOME È NESSUNO',
     phaseNumber: 1,
     phaseLabel: 'FASE 1: I PRODROMI DELLO SCONTRO',
@@ -49,8 +53,10 @@ const ZONES: ZoneInfo[] = [
   },
   {
     id: 2,
-    x: 33,
-    y: 30,
+    x: 34.5,
+    y: 28.5,
+    zoomX: 34.5,
+    zoomY: 21,
     title: 'CLASSIFICHE',
     phaseNumber: 1,
     phaseLabel: 'FASE 1: I PRODROMI DELLO SCONTRO',
@@ -64,6 +70,8 @@ const ZONES: ZoneInfo[] = [
     id: 3,
     x: 48,
     y: 74,
+    zoomX: 48,
+    zoomY: 65,
     title: 'PASSWORD & BUSSOLOTTI',
     phaseNumber: 2,
     phaseLabel: 'FASE 2: LA CORSA AGLI EQUIPAGGIAMENTI',
@@ -75,8 +83,10 @@ const ZONES: ZoneInfo[] = [
   },
   {
     id: 4,
-    x: 67,
-    y: 32,
+    x: 63.5,
+    y: 33.5,
+    zoomX: 63.5,
+    zoomY: 25.5,
     title: 'FRASE A TEMPO',
     phaseNumber: 2,
     phaseLabel: 'FASE 2: LA CORSA AGLI EQUIPAGGIAMENTI',
@@ -90,6 +100,8 @@ const ZONES: ZoneInfo[] = [
     id: 5,
     x: 78,
     y: 62,
+    zoomX: 78,
+    zoomY: 54,
     title: 'TERMOPILI — SCONTRO FINALE',
     phaseNumber: 3,
     phaseLabel: 'FASE FINALE: TERMOPILI',
@@ -101,34 +113,96 @@ const ZONES: ZoneInfo[] = [
   },
 ];
 
-// Grande banco denso e volumetrico di nuvole realistiche che copre l'intera sezione dell'isola
-function HeavyCloudBlanket() {
-  return (
-    <div className="relative w-[650px] h-[450px] pointer-events-none select-none flex items-center justify-center">
-      {/* 1. Strato di nebbia diffusa a terra che oscura completamente i dettagli del terreno */}
-      <div className="absolute inset-4 rounded-full bg-slate-950/90 blur-3xl" />
-      <div className="absolute inset-10 rounded-full bg-blue-950/70 blur-2xl" />
-      <div className="absolute -inset-2 rounded-full bg-slate-900/60 blur-xl" />
+// Curve Bézier cubiche esatte corrispondenti ai tracciati SVG tra le sezioni
+interface BezierCurve {
+  p0: { x: number; y: number };
+  p1: { x: number; y: number };
+  p2: { x: number; y: number };
+  p3: { x: number; y: number };
+}
 
-      {/* 2. SVG Volumetrico con densi cumuli di nuvole 3D e ombre morbide */}
+const SEGMENT_CURVES: Record<number, BezierCurve> = {
+  // S1: Zona 1 (422, 670) -> Zona 2 (662, 308)
+  2: {
+    p0: { x: 422, y: 670 },
+    p1: { x: 470, y: 510 },
+    p2: { x: 580, y: 400 },
+    p3: { x: 662, y: 308 },
+  },
+  // S2: Zona 2 (662, 308) -> Zona 3 (922, 799)
+  3: {
+    p0: { x: 662, y: 308 },
+    p1: { x: 710, y: 470 },
+    p2: { x: 770, y: 720 },
+    p3: { x: 922, y: 799 },
+  },
+  // S3: Zona 3 (922, 799) -> Zona 4 (1219, 362)
+  4: {
+    p0: { x: 922, y: 799 },
+    p1: { x: 1050, y: 750 },
+    p2: { x: 1140, y: 500 },
+    p3: { x: 1219, y: 362 },
+  },
+  // S4: Zona 4 (1219, 362) -> Zona 5 (1498, 670)
+  5: {
+    p0: { x: 1219, y: 362 },
+    p1: { x: 1320, y: 440 },
+    p2: { x: 1440, y: 550 },
+    p3: { x: 1498, y: 670 },
+  },
+};
+
+function getPointOnCubicBezier(curve: BezierCurve, t: number): { x: number; y: number } {
+  const clampedT = Math.max(0, Math.min(1, t));
+  const u = 1 - clampedT;
+  const tt = clampedT * clampedT;
+  const uu = u * u;
+  const uuu = uu * u;
+  const ttt = tt * clampedT;
+
+  const px = uuu * curve.p0.x + 3 * uu * clampedT * curve.p1.x + 3 * u * tt * curve.p2.x + ttt * curve.p3.x;
+  const py = uuu * curve.p0.y + 3 * uu * clampedT * curve.p1.y + 3 * u * tt * curve.p2.y + ttt * curve.p3.y;
+
+  return {
+    x: px / 19.2, // Converti coordinate 1920 in percentuale
+    y: py / 10.8, // Converti coordinate 1080 in percentuale
+  };
+}
+
+function easeInOutCubic(x: number): number {
+  return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+}
+
+// Grande banco volumetrico di nuvole realistiche 3D
+function HeavyCloudBlanket({ isDissolving = false }: { isDissolving?: boolean }) {
+  return (
+    <div
+      className={`relative w-[820px] h-[540px] pointer-events-none select-none flex items-center justify-center transition-all duration-1000 ${
+        isDissolving ? 'opacity-0 scale-125' : 'opacity-100 scale-100'
+      }`}
+    >
+      {/* Ombra di contatto morbida e racchiusa sotto il centro della nuvola */}
+      <div className="absolute w-[480px] h-[220px] rounded-full bg-black/25 blur-2xl transform scale-y-60 pointer-events-none" />
+
+      {/* SVG Volumetrico ad alta densità con cumuli bianchi espansi e sfumature di luce */}
       <svg
-        viewBox="0 0 550 380"
-        className="w-full h-full drop-shadow-[0_25px_40px_rgba(0,0,0,0.85)] relative z-10"
+        viewBox="0 0 720 480"
+        className="w-full h-full drop-shadow-[0_20px_35px_rgba(0,0,0,0.55)] relative z-10"
         fill="none"
       >
         <defs>
-          <radialGradient id="heavyCloudGrad1" cx="35%" cy="30%" r="70%">
+          <radialGradient id="cloudGradBright" cx="35%" cy="30%" r="68%">
             <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="45%" stopColor="#f1f5f9" />
-            <stop offset="75%" stopColor="#cbd5e1" />
+            <stop offset="50%" stopColor="#f8fafc" />
+            <stop offset="80%" stopColor="#e2e8f0" />
+            <stop offset="100%" stopColor="#cbd5e1" />
+          </radialGradient>
+          <radialGradient id="cloudGradBase" cx="45%" cy="40%" r="65%">
+            <stop offset="0%" stopColor="#f1f5f9" />
+            <stop offset="65%" stopColor="#cbd5e1" />
             <stop offset="100%" stopColor="#94a3b8" />
           </radialGradient>
-          <radialGradient id="heavyCloudGradDark" cx="50%" cy="45%" r="65%">
-            <stop offset="0%" stopColor="#e2e8f0" />
-            <stop offset="60%" stopColor="#94a3b8" />
-            <stop offset="100%" stopColor="#64748b" />
-          </radialGradient>
-          <filter id="cloudSoftBlur" x="-15%" y="-15%" width="130%" height="130%">
+          <filter id="cloudSoftBlurWide" x="-15%" y="-15%" width="130%" height="130%">
             <feGaussianBlur stdDeviation="2.5" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
@@ -137,32 +211,35 @@ function HeavyCloudBlanket() {
           </filter>
         </defs>
 
-        <g filter="url(#cloudSoftBlur)">
-          {/* Base posteriore più scura per dare profondità volumetrica */}
-          <circle cx="150" cy="220" r="95" fill="url(#heavyCloudGradDark)" />
-          <circle cx="270" cy="240" r="105" fill="url(#heavyCloudGradDark)" />
-          <circle cx="390" cy="220" r="95" fill="url(#heavyCloudGradDark)" />
-          <circle cx="470" cy="180" r="75" fill="url(#heavyCloudGradDark)" />
-          <circle cx="80" cy="190" r="75" fill="url(#heavyCloudGradDark)" />
+        <g filter="url(#cloudSoftBlurWide)">
+          {/* 1. Base posteriore densa che estende la copertura verso l'esterno */}
+          <circle cx="150" cy="270" r="115" fill="url(#cloudGradBase)" />
+          <circle cx="290" cy="290" r="130" fill="url(#cloudGradBase)" />
+          <circle cx="440" cy="280" r="125" fill="url(#cloudGradBase)" />
+          <circle cx="560" cy="250" r="110" fill="url(#cloudGradBase)" />
+          <circle cx="630" cy="210" r="85" fill="url(#cloudGradBase)" />
+          <circle cx="85" cy="240" r="85" fill="url(#cloudGradBase)" />
 
-          {/* Livello centrale denso e corposo */}
-          <circle cx="160" cy="170" r="95" fill="url(#heavyCloudGrad1)" />
-          <circle cx="260" cy="150" r="115" fill="url(#heavyCloudGrad1)" />
-          <circle cx="360" cy="160" r="105" fill="url(#heavyCloudGrad1)" />
-          <circle cx="440" cy="180" r="80" fill="url(#heavyCloudGrad1)" />
-          <circle cx="95" cy="185" r="75" fill="url(#heavyCloudGrad1)" />
+          {/* 2. Livello centrale volumetrico ad alta opacità */}
+          <circle cx="180" cy="200" r="115" fill="url(#cloudGradBright)" />
+          <circle cx="310" cy="180" r="135" fill="url(#cloudGradBright)" />
+          <circle cx="450" cy="190" r="130" fill="url(#cloudGradBright)" />
+          <circle cx="550" cy="190" r="105" fill="url(#cloudGradBright)" />
+          <circle cx="100" cy="190" r="95" fill="url(#cloudGradBright)" />
 
-          {/* Cumuli superiori candidi ed esposti alla luce */}
-          <circle cx="210" cy="100" r="85" fill="url(#heavyCloudGrad1)" />
-          <circle cx="310" cy="95" r="90" fill="url(#heavyCloudGrad1)" />
-          <circle cx="390" cy="120" r="70" fill="url(#heavyCloudGrad1)" />
-          <circle cx="130" cy="125" r="70" fill="url(#heavyCloudGrad1)" />
+          {/* 3. Cumuli superiori bianchi e illuminati */}
+          <circle cx="230" cy="120" r="105" fill="url(#cloudGradBright)" />
+          <circle cx="360" cy="110" r="115" fill="url(#cloudGradBright)" />
+          <circle cx="480" cy="130" r="100" fill="url(#cloudGradBright)" />
+          <circle cx="140" cy="140" r="85" fill="url(#cloudGradBright)" />
 
-          {/* Sfere di riflesso puro */}
-          <circle cx="215" cy="85" r="55" fill="#ffffff" fillOpacity="0.8" />
-          <circle cx="310" cy="80" r="60" fill="#ffffff" fillOpacity="0.85" />
-          <circle cx="260" cy="130" r="70" fill="#ffffff" fillOpacity="0.65" />
-          <circle cx="360" cy="140" r="55" fill="#ffffff" fillOpacity="0.6" />
+          {/* 4. Punti luce e riflessi puri a specchio */}
+          <circle cx="240" cy="100" r="70" fill="#ffffff" fillOpacity="0.85" />
+          <circle cx="360" cy="90" r="80" fill="#ffffff" fillOpacity="0.9" />
+          <circle cx="470" cy="115" r="65" fill="#ffffff" fillOpacity="0.8" />
+          <circle cx="310" cy="160" r="90" fill="#ffffff" fillOpacity="0.7" />
+          <circle cx="450" cy="170" r="80" fill="#ffffff" fillOpacity="0.7" />
+          <circle cx="180" cy="180" r="75" fill="#ffffff" fillOpacity="0.75" />
         </g>
       </svg>
     </div>
@@ -210,6 +287,18 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
     };
   }, []);
 
+  // STATO SINCRONIZZATO: Passo di sblocco della sezione corrente
+  // 0 = Personaggi alla sezione precedente, nuova sezione coperta da nuvole con "?"
+  // 1 = Personaggi avanzati alla nuova sezione, nuvole dissolte e sezione scoperta!
+  const [unlockedStep, setUnlockedStep] = useSyncedState<number>(
+    `playstate_${slideId}_unlocked_step`,
+    activeBox === 1 ? 1 : 0
+  );
+
+  // Progresso continuo da 0.0 a 1.0 per l'animazione di marcia lungo il sentiero
+  const [animProgress, setAnimProgress] = useState<number>(() => (activeBox === 1 || unlockedStep === 1 ? 1 : 0));
+  const animFrameRef = useRef<number | null>(null);
+
   // Sincronizzazione dello zoom cinematico tra finestre (Relatore <-> Schermo Pubblico <-> iPad)
   const [isZoomed, setIsZoomed] = useSyncedState<boolean>(`playstate_${slideId}_is_zoomed`, false);
   const [showVideoOverlay, setShowVideoOverlay] = useState<boolean>(isZoomed);
@@ -219,6 +308,58 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
   const targetZone = useMemo(() => {
     return ZONES.find((z) => z.id === activeBox) || ZONES[0];
   }, [activeBox]);
+
+  // Gestione dell'animazione di marcia dei personaggi lungo la curva Bézier
+  useEffect(() => {
+    if (activeBox === 1) {
+      setAnimProgress(1);
+      return;
+    }
+
+    const targetProgress = unlockedStep === 1 ? 1 : 0;
+    const startProgress = animProgress;
+    if (Math.abs(startProgress - targetProgress) < 0.01) {
+      setAnimProgress(targetProgress);
+      return;
+    }
+
+    const duration = unlockedStep === 1 ? 2200 : 1400; // 2.2s marcia in avanti, 1.4s ritorno
+    const startTime = performance.now();
+
+    const animateLoop = (now: number) => {
+      const elapsed = now - startTime;
+      const rawT = Math.min(1, elapsed / duration);
+      const easedT = easeInOutCubic(rawT);
+      const current = startProgress + (targetProgress - startProgress) * easedT;
+      setAnimProgress(current);
+
+      if (rawT < 1) {
+        animFrameRef.current = requestAnimationFrame(animateLoop);
+      } else {
+        setAnimProgress(targetProgress);
+      }
+    };
+
+    animFrameRef.current = requestAnimationFrame(animateLoop);
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [unlockedStep, activeBox]);
+
+  // Calcola la posizione attuale (x, y) dei 3 personaggi in percentuale (1920x1080)
+  const currentTokenPos = useMemo(() => {
+    if (activeBox === 1) {
+      return { x: ZONES[0].x, y: ZONES[0].y };
+    }
+    const curve = SEGMENT_CURVES[activeBox];
+    if (!curve) {
+      return { x: targetZone.x, y: targetZone.y };
+    }
+    return getPointOnCubicBezier(curve, animProgress);
+  }, [activeBox, animProgress, targetZone]);
+
+  // La sezione è considerata visivamente scoperta quando i personaggi hanno quasi completato la marcia
+  const isSectionRevealed = activeBox === 1 || animProgress >= 0.85;
 
   // Gestione del timing per dissolvenza video durante lo zoom
   useEffect(() => {
@@ -236,15 +377,20 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
     };
   }, [isZoomed]);
 
+
   const handleToggleZoom = useCallback(() => {
-    setIsZoomed(!isZoomed);
-  }, [isZoomed, setIsZoomed]);
+    if (activeBox > 1 && unlockedStep === 0) {
+      setUnlockedStep(1);
+    } else {
+      setIsZoomed(!isZoomed);
+    }
+  }, [activeBox, unlockedStep, setUnlockedStep, isZoomed, setIsZoomed]);
 
   const handleReturnToMap = useCallback(() => {
     setIsZoomed(false);
   }, [setIsZoomed]);
 
-  // Gestione scorciatoie tastiera globali
+  // Gestione scorciatoie da tastiera
   useEffect(() => {
     if (!interactive) return;
 
@@ -256,9 +402,31 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
         return;
       }
 
-      if (e.key === 'Enter' || e.key === ' ' || e.key === 'v' || e.key === 'V') {
+      if (e.key === 'ArrowRight') {
+        if (!isZoomed) {
+          if (activeBox > 1 && unlockedStep === 0) {
+            e.preventDefault();
+            setUnlockedStep(1);
+          } else if (unlockedStep === 1 && animProgress >= 0.95) {
+            e.preventDefault();
+            setIsZoomed(true);
+          }
+        }
+      } else if (e.key === 'ArrowLeft') {
+        if (isZoomed) {
+          e.preventDefault();
+          setIsZoomed(false);
+        } else if (activeBox > 1 && unlockedStep === 1) {
+          e.preventDefault();
+          setUnlockedStep(0);
+        }
+      } else if (e.key === 'Enter' || e.key === ' ' || e.key === 'v' || e.key === 'V') {
         e.preventDefault();
-        handleToggleZoom();
+        if (activeBox > 1 && unlockedStep === 0) {
+          setUnlockedStep(1);
+        } else {
+          handleToggleZoom();
+        }
       } else if (e.key === 'm' || e.key === 'M' || e.key === 'Escape') {
         if (isZoomed) {
           e.preventDefault();
@@ -269,12 +437,55 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, isZoomed, handleToggleZoom, handleReturnToMap]);
+  }, [interactive, isZoomed, activeBox, unlockedStep, setUnlockedStep, animProgress, setIsZoomed, handleToggleZoom, handleReturnToMap]);
 
   return (
     <div className="relative w-[1920px] h-[1080px] bg-[#07090e] text-white overflow-hidden font-sans select-none">
-      {/* STILI ANIMAZIONI E KEYFRAMES CUSTOM */}
+      {/* IMPORT DEI FONT (CINZEL PER IMPERIO VIII & LILITA ONE PER IL TITOLO SEZIONE) */}
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Lilita+One&family=Titan+One&display=swap');
+
+        /* FONT SEZIONE STILE "PAESE DEI GIOCATTOLI" (GIALLO-ARANCIO 3D VIBRANTE CON CONTORNO ED ESTRUSIONE NERA) */
+        .brawl-game-title {
+          font-family: 'Lilita One', 'Titan One', 'Impact', sans-serif;
+          background: linear-gradient(180deg, #FFF952 0%, #FFCC00 35%, #FF7A00 70%, #E63900 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: 
+            drop-shadow(0 2px 0 #000) 
+            drop-shadow(2px 0 0 #000) 
+            drop-shadow(-2px 0 0 #000) 
+            drop-shadow(0 -2px 0 #000) 
+            drop-shadow(3px 4px 0 #000) 
+            drop-shadow(0 8px 18px rgba(0, 0, 0, 0.9));
+          transform: rotate(-1.5deg);
+          letter-spacing: 0.03em;
+        }
+
+        /* FONT SOTTOTITOLO FASE AZZURRO STILE "Ti diamo il benvenuto a" */
+        .brawl-game-phase {
+          font-family: 'Lilita One', cursive, sans-serif;
+          color: #38bdf8;
+          text-shadow: 
+            2px 2px 0 #000, 
+            -1.5px -1.5px 0 #000, 
+            1.5px -1.5px 0 #000, 
+            -1.5px 1.5px 0 #000, 
+            0 3px 0 #000, 
+            0 4px 10px rgba(0, 0, 0, 0.85);
+          transform: rotate(-1.5deg);
+          letter-spacing: 0.05em;
+        }
+
+        /* FONT IMPERIALE VIII PER IL LOGO A SINISTRA */
+        .font-imperio-title {
+          font-family: 'Cinzel', serif;
+          background: linear-gradient(180deg, #FFFFFF 0%, #FEF08A 35%, #F59E0B 75%, #B45309 100%);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          filter: drop-shadow(0 4px 12px rgba(0,0,0,0.9)) drop-shadow(0 0 20px rgba(245, 158, 11, 0.5));
+        }
+
         @keyframes floatTokenTeam1 {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-13px); }
@@ -289,7 +500,7 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
         }
         @keyframes cloudDriftSlow {
           0% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(14px, -8px) scale(1.02); }
+          50% { transform: translate(16px, -10px) scale(1.02); }
           100% { transform: translate(0, 0) scale(1); }
         }
         @keyframes pulseRing {
@@ -305,7 +516,7 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           to { stroke-dashoffset: 0; }
         }
         @keyframes questionPulse {
-          0%, 100% { transform: scale(1) translateY(0); filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.7)); }
+          0%, 100% { transform: scale(1) translateY(0); filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.75)); }
           50% { transform: scale(1.08) translateY(-8px); filter: drop-shadow(0 0 30px rgba(245, 158, 11, 0.95)); }
         }
 
@@ -336,7 +547,7 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
       <div
         className="absolute inset-0 w-full h-full origin-center"
         style={{
-          transformOrigin: isZoomed ? `${targetZone.x}% ${targetZone.y}%` : '50% 50%',
+          transformOrigin: isZoomed ? `${targetZone.zoomX}% ${targetZone.zoomY}%` : '50% 50%',
           transform: isZoomed ? 'scale(2.75)' : 'scale(1)',
           transition: 'transform 1.25s cubic-bezier(0.22, 1, 0.36, 1)',
         }}
@@ -369,50 +580,50 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
 
           {/* S1: Zona 1 -> Zona 2 */}
           <path
-            d="M 422 670 C 460 520, 560 410, 634 324"
-            stroke={activeBox >= 2 ? '#fbbf24' : 'rgba(255,255,255,0.22)'}
-            strokeWidth={activeBox >= 2 ? '7' : '4'}
-            strokeDasharray={activeBox >= 2 ? '14 10' : '6 8'}
+            d="M 422 670 C 470 510, 580 400, 662 308"
+            stroke={activeBox > 2 || (activeBox === 2 && animProgress > 0) ? '#fbbf24' : 'rgba(255,255,255,0.22)'}
+            strokeWidth={activeBox > 2 || (activeBox === 2 && animProgress > 0) ? '7' : '4'}
+            strokeDasharray={activeBox > 2 || (activeBox === 2 && animProgress > 0) ? '14 10' : '6 8'}
             strokeLinecap="round"
-            className={activeBox >= 2 ? 'animate-path-dash' : ''}
-            filter={activeBox >= 2 ? 'url(#glowEffect)' : undefined}
+            className={activeBox > 2 || (activeBox === 2 && animProgress > 0) ? 'animate-path-dash' : ''}
+            filter={activeBox > 2 || (activeBox === 2 && animProgress > 0) ? 'url(#glowEffect)' : undefined}
           />
 
-          {/* S2: Zona 2 -> Zona 3 (curva attorno alla lampada verso sud) */}
+          {/* S2: Zona 2 -> Zona 3 */}
           <path
-            d="M 634 324 C 690 480, 770 730, 922 799"
-            stroke={activeBox >= 3 ? '#fbbf24' : 'rgba(255,255,255,0.22)'}
-            strokeWidth={activeBox >= 3 ? '7' : '4'}
-            strokeDasharray={activeBox >= 3 ? '14 10' : '6 8'}
+            d="M 662 308 C 710 470, 770 720, 922 799"
+            stroke={activeBox > 3 || (activeBox === 3 && animProgress > 0) ? '#fbbf24' : 'rgba(255,255,255,0.22)'}
+            strokeWidth={activeBox > 3 || (activeBox === 3 && animProgress > 0) ? '7' : '4'}
+            strokeDasharray={activeBox > 3 || (activeBox === 3 && animProgress > 0) ? '14 10' : '6 8'}
             strokeLinecap="round"
-            className={activeBox >= 3 ? 'animate-path-dash' : ''}
-            filter={activeBox >= 3 ? 'url(#glowEffect)' : undefined}
+            className={activeBox > 3 || (activeBox === 3 && animProgress > 0) ? 'animate-path-dash' : ''}
+            filter={activeBox > 3 || (activeBox === 3 && animProgress > 0) ? 'url(#glowEffect)' : undefined}
           />
 
-          {/* S3: Zona 3 -> Zona 4 (risale verso nord-est) */}
+          {/* S3: Zona 3 -> Zona 4 */}
           <path
-            d="M 922 799 C 1070 760, 1180 500, 1286 346"
-            stroke={activeBox >= 4 ? '#fbbf24' : 'rgba(255,255,255,0.22)'}
-            strokeWidth={activeBox >= 4 ? '7' : '4'}
-            strokeDasharray={activeBox >= 4 ? '14 10' : '6 8'}
+            d="M 922 799 C 1050 750, 1140 500, 1219 362"
+            stroke={activeBox > 4 || (activeBox === 4 && animProgress > 0) ? '#fbbf24' : 'rgba(255,255,255,0.22)'}
+            strokeWidth={activeBox > 4 || (activeBox === 4 && animProgress > 0) ? '7' : '4'}
+            strokeDasharray={activeBox > 4 || (activeBox === 4 && animProgress > 0) ? '14 10' : '6 8'}
             strokeLinecap="round"
-            className={activeBox >= 4 ? 'animate-path-dash' : ''}
-            filter={activeBox >= 4 ? 'url(#glowEffect)' : undefined}
+            className={activeBox > 4 || (activeBox === 4 && animProgress > 0) ? 'animate-path-dash' : ''}
+            filter={activeBox > 4 || (activeBox === 4 && animProgress > 0) ? 'url(#glowEffect)' : undefined}
           />
 
-          {/* S4: Zona 4 -> Zona 5 (scende all'arena Termopili) */}
+          {/* S4: Zona 4 -> Zona 5 */}
           <path
-            d="M 1286 346 C 1370 440, 1450 560, 1498 670"
-            stroke={activeBox >= 5 ? '#fbbf24' : 'rgba(255,255,255,0.22)'}
-            strokeWidth={activeBox >= 5 ? '7' : '4'}
-            strokeDasharray={activeBox >= 5 ? '14 10' : '6 8'}
+            d="M 1219 362 C 1320 440, 1440 550, 1498 670"
+            stroke={activeBox > 5 || (activeBox === 5 && animProgress > 0) ? '#fbbf24' : 'rgba(255,255,255,0.22)'}
+            strokeWidth={activeBox > 5 || (activeBox === 5 && animProgress > 0) ? '7' : '4'}
+            strokeDasharray={activeBox > 5 || (activeBox === 5 && animProgress > 0) ? '14 10' : '6 8'}
             strokeLinecap="round"
-            className={activeBox >= 5 ? 'animate-path-dash' : ''}
-            filter={activeBox >= 5 ? 'url(#glowEffect)' : undefined}
+            className={activeBox > 5 || (activeBox === 5 && animProgress > 0) ? 'animate-path-dash' : ''}
+            filter={activeBox > 5 || (activeBox === 5 && animProgress > 0) ? 'url(#glowEffect)' : undefined}
           />
         </svg>
 
-        {/* ELEMENTO CENTRALE: LAMPADA MAGICA DI ALADINO (VISIBILE SENZA TESTO SPOILER) */}
+        {/* ELEMENTO CENTRALE: LAMPADA MAGICA DI ALADINO (VISIBILE SENZA ALCUN TESTO SPOILER) */}
         <div
           className="absolute z-20 pointer-events-none transform -translate-x-1/2 -translate-y-1/2"
           style={{ left: '50%', top: '44%' }}
@@ -420,18 +631,22 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           {/* Alone mistico pulsante oro & viola */}
           <div className="absolute -inset-16 rounded-full bg-gradient-to-r from-amber-500/35 via-purple-600/40 to-amber-400/35 blur-2xl animate-aura pointer-events-none" />
 
-          {/* Scintille magiche discrete intorno alla lampada (nessuna scritta) */}
+          {/* Scintille magiche intorno alla lampada (nessuna scritta) */}
           <div className="relative flex items-center justify-center pointer-events-none">
             <span className="text-amber-300 text-sm animate-ping absolute -top-4 -right-4">✨</span>
             <span className="text-purple-300 text-xs animate-pulse absolute -bottom-3 -left-3">✨</span>
           </div>
         </div>
 
-        {/* RENDERING DELLE 5 ZONE */}
+        {/* RENDERING DELLE 5 ZONE CON PIN E COPERTURA NUVOLE */}
         {ZONES.map((zone) => {
+          // Una zona è completata se il suo ID è inferiore al box attivo (o se siamo nel box attivo e siamo già avanzati oltre)
           const isCompleted = zone.id < activeBox;
           const isCurrent = zone.id === activeBox;
-          const isLocked = zone.id > activeBox;
+          const isFuture = zone.id > activeBox;
+
+          // Per la zona corrente: è coperta dalle nuvole se non è ancora stata svelata (animProgress < 0.85)
+          const showCloudsOnCurrent = isCurrent && !isSectionRevealed;
 
           return (
             <div
@@ -439,32 +654,34 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
               className="absolute z-20 transform -translate-x-1/2 -translate-y-1/2 pointer-events-auto"
               style={{ left: `${zone.x}%`, top: `${zone.y}%` }}
             >
-              {/* NEBBIA DI GUERRA / GRANDI NUVOLE DENSE SULLE ZONE NON ANCORA SCOPERTE */}
-              {isLocked && (
+              {/* NEBBIA DI GUERRA: GRANDI NUVOLE DENSE SULLE ZONE NON ANCORA SCOPERTE */}
+              {(isFuture || showCloudsOnCurrent) && (
                 <div
-                  className="absolute -inset-52 flex items-center justify-center pointer-events-none transition-all duration-1000"
-                  style={{ animation: 'cloudDriftSlow 9s ease-in-out infinite' }}
+                  className="absolute -inset-64 flex items-center justify-center pointer-events-none transition-all duration-1000"
+                  style={{ animation: 'cloudDriftSlow 10s ease-in-out infinite' }}
                 >
-                  {/* Grande coltre di nuvole che copre l'intera porzione d'isola */}
-                  <HeavyCloudBlanket />
+                  {/* Grande coltre di nuvole bianche realistiche con dissolvenza fluida quando si scopre */}
+                  <HeavyCloudBlanket isDissolving={isCurrent && isSectionRevealed} />
 
                   {/* Medaglione Punto di Domanda ? in rilievo dorato 3D fluttuante */}
-                  <div className="absolute z-30 flex flex-col items-center animate-question-token">
-                    <div
-                      className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 p-1 shadow-[0_12px_28px_rgba(0,0,0,0.85)] border border-amber-200/50 flex items-center justify-center"
-                    >
-                      <div className="w-full h-full rounded-xl bg-slate-950/90 border border-amber-400/40 flex items-center justify-center">
-                        <span className="text-3xl font-black text-amber-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                          ?
-                        </span>
+                  {(!isCurrent || !isSectionRevealed) && (
+                    <div className="absolute z-30 flex flex-col items-center animate-question-token">
+                      <div
+                        className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 p-1 shadow-[0_12px_28px_rgba(0,0,0,0.85)] border border-amber-200/50 flex items-center justify-center"
+                      >
+                        <div className="w-full h-full rounded-xl bg-slate-950/90 border border-amber-400/40 flex items-center justify-center">
+                          <span className="text-3xl font-black text-amber-300 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+                            ?
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
 
-              {/* ONDE RADAR & EFFETTO SULLA ZONA CORRENTE */}
-              {isCurrent && (
+              {/* ONDE RADAR & EFFETTO SULLA ZONA CORRENTE (ATTIVE QUANDO SCOPERTA) */}
+              {isCurrent && isSectionRevealed && (
                 <>
                   <div className="absolute -inset-10 rounded-full border-2 border-amber-400/80 animate-pulse-ring pointer-events-none" />
                   <div
@@ -491,9 +708,9 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
                 </div>
               )}
 
-              {/* ZONA ATTIVA (Solo numero stilizzato in medaglione dorato 3D, no "BOX") */}
-              {isCurrent && (
-                <div className="flex flex-col items-center">
+              {/* ZONA ATTIVA (Solo numero stilizzato in medaglione dorato 3D quando scoperta) */}
+              {isCurrent && isSectionRevealed && (
+                <div className="flex flex-col items-center animate-fade-in">
                   <div
                     className="relative w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-300 p-0.5 shadow-[0_0_35px_rgba(245,158,11,0.85),0_8px_16px_rgba(0,0,0,0.6)] flex items-center justify-center cursor-pointer transition-transform hover:scale-110 active:scale-95"
                     onClick={interactive ? handleToggleZoom : undefined}
@@ -525,12 +742,12 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           );
         })}
 
-        {/* I 3 PERSONAGGI / SEGNALINI INSIEME SULLA ZONA CORRENTE (COLORI DELLE 3 SQUADRE) */}
+        {/* I 3 PERSONAGGI / SEGNALINI IN MOVIMENTO LUNGO LA CURVA BÉZIER */}
         <div
-          className="absolute z-30 pointer-events-none transform -translate-x-1/2 -translate-y-full transition-all duration-1000 ease-out"
+          className="absolute z-30 pointer-events-none transform -translate-x-1/2 -translate-y-full"
           style={{
-            left: `${targetZone.x}%`,
-            top: `${targetZone.y - 1}%`,
+            left: `${currentTokenPos.x}%`,
+            top: `${currentTokenPos.y - 1}%`,
           }}
         >
           {/* Ombra collettiva a terra */}
@@ -587,53 +804,59 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
       </div>
 
       {/* =========================================================================
-          HUD SUPERIORE (GRAFICA UNREAL ENGINE / ESPORTS: IMPERIO VIII & FASE)
+          HUD SUPERIORE
+          - A SINISTRA: LOGO E TITOLO EPICO IMPERIALE "IMPERIO VIII"
+          - A DESTRA: TITOLO SEZIONE IN STILE BRAWL STARS ("PAESE DEI GIOCATTOLI")
           ========================================================================= */}
-      <div className={`absolute top-0 inset-x-0 z-40 p-6 flex items-start justify-between pointer-events-none transition-opacity duration-500 ${isZoomed ? 'opacity-0' : 'opacity-100'}`}>
-        {/* Titolo Principale a Sinistra */}
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-red-600 p-0.5 shadow-2xl flex items-center justify-center">
-            <div className="w-full h-full rounded-2xl bg-slate-950/90 flex items-center justify-center font-serif text-amber-400 font-black text-2xl tracking-tighter">
-              VIII
+      <div className={`absolute top-0 inset-x-0 z-40 p-8 flex items-start justify-between pointer-events-none transition-opacity duration-500 ${isZoomed ? 'opacity-0' : 'opacity-100'}`}>
+        
+        {/* LOGO E TITOLO "IMPERIO VIII" A SINISTRA (STILE IMPERIALE EPICO CHISELED) */}
+        <div className="flex items-center gap-4 drop-shadow-[0_8px_24px_rgba(0,0,0,0.9)]">
+          {/* Medaglione Scudetto 3D con VIII e Corona */}
+          <div className="relative w-16 h-18 rounded-2xl bg-gradient-to-b from-amber-300 via-amber-600 to-amber-900 p-1 shadow-[0_0_30px_rgba(245,158,11,0.7)] flex items-center justify-center">
+            <div className="w-full h-full rounded-xl bg-gradient-to-b from-red-950 via-slate-950 to-red-950 border border-amber-400/60 flex flex-col items-center justify-center py-1">
+              <span className="text-amber-400 text-xs leading-none">👑</span>
+              <span className="font-serif font-black text-2xl tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600 drop-shadow">
+                VIII
+              </span>
             </div>
+            {/* Alone luminoso */}
+            <div className="absolute -inset-1 rounded-2xl bg-amber-500/25 blur-sm pointer-events-none" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl font-black tracking-wider text-white uppercase drop-shadow">
+
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2.5">
+              <span className="font-imperio-title text-3xl md:text-4xl font-black tracking-widest uppercase">
                 Imperio VIII
               </span>
-              <span className="text-xs px-2 py-0.5 rounded bg-amber-500/20 border border-amber-400/40 text-amber-300 font-bold uppercase tracking-wider">
-                Mappa dell'Isola
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/50 text-[10px] font-black text-amber-300 uppercase tracking-widest shadow-sm">
+                Mappa
               </span>
             </div>
-            <div className="text-xs font-semibold text-white/60 tracking-wide mt-0.5">
+            <span className="text-xs font-semibold text-amber-100/75 tracking-wider mt-0.5 drop-shadow">
               Il Viaggio attraverso le 3 Fasi del Torneo
-            </div>
+            </span>
           </div>
         </div>
 
-        {/* Scheda Fase e Sezione Attiva al Centro / Destra */}
-        <div className="flex items-center gap-3">
-          <div className="px-5 py-2.5 rounded-2xl bg-slate-950/85 border border-white/15 shadow-2xl backdrop-blur-md flex items-center gap-3.5">
-            <div className="flex flex-col items-end">
-              <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest">
-                {targetZone.phaseLabel}
-              </span>
-              <span className="text-sm font-black text-white uppercase tracking-wide">
-                {targetZone.title}
-              </span>
-            </div>
-            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${targetZone.bgGradient} flex items-center justify-center text-xl shadow-lg border border-white/20`}>
-              {targetZone.badgeEmoji}
-            </div>
-          </div>
+        {/* TITOLO DEL GIOCO IN ALTO A DESTRA IN STILE "PAESE DEI GIOCATTOLI" */}
+        <div className="flex flex-col items-end text-right">
+          {/* Sottotitolo azzurro brillante con contorno nero stile "Ti diamo il benvenuto a" */}
+          <span className="brawl-game-phase text-xl md:text-2xl font-black uppercase">
+            {targetZone.phaseLabel}
+          </span>
+          {/* Titolo principale giallo-arancio-rosso 3D brillante stile "PAESE DEI GIOCATTOLI" */}
+          <h1 className="brawl-game-title text-5xl md:text-6xl font-black uppercase mt-0.5 transition-all duration-700">
+            {isSectionRevealed ? targetZone.title : `SCOPRI LA SEZIONE ${targetZone.id} ?`}
+          </h1>
         </div>
+
       </div>
 
       {/* =========================================================================
-          HUD INFERIORE (DESCRIZIONE GIOCO & PULSANTE AVVIO VIDEO SPIEGAZIONE)
+          HUD INFERIORE (DESCRIZIONE GIOCO & PULSANTE AVVIO/AVANZAMENTO)
           ========================================================================= */}
-      <div className={`absolute bottom-0 inset-x-0 z-40 p-6 flex items-end justify-between pointer-events-auto transition-opacity duration-500 ${isZoomed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`absolute bottom-0 inset-x-0 z-40 p-8 flex items-end justify-between pointer-events-auto transition-opacity duration-500 ${isZoomed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
         {/* Card Dettagli Regole del Gioco */}
         <div className="max-w-xl p-5 rounded-2xl bg-slate-950/90 border border-amber-500/30 shadow-2xl backdrop-blur-md">
           <div className="flex items-center gap-2 mb-1.5">
@@ -641,33 +864,16 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
               Sezione {targetZone.id}
             </span>
             <span className="text-xs font-bold text-white/50 uppercase tracking-wider">
-              {targetZone.subtitle}
+              {isSectionRevealed ? targetZone.subtitle : 'Area da Esplorare'}
             </span>
           </div>
           <p className="text-sm font-medium text-slate-200 leading-relaxed">
-            {targetZone.description}
+            {isSectionRevealed
+              ? targetZone.description
+              : 'Premi la Freccia Destra [→] per far muovere i campioni delle squadre lungo il sentiero e svelare questa nuova porzione della mappa!'}
           </p>
         </div>
 
-        {/* Pulsante Call-to-Action per Avviare il Video della Spiegazione */}
-        <div className="flex flex-col items-end gap-2">
-          {interactive && (
-            <button
-              type="button"
-              onClick={handleToggleZoom}
-              className="group relative px-8 py-4 rounded-2xl bg-gradient-to-r from-[#d24726] via-amber-500 to-[#d24726] bg-[length:200%_auto] hover:bg-right transition-all duration-500 text-white font-black text-base tracking-wider uppercase shadow-[0_0_35px_rgba(210,71,38,0.7)] flex items-center gap-3 cursor-pointer hover:scale-105 active:scale-95"
-            >
-              <span className="text-xl group-hover:scale-125 transition-transform duration-300">🎬</span>
-              <span>Avvia Video Spiegazione ▶</span>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded bg-black/30 border border-white/20 text-amber-200">
-                INVIO
-              </span>
-            </button>
-          )}
-          <span className="text-[11px] font-semibold text-white/50 tracking-wider">
-            Premi INVIO o Spazio per avviare la spiegazione
-          </span>
-        </div>
       </div>
 
       {/* =========================================================================

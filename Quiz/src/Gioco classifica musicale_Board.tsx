@@ -596,13 +596,15 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     { value: 1, top: "89.000%" }  // Blu 4
   ];
 
+  const currentSfondo = (gameData as any).sfondo || '/Icone/sfondi/sfondo_box2_cristalli.jpg';
+
   return (
     <div 
-      className={`relative w-full min-h-screen ${(gameData as any).sfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
-      style={(gameData as any).sfondo ? { backgroundImage: assetUrlCss((gameData as any).sfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
+      className={`relative w-full min-h-screen ${currentSfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
+      style={currentSfondo ? { backgroundImage: assetUrlCss(currentSfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
       {/* EFFETTI DI LUCE SULLO SFONDO (Decorativi) */}
-      {!(gameData as any).sfondo && (
+      {!currentSfondo && (
         <>
           <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
           <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />

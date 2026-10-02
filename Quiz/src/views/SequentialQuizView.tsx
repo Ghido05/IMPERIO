@@ -115,7 +115,7 @@ export function getSlideForBoxQuestion(
 
   if (boxNum === 1) {
     const q1 = setupState.gioco1?.questions?.[questionNum] || createDefaultGioco1Question();
-    const sf = q1.sfondo || setupState.gioco1?.sfondoGenerale || '';
+    const sf = q1.sfondo || setupState.gioco1?.sfondoGenerale || '/Icone/sfondi/sfondo_box1_foresta_musicale.jpg';
     if (q1.tipo === 'canzone') {
       const data = {
         indizi: [
@@ -196,7 +196,7 @@ export function getSlideForBoxQuestion(
 
   if (boxNum === 2) {
     const q2 = setupState.gioco2?.questions?.[questionNum] || createDefaultGioco2Question();
-    const sf = q2.sfondo || setupState.gioco2?.sfondoGenerale || '';
+    const sf = q2.sfondo || setupState.gioco2?.sfondoGenerale || '/Icone/sfondi/sfondo_box2_cristalli.jpg';
     if (q2.tipo === 'canzone') {
       const data = {
         titolo: q2.canzone.domanda || q2.canzone.titolo || 'Classifica Musicale',

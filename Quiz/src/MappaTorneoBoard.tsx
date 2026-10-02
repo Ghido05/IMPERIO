@@ -101,12 +101,12 @@ const ZONES: ZoneInfo[] = [
     x: 78,
     y: 62,
     zoomX: 78,
-    zoomY: 54,
+    zoomY: 55,
     title: 'TERMOPILI — SCONTRO FINALE',
     phaseNumber: 3,
     phaseLabel: 'FASE FINALE: TERMOPILI',
-    subtitle: 'La Resa dei Conti tra Prescelti',
-    description: 'Scontro finale! Le squadre schierano 6, 5, 4 o 3 prescelti in base al delta punti per decretare il vincitore.',
+    subtitle: 'L\'Arena d\'Acqua & La Scalinata del Trono',
+    description: 'Scontro finale sull\'arena d\'acqua! I prescelti si sfidano sui cubi sospesi: chi sbaglia fa splash! Chi conquisterà la scalinata verso il trono?',
     badgeEmoji: '⚔️',
     accentColor: '#ef4444',
     bgGradient: 'from-rose-500 to-red-700',
@@ -177,12 +177,12 @@ function easeInOutCubic(x: number): number {
 function HeavyCloudBlanket({ isDissolving = false }: { isDissolving?: boolean }) {
   return (
     <div
-      className={`relative w-[820px] h-[540px] pointer-events-none select-none flex items-center justify-center transition-all duration-1000 ${
+      className={`relative w-[880px] h-[580px] pointer-events-none select-none flex items-center justify-center transition-all duration-1000 ${
         isDissolving ? 'opacity-0 scale-125' : 'opacity-100 scale-100'
       }`}
     >
       {/* Ombra di contatto morbida e racchiusa sotto il centro della nuvola */}
-      <div className="absolute w-[480px] h-[220px] rounded-full bg-black/25 blur-2xl transform scale-y-60 pointer-events-none" />
+      <div className="absolute w-[520px] h-[240px] rounded-full bg-black/25 blur-2xl transform scale-y-60 pointer-events-none" />
 
       {/* SVG Volumetrico ad alta densità con cumuli bianchi espansi e sfumature di luce */}
       <svg

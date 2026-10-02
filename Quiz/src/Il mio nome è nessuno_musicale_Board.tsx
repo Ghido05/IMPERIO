@@ -458,10 +458,12 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [step, isAutoAdvancing, lockedStep, setLockedStep, setAssignedTeam, setBookedTeam]);
 
+  const currentSfondo = gameData.sfondo || '/Icone/sfondi/sfondo_box1_foresta_musicale.jpg';
+
   return (
     <div 
-      className={`relative w-full min-h-screen ${gameData.sfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
-      style={gameData.sfondo ? { backgroundImage: assetUrlCss(gameData.sfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
+      className={`relative w-full min-h-screen ${currentSfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
+      style={currentSfondo ? { backgroundImage: assetUrlCss(currentSfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
       
       {/* Overlay di Errore (Flash Rosso + X Centrale) */}

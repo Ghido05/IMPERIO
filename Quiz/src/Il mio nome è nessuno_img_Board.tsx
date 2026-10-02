@@ -293,10 +293,12 @@ const GameBoard = ({ interactive = true, revealAll = false }: { interactive?: bo
     return step >= (revealStep * 2);
   };
 
+  const currentSfondo = gameData.sfondo || '/Icone/sfondi/sfondo_box1_foresta_musicale.jpg';
+
   return (
     <div
-      className={`relative w-full h-full ${gameData.sfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
-      style={gameData.sfondo ? { backgroundImage: assetUrlCss(gameData.sfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
+      className={`relative w-full h-full ${currentSfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
+      style={currentSfondo ? { backgroundImage: assetUrlCss(currentSfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
       {/* Overlay Errore */}
       {showError && (

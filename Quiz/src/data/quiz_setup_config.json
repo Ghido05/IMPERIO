@@ -378,7 +378,7 @@
         }
       }
     },
-    "sfondoGenerale": "/Icone/nessuno_img/sfondo_finale_default.jpg"
+    "sfondoGenerale": "/Icone/sfondi/sfondo_box1_foresta_musicale.jpg"
   },
   "gioco2": {
     "selectedQuestion": 3,
@@ -707,7 +707,7 @@
         }
       }
     },
-    "sfondoGenerale": ""
+    "sfondoGenerale": "/Icone/sfondi/sfondo_box2_cristalli.jpg"
   },
   "gioco3": {
     "selectedQuestion": 1,
@@ -1175,7 +1175,7 @@
     "videoSpiegazione": ""
   },
   "punteggi": {
-    "sfondo": "/Icone/nessuno_img/sfondo_finale_acqua.jpg",
+    "sfondo": "/Icone/sfondi/sfondo_generale_torneo.jpg",
     "nomiSquadre": [
       "PORTO",
       "MARMIROLO",

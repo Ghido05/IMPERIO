@@ -424,13 +424,13 @@ export function getDefaultSetupState(): QuizSetupState {
       selectedQuestion: 1,
       videoSpiegazione: '',
       questions: q1,
-      sfondoGenerale: '',
+      sfondoGenerale: '/Icone/sfondi/sfondo_box1_foresta_musicale.jpg',
     },
     gioco2: {
       selectedQuestion: 1,
       videoSpiegazione: '',
       questions: q2,
-      sfondoGenerale: '',
+      sfondoGenerale: '/Icone/sfondi/sfondo_box2_cristalli.jpg',
     },
     gioco3: {
       selectedQuestion: 1,
@@ -454,7 +454,7 @@ export function getDefaultSetupState(): QuizSetupState {
       notePresentatore: '',
     },
     punteggi: {
-      sfondo: '',
+      sfondo: '/Icone/sfondi/sfondo_generale_torneo.jpg',
       nomiSquadre: ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'],
       iconeBonus: ['', '', '', ''],
     },

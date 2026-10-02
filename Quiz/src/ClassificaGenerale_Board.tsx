@@ -50,10 +50,10 @@ const EditableScore: React.FC<{ index: number; score: number; setScore: (i: numb
             (e.target as HTMLInputElement).blur();
           }
         }}
-        className="bg-transparent text-6xl font-black text-center w-full focus:outline-none focus:ring-2 focus:ring-white/20 rounded-xl transition-all hover:bg-white/5 cursor-text"
+        className="bg-transparent text-6xl font-black text-center w-full focus:outline-none focus:ring-2 focus:ring-white/20 rounded-xl transition-all hover:bg-white/5 cursor-text drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]"
         style={{ width: `${Math.max(displayValue.length, 3)}ch` }}
       />
-      <span className="text-2xl font-black ml-2 opacity-50">PT</span>
+      <span className="text-2xl font-black ml-2 opacity-70 drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">PT</span>
       <div className="absolute -bottom-1 left-0 w-full h-0.5 bg-white/20 scale-x-0 group-hover:scale-x-100 transition-transform" />
     </div>
   );
@@ -167,10 +167,12 @@ const ClassificaGenerale_Board: React.FC = () => {
   const maxScore = Math.max(...scores, 10000); // Scale histogram to at least 10k
   const isBox0 = activeBox === 0;
 
+  const effectiveBg = (!isBox0 && (setup?.sfondo || '/Icone/sfondi/sfondo_generale_torneo.jpg')) || '';
+
   return (
     <div
       className="relative w-[1920px] h-[1080px] bg-[#0a0a0a] text-white flex flex-col px-10 py-8 overflow-hidden font-sans"
-      style={(!isBox0 && setup?.sfondo) ? { backgroundImage: `url("${assetUrl(setup.sfondo)}")`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
+      style={effectiveBg ? { backgroundImage: `url("${assetUrl(effectiveBg)}")`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
       <style>{`
         @keyframes custom-blink {
@@ -182,8 +184,10 @@ const ClassificaGenerale_Board: React.FC = () => {
         }
       `}</style>
 
-      {/* Background decoration */}
-      {(!setup?.sfondo || isBox0) && (
+
+
+      {/* Background decoration in Box 0 */}
+      {(!effectiveBg || isBox0) && (
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none opacity-20">
           <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-600/20 blur-[120px] rounded-full" />
           <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] bg-blue-600/20 blur-[120px] rounded-full" />

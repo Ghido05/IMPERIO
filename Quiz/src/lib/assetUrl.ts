@@ -117,6 +117,10 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   // Sfondi e Finale
   'sfondo_finale_acqua.jpg': '/sfondo_finale_acqua.jpg',
   'sfondo_finale_default.jpg': '/sfondo_finale_default.jpg',
+  'sfondo_box1_foresta_musicale.jpg': '/Icone/sfondi/sfondo_box1_foresta_musicale.jpg',
+  'sfondo_box2_cristalli.jpg': '/Icone/sfondi/sfondo_box2_cristalli.jpg',
+  'sfondo_box3_forzieri.jpg': '/Icone/sfondi/sfondo_box3_forzieri.jpg',
+  'sfondo_generale_torneo.jpg': '/Icone/sfondi/sfondo_generale_torneo.jpg',
   'trofeo_vittoria.png': '/Icone/finale/trofeo_vittoria.png',
   'coppa.png': '/coppa.png',
   // Sfondi Password

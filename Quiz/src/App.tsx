@@ -19,7 +19,8 @@ export type SlideType =
   | 'finale_squadre'
   | 'scenetta'
   | 'video'
-  | 'mappa_torneo';
+  | 'mappa_torneo'
+  | 'spiegazione_fasi';
 
 export interface Slide {
   id: string;

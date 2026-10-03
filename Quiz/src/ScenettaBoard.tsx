@@ -136,13 +136,55 @@ export default function ScenettaBoard({ }: ScenettaBoardProps) {
           <div className="w-12 h-12 rounded-xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-2xl shrink-0">
             ⚔️
           </div>
-          <div>
+          <div className="flex-1">
             <h4 className="text-sm font-black text-amber-300 uppercase tracking-wider mb-1">
               Regola dei Prescelti — Scontro Finale alle Termopili
             </h4>
-            <p className="text-xs text-slate-200 leading-relaxed font-medium">
+            <p className="text-xs text-slate-200 leading-relaxed font-medium mb-3">
               Per non delegittimare il percorso che intraprenderemo, la squadra con <strong className="text-amber-300 font-bold">più punti</strong> giocherà la manche finale con <strong className="text-white font-bold">6 prescelti</strong>. La seconda, in base al divario con la prima squadra, potrà giocare con <strong className="text-white font-bold">6, 5 o 4 persone</strong> secondo i delta punti riportati. L’ultima squadra giocherà con <strong className="text-rose-400 font-bold">solo 3 persone</strong>.
             </p>
+
+            {/* Griglia Delta Punti Visiva */}
+            <div className="grid grid-cols-3 gap-3 pt-2.5 border-t border-amber-500/20">
+              <div className="bg-black/40 border border-amber-400/30 rounded-xl px-3 py-2 flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] font-black text-amber-300 uppercase tracking-wider">🥇 1ª Classificata</div>
+                  <div className="text-[10px] text-slate-400">Punteggio più alto</div>
+                </div>
+                <span className="text-xs font-black text-amber-200 px-2 py-0.5 rounded bg-amber-500/20 border border-amber-400/40">
+                  6 Omini
+                </span>
+              </div>
+
+              <div className="bg-black/40 border border-cyan-400/30 rounded-xl px-3 py-1.5 flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-black text-cyan-300 uppercase tracking-wider">🥈 2ª Classificata</span>
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Delta Punti</span>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-300 py-0.5 border-b border-white/5">
+                  <span>Distacco &lt; 3.000 pt:</span>
+                  <strong className="text-white font-black">6 Omini</strong>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-300 py-0.5 border-b border-white/5">
+                  <span>Tra 3.000 e 15.000 pt:</span>
+                  <strong className="text-cyan-300 font-black">5 Omini</strong>
+                </div>
+                <div className="flex items-center justify-between text-[10px] text-slate-300 py-0.5">
+                  <span>Distacco &gt; 15.000 pt:</span>
+                  <strong className="text-amber-300 font-black">4 Omini</strong>
+                </div>
+              </div>
+
+              <div className="bg-black/40 border border-rose-400/30 rounded-xl px-3 py-2 flex items-center justify-between">
+                <div>
+                  <div className="text-[11px] font-black text-rose-300 uppercase tracking-wider">🥉 3ª Classificata</div>
+                  <div className="text-[10px] text-slate-400">Inizia per prima</div>
+                </div>
+                <span className="text-xs font-black text-rose-200 px-2 py-0.5 rounded bg-rose-500/20 border border-rose-400/40">
+                  3 Omini
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </footer>

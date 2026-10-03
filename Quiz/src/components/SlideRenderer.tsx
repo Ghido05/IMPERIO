@@ -12,6 +12,7 @@ import FinaleSquadreBoard from '../FinaleSquadre_Board';
 import ScenettaBoard from '../ScenettaBoard';
 import VideoBoard from '../VideoBoard';
 import MappaTorneoBoard from '../MappaTorneoBoard';
+import SpiegazioneFasiBoard from '../SpiegazioneFasiBoard';
 
 interface SlideRendererProps {
   type: SlideType;
@@ -36,6 +37,7 @@ export default function SlideRenderer({ type, interactive = true, revealAll = fa
       {type === 'scenetta' && <ScenettaBoard interactive={interactive} revealAll={revealAll} />}
       {type === 'video' && <VideoBoard interactive={interactive} revealAll={revealAll} />}
       {type === 'mappa_torneo' && <MappaTorneoBoard interactive={interactive} revealAll={revealAll} />}
+      {type === 'spiegazione_fasi' && <SpiegazioneFasiBoard interactive={interactive} revealAll={revealAll} />}
     </>
   );
 }

@@ -244,7 +244,7 @@ export function createDefaultGioco3Question(): Gioco3Question {
 }
 
 export const DEFAULT_BOX0_RULES = `Imperio VIII è composto da 3 fasi: la prima fase è chiamata “I prodromi dello scontro”, in essa troviamo due giochi che vi permetteranno di ottenere punti. La seconda fase “La corsa agli equipaggiamenti”, formata da due giochi, è possibile ottenere oltre a punti, bonus, cioè vantaggi per il gioco finale. La fase finale “Termopili: scontro finale” nella quale si decreterà la squadra vincente.
-Per non delegittimare il percorso che intraprenderemo, la squadra con più punti giocherà la manche finale con 6 prescelti, la seconda, in base al divario con la prima squadra potrà giocare con 6, 5 o 4 persone secondo i delta punti che vedete riportati, l’ultima con solo 3.`;
+Per non delegittimare il percorso che intraprenderemo, la squadra con più punti giocherà la manche finale con 6 prescelti, la seconda, in base al divario con la prima squadra potrà giocare con 6, 5 o 4 persone secondo i delta punti riportati (<3.000 pt: 6 omini; da 3.000 a 15.000 pt: 5 omini; >15.000 pt: 4 omini), l’ultima con solo 3.`;
 
 export function createDefaultBox0Setup(): Box0Setup {
   return {

@@ -328,13 +328,34 @@ function normalizeStartingMembers(scores: number[] | null): Record<TeamId, numbe
   const base: Record<TeamId, number> = { 1: 6, 2: 5, 3: 3 };
   if (!scores || scores.length < 3) return base;
   const ranking = scores
-    .map((score, index) => ({ teamId: (index + 1) as TeamId, score }))
+    .map((score, index) => ({ teamId: (index + 1) as TeamId, score: Number(score) || 0 }))
     .sort((a, b) => b.score - a.score);
-  const assigned = [6, 5, 3];
-  ranking.forEach((item, idx) => {
-    base[item.teamId] = assigned[idx] ?? base[item.teamId];
-  });
-  return base;
+
+  const first = ranking[0];
+  const second = ranking[1];
+  const third = ranking[2];
+
+  // Distacco di punti della seconda squadra rispetto alla prima squadra
+  const diffFromFirst = Math.max(0, first.score - second.score);
+
+  // Calcolo omini per la seconda squadra in base al distacco dalla prima:
+  // - Meno di 3000 pt di distacco: 6 omini
+  // - Distacco tra 3000 pt e 15000 pt: 5 omini
+  // - Distacco maggiore di 15000 pt: 4 omini
+  let secondTeamPawns = 5;
+  if (diffFromFirst < 3000) {
+    secondTeamPawns = 6;
+  } else if (diffFromFirst <= 15000) {
+    secondTeamPawns = 5;
+  } else {
+    secondTeamPawns = 4;
+  }
+
+  return {
+    [first.teamId]: 6,
+    [second.teamId]: secondTeamPawns,
+    [third.teamId]: 3,
+  } as Record<TeamId, number>;
 }
 
 // Stylized Omino Pawn component matching omini.jpg with hilarious splash-sink animation
@@ -1025,6 +1046,27 @@ export default function FinaleSquadre_Board() {
     const second = sorted[1]?.teamId ?? 2;
     const first = sorted[0]?.teamId ?? 1;
     return [third, second, first];
+  }, [scores]);
+
+  // Ranking and gap stats for display and tooltips
+  const rankingStats = useMemo(() => {
+    if (!scores || scores.length < 3) {
+      return {
+        firstTeamId: 1 as TeamId,
+        secondTeamId: 2 as TeamId,
+        thirdTeamId: 3 as TeamId,
+        gapSecondFromFirst: 0,
+      };
+    }
+    const sorted = scores
+      .map((score, index) => ({ teamId: (index + 1) as TeamId, score: Number(score) || 0 }))
+      .sort((a, b) => b.score - a.score);
+    return {
+      firstTeamId: sorted[0]?.teamId ?? (1 as TeamId),
+      secondTeamId: sorted[1]?.teamId ?? (2 as TeamId),
+      thirdTeamId: sorted[2]?.teamId ?? (3 as TeamId),
+      gapSecondFromFirst: Math.max(0, (sorted[0]?.score ?? 0) - (sorted[1]?.score ?? 0)),
+    };
   }, [scores]);
 
   // Synced States across Electron windows (defaults to 3rd place team with fewest points)
@@ -1766,21 +1808,21 @@ export default function FinaleSquadre_Board() {
                           {teamId === rankingOrder[0] ? (
                             <span
                               className="px-1.5 py-0.5 text-[9px] font-black rounded bg-amber-600/40 text-amber-200 border border-amber-500/50 shadow-sm"
-                              title="3ª classificata: inizia per prima!"
+                              title="3ª classificata: inizia per prima con 3 omini"
                             >
                               🥉 3ª (Inizia)
                             </span>
                           ) : teamId === rankingOrder[1] ? (
                             <span
-                              className="px-1.5 py-0.5 text-[9px] font-black rounded bg-slate-400/30 text-slate-200 border border-slate-300/40 shadow-sm"
-                              title="2ª classificata"
+                              className="px-1.5 py-0.5 text-[9px] font-black rounded bg-slate-400/30 text-slate-200 border border-slate-300/40 shadow-sm cursor-help"
+                              title={`2ª classificata: distacco dalla 1ª di ${rankingStats.gapSecondFromFirst.toLocaleString('it-IT')} pt ➔ ${startingMembers[teamId]} omini (<3.000: 6, 3.000-15.000: 5, >15.000: 4)`}
                             >
                               🥈 2ª
                             </span>
                           ) : (
                             <span
                               className="px-1.5 py-0.5 text-[9px] font-black rounded bg-yellow-500/30 text-yellow-100 border border-yellow-400/50 shadow-sm"
-                              title="1ª classificata"
+                              title="1ª classificata: 6 omini"
                             >
                               🥇 1ª
                             </span>

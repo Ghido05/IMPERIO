@@ -67,16 +67,17 @@ export function getSlideForBoxQuestion(
         },
       };
     }
+    const hasCustomVideo = Boolean(setupState.box0?.videoSpiegazione);
     return {
       id: 'box0_spiegazione',
-      type: 'video',
+      type: (hasCustomVideo ? 'video' : 'spiegazione_fasi') as any,
       data: {
         src: setupState.box0?.videoSpiegazione || '',
         videoUrl: setupState.box0?.videoSpiegazione || '',
-        titolo: 'VIDEO SPIEGAZIONE GENERALE',
+        titolo: 'SPIEGAZIONE FASI DEL QUIZ',
         sottotitolo: 'Regolamento Generale del Torneo',
         slideId: 'box0_spiegazione',
-        notePresentatore: 'Video esplicativo del regolamento globale e delle 3 fasi',
+        notePresentatore: 'Animazione esplicativa del regolamento globale e delle 3 fasi',
       },
     };
   }
@@ -1192,7 +1193,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                   if (activeQuestion === 1) return 'BOX 0 — 1. Scenetta (Regolamento & Delta Punti)';
                   if (activeQuestion === 2) return 'BOX 0 — 2. Video Pre-Sigla';
                   if (activeQuestion === 3) return 'BOX 0 — 3. Video Sigla Ufficiale';
-                  if (activeQuestion === 4) return 'BOX 0 — 4. Video Spiegazione Generale';
+                  if (activeQuestion === 4) return 'BOX 0 — 4. Spiegazione Fasi Quiz';
                   return `BOX 0 — Passaggio #${activeQuestion}`;
                 }
                 if (activeQuestion === 0) {

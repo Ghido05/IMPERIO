@@ -18,9 +18,10 @@ interface SlideRendererProps {
   type: SlideType;
   interactive?: boolean;
   revealAll?: boolean;
+  isPresenter?: boolean;
 }
 
-export default function SlideRenderer({ type, interactive = true, revealAll = false }: SlideRendererProps) {
+export default function SlideRenderer({ type, interactive = true, revealAll = false, isPresenter = false }: SlideRendererProps) {
   return (
     <>
       <style>{`.min-h-screen { min-height: 1080px !important; height: 1080px !important; }`}</style>
@@ -37,7 +38,7 @@ export default function SlideRenderer({ type, interactive = true, revealAll = fa
       {type === 'scenetta' && <ScenettaBoard interactive={interactive} revealAll={revealAll} />}
       {type === 'video' && <VideoBoard interactive={interactive} revealAll={revealAll} />}
       {type === 'mappa_torneo' && <MappaTorneoBoard interactive={interactive} revealAll={revealAll} />}
-      {type === 'spiegazione_fasi' && <SpiegazioneFasiBoard interactive={interactive} revealAll={revealAll} />}
+      {type === 'spiegazione_fasi' && <SpiegazioneFasiBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
     </>
   );
 }

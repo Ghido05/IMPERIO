@@ -162,7 +162,7 @@ export default function SlideCanvas({
         className={interactive ? 'relative' : 'relative pointer-events-none'}
         style={{ width: STAGE_W, height: STAGE_H }}
       >
-        <SlideRenderer key={slide.id} type={slide.type} interactive={interactive} revealAll={revealAll} />
+        <SlideRenderer key={slide.id} type={slide.type} interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />
         {shouldShowNadia && (
           <MilleEUnaNadiaBoard
             nadiaSetup={effectiveNadiaSetup}

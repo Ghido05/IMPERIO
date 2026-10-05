@@ -178,7 +178,7 @@
             "È UN VECCHIO CARRO ATTREZZI SENZA PIÙ VERNICE, MA CON I SUOI DENTONI È SEMPRE FELICE",
             "PER OGNI SOCCORSO LUI CI METTE IL PETTO, IL SUO NOME ESATTO È PROPRIO..."
           ],
-          "confermaAudio": "/Audio/strumenti/1_4_bam bam.mp3",
+          "confermaAudio": "/Audio/strumenti/1_4_anotherway.mp3",
           "soluzione": "CRICCHETTO",
           "categoria": "PERSONAGGIO ",
           "grigliaSeme": 534747
@@ -237,15 +237,16 @@
           "anno": ""
         },
         "immagine": {
-          "immagineJpg": "",
+          "immagineJpg": "/Icone/nessuno_img/1_6_ritornoalfuturo.jpg",
           "indizi": [
             "",
             "",
             "",
             ""
           ],
-          "confermaAudio": "",
-          "soluzione": "STELE DI ROSETTA"
+          "confermaAudio": "/Audio/strumenti/1_6_macchinadeltempo.mp3",
+          "soluzione": "RITORNO AL FUTURO",
+          "categoria": "FILM"
         }
       },
       "7": {
@@ -382,7 +383,7 @@
     "sfondoGenerale": "/Icone/sfondi/sfondo_box1_foresta_musicale.jpg"
   },
   "gioco2": {
-    "selectedQuestion": 3,
+    "selectedQuestion": 1,
     "videoSpiegazione": "",
     "questions": {
       "1": {
@@ -398,27 +399,27 @@
             "/Audio/strumenti/g02m01s07-tastiera.mp3"
           ],
           "risposte": [
-            "REPUBBLICA DEMOCRATICA DEL CONGO",
-            "REPUBBLICA CENTRAFRICANA",
-            "SAN VINCENZO E GRENADINE",
-            "REPUBBLICA DOMINICANA",
-            "SAN CRISTOFORO E NEVIS",
-            "REPUBBLICA DEL CONGO",
-            "BOSNIA ERZEGOVINA"
+            "STATI UNITI",
+            "GIAPPONE",
+            "GERMANIA",
+            "FRANCIA",
+            "REGNO UNITO",
+            "ITALIA",
+            "CANADA"
           ],
           "indizi": [
-            "OSSESIONE1",
-            "",
-            "",
-            "",
-            "",
-            "",
-            ""
+            "\"SIAMO ALLE SOLITE\"",
+            "\"VENERDÌ\"",
+            "\"ALTA MAREA\"",
+            "SANREMO",
+            "2026",
+            "\"MALEDETTO FEELING\"",
+            "SAMURAI"
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g02m01soluzione.mp3",
           "titolo": "OSSESSIONE",
           "info": "2026",
-          "domanda": "Nazioni con più lettere nel nome corrente in Italiano",
+          "domanda": "NAZIONI MEMBRI DEL G7 ORDINATI PER NUMERO DI ABITANTI",
           "artista": "SAMURAI JAY"
         },
         "immagine": {
@@ -437,7 +438,8 @@
           "immagineJpg": "",
           "soluzioneAudio": "",
           "soluzioneTesto": ""
-        }
+        },
+        "notePresentatore": "1. **Stati Uniti**: circa 335-340 milioni di abitanti; 2. **Giappone**: circa 124 milioni di abitanti; 3. **Germania**: circa 84 milioni di abitanti; 4. **Francia**: circa 68 milioni di abitanti; 5. **Regno Unito**: circa 67 milioni di abitanti; 6. **Italia**: circa 59 milioni di abitanti; 7. **Canada**: circa 40 milioni di abitanti"
       },
       "2": {
         "tipo": "immagine",
@@ -656,7 +658,7 @@
         }
       },
       "6": {
-        "tipo": "canzone",
+        "tipo": "immagine",
         "canzone": {
           "audioFiles": [
             "",
@@ -702,9 +704,9 @@
             "",
             ""
           ],
-          "immagineJpg": "",
+          "immagineJpg": "/Icone/nessuno_img/2_6_rafano.jpeg",
           "soluzioneAudio": "",
-          "soluzioneTesto": ""
+          "soluzioneTesto": "RAFANO"
         }
       }
     },
@@ -1154,11 +1156,28 @@
         "notePresentatore": "Nel nono cerchio dell'Inferno, imprigionato nel ghiaccio perenne del lago di Cocito, Dante si imbatte nel Conte Ugolino della Gherardesca. Condannato per tradimento politico, Ugolino è protagonista di uno degli episodi più tragici dell'intero poema: morì di inedia rinchiuso in una torre pisana insieme ai suoi figli e nipoti. Nell'Inferno dantesco è costretto al gelo eterno, condannato a sfogare la sua rabbia contro l'arcivescovo che lo aveva imprigionato.\nSe avete una memoria di ferro per la letteratura, avrete notato che c'è una piccola 'licenza poetica' nell'immagine che vi abbiamo mostrato. Nel testo originale della Divina Commedia, infatti, il Conte Ugolino non si trova affatto da solo nel ghiaccio. È condannato a stare nella stessa buca insieme al suo acerrimo nemico e carceriere, l'Arcivescovo Ruggieri. Per la precisione, Ugolino è posizionato sopra di lui e gli azzanna in eterno la nuca in quello che Dante definisce un fiero pasto. Nell'immagine, Ruggieri è stato provvidenzialmente omesso per non rendere la scena troppo macabra!"
       },
       {
-        "testo": "FRASE BIBBIA",
-        "sfondo": "",
+        "testo": "EINSTEIN RICEVE IL PREMIO NOBEL PER GLI STUDI SULL' EFFETTO FOTOELETTRICO",
+        "sfondo": "/Icone/nessuno_img/4_8_Einstein.png",
         "confermaAudio": "",
-        "lettereVisibili": [],
-        "indizio": "",
+        "lettereVisibili": [
+          1,
+          6,
+          10,
+          14,
+          16,
+          23,
+          27,
+          33,
+          38,
+          44,
+          47,
+          54,
+          57,
+          60,
+          65,
+          69
+        ],
+        "indizio": "STOCCOLMA, OTTOBRE 1922",
         "bonus": "",
         "punti": 1000,
         "notePresentatore": ""

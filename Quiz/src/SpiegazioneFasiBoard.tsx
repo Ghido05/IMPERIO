@@ -914,7 +914,7 @@ export default function SpiegazioneFasiBoard({
         }
       `}</style>
 
-      {/* Audio Element con voce narrante pulita (#4 Spiegazione.mp3 con fallback a m4a) */}
+      {/* Audio Element con voce narrante pulita (#4 Spiegazione.mp3) */}
       {interactive && (
         <audio
           ref={audioRef}
@@ -922,13 +922,8 @@ export default function SpiegazioneFasiBoard({
           muted={isMuted}
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleAudioEnded}
-          onError={() => {
-            console.warn('Fallback caricamento audio a formato compatibile...');
-            if (audioRef.current && !audioRef.current.src.includes('spiegazione_fasi_audio.m4a')) {
-              audioRef.current.src = assetUrl('/Audio/spiegazione_fasi_audio.m4a');
-              audioRef.current.load();
-              if (isPlaying) audioRef.current.play().catch(() => {});
-            }
+          onError={(e) => {
+            console.warn('Errore riproduzione audio spiegazione:', e);
           }}
           preload="auto"
         />

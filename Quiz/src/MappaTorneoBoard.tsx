@@ -304,6 +304,19 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
   const [showVideoOverlay, setShowVideoOverlay] = useState<boolean>(isZoomed);
   const zoomTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Transizione cinematica di ingresso dell'isola di gioco (all'inizio del Box 1 dalla spiegazione)
+  const [isIslandIntro, setIsIslandIntro] = useState<boolean>(activeBox === 1);
+
+  useEffect(() => {
+    if (activeBox === 1) {
+      setIsIslandIntro(true);
+      const timer = setTimeout(() => {
+        setIsIslandIntro(false);
+      }, 2600);
+      return () => clearTimeout(timer);
+    }
+  }, [activeBox]);
+
   // Trova la zona corrente attiva
   const targetZone = useMemo(() => {
     return ZONES.find((z) => z.id === activeBox) || ZONES[0];
@@ -432,6 +445,10 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           e.preventDefault();
           handleReturnToMap();
         }
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault();
+        setIsIslandIntro(true);
+        setTimeout(() => setIsIslandIntro(false), 2600);
       }
     };
 
@@ -541,15 +558,173 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
         .animate-question-token {
           animation: questionPulse 2.5s ease-in-out infinite;
         }
+
+        /* KEYFRAMES TRANSIZIONE DI INGRESSO ISOLA DI GIOCO */
+        @keyframes islandIntroZoom {
+          0% {
+            opacity: 0;
+            transform: scale(1.08);
+            filter: brightness(0.35) blur(8px);
+          }
+          40% {
+            opacity: 1;
+            filter: brightness(0.85) blur(2px);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+            filter: brightness(1) blur(0px);
+          }
+        }
+        @keyframes curtainFade {
+          0% { opacity: 0.95; }
+          30% { opacity: 0.85; }
+          100% { opacity: 0; }
+        }
+        @keyframes cloudsPart {
+          0% { transform: scale(1); opacity: 0.75; }
+          40% { transform: scale(1.15); opacity: 0.65; }
+          100% { transform: scale(1.6); opacity: 0; }
+        }
+        @keyframes sunbeamSweep {
+          0% { transform: translateX(-60%) rotate(-25deg); opacity: 0; }
+          30% { opacity: 0.75; }
+          100% { transform: translateX(70%) rotate(-25deg); opacity: 0; }
+        }
+        @keyframes mistDissolve {
+          0%, 90% { pointer-events: none; }
+          100% { visibility: hidden; }
+        }
+        .animate-curtain-fade {
+          animation: curtainFade 2.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-clouds-part {
+          animation: cloudsPart 2.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-sunbeam-sweep {
+          animation: sunbeamSweep 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .animate-mist-dissolve {
+          animation: mistDissolve 2.5s forwards;
+        }
+
+        /* DISCESA E ATTERRAGGIO CON RIMBALZO DEI 3 EROI */
+        @keyframes dropBounceRed {
+          0% {
+            opacity: 0;
+            transform: translateY(-130px) scale(0.6);
+          }
+          60% {
+            opacity: 1;
+            transform: translateY(10px) scale(1.08);
+          }
+          80% {
+            transform: translateY(-5px) scale(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0px) scale(1);
+          }
+        }
+        @keyframes dropBounceBlue {
+          0% {
+            opacity: 0;
+            transform: translateY(-150px) scale(0.6);
+          }
+          60% {
+            opacity: 1;
+            transform: translateY(12px) scale(1.1);
+          }
+          80% {
+            transform: translateY(-6px) scale(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0px) scale(1);
+          }
+        }
+        @keyframes dropBounceGreen {
+          0% {
+            opacity: 0;
+            transform: translateY(-130px) scale(0.6);
+          }
+          60% {
+            opacity: 1;
+            transform: translateY(10px) scale(1.08);
+          }
+          80% {
+            transform: translateY(-5px) scale(0.96);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0px) scale(1);
+          }
+        }
+        .animate-team-red-drop {
+          animation: dropBounceRed 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.5s backwards;
+        }
+        .animate-team-blue-drop {
+          animation: dropBounceBlue 1.1s cubic-bezier(0.16, 1, 0.3, 1) 0.75s backwards;
+        }
+        .animate-team-green-drop {
+          animation: dropBounceGreen 1.1s cubic-bezier(0.16, 1, 0.3, 1) 1.0s backwards;
+        }
+
+        /* SCIVOLAMENTO HUD SUPERIORE E INFERIORE */
+        @keyframes hudTopSlide {
+          0% {
+            opacity: 0;
+            transform: translateY(-60px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-hud-top-slide {
+          animation: hudTopSlide 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.7s backwards;
+        }
+
+        @keyframes hudBottomSlide {
+          0% {
+            opacity: 0;
+            transform: translateY(60px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-hud-bottom-slide {
+          animation: hudBottomSlide 1.2s cubic-bezier(0.16, 1, 0.3, 1) 0.9s backwards;
+        }
       `}</style>
 
-      {/* CONTENITORE MAPPA ISOLA CON ZOOM DINAMICO */}
+      {/* TRANSIZIONE DI INGRESSO ISOLA DI GIOCO - Velo di nebbia atmosferica che si apre */}
+      {isIslandIntro && (
+        <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden animate-mist-dissolve">
+          {/* Telo di buio iniziale che sfuma */}
+          <div className="absolute inset-0 bg-[#07090e] animate-curtain-fade" />
+
+          {/* Cumuli di nuvole dense che si aprono dal centro verso l'esterno */}
+          <div className="absolute inset-0 flex items-center justify-center animate-clouds-part">
+            <div className="w-[1500px] h-[900px] rounded-full bg-slate-300/25 blur-3xl" />
+            <div className="absolute w-[1000px] h-[600px] rounded-full bg-white/35 blur-2xl" />
+          </div>
+
+          {/* Raggio di sole dorato che spazza l'isola appena svelata */}
+          <div className="absolute -inset-full bg-gradient-to-r from-transparent via-amber-300/30 to-transparent transform -rotate-25 animate-sunbeam-sweep pointer-events-none" />
+        </div>
+      )}
+
+      {/* CONTENITORE MAPPA ISOLA CON ZOOM DINAMICO ED ENTRATA CINEMATICA */}
       <div
         className="absolute inset-0 w-full h-full origin-center"
         style={{
           transformOrigin: isZoomed ? `${targetZone.zoomX}% ${targetZone.zoomY}%` : '50% 50%',
           transform: isZoomed ? 'scale(2.75)' : 'scale(1)',
           transition: 'transform 1.25s cubic-bezier(0.22, 1, 0.36, 1)',
+          animation: isIslandIntro ? 'islandIntroZoom 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards' : undefined,
         }}
       >
         {/* SFONDO ISOLA ISOMETRICA 3D */}
@@ -756,7 +931,9 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           {/* Formazione a 3 dei Personaggi delle Squadre */}
           <div className="relative flex items-end justify-center w-56 h-40">
             {/* 1. SQUADRA 1 (ROSSO) - Sinistra */}
-            <div className="absolute left-0 bottom-0 flex flex-col items-center z-10 animate-team-red">
+            <div className={`absolute left-0 bottom-0 flex flex-col items-center z-10 ${
+              isIslandIntro ? 'animate-team-red-drop' : 'animate-team-red'
+            }`}>
               <div className="mb-1 px-2.5 py-0.5 rounded-full bg-red-600/90 border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.8)] backdrop-blur-sm">
                 <span className="text-[10px] font-black uppercase tracking-wider text-white">
                   {teamNames[0] || 'SQ 1'}
@@ -771,7 +948,9 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
             </div>
 
             {/* 2. SQUADRA 2 (BLU) - Centro (Leggermente in avanti e più alto) */}
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-3 flex flex-col items-center z-20 animate-team-blue">
+            <div className={`absolute left-1/2 -translate-x-1/2 bottom-3 flex flex-col items-center z-20 ${
+              isIslandIntro ? 'animate-team-blue-drop' : 'animate-team-blue'
+            }`}>
               <div className="mb-1 px-3 py-0.5 rounded-full bg-blue-600/90 border-2 border-white shadow-[0_3px_10px_rgba(0,0,0,0.9)] backdrop-blur-sm">
                 <span className="text-[11px] font-black uppercase tracking-wider text-white">
                   {teamNames[1] || 'SQ 2'}
@@ -786,7 +965,9 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
             </div>
 
             {/* 3. SQUADRA 3 (VERDE) - Destra */}
-            <div className="absolute right-0 bottom-0 flex flex-col items-center z-10 animate-team-green">
+            <div className={`absolute right-0 bottom-0 flex flex-col items-center z-10 ${
+              isIslandIntro ? 'animate-team-green-drop' : 'animate-team-green'
+            }`}>
               <div className="mb-1 px-2.5 py-0.5 rounded-full bg-emerald-600/90 border border-white/60 shadow-[0_2px_8px_rgba(0,0,0,0.8)] backdrop-blur-sm">
                 <span className="text-[10px] font-black uppercase tracking-wider text-white">
                   {teamNames[2] || 'SQ 3'}
@@ -808,7 +989,9 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           - A SINISTRA: LOGO E TITOLO EPICO IMPERIALE "IMPERIO VIII"
           - A DESTRA: TITOLO SEZIONE IN STILE BRAWL STARS ("PAESE DEI GIOCATTOLI")
           ========================================================================= */}
-      <div className={`absolute top-0 inset-x-0 z-40 p-8 flex items-start justify-between pointer-events-none transition-opacity duration-500 ${isZoomed ? 'opacity-0' : 'opacity-100'}`}>
+      <div className={`absolute top-0 inset-x-0 z-40 p-8 flex items-start justify-between pointer-events-none transition-opacity duration-500 ${
+        isZoomed ? 'opacity-0' : 'opacity-100'
+      } ${isIslandIntro ? 'animate-hud-top-slide' : ''}`}>
         
         {/* LOGO E TITOLO "IMPERIO VIII" A SINISTRA (STILE IMPERIALE EPICO CHISELED) */}
         <div className="flex items-center gap-4 drop-shadow-[0_8px_24px_rgba(0,0,0,0.9)]">
@@ -856,7 +1039,9 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
       {/* =========================================================================
           HUD INFERIORE (DESCRIZIONE GIOCO & PULSANTE AVVIO/AVANZAMENTO)
           ========================================================================= */}
-      <div className={`absolute bottom-0 inset-x-0 z-40 p-8 flex items-end justify-between pointer-events-auto transition-opacity duration-500 ${isZoomed ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+      <div className={`absolute bottom-0 inset-x-0 z-40 p-8 flex items-end justify-between pointer-events-auto transition-opacity duration-500 ${
+        isZoomed ? 'opacity-0 pointer-events-none' : 'opacity-100'
+      } ${isIslandIntro ? 'animate-hud-bottom-slide' : ''}`}>
         {/* Card Dettagli Regole del Gioco */}
         <div className="max-w-xl p-5 rounded-2xl bg-slate-950/90 border border-amber-500/30 shadow-2xl backdrop-blur-md">
           <div className="flex items-center gap-2 mb-1.5">

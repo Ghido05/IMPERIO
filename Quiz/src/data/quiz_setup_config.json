@@ -1085,7 +1085,7 @@
       {
         "testo": "ARCHIMEDE BRUCIò LE NAVI ROMANE CON GLI SPECCHI",
         "sfondo": "/Icone/nessuno_img/4_4_archimede.jpg",
-        "confermaAudio": "",
+        "confermaAudio": "/Audio/strumenti/4_4_bam bam.mp3",
         "lettereVisibili": [
           4,
           8,
@@ -1102,9 +1102,9 @@
         "notePresentatore": ""
       },
       {
-        "testo": "",
+        "testo": "L' ARSENAL DI RICCARDO CALAFIORI VINCE LA PREMIER LEAGUE",
         "sfondo": "",
-        "confermaAudio": "",
+        "confermaAudio": "/Audio/strumenti/4_5_WELIKETOPARTY.mp3",
         "lettereVisibili": [],
         "indizio": "",
         "bonus": "",
@@ -1158,7 +1158,7 @@
       {
         "testo": "EINSTEIN RICEVE IL PREMIO NOBEL PER GLI STUDI SULL' EFFETTO FOTOELETTRICO",
         "sfondo": "/Icone/nessuno_img/4_8_Einstein.png",
-        "confermaAudio": "",
+        "confermaAudio": "/Audio/strumenti/4_8_latestagira.mp3",
         "lettereVisibili": [
           1,
           6,

@@ -42,7 +42,8 @@
     },
     "videoPreSigla": "",
     "videoSigla": "",
-    "videoSpiegazione": ""
+    "sfondoSpiegazione": "/Icone/nessuno_img/sfondo_finale_acqua.jpg",
+    "videoSpiegazione": "/Icone/nessuno_img/sfondo_finale_acqua.jpg"
   },
   "gioco1": {
     "selectedQuestion": 7,

@@ -67,13 +67,14 @@ export function getSlideForBoxQuestion(
         },
       };
     }
-    const hasCustomVideo = Boolean(setupState.box0?.videoSpiegazione);
+    const customSfondo = setupState.box0?.sfondoSpiegazione || setupState.box0?.videoSpiegazione || '';
     return {
       id: 'box0_spiegazione',
-      type: (hasCustomVideo ? 'video' : 'spiegazione_fasi') as any,
+      type: 'spiegazione_fasi' as any,
       data: {
-        src: setupState.box0?.videoSpiegazione || '',
-        videoUrl: setupState.box0?.videoSpiegazione || '',
+        sfondo: customSfondo,
+        sfondoSpiegazione: customSfondo,
+        src: customSfondo,
         titolo: 'SPIEGAZIONE FASI DEL QUIZ',
         sottotitolo: 'Regolamento Generale del Torneo',
         slideId: 'box0_spiegazione',

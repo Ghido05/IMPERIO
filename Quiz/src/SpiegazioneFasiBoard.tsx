@@ -6,6 +6,8 @@ import { useSyncedState } from './hooks/useSyncedState';
 interface SpiegazioneData {
   src?: string;
   videoUrl?: string;
+  sfondo?: string;
+  sfondoSpiegazione?: string;
   titolo?: string;
   sottotitolo?: string;
   slideId?: string;
@@ -199,6 +201,7 @@ export default function SpiegazioneFasiBoard({
 }: SpiegazioneFasiBoardProps) {
   const data = useGameData<SpiegazioneData>();
   const slideId = data?.slideId || 'box0_spiegazione';
+  const customSfondo = data?.sfondo || data?.sfondoSpiegazione;
 
   // File audio pulito solo voce (con supporto per '#4 Spiegazione.mp3' e fallback nativo su m4a)
   const audioSrc = useMemo(() => {
@@ -935,15 +938,44 @@ export default function SpiegazioneFasiBoard({
       {/* SFONDO E CORNICE OLOGRAFICA HUD                                           */}
       {/* ========================================================================= */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Sfondo personalizzato da setup (se specificato) */}
+        {customSfondo && (
+          <>
+            <img
+              src={assetUrl(customSfondo)}
+              alt="Sfondo Spiegazione"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            {/* Overlay scuro soffuso semitrasparente per dare profondità e massimo risalto alla grafica */}
+            <div className="absolute inset-0 bg-gradient-to-b from-[#07090f]/75 via-[#07090f]/45 to-[#07090f]/80" />
+          </>
+        )}
+
         {/* Luci volumetriche ambientali */}
-        <div className="absolute -top-24 left-[10%] w-[550px] h-[550px] bg-red-600/15 rounded-full blur-[140px]" />
-        <div className="absolute -top-24 left-[50%] -translate-x-1/2 w-[550px] h-[550px] bg-emerald-600/15 rounded-full blur-[140px]" />
-        <div className="absolute -top-24 right-[10%] w-[550px] h-[550px] bg-sky-600/15 rounded-full blur-[140px]" />
-        <div className="absolute -bottom-32 left-[50%] -translate-x-1/2 w-[900px] h-[400px] bg-indigo-900/15 rounded-full blur-[160px]" />
+        <div
+          className={`absolute -top-24 left-[10%] w-[550px] h-[550px] bg-red-600/15 rounded-full blur-[140px] ${
+            customSfondo ? 'opacity-40' : 'opacity-100'
+          }`}
+        />
+        <div
+          className={`absolute -top-24 left-[50%] -translate-x-1/2 w-[550px] h-[550px] bg-emerald-600/15 rounded-full blur-[140px] ${
+            customSfondo ? 'opacity-40' : 'opacity-100'
+          }`}
+        />
+        <div
+          className={`absolute -top-24 right-[10%] w-[550px] h-[550px] bg-sky-600/15 rounded-full blur-[140px] ${
+            customSfondo ? 'opacity-40' : 'opacity-100'
+          }`}
+        />
+        <div
+          className={`absolute -bottom-32 left-[50%] -translate-x-1/2 w-[900px] h-[400px] bg-indigo-900/15 rounded-full blur-[160px] ${
+            customSfondo ? 'opacity-40' : 'opacity-100'
+          }`}
+        />
 
         {/* Griglia Blueprint tecnologica */}
         <div
-          className="absolute inset-0"
+          className={`absolute inset-0 ${customSfondo ? 'opacity-35' : 'opacity-100'}`}
           style={{
             backgroundImage: `
               linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
@@ -954,8 +986,10 @@ export default function SpiegazioneFasiBoard({
           }}
         />
 
-        {/* Gradiente radiale centrale */}
-        <div className="absolute inset-0 bg-radial from-transparent via-[#07090f]/70 to-[#07090f] opacity-90" />
+        {/* Gradiente radiale centrale solo se non c'è sfondo personalizzato */}
+        {!customSfondo && (
+          <div className="absolute inset-0 bg-radial from-transparent via-[#07090f]/70 to-[#07090f] opacity-90" />
+        )}
 
         {/* Bracket angolari futuristici */}
         <svg className="absolute inset-0 w-full h-full text-white/10" fill="none">
@@ -1135,9 +1169,9 @@ export default function SpiegazioneFasiBoard({
                   animation: showFase1Bottom ? 'badge-entry 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
                 }}
               >
-                <div className="w-full rounded-2xl p-4 bg-gradient-to-r from-red-950/80 via-red-900/60 to-red-950/80 border border-red-500/50 flex items-center justify-between shadow-[0_4px_20px_rgba(220,38,38,0.35)]">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl bg-red-500/20 border border-red-400/40 flex items-center justify-center text-red-300 font-mono font-black text-xl shadow-inner">
+                <div className="w-full h-[96px] rounded-2xl p-4 bg-gradient-to-r from-red-950/80 via-red-900/60 to-red-950/80 border border-red-500/50 flex items-center justify-between shadow-[0_4px_20px_rgba(220,38,38,0.35)]">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-13 h-13 rounded-xl bg-red-500/20 border border-red-400/40 flex items-center justify-center text-red-300 font-mono font-black text-2xl shadow-inner">
                       🎯
                     </div>
                     <div className="flex flex-col">
@@ -1149,7 +1183,7 @@ export default function SpiegazioneFasiBoard({
                       </span>
                     </div>
                   </div>
-                  <div className="px-3 py-1 rounded-lg bg-red-500/30 border border-red-400/50 text-red-200 font-mono font-black text-xs">
+                  <div className="px-3.5 py-1.5 rounded-lg bg-red-500/30 border border-red-400/50 text-red-200 font-mono font-black text-xs">
                     STEP 1 & 2
                   </div>
                 </div>
@@ -1279,25 +1313,25 @@ export default function SpiegazioneFasiBoard({
 
               {/* Bottom Badge Fase 2: Punti + Bonus */}
               <div
-                className={`w-full grid grid-cols-2 gap-3 transition-all duration-700 ${
+                className={`w-full h-[96px] grid grid-cols-2 gap-3 transition-all duration-700 ${
                   showFase2Coins || showFase2Bonus ? 'opacity-100' : 'opacity-0 translate-y-8 pointer-events-none'
                 }`}
               >
                 {/* Pod 1: Punti */}
                 <div
-                  className={`rounded-2xl p-3 bg-gradient-to-b from-amber-950/70 to-black/80 border border-amber-500/50 flex items-center gap-2.5 shadow-[0_4px_16px_rgba(245,158,11,0.25)] transition-all duration-500 ${
+                  className={`h-full rounded-2xl px-4 py-3 bg-gradient-to-b from-amber-950/75 to-black/85 border border-amber-500/50 flex items-center gap-3 shadow-[0_4px_18px_rgba(245,158,11,0.25)] transition-all duration-500 ${
                     showFase2Coins ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
                   }`}
                   style={{
                     animation: showFase2Coins ? 'badge-entry 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
                   }}
                 >
-                  <CoinsGraphic className="w-11 h-11 shrink-0" />
+                  <CoinsGraphic className="w-14 h-14 shrink-0 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
                   <div className="flex flex-col overflow-hidden">
-                    <span className="text-[10px] font-mono font-bold tracking-wider text-amber-300 uppercase">
+                    <span className="text-[11px] font-mono font-bold tracking-wider text-amber-300 uppercase">
                       MONTEPREMI
                     </span>
-                    <span className="text-sm font-black tracking-wide text-white uppercase truncate">
+                    <span className="text-base font-black tracking-wide text-white uppercase truncate">
                       PUNTI
                     </span>
                   </div>
@@ -1305,19 +1339,19 @@ export default function SpiegazioneFasiBoard({
 
                 {/* Pod 2: Bonus Equipaggiamento */}
                 <div
-                  className={`rounded-2xl p-3 bg-gradient-to-b from-emerald-950/70 to-black/80 border border-emerald-400/50 flex items-center gap-2.5 shadow-[0_4px_16px_rgba(52,211,153,0.25)] transition-all duration-500 ${
+                  className={`h-full rounded-2xl px-4 py-3 bg-gradient-to-b from-emerald-950/75 to-black/85 border border-emerald-400/50 flex items-center gap-3 shadow-[0_4px_18px_rgba(52,211,153,0.25)] transition-all duration-500 ${
                     showFase2Bonus ? 'opacity-100 scale-100' : 'opacity-0 scale-90'
                   }`}
                   style={{
                     animation: showFase2Bonus ? 'badge-entry 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s forwards' : 'none',
                   }}
                 >
-                  <BonusGraphic className="w-11 h-11 shrink-0" />
+                  <BonusGraphic className="w-14 h-14 shrink-0 drop-shadow-[0_0_10px_rgba(52,211,153,0.5)]" />
                   <div className="flex flex-col overflow-hidden">
-                    <span className="text-[10px] font-mono font-bold tracking-wider text-emerald-300 uppercase">
+                    <span className="text-[11px] font-mono font-bold tracking-wider text-emerald-300 uppercase">
                       FINALE
                     </span>
-                    <span className="text-sm font-black tracking-wide text-emerald-200 uppercase truncate">
+                    <span className="text-base font-black tracking-wide text-emerald-200 uppercase truncate">
                       BONUS
                     </span>
                   </div>
@@ -1425,9 +1459,9 @@ export default function SpiegazioneFasiBoard({
                   animation: showFase3Trophy ? 'badge-entry 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
                 }}
               >
-                <div className="w-full rounded-2xl p-4 bg-gradient-to-r from-amber-950/80 via-yellow-900/60 to-amber-950/80 border border-amber-400/60 flex items-center justify-between shadow-[0_4px_25px_rgba(245,158,11,0.45)]">
-                  <div className="flex items-center gap-3">
-                    <TrophyGraphic className="w-12 h-12 shrink-0 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]" />
+                <div className="w-full h-[96px] rounded-2xl p-4 bg-gradient-to-r from-amber-950/80 via-yellow-900/60 to-amber-950/80 border border-amber-400/60 flex items-center justify-between shadow-[0_4px_25px_rgba(245,158,11,0.45)]">
+                  <div className="flex items-center gap-3.5">
+                    <TrophyGraphic className="w-13 h-13 shrink-0 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]" />
                     <div className="flex flex-col">
                       <span className="text-xs font-mono font-bold tracking-widest text-amber-300 uppercase">
                         EPILOGO
@@ -1437,7 +1471,7 @@ export default function SpiegazioneFasiBoard({
                       </span>
                     </div>
                   </div>
-                  <div className="px-3 py-1 rounded-lg bg-amber-500/30 border border-amber-300/60 text-amber-200 font-mono font-black text-xs animate-pulse">
+                  <div className="px-3.5 py-1.5 rounded-lg bg-amber-500/30 border border-amber-300/60 text-amber-200 font-mono font-black text-xs animate-pulse">
                     VITTORIA
                   </div>
                 </div>
@@ -1452,19 +1486,44 @@ export default function SpiegazioneFasiBoard({
       {/* ========================================================================= */}
       {activeScene === 'termopili' && (
         <div className="relative z-10 w-full h-full flex flex-col items-center justify-between transition-all duration-700">
-          {/* HEADER DELLA PARTE 2: PILL BADGE TERMOPILI */}
-          <header className="relative w-full max-w-[1780px] flex flex-col items-center shrink-0 pt-2 pb-2">
+          {/* HEADER DELLA PARTE 2: PILL BADGE TERMOPILI & TICKER RIASSUNTIVO */}
+          <header className="relative w-full max-w-[1780px] flex flex-col items-center shrink-0 pt-3 pb-2 z-20">
             <div
               className={`transition-all duration-700 flex flex-col items-center ${
                 showTermopiliHeader ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-6 pointer-events-none'
               }`}
             >
-              {/* Pill Badge Olografico "TERMOPILI" ispirato a pt2.mov */}
-              <div className="px-14 py-3 rounded-full bg-gradient-to-r from-teal-950/90 via-emerald-900/90 to-teal-950/90 border-2 border-emerald-400 shadow-[0_0_35px_rgba(52,211,153,0.45)] flex items-center justify-center">
-                <span className="text-3xl lg:text-4xl font-black tracking-[0.25em] text-white uppercase drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
-                  TERMOPILI
+              {/* Top Tag Ufficiale */}
+              <div className="flex items-center gap-2.5 px-4 py-1 rounded-full bg-white/5 border border-emerald-400/30 backdrop-blur-md shadow-md mb-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span className="text-[11px] font-mono font-black uppercase tracking-[0.25em] text-emerald-300">
+                  IMPERIO VIII • REGOLAMENTO UFFICIALE
+                </span>
+                <span className="text-white/30 text-xs">|</span>
+                <span className="text-[11px] font-mono font-bold tracking-wider text-white/70">
+                  PARTE 2: MANCHE FINALE & PRESCELTI
                 </span>
               </div>
+
+              {/* Pill Badge Olografico "TERMOPILI" con ali grafiche */}
+              <div className="flex items-center gap-5">
+                <div className="hidden md:flex items-center gap-2 opacity-60">
+                  <div className="w-14 h-[1px] bg-gradient-to-r from-transparent to-emerald-400" />
+                  <div className="w-1.5 h-1.5 rotate-45 border border-emerald-400 bg-emerald-950" />
+                </div>
+
+                <div className="px-16 py-2.5 rounded-full bg-gradient-to-r from-teal-950/90 via-emerald-900/90 to-teal-950/90 border-2 border-emerald-400 shadow-[0_0_35px_rgba(52,211,153,0.45)] flex items-center justify-center">
+                  <span className="text-3xl lg:text-4xl font-black tracking-[0.25em] text-white uppercase drop-shadow-[0_2px_12px_rgba(0,0,0,0.9)]">
+                    TERMOPILI
+                  </span>
+                </div>
+
+                <div className="hidden md:flex items-center gap-2 opacity-60">
+                  <div className="w-1.5 h-1.5 rotate-45 border border-emerald-400 bg-emerald-950" />
+                  <div className="w-14 h-[1px] bg-gradient-to-l from-transparent to-emerald-400" />
+                </div>
+              </div>
+
               <div className="flex items-center gap-2 mt-2">
                 <span className="text-xs font-mono font-bold tracking-[0.3em] uppercase text-emerald-300/80">
                   SCONTRO FINALE • REGOLE DI QUALIFICAZIONE & PRESCELTI
@@ -1473,183 +1532,225 @@ export default function SpiegazioneFasiBoard({
             </div>
           </header>
 
-          {/* STAGE CONTAINER: FRAME OLOGRAFICO CON PODIO E REGOLE DELTA */}
-          <main className="relative w-full max-w-[1780px] flex-1 flex flex-col justify-end min-h-0 pb-8 px-6">
+          {/* STAGE CONTAINER: FRAME OLOGRAFICO CON PODIO E REGOLE */}
+          <main className="relative w-full max-w-[1780px] flex-1 flex flex-col justify-end min-h-0 pb-6 px-6">
             {/* Cornice Rettangolare Tech come nel video pt2.mov */}
-            <div className="absolute inset-x-6 inset-y-2 rounded-3xl border border-cyan-400/20 bg-gradient-to-b from-cyan-950/10 via-transparent to-black/40 pointer-events-none" />
+            <div className="absolute inset-x-6 inset-y-1 rounded-3xl border border-cyan-400/25 bg-gradient-to-b from-cyan-950/20 via-transparent to-black/45 pointer-events-none" />
 
-            {/* AREA SUPERIORE DELLO STAGE: ELEMENTI QUALIFICATI SOPRA IL PODIO */}
-            <div className="relative z-10 w-full flex items-end justify-between px-8 mb-6">
-              {/* LATO SINISTRO (Sopra Podio 2): TABELLA DELTA PUNTEGGIO */}
-              <div className="w-[480px] flex flex-col gap-3">
-                <div
-                  className={`transition-all duration-600 ${
-                    showDeltaTable ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
-                  }`}
-                >
-                  <span className="text-xs font-mono font-black tracking-widest uppercase text-slate-300/80 px-2 py-0.5 rounded bg-white/5 border border-white/10">
-                    DIVARIO DALLA 1ª SQUADRA
-                  </span>
-                </div>
-
-                {/* Riga 1: 6x < 3.000 */}
-                <div
-                  className={`flex items-center gap-3 transition-all duration-500 ${
-                    showDeltaRow1 ? 'opacity-100' : 'opacity-0 -translate-x-8 pointer-events-none'
-                  }`}
-                  style={{
-                    animation: showDeltaRow1 ? 'delta-slide-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
-                  }}
-                >
-                  <div className="w-24 py-2.5 rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-600 border border-blue-400/60 shadow-[0_0_15px_rgba(59,130,246,0.35)] flex items-center justify-center">
-                    <span className="text-2xl font-black text-white">6 x</span>
-                  </div>
-                  <PersonIcon className="w-14 h-14 shrink-0 drop-shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
-                  <div className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 border border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.35)] flex items-center justify-center">
-                    <span className="text-2xl font-black text-white tracking-wide">&lt; 3.000</span>
-                  </div>
-                </div>
-
-                {/* Riga 2: 5x 3.000 - 15.000 */}
-                <div
-                  className={`flex items-center gap-3 transition-all duration-500 ${
-                    showDeltaRow2 ? 'opacity-100' : 'opacity-0 -translate-x-8 pointer-events-none'
-                  }`}
-                  style={{
-                    animation: showDeltaRow2 ? 'delta-slide-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
-                  }}
-                >
-                  <div className="w-24 py-2.5 rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-600 border border-blue-400/60 shadow-[0_0_15px_rgba(59,130,246,0.35)] flex items-center justify-center">
-                    <span className="text-2xl font-black text-white">5 x</span>
-                  </div>
-                  <PersonIcon className="w-14 h-14 shrink-0 drop-shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
-                  <div className="flex-1 py-1.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 border border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.35)] flex flex-col items-center justify-center leading-tight">
-                    <span className="text-lg font-black text-white">3.000</span>
-                    <span className="text-lg font-black text-white">15.000</span>
-                  </div>
-                </div>
-
-                {/* Riga 3: 4x > 15.000 */}
-                <div
-                  className={`flex items-center gap-3 transition-all duration-500 ${
-                    showDeltaRow3 ? 'opacity-100' : 'opacity-0 -translate-x-8 pointer-events-none'
-                  }`}
-                  style={{
-                    animation: showDeltaRow3 ? 'delta-slide-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
-                  }}
-                >
-                  <div className="w-24 py-2.5 rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-600 border border-blue-400/60 shadow-[0_0_15px_rgba(59,130,246,0.35)] flex items-center justify-center">
-                    <span className="text-2xl font-black text-white">4 x</span>
-                  </div>
-                  <PersonIcon className="w-14 h-14 shrink-0 drop-shadow-[0_0_10px_rgba(56,189,248,0.5)]" />
-                  <div className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 border border-emerald-400/60 shadow-[0_0_15px_rgba(16,185,129,0.35)] flex items-center justify-center">
-                    <span className="text-2xl font-black text-white tracking-wide">&gt; 15.000</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* CENTRO (Sopra Podio 1): 6 PRESCELTI DELLA 1ª SQUADRA (2 File da 3) */}
-              <div className="w-[520px] flex flex-col items-center justify-center gap-2">
-                <div
-                  className={`transition-all duration-600 flex flex-col items-center gap-3 ${
-                    showPodio1Avatars ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'
-                  }`}
-                >
-                  <span className="px-4 py-1 rounded-full bg-amber-500/20 border border-amber-400/60 text-amber-300 font-mono font-black text-xs uppercase tracking-widest shadow-[0_0_15px_rgba(245,158,11,0.3)]">
-                    ⭐ 6 PRESCELTI GARANTITI
-                  </span>
-
-                  {/* Fila 1 di 3 omini */}
-                  <div className="flex items-center gap-6">
-                    <PersonIcon className="w-16 h-16 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)]" />
-                    <PersonIcon className="w-16 h-16 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)]" />
-                    <PersonIcon className="w-16 h-16 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)]" />
-                  </div>
-
-                  {/* Fila 2 di 3 omini */}
-                  <div className="flex items-center gap-6">
-                    <PersonIcon className="w-16 h-16 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)]" />
-                    <PersonIcon className="w-16 h-16 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)]" />
-                    <PersonIcon className="w-16 h-16 drop-shadow-[0_0_12px_rgba(56,189,248,0.7)]" />
-                  </div>
-                </div>
-              </div>
-
-              {/* LATO DESTRO (Sopra Podio 3): 3 PRESCELTI DELLA 3ª SQUADRA (1 Fila da 3) */}
-              <div className="w-[480px] flex flex-col items-center justify-center gap-2">
-                <div
-                  className={`transition-all duration-600 flex flex-col items-center gap-3 ${
-                    showPodio3Avatars ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'
-                  }`}
-                >
-                  <span className="px-4 py-1 rounded-full bg-amber-950/40 border border-amber-600/60 text-amber-400 font-mono font-black text-xs uppercase tracking-widest">
-                    3 PRESCELTI
-                  </span>
-
-                  {/* 1 Fila da 3 omini come in pt2.mov */}
-                  <div className="flex items-center gap-6">
-                    <PersonIcon className="w-16 h-16 drop-shadow-[0_0_10px_rgba(56,189,248,0.6)]" />
-                    <PersonIcon className="w-16 h-16 drop-shadow-[0_0_10px_rgba(56,189,248,0.6)]" />
-                    <PersonIcon className="w-16 h-16 drop-shadow-[0_0_10px_rgba(56,189,248,0.6)]" />
-                  </div>
-                </div>
-              </div>
+            {/* Strip HUD Superiore all'interno della cornice */}
+            <div className="relative z-10 w-full flex items-center justify-between px-8 pb-3 text-[10px] font-mono font-bold text-cyan-400/50 uppercase tracking-widest pointer-events-none">
+              <span className="flex items-center gap-2">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400/70" />
+                TABELLONE QUALIFICAZIONE ALLA FASE DECISIVA
+              </span>
+              <span className="flex items-center gap-2">
+                SCHIERAMENTO PRESCELTI AL TAVOLO DELLE TERMOPILI
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-cyan-400/70" />
+              </span>
             </div>
 
-            {/* BASELINE GROUND DEL PODIO: I 3 BLOCCHI ALTI, MEDI E BASSI */}
-            <div className="relative z-10 w-full flex items-end justify-center px-4">
-              {/* BLOCCO 2 (Sinistra - Argento / Grigio - Medio) */}
-              <div
-                className={`w-[480px] transition-all duration-700 flex flex-col items-center justify-center rounded-t-3xl border-2 border-slate-400/80 shadow-[0_0_35px_rgba(148,163,184,0.35)] bg-gradient-to-t from-slate-800 via-slate-700 to-slate-600 relative overflow-hidden ${
-                  showPodio2 ? 'opacity-100 h-[220px]' : 'opacity-0 h-0 pointer-events-none'
-                }`}
-                style={{
-                  animation: showPodio2 ? 'podium-rise 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
-                }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent pointer-events-none" />
-                <span className="text-8xl font-black text-white drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
-                  2
-                </span>
-                <span className="text-xs font-mono font-bold tracking-widest text-slate-200 uppercase mt-1">
-                  2ª CLASSIFICATA
-                </span>
+            {/* PALCO PODIO: 3 COLONNE VERTICALI UNIFICATE (2, 1, 3) */}
+            <div className="relative z-10 w-full flex items-end justify-center">
+              {/* ========================================================= */}
+              {/* COLONNA 2: 2° POSTO (ARGENTO - SINISTRA)                  */}
+              {/* ========================================================= */}
+              <div className="w-[490px] flex flex-col items-center justify-end">
+                {/* ZONA SUPERIORE: TABELLA DELTA (CENTRATA SU PODIO 2) */}
+                <div className="w-full max-w-[450px] flex flex-col items-center justify-end h-[530px] pb-5">
+                  {/* Titolo Delta con spiegazione chiara */}
+                  <div
+                    className={`transition-all duration-600 mb-4 flex flex-col items-center text-center ${
+                      showDeltaTable ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                    }`}
+                  >
+                    <div className="px-5 py-1.5 rounded-full bg-slate-800/90 border border-slate-400/60 text-slate-200 font-mono font-black text-xs uppercase tracking-widest shadow-md flex items-center gap-2">
+                      <span>📊 CRITERIO DEL DIVARIO PUNTI</span>
+                    </div>
+                    <span className="text-[10px] font-mono font-bold tracking-wider uppercase text-slate-400/80 mt-1">
+                      DISTACCO RISPETTO ALLA 1ª SQUADRA
+                    </span>
+                  </div>
+
+                  {/* Righe Delta */}
+                  <div className="w-full flex flex-col gap-3.5">
+                    {/* Riga 1: 6x < 3.000 */}
+                    <div
+                      className={`flex items-center gap-3 transition-all duration-500 ${
+                        showDeltaRow1 ? 'opacity-100' : 'opacity-0 -translate-x-8 pointer-events-none'
+                      }`}
+                      style={{
+                        animation: showDeltaRow1 ? 'delta-slide-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
+                      }}
+                    >
+                      <div className="w-24 py-2.5 rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-600 border border-blue-400/80 shadow-[0_0_15px_rgba(59,130,246,0.35)] flex items-center justify-center">
+                        <span className="text-2xl font-black text-white">6 x</span>
+                      </div>
+                      <PersonIcon className="w-20 h-20 shrink-0 drop-shadow-[0_0_12px_rgba(56,189,248,0.6)]" />
+                      <div className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 border border-emerald-400/80 shadow-[0_0_15px_rgba(16,185,129,0.35)] flex items-center justify-center">
+                        <span className="text-2xl font-black text-white tracking-wide">&lt; 3.000</span>
+                      </div>
+                    </div>
+
+                    {/* Riga 2: 5x 3.000 - 15.000 */}
+                    <div
+                      className={`flex items-center gap-3 transition-all duration-500 ${
+                        showDeltaRow2 ? 'opacity-100' : 'opacity-0 -translate-x-8 pointer-events-none'
+                      }`}
+                      style={{
+                        animation: showDeltaRow2 ? 'delta-slide-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
+                      }}
+                    >
+                      <div className="w-24 py-2.5 rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-600 border border-blue-400/80 shadow-[0_0_15px_rgba(59,130,246,0.35)] flex items-center justify-center">
+                        <span className="text-2xl font-black text-white">5 x</span>
+                      </div>
+                      <PersonIcon className="w-20 h-20 shrink-0 drop-shadow-[0_0_12px_rgba(56,189,248,0.6)]" />
+                      <div className="flex-1 py-1.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 border border-emerald-400/80 shadow-[0_0_15px_rgba(16,185,129,0.35)] flex flex-col items-center justify-center leading-tight">
+                        <span className="text-lg font-black text-white">3.000</span>
+                        <span className="text-lg font-black text-white">15.000</span>
+                      </div>
+                    </div>
+
+                    {/* Riga 3: 4x > 15.000 */}
+                    <div
+                      className={`flex items-center gap-3 transition-all duration-500 ${
+                        showDeltaRow3 ? 'opacity-100' : 'opacity-0 -translate-x-8 pointer-events-none'
+                      }`}
+                      style={{
+                        animation: showDeltaRow3 ? 'delta-slide-in 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
+                      }}
+                    >
+                      <div className="w-24 py-2.5 rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-600 border border-blue-400/80 shadow-[0_0_15px_rgba(59,130,246,0.35)] flex items-center justify-center">
+                        <span className="text-2xl font-black text-white">4 x</span>
+                      </div>
+                      <PersonIcon className="w-20 h-20 shrink-0 drop-shadow-[0_0_12px_rgba(56,189,248,0.6)]" />
+                      <div className="flex-1 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 border border-emerald-400/80 shadow-[0_0_15px_rgba(16,185,129,0.35)] flex items-center justify-center">
+                        <span className="text-2xl font-black text-white tracking-wide">&gt; 15.000</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ZONA INFERIORE: BLOCCO PODIO 2 (h-[260px]) */}
+                <div className="w-full h-[260px] flex items-end">
+                  <div
+                    className={`w-full transition-all duration-700 flex items-center justify-center rounded-t-3xl border-2 border-slate-400/80 shadow-[0_0_40px_rgba(148,163,184,0.35)] bg-gradient-to-t from-slate-800 via-slate-700 to-slate-600 relative overflow-hidden ${
+                      showPodio2 ? 'opacity-100 h-full' : 'opacity-0 h-0 pointer-events-none'
+                    }`}
+                    style={{
+                      animation: showPodio2 ? 'podium-rise 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent pointer-events-none" />
+                    <span className="text-[120px] font-black text-white drop-shadow-[0_6px_22px_rgba(0,0,0,0.9)] select-none leading-none">
+                      2
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* BLOCCO 1 (Centro - Oro / Ambra - Il più alto) */}
-              <div
-                className={`w-[520px] transition-all duration-700 flex flex-col items-center justify-center rounded-t-3xl border-2 border-amber-300 shadow-[0_0_55px_rgba(245,158,11,0.55)] bg-gradient-to-t from-amber-800 via-amber-600 to-amber-500 relative overflow-hidden z-20 ${
-                  showPodio1 ? 'opacity-100 h-[320px]' : 'opacity-0 h-0 pointer-events-none'
-                }`}
-                style={{
-                  animation: showPodio1 ? 'podium-rise 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
-                }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
-                <span className="text-9xl font-black text-white drop-shadow-[0_4px_22px_rgba(0,0,0,0.9)]">
-                  1
-                </span>
-                <span className="text-sm font-mono font-black tracking-widest text-amber-100 uppercase mt-1">
-                  1ª CLASSIFICATA
-                </span>
+              {/* ========================================================= */}
+              {/* COLONNA 1: 1° POSTO (ORO - CENTRO - IL PIÙ ALTO)          */}
+              {/* ========================================================= */}
+              <div className="w-[540px] flex flex-col items-center justify-end z-20">
+                {/* ZONA SUPERIORE: 6 PRESCELTI (2 FILE DA 3 - OMINI GRANDI) */}
+                <div className="w-full flex flex-col items-center justify-end h-[420px] pb-5">
+                  <div
+                    className={`transition-all duration-600 flex flex-col items-center gap-3.5 ${
+                      showPodio1Avatars ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'
+                    }`}
+                  >
+                    {/* Badge Titolo Campioni 1° Posto */}
+                    <div className="flex flex-col items-center gap-1">
+                      <div className="px-6 py-1.5 rounded-full bg-gradient-to-r from-amber-500/25 via-amber-400/35 to-amber-500/25 border border-amber-300 text-amber-200 font-mono font-black text-xs uppercase tracking-widest shadow-[0_0_20px_rgba(245,158,11,0.4)] flex items-center gap-2">
+                        <span className="text-base leading-none">👑</span>
+                        <span>ACCESSO DIRETTO • 6 PRESCELTI</span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-amber-300/70">
+                        MASSIMO CONTINGENTE QUALIFICATO AL TAVOLO
+                      </span>
+                    </div>
+
+                    {/* Fila 1 di 3 omini (grandi e ben distanziati) */}
+                    <div className="flex items-center gap-7 pt-1">
+                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                    </div>
+
+                    {/* Fila 2 di 3 omini */}
+                    <div className="flex items-center gap-7">
+                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ZONA INFERIORE: BLOCCO PODIO 1 (h-[370px]) */}
+                <div className="w-full h-[370px] flex items-end">
+                  <div
+                    className={`w-full transition-all duration-700 flex items-center justify-center rounded-t-3xl border-2 border-amber-300 shadow-[0_0_60px_rgba(245,158,11,0.6)] bg-gradient-to-t from-amber-800 via-amber-600 to-amber-500 relative overflow-hidden ${
+                      showPodio1 ? 'opacity-100 h-full' : 'opacity-0 h-0 pointer-events-none'
+                    }`}
+                    style={{
+                      animation: showPodio1 ? 'podium-rise 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+                    <span className="text-[150px] font-black text-white drop-shadow-[0_6px_28px_rgba(0,0,0,0.9)] select-none leading-none">
+                      1
+                    </span>
+                  </div>
+                </div>
               </div>
 
-              {/* BLOCCO 3 (Destra - Bronzo / Rame - Il più basso) */}
-              <div
-                className={`w-[480px] transition-all duration-700 flex flex-col items-center justify-center rounded-t-3xl border-2 border-amber-700/80 shadow-[0_0_35px_rgba(180,83,9,0.35)] bg-gradient-to-t from-amber-950 via-amber-900 to-amber-800 relative overflow-hidden ${
-                  showPodio3 ? 'opacity-100 h-[140px]' : 'opacity-0 h-0 pointer-events-none'
-                }`}
-                style={{
-                  animation: showPodio3 ? 'podium-rise 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
-                }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
-                <span className="text-7xl font-black text-white drop-shadow-[0_4px_14px_rgba(0,0,0,0.9)]">
-                  3
-                </span>
-                <span className="text-xs font-mono font-bold tracking-widest text-amber-300/80 uppercase mt-0.5">
-                  3ª CLASSIFICATA
-                </span>
+              {/* ========================================================= */}
+              {/* COLONNA 3: 3° POSTO (BRONZO - DESTRA - IL PIÙ BASSO)      */}
+              {/* ========================================================= */}
+              <div className="w-[490px] flex flex-col items-center justify-end">
+                {/* ZONA SUPERIORE: 3 PRESCELTI (CENTRATI DIRETTAMENTE SU PODIO 3) */}
+                <div className="w-full flex flex-col items-center justify-end h-[620px] pb-5">
+                  <div
+                    className={`transition-all duration-600 flex flex-col items-center gap-3.5 ${
+                      showPodio3Avatars ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'
+                    }`}
+                  >
+                    {/* Badge Titolo 3° Posto che bilancia lo spazio alto */}
+                    <div className="flex flex-col items-center text-center gap-1">
+                      <div className="px-5 py-1.5 rounded-full bg-amber-950/60 border border-amber-600/70 text-amber-300 font-mono font-black text-xs uppercase tracking-widest shadow-[0_0_15px_rgba(180,83,9,0.35)] flex items-center gap-2">
+                        <span className="text-base leading-none">🥉</span>
+                        <span>3 PRESCELTI • CONTINGENTE BASE</span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold tracking-widest uppercase text-amber-400/70">
+                        QUALIFICAZIONE GARANTITA INDIPENDENTEMENTE DAL DISTACCO
+                      </span>
+                    </div>
+
+                    {/* 1 Fila da 3 omini (stessa dimensione generosa del 1° posto) */}
+                    <div className="flex items-center gap-7 pt-1">
+                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ZONA INFERIORE: BLOCCO PODIO 3 (h-[170px]) */}
+                <div className="w-full h-[170px] flex items-end">
+                  <div
+                    className={`w-full transition-all duration-700 flex items-center justify-center rounded-t-3xl border-2 border-amber-700/80 shadow-[0_0_35px_rgba(180,83,9,0.35)] bg-gradient-to-t from-amber-950 via-amber-900 to-amber-800 relative overflow-hidden ${
+                      showPodio3 ? 'opacity-100 h-full' : 'opacity-0 h-0 pointer-events-none'
+                    }`}
+                    style={{
+                      animation: showPodio3 ? 'podium-rise 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
+                    }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
+                    <span className="text-[105px] font-black text-white drop-shadow-[0_5px_18px_rgba(0,0,0,0.9)] select-none leading-none">
+                      3
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </main>
@@ -1882,19 +1983,14 @@ export default function SpiegazioneFasiBoard({
  * Avatar Prescelto Olografico (Sagoma testa + spalle con contorno neon e fill scuro)
  * Ispirato al design del video pt2.mov
  */
-function PersonIcon({ className = 'w-14 h-14' }: { className?: string }) {
+function PersonIcon({ className = 'w-24 h-24' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 64 64" fill="none" className={className}>
-      <defs>
-        <filter id="personGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="1.8" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-
+    <svg
+      viewBox="0 0 64 64"
+      fill="none"
+      className={className}
+      style={{ filter: 'drop-shadow(0 0 10px rgba(56,189,248,0.55))' }}
+    >
       {/* Testa Circolare con bordo neon ciano */}
       <circle
         cx="32"
@@ -1903,17 +1999,15 @@ function PersonIcon({ className = 'w-14 h-14' }: { className?: string }) {
         fill="#07090f"
         stroke="#38bdf8"
         strokeWidth="3.6"
-        filter="url(#personGlow)"
       />
 
       {/* Busto Sagomato con spalle arrotondate */}
       <path
-        d="M 12 54 C 12 41, 20 36, 32 36 C 44 36, 52 41, 52 54 C 52 57, 49 57, 46 57 L 18 57 C 15 57, 12 57, 12 54 Z"
+        d="M 12 55 C 12 41.5, 19 36, 32 36 C 45 36, 52 41.5, 52 55 C 52 57.5, 49 57.5, 46 57.5 L 18 57.5 C 15 57.5, 12 57.5, 12 55 Z"
         fill="#07090f"
         stroke="#38bdf8"
         strokeWidth="3.6"
         strokeLinejoin="round"
-        filter="url(#personGlow)"
       />
     </svg>
   );

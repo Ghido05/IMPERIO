@@ -383,7 +383,7 @@
     "sfondoGenerale": "/Icone/sfondi/sfondo_box1_foresta_musicale.jpg"
   },
   "gioco2": {
-    "selectedQuestion": 1,
+    "selectedQuestion": 5,
     "videoSpiegazione": "",
     "questions": {
       "1": {
@@ -509,28 +509,28 @@
             "/Audio/strumenti/g02m03s07fluato siamo uguali.mp3"
           ],
           "risposte": [
-            "",
-            "",
-            "",
+            "VENETO",
+            "LAZIALE",
+            "SICILIANO",
             "",
             "",
             "",
             ""
           ],
           "indizi": [
-            "BBFBG",
-            "",
-            "",
-            "",
-            "",
-            "",
-            ""
+            "\"PIEDISTALLI\"",
+            "2015",
+            "\"DISTORTA\"",
+            "LORENZO",
+            "VINCE X FACTOR",
+            "\"POTREI DARTI IL MONDO\"",
+            "\"NON SCAPPARE DAI MIEI SGUARDI\""
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g02m03soluzione.mp3",
           "titolo": "SIAMO UGUALI",
           "info": "2015",
           "artista": "LORENZO FRAGOLA",
-          "domanda": "SUCA"
+          "domanda": "INDOVINA IL DIALETTO DELLA REGIONE "
         },
         "immagine": {
           "lista10": [
@@ -597,7 +597,7 @@
             "🥋 ARTI MARZIALI",
             "🚴 CICLISMO"
           ],
-          "immagineJpg": "",
+          "immagineJpg": "/Icone/nessuno_img/2_4_cadodallenubi.jpeg",
           "soluzioneAudio": "/Audio/strumenti/2_4_Angela.mp3",
           "soluzioneTesto": "CADO DALLE NUBI",
           "categoria": "FILM",
@@ -1103,10 +1103,10 @@
       },
       {
         "testo": "L' ARSENAL DI RICCARDO CALAFIORI VINCE LA PREMIER LEAGUE",
-        "sfondo": "",
+        "sfondo": "/Icone/nessuno_img/4_5_Arsenal.jpg",
         "confermaAudio": "/Audio/strumenti/4_5_WELIKETOPARTY.mp3",
         "lettereVisibili": [],
-        "indizio": "",
+        "indizio": "31 MAGGIO 2026, EMIRATES STADIUM, LONDRA",
         "bonus": "",
         "punti": 1000,
         "notePresentatore": ""

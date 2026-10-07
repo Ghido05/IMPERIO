@@ -14,46 +14,146 @@ const EditableScore: React.FC<{
   const [isEditing, setIsEditing] = React.useState(false);
   const [localValue, setLocalValue] = React.useState(score.toString());
   const [animScore, setAnimScore] = React.useState(isAnimated ? 0 : score);
+  const [isPulsing, setIsPulsing] = React.useState(isAnimated);
+  const [pulseKey, setPulseKey] = React.useState(0);
 
-  // Animazione progressiva di conteggio all'avvio del Box 1
-  React.useEffect(() => {
-    if (!isAnimated) {
-      setAnimScore(score);
+  const prevScoreRef = React.useRef(score);
+  const animScoreRef = React.useRef(animScore);
+  animScoreRef.current = animScore;
+
+  const isFirstRender = React.useRef(true);
+  const prevIsAnimatedRef = React.useRef(isAnimated);
+  const animIdRef = React.useRef<number | null>(null);
+  const pulseTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const triggerPulse = React.useCallback(() => {
+    if (pulseTimerRef.current) {
+      clearTimeout(pulseTimerRef.current);
+      pulseTimerRef.current = null;
+    }
+    setPulseKey((k) => k + 1);
+    setIsPulsing(true);
+    pulseTimerRef.current = setTimeout(() => {
+      setIsPulsing(false);
+      pulseTimerRef.current = null;
+    }, 1800);
+  }, []);
+
+  const animateCount = React.useCallback((startVal: number, targetVal: number, duration: number, delay: number = 0) => {
+    if (animIdRef.current) {
+      cancelAnimationFrame(animIdRef.current);
+      animIdRef.current = null;
+    }
+
+    if (startVal === targetVal) {
+      setAnimScore(targetVal);
       return;
     }
-    let startTime: number | null = null;
-    const startVal = 0;
-    const targetVal = score;
-    const duration = 1600;
 
-    let animId: number;
-    const animate = (now: number) => {
-      if (!startTime) startTime = now;
-      const progress = Math.min(1, (now - startTime) / duration);
-      // Easing cubico fluido
+    let startTimestamp: number | null = null;
+
+    const step = (timestamp: number) => {
+      if (startTimestamp === null) {
+        startTimestamp = timestamp;
+      }
+
+      const elapsed = timestamp - startTimestamp;
+      if (elapsed < delay) {
+        animIdRef.current = requestAnimationFrame(step);
+        return;
+      }
+
+      const progress = Math.min(1, (elapsed - delay) / duration);
+      // Easing cubico fluido (ease-out)
       const ease = 1 - Math.pow(1 - progress, 3);
-      setAnimScore(Math.round(startVal + (targetVal - startVal) * ease));
+      const current = Math.round(startVal + (targetVal - startVal) * ease);
+      setAnimScore(current);
+
       if (progress < 1) {
-        animId = requestAnimationFrame(animate);
+        animIdRef.current = requestAnimationFrame(step);
       } else {
         setAnimScore(targetVal);
+        animIdRef.current = null;
       }
     };
-    animId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animId);
-  }, [score, isAnimated]);
 
-  // Sincronizza il valore locale se cambia dall'esterno (es. reset o altra finestra)
+    animIdRef.current = requestAnimationFrame(step);
+  }, []);
+
+  // Cleanup animazioni e timer all'unmount
+  React.useEffect(() => {
+    return () => {
+      if (animIdRef.current) cancelAnimationFrame(animIdRef.current);
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    };
+  }, []);
+
+  // Gestione animazione: all'ingresso Box 1/transizione 'T' o ad ogni variazione dei punteggi
+  React.useEffect(() => {
+    // 1. Primo montaggio
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      prevScoreRef.current = score;
+      prevIsAnimatedRef.current = isAnimated;
+
+      if (isAnimated) {
+        triggerPulse();
+        animateCount(0, score, 1600, index * 250);
+      } else {
+        setAnimScore(score);
+      }
+      return;
+    }
+
+    // 2. Transizione forzata (es. passaggio a Box 1 o scorciatoia 'T')
+    if (isAnimated && !prevIsAnimatedRef.current) {
+      prevIsAnimatedRef.current = isAnimated;
+      prevScoreRef.current = score;
+      triggerPulse();
+      animateCount(0, score, 1600, index * 250);
+      return;
+    }
+    prevIsAnimatedRef.current = isAnimated;
+
+    // 3. Modifica punteggio dall'esterno (assegnazione punti da un gioco o reset)
+    if (!isEditing && score !== prevScoreRef.current) {
+      const prev = prevScoreRef.current;
+      prevScoreRef.current = score;
+
+      if (score === 0) {
+        if (animIdRef.current) {
+          cancelAnimationFrame(animIdRef.current);
+          animIdRef.current = null;
+        }
+        setAnimScore(0);
+        setIsPulsing(false);
+      } else if (score > prev) {
+        // Incremento punti: conteggio progressivo graduale e bagliore luminoso
+        triggerPulse();
+        const startVal = animScoreRef.current;
+        animateCount(startVal, score, 1200, 0);
+      } else {
+        // Decremento punti: transizione fluida
+        const startVal = animScoreRef.current;
+        animateCount(startVal, score, 800, 0);
+      }
+    }
+  }, [score, isAnimated, isEditing, index, animateCount, triggerPulse]);
+
+  // Sincronizza il valore locale se non in fase di modifica manuale
   React.useEffect(() => {
     if (!isEditing) {
-      setLocalValue(isAnimated ? animScore.toString() : score.toString());
+      setLocalValue(animScore.toString());
     }
-  }, [score, isEditing, animScore, isAnimated]);
+  }, [isEditing, animScore]);
 
-  const displayValue = isEditing ? localValue : formatScoreNumber(isAnimated ? animScore : score);
+  const displayValue = isEditing ? localValue : formatScoreNumber(animScore);
 
   return (
-    <div className={`mb-3 group relative shrink-0 flex items-center justify-center ${isAnimated ? 'animate-point-pulse' : ''}`}>
+    <div 
+      key={pulseKey}
+      className={`mb-3 group relative shrink-0 flex items-center justify-center ${isPulsing ? 'animate-point-pulse' : ''}`}
+    >
       <input
         type="text"
         inputMode="numeric"
@@ -66,17 +166,19 @@ const EditableScore: React.FC<{
           const val = e.target.value.replace(/\D/g, '');
           setLocalValue(val);
           if (val !== '') {
-            setScore(index, parseInt(val, 10));
+            const parsed = parseInt(val, 10);
+            prevScoreRef.current = parsed;
+            setAnimScore(parsed);
+            setScore(index, parsed);
           }
         }}
         onBlur={() => {
           setIsEditing(false);
-          if (localValue === '') {
-            setLocalValue('0');
-            setScore(index, 0);
-          } else {
-            setScore(index, parseInt(localValue, 10) || 0);
-          }
+          const finalVal = localValue === '' ? 0 : parseInt(localValue, 10) || 0;
+          prevScoreRef.current = finalVal;
+          setAnimScore(finalVal);
+          setLocalValue(finalVal.toString());
+          setScore(index, finalVal);
         }}
         onKeyDown={(e) => {
           e.stopPropagation();
@@ -384,7 +486,12 @@ const ClassificaGenerale_Board: React.FC = () => {
                 </div>
 
                 <div className="py-4">
-                  <EditableScore index={i} score={scores[i]} setScore={setScore} />
+                  <EditableScore 
+                    index={i} 
+                    score={scores[i]} 
+                    setScore={setScore} 
+                    isAnimated={isTransitioning}
+                  />
                 </div>
               </div>
             ))}

@@ -76,6 +76,11 @@ const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false, onClo
             </button>
           )}
 
+          {/* Badge Punti Soluzione */}
+          <div className="inline-flex items-center gap-2 px-5 py-1.5 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 font-black text-xs md:text-sm uppercase tracking-widest shadow-lg">
+            <span>⭐</span> +5.000 PT
+          </div>
+
           <h2 className="text-[clamp(24px,3vw,56px)] font-black text-white tracking-tight leading-tight animate-zoom-in drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
             {soluzioneTitolo}
           </h2>
@@ -127,6 +132,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
   const [showSolution, setShowSolution] = useSyncedState(`playstate_${slideId}_showsolution`, false);
   const [isPlaying, setIsPlaying] = useSyncedState<boolean>(`playstate_${slideId}_playing`, false);
   const [playTrigger, setPlayTrigger] = useSyncedState<number>(`playstate_${slideId}_play_trigger`, 0);
+  const [solutionAwarded, setSolutionAwarded] = useSyncedState<boolean>(`playstate_${slideId}_solution_awarded`, false);
   
   const audiosRef = React.useRef<Record<number, HTMLAudioElement>>({});
   const finalAudioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -489,6 +495,68 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     }
   }, [showError]);
 
+  const getBox2StarterIdx = React.useCallback((): number => {
+    const saved = localStorage.getItem('playstate_box2_starter_idx');
+    if (saved !== null) {
+      return parseInt(saved, 10);
+    }
+    let lowestIdx = 0;
+    for (let i = 1; i < scores.length; i++) {
+      if (Number(scores[i]) < Number(scores[lowestIdx])) {
+        lowestIdx = i;
+      }
+    }
+    localStorage.setItem('playstate_box2_starter_idx', lowestIdx.toString());
+    return lowestIdx;
+  }, [scores]);
+
+  const questionStarterIdx = (getBox2StarterIdx() + (questionNum - 1)) % 3;
+
+  const getCluePoints = (clueNum: number) => {
+    if (clueNum >= 1 && clueNum <= 4) return 1000;
+    if (clueNum === 5 || clueNum === 6) return 2000;
+    if (clueNum === 7) return 3000;
+    return 0;
+  };
+
+  const getActiveTeamIdx = React.useCallback((currentRevealedCount: number): number => {
+    const savedActive = localStorage.getItem('playstate_box2_active_team_idx');
+    if (savedActive !== null) {
+      return parseInt(savedActive, 10);
+    }
+    return (questionStarterIdx + currentRevealedCount) % 3;
+  }, [questionStarterIdx]);
+
+  const handleGiveSolution = React.useCallback(() => {
+    if (showSolution) {
+      // Se la soluzione è già svelata, premere S o Invio torna alla lista!
+      setShowSolution(false);
+      return;
+    }
+
+    // Se la soluzione non è stata ancora assegnata in questa manche/slide, assegna i 5000pt alla squadra di turno
+    if (!solutionAwarded) {
+      const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
+      const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
+      addScore(targetTeamIdx, 5000);
+      setSolutionAwarded(true);
+    }
+
+    // Ferma e silenzia all'istante e completamente tutti gli stems
+    stopAndMuteAllStems();
+
+    // Svela tutte le 7 risposte della lista
+    const allRevealedObj: Record<number, boolean> = {};
+    for (let i = 1; i <= 7; i++) {
+      allRevealedObj[i] = true;
+    }
+    setRevealed(allRevealedObj);
+    setIsPlaying(true);
+
+    // Mostra la soluzione: l'effetto dedicato showSolution farà partire ESCLUSIVAMENTE la traccia finale
+    setShowSolution(true);
+  }, [showSolution, solutionAwarded, revealed, getActiveTeamIdx, addScore, setSolutionAwarded, stopAndMuteAllStems, setRevealed, setIsPlaying, setShowSolution]);
+
   // Input da tastiera (1-7, S / Invio, M, T, E, X)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -498,38 +566,6 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
       ) {
         return;
       }
-
-      const getBox2StarterIdx = (): number => {
-        const saved = localStorage.getItem('playstate_box2_starter_idx');
-        if (saved !== null) {
-          return parseInt(saved, 10);
-        }
-        let lowestIdx = 0;
-        for (let i = 1; i < scores.length; i++) {
-          if (Number(scores[i]) < Number(scores[lowestIdx])) {
-            lowestIdx = i;
-          }
-        }
-        localStorage.setItem('playstate_box2_starter_idx', lowestIdx.toString());
-        return lowestIdx;
-      };
-
-      const questionStarterIdx = (getBox2StarterIdx() + (questionNum - 1)) % 3;
-
-      const getCluePoints = (clueNum: number) => {
-        if (clueNum >= 1 && clueNum <= 4) return 1000;
-        if (clueNum === 5 || clueNum === 6) return 2000;
-        if (clueNum === 7) return 3000;
-        return 0;
-      };
-
-      const getActiveTeamIdx = (currentRevealedCount: number): number => {
-        const savedActive = localStorage.getItem('playstate_box2_active_team_idx');
-        if (savedActive !== null) {
-          return parseInt(savedActive, 10);
-        }
-        return (questionStarterIdx + currentRevealedCount) % 3;
-      };
 
       const key = e.key;
       if (key >= '1' && key <= '7') {
@@ -547,25 +583,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
           setIsPlaying(true);
         }
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
-        if (showSolution) {
-          // Se la soluzione è già svelata, premere S o Invio torna alla lista!
-          setShowSolution(false);
-          return;
-        }
-
-        // Ferma e silenzia all'istante e completamente tutti gli stems
-        stopAndMuteAllStems();
-
-        // Svela tutte le 7 risposte della lista
-        const allRevealedObj: Record<number, boolean> = {};
-        for (let i = 1; i <= 7; i++) {
-          allRevealedObj[i] = true;
-        }
-        setRevealed(allRevealedObj);
-        setIsPlaying(true);
-
-        // Mostra la soluzione: l'effetto dedicato showSolution farà partire ESCLUSIVAMENTE la traccia finale
-        setShowSolution(true);
+        handleGiveSolution();
       } else if (key === 'Escape' || key === 'Backspace') {
         if (showSolution) {
           setShowSolution(false);
@@ -584,7 +602,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, scores, revealed, questionNum, addScore, showSolution, stopAndMuteAllStems, setRevealed, setLatestClue, setPlayTrigger, setIsPlaying]);
+  }, [interactive, revealed, showSolution, handleGiveSolution, setShowSolution, getActiveTeamIdx, addScore, setRevealed, setLatestClue, setPlayTrigger, setIsPlaying]);
 
   const rankingMarkers = [
     { value: 7, top: "34.070%" }, // Giallo (1 indizio)
@@ -764,7 +782,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
           <div className="absolute left-[5.052%] top-[82%] z-40">
             <button
               type="button"
-              onClick={() => setShowSolution(true)}
+              onClick={handleGiveSolution}
               className="px-5 py-2.5 rounded-2xl bg-[#792ba6]/90 hover:bg-[#792ba6] text-white border-2 border-white/30 text-xs font-black uppercase tracking-wider shadow-[0_0_25px_rgba(121,43,166,0.6)] flex items-center gap-2 cursor-pointer transition-all active:scale-95"
             >
               <span>🎵</span> Mostra Soluzione [S]

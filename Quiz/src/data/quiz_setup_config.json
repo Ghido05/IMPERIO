@@ -383,7 +383,7 @@
     "sfondoGenerale": "/Icone/sfondi/sfondo_box1_foresta_musicale.jpg"
   },
   "gioco2": {
-    "selectedQuestion": 5,
+    "selectedQuestion": 6,
     "videoSpiegazione": "",
     "questions": {
       "1": {
@@ -693,20 +693,22 @@
         },
         "immagine": {
           "lista10": [
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            ""
+            "MANTIENI LA CALMA 🧘",
+            "CERCA UN RIFUGIO SICURO 🏠",
+            "PROCURARE BENI DI PRIMA NECESSITà 🥫",
+            "INTERROMPERE COMUNICAZIONE LUMINOSE O ACUSTICHE 🤫",
+            "PROCURARSI UNA RADIO 📻",
+            "TROVARE ARMI 🗡️",
+            "OSSERVARE I LORO PUNTI DEBOLI 💧",
+            "FARE SQUADRA 👥",
+            "EVITARE IL CONTATTO DIRETTO 🛸",
+            "PREPARARSI AD UNA LUNGA RESISTENZA 🌍"
           ],
           "immagineJpg": "/Icone/nessuno_img/2_6_rafano.jpeg",
-          "soluzioneAudio": "",
-          "soluzioneTesto": "RAFANO"
+          "soluzioneAudio": "/Audio/strumenti/2_6_BAMBAMTWIST.mp3",
+          "soluzioneTesto": "RAFANO",
+          "domanda": "10 COSE DA FARE IN CASO DI ATTACCO ALIENO",
+          "categoria": "ORTAGGIO"
         }
       }
     },
@@ -1178,6 +1180,32 @@
           69
         ],
         "indizio": "STOCCOLMA, OTTOBRE 1922",
+        "bonus": "",
+        "punti": 1000,
+        "notePresentatore": ""
+      },
+      {
+        "testo": "IL TRAPPER PERCEPISCE CHE IL TALENTO L' HA PORTATO LONTANO DAGLI AFFETTI",
+        "sfondo": "/Icone/nessuno_img/4_9_sferaebbasta.png",
+        "confermaAudio": "",
+        "lettereVisibili": [
+          0,
+          8,
+          12,
+          17,
+          20,
+          24,
+          26,
+          32,
+          40,
+          46,
+          48,
+          51,
+          56,
+          62,
+          67
+        ],
+        "indizio": "SFERA EBBASTA, 2026",
         "bonus": "",
         "punti": 1000,
         "notePresentatore": ""

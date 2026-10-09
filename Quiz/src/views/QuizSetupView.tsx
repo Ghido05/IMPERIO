@@ -72,6 +72,7 @@ export interface Box0Setup {
   videoSigla?: string;
   sfondoSpiegazione?: string;
   videoSpiegazione?: string;
+  audioSpiegazione?: string;
 }
 
 export interface Gioco5Setup {
@@ -260,6 +261,7 @@ export function createDefaultBox0Setup(): Box0Setup {
     videoSigla: '',
     sfondoSpiegazione: '',
     videoSpiegazione: '',
+    audioSpiegazione: '/Audio/spiegazione_fasi_audio.mp3',
   };
 }
 
@@ -278,6 +280,7 @@ export function normalizeBox0(raw: any, def: Box0Setup): Box0Setup {
     videoSigla: raw.videoSigla || '',
     sfondoSpiegazione: sfondoSpieg,
     videoSpiegazione: sfondoSpieg,
+    audioSpiegazione: raw.audioSpiegazione || def.audioSpiegazione || '/Audio/spiegazione_fasi_audio.mp3',
   };
 }
 

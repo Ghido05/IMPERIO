@@ -39,6 +39,10 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   '1_2_Tuttoperunaragione_Benji.mp3': '/Audio/strumenti/1_2_Tuttoperunaragione_Benji.mp3',
   '1_8_thinkabouttheway.mp3': '/Audio/strumenti/1_8_thinkabouttheway.mp3',
   '4_7_Pedro_Carra.mp3': '/Audio/stacchetto/4_7_Pedro_Carra.mp3',
+  // Audio Spiegazione Box 0
+  'spiegazione_fasi_audio.mp3': '/Audio/spiegazione_fasi_audio.mp3',
+  '#4 Spiegazione.mp3': '/Audio/spiegazione_fasi_audio.mp3',
+  '4 Spiegazione.mp3': '/Audio/spiegazione_fasi_audio.mp3',
   // Audio Soluzioni
   'g01m01soluzione.mp3': '/Audio/soluzioni a conferma/g01m01soluzione.mp3',
   'g01m03soluzione.mp3': '/Audio/soluzioni a conferma/g01m03soluzione.mp3',
@@ -143,6 +147,7 @@ export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): 
     if (clean.includes('4_6_Livingstone') || clean.includes('4_6_livingstone')) return '/Icone/sfondi/4_6_Livingstone.jpg';
     if (clean.includes('4_7_Ugolino') || clean.includes('4_7_ugolino')) return '/Icone/sfondi/4_7_Ugolino.jpg';
     if (clean.includes('4_7_Pedro_Carra') || clean.includes('4_7_pedro_carra')) return '/Audio/stacchetto/4_7_Pedro_Carra.mp3';
+    if (clean.includes('Spiegazione') || clean.includes('spiegazione_fasi_audio')) return '/Audio/spiegazione_fasi_audio.mp3';
     if (clean.includes('/') || clean.includes('\\')) {
       return null;
     }
@@ -187,6 +192,7 @@ export function sanitizeSetupStateWithKnownAssets<T>(obj: T): T {
     if (obj.includes('4_6_Livingstone') || obj.includes('4_6_livingstone')) return '/Icone/sfondi/4_6_Livingstone.jpg' as unknown as T;
     if (obj.includes('4_7_Ugolino') || obj.includes('4_7_ugolino')) return '/Icone/sfondi/4_7_Ugolino.jpg' as unknown as T;
     if (obj.includes('4_7_Pedro_Carra') || obj.includes('4_7_pedro_carra')) return '/Audio/stacchetto/4_7_Pedro_Carra.mp3' as unknown as T;
+    if (obj.includes('Spiegazione') || obj.includes('spiegazione_fasi_audio')) return '/Audio/spiegazione_fasi_audio.mp3' as unknown as T;
     if (obj.includes('exterior_00.webp')) return '/Icone/exterior_00.webp' as unknown as T;
     if (obj.includes('g01m05s01basso')) return '/Audio/strumenti/g01m05s01basso_nordsudovestest.mp3' as unknown as T;
     if (obj.includes('g01m05s02chitarra')) return '/Audio/strumenti/g01m05s02chitarra_nordsudovestest.mp3' as unknown as T;

@@ -75,6 +75,7 @@ export function getSlideForBoxQuestion(
         sfondo: customSfondo,
         sfondoSpiegazione: customSfondo,
         src: customSfondo,
+        audioUrl: setupState.box0?.audioSpiegazione || '/Audio/spiegazione_fasi_audio.mp3',
         titolo: 'SPIEGAZIONE FASI DEL QUIZ',
         sottotitolo: 'Regolamento Generale del Torneo',
         slideId: 'box0_spiegazione',

@@ -203,11 +203,10 @@ export default function SpiegazioneFasiBoard({
   const slideId = data?.slideId || 'box0_spiegazione';
   const customSfondo = data?.sfondo || data?.sfondoSpiegazione;
 
-  // File audio pulito solo voce (con supporto per '#4 Spiegazione.mp3' e fallback nativo su m4a)
+  // File audio pulito solo voce (spiegazione_fasi_audio.mp3)
   const audioSrc = useMemo(() => {
-    const rawUrl = data?.audioUrl || '/Audio/#4 Spiegazione.mp3';
-    const encodedUrl = rawUrl.replace(/#/g, '%23');
-    return assetUrl(encodedUrl);
+    const rawUrl = data?.audioUrl || '/Audio/spiegazione_fasi_audio.mp3';
+    return assetUrl(rawUrl);
   }, [data?.audioUrl]);
 
   const fase1Title = data?.fase1Titolo || 'PRODROMI DELLO SCONTRO';
@@ -233,6 +232,8 @@ export default function SpiegazioneFasiBoard({
   // Gestione emissione audio: in Electron multi-finestra, solo la finestra Giochi emette audio
   const isMultiWindowRelatore = useMemo(() => {
     if (typeof window === 'undefined') return false;
+    const isElectron = (window as any).electron !== undefined;
+    if (!isElectron) return false;
     const params = new URLSearchParams(window.location.search);
     const mode = params.get('mode');
     const isSandbox = params.get('sandbox') === 'true';
@@ -312,11 +313,13 @@ export default function SpiegazioneFasiBoard({
 
   // Ricezione del comando di seek sincronizzato da qualsiasi finestra
   useEffect(() => {
-    if (!seekTrigger) return;
-    const target = seekTrigger.time;
+    if (!seekTrigger || isNaN(seekTrigger.time)) return;
+    const target = Math.max(0, seekTrigger.time);
     setCurrentTime(target);
-    if (audioRef.current) {
-      audioRef.current.currentTime = target;
+    if (audioRef.current && !isNaN(target)) {
+      try {
+        audioRef.current.currentTime = target;
+      } catch {}
     }
     // Allinea la scena attiva al punto di seek
     if (target >= 29.5) {
@@ -361,8 +364,10 @@ export default function SpiegazioneFasiBoard({
   const handleTimeUpdate = () => {
     if (audioRef.current) {
       const t = audioRef.current.currentTime;
-      setCurrentTime(t);
-      if (audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+      if (!isNaN(t)) {
+        setCurrentTime(t);
+      }
+      if (audioRef.current.duration && !isNaN(audioRef.current.duration) && audioRef.current.duration > 0) {
         setDuration(audioRef.current.duration);
       }
       if (t >= 49.3) {
@@ -538,10 +543,14 @@ export default function SpiegazioneFasiBoard({
   // Seek sincronizzato
   const seekTo = useCallback(
     (time: number) => {
-      const clamped = Math.max(0, Math.min(duration, time));
+      const targetDuration = (!duration || isNaN(duration) || duration <= 0) ? 49.58 : duration;
+      const targetTime = isNaN(time) ? 0 : time;
+      const clamped = Math.max(0, Math.min(targetDuration, targetTime));
       setCurrentTime(clamped);
-      if (audioRef.current) {
-        audioRef.current.currentTime = clamped;
+      if (audioRef.current && !isNaN(clamped)) {
+        try {
+          audioRef.current.currentTime = clamped;
+        } catch {}
       }
       if (clamped >= 29.5) {
         setActiveScene('termopili');
@@ -583,13 +592,17 @@ export default function SpiegazioneFasiBoard({
     playedSoundsRef.current.clear();
     if (audioRef.current) {
       audioRef.current.pause();
+      try {
+        audioRef.current.currentTime = 0;
+      } catch {}
     }
-    seekTo(0);
+    setCurrentTime(0);
     setActiveScene('fasi');
     setIsPlaying(false);
     setIsAllRevealed(false);
     setManualStep(0);
-  }, [interactive, setIsPlaying, setIsAllRevealed, setManualStep, seekTo, setActiveScene]);
+    setSeekTrigger({ time: 0, timestamp: Date.now() });
+  }, [interactive, setIsPlaying, setIsAllRevealed, setManualStep, setSeekTrigger, setActiveScene]);
 
   // Svela tutto immediatamente e ferma la voce narrante
   const revealEverything = useCallback(() => {
@@ -805,6 +818,7 @@ export default function SpiegazioneFasiBoard({
   };
 
   const formatTime = (secs: number) => {
+    if (isNaN(secs) || secs < 0) return '00:00';
     const m = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
@@ -914,7 +928,7 @@ export default function SpiegazioneFasiBoard({
         }
       `}</style>
 
-      {/* Audio Element con voce narrante pulita (#4 Spiegazione.mp3) */}
+      {/* Audio Element con voce narrante pulita (spiegazione_fasi_audio.mp3) */}
       {interactive && (
         <audio
           ref={audioRef}
@@ -924,6 +938,13 @@ export default function SpiegazioneFasiBoard({
           onEnded={handleAudioEnded}
           onError={(e) => {
             console.warn('Errore riproduzione audio spiegazione:', e);
+            if (audioRef.current && !audioRef.current.src.includes('spiegazione_fasi_audio.mp3')) {
+              audioRef.current.src = assetUrl('/Audio/spiegazione_fasi_audio.mp3');
+              audioRef.current.load();
+              if (isPlaying) {
+                audioRef.current.play().catch(() => {});
+              }
+            }
           }}
           preload="auto"
         />
@@ -1144,14 +1165,33 @@ export default function SpiegazioneFasiBoard({
                   </g>
                 </svg>
 
-                {/* Micro-label dei giochi svelati */}
-                <div className="flex flex-col gap-1 items-center mt-2 font-mono text-[11px] font-bold text-red-300/80">
-                  <span className={`transition-opacity duration-500 ${showFase1Arrow1 ? 'opacity-100' : 'opacity-0'}`}>
-                    • GIOCO 1: NOME È NESSUNO
-                  </span>
-                  <span className={`transition-opacity duration-500 ${showFase1Arrow2 ? 'opacity-100' : 'opacity-0'}`}>
-                    • GIOCO 2: CLASSIFICA
-                  </span>
+                {/* Badge dei giochi svelati */}
+                <div className="flex flex-col gap-2 items-center mt-3 w-full max-w-[340px]">
+                  <div
+                    className={`w-full flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl bg-red-950/70 border border-red-500/50 shadow-[0_4px_16px_rgba(220,38,38,0.35)] transition-all duration-500 ${
+                      showFase1Arrow1 ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+                    }`}
+                  >
+                    <span className="px-2 py-0.5 rounded-md bg-red-600 text-white font-mono font-black text-xs tracking-wider shadow">
+                      G1
+                    </span>
+                    <span className="text-sm lg:text-[15px] font-black uppercase text-white tracking-wide">
+                      IL MIO NOME È NESSUNO
+                    </span>
+                  </div>
+
+                  <div
+                    className={`w-full flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl bg-red-950/70 border border-red-500/50 shadow-[0_4px_16px_rgba(220,38,38,0.35)] transition-all duration-500 ${
+                      showFase1Arrow2 ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+                    }`}
+                  >
+                    <span className="px-2 py-0.5 rounded-md bg-red-600 text-white font-mono font-black text-xs tracking-wider shadow">
+                      G2
+                    </span>
+                    <span className="text-sm lg:text-[15px] font-black uppercase text-white tracking-wide">
+                      GIOCO A CLASSIFICA
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1295,14 +1335,33 @@ export default function SpiegazioneFasiBoard({
                   </g>
                 </svg>
 
-                {/* Micro-label dei giochi svelati */}
-                <div className="flex flex-col gap-1 items-center mt-2 font-mono text-[11px] font-bold text-emerald-300/80">
-                  <span className={`transition-opacity duration-500 ${showFase2Arrow1 ? 'opacity-100' : 'opacity-0'}`}>
-                    • GIOCO 3: PASSWORD
-                  </span>
-                  <span className={`transition-opacity duration-500 ${showFase2Arrow2 ? 'opacity-100' : 'opacity-0'}`}>
-                    • GIOCO 4: FRASE TEMPO
-                  </span>
+                {/* Badge dei giochi svelati */}
+                <div className="flex flex-col gap-2 items-center mt-3 w-full max-w-[340px]">
+                  <div
+                    className={`w-full flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-950/70 border border-emerald-500/50 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all duration-500 ${
+                      showFase2Arrow1 ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+                    }`}
+                  >
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-mono font-black text-xs tracking-wider shadow">
+                      G3
+                    </span>
+                    <span className="text-sm lg:text-[15px] font-black uppercase text-white tracking-wide">
+                      PASSWORD
+                    </span>
+                  </div>
+
+                  <div
+                    className={`w-full flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-950/70 border border-emerald-500/50 shadow-[0_4px_16px_rgba(16,185,129,0.35)] transition-all duration-500 ${
+                      showFase2Arrow2 ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+                    }`}
+                  >
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-mono font-black text-xs tracking-wider shadow">
+                      G4
+                    </span>
+                    <span className="text-sm lg:text-[15px] font-black uppercase text-white tracking-wide">
+                      FRASE TEMPO
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1438,10 +1497,20 @@ export default function SpiegazioneFasiBoard({
                   </g>
                 </svg>
 
-                <div className="flex flex-col items-center mt-2 font-mono text-[11px] font-bold text-sky-300/80">
-                  <span className={`transition-opacity duration-500 ${showFase3Arrow ? 'opacity-100' : 'opacity-0'}`}>
-                    • MANCHE CONCLUSIVA AD ALTA TENSIONE
-                  </span>
+                {/* Badge della manche finale svelata */}
+                <div className="flex flex-col items-center mt-3 w-full max-w-[340px]">
+                  <div
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-sky-950/75 border border-sky-400/60 shadow-[0_4px_18px_rgba(56,189,248,0.4)] transition-all duration-500 ${
+                      showFase3Arrow ? 'opacity-100 scale-100' : 'opacity-0 scale-95 pointer-events-none'
+                    }`}
+                  >
+                    <span className="px-2.5 py-0.5 rounded-md bg-gradient-to-r from-sky-500 to-indigo-600 text-white font-mono font-black text-xs tracking-wider shadow">
+                      FINALE
+                    </span>
+                    <span className="text-sm lg:text-[15px] font-black uppercase text-white tracking-wide">
+                      TERMOPILI APOCALITTICHE
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1551,11 +1620,11 @@ export default function SpiegazioneFasiBoard({
               {/* ========================================================= */}
               <div className="w-[490px] flex flex-col items-center justify-end">
                 {/* ZONA SUPERIORE: TABELLA DELTA (CENTRATA SU PODIO 2) */}
-                <div className="w-full max-w-[450px] flex flex-col items-center justify-end h-[530px] pb-5">
+                <div className="w-full max-w-[450px] flex flex-col items-center justify-end h-[440px] pb-4">
                   {/* Titolo Delta con spiegazione chiara */}
                   <div
                     className={`transition-all duration-600 mb-4 flex flex-col items-center text-center ${
-                      showDeltaTable ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                      showDeltaTable ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
                     }`}
                   >
                     <div className="px-5 py-1.5 rounded-full bg-slate-800/90 border border-slate-400/60 text-slate-200 font-mono font-black text-xs uppercase tracking-widest shadow-md flex items-center gap-2">
@@ -1625,19 +1694,24 @@ export default function SpiegazioneFasiBoard({
                   </div>
                 </div>
 
-                {/* ZONA INFERIORE: BLOCCO PODIO 2 (h-[260px]) */}
-                <div className="w-full h-[260px] flex items-end">
+                {/* ZONA INFERIORE: BLOCCO PODIO 2 (h-[200px]) */}
+                <div className="w-full h-[200px] flex items-end">
                   <div
-                    className={`w-full transition-all duration-700 flex items-center justify-center rounded-t-3xl border-2 border-slate-400/80 shadow-[0_0_40px_rgba(148,163,184,0.35)] bg-gradient-to-t from-slate-800 via-slate-700 to-slate-600 relative overflow-hidden ${
-                      showPodio2 ? 'opacity-100 h-full' : 'opacity-0 h-0 pointer-events-none'
+                    className={`w-full h-full transition-all duration-700 flex flex-col items-center justify-center rounded-t-3xl border-2 relative overflow-hidden select-none ${
+                      showPodio2
+                        ? 'border-slate-300 shadow-[0_0_55px_rgba(148,163,184,0.65)] bg-gradient-to-t from-slate-800 via-slate-700 to-slate-500 ring-2 ring-slate-300/40'
+                        : 'border-slate-500/50 shadow-[0_0_20px_rgba(148,163,184,0.25)] bg-gradient-to-t from-slate-950/90 via-slate-900/80 to-slate-800/70 opacity-80'
                     }`}
                     style={{
                       animation: showPodio2 ? 'podium-rise 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
                     }}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent pointer-events-none" />
-                    <span className="text-[120px] font-black text-white drop-shadow-[0_6px_22px_rgba(0,0,0,0.9)] select-none leading-none">
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
+                    <span className="text-[105px] font-black text-white drop-shadow-[0_6px_22px_rgba(0,0,0,0.95)] select-none leading-none">
                       2
+                    </span>
+                    <span className="text-xs font-mono font-black tracking-widest text-slate-200 uppercase mt-1">
+                      2ª CLASSIFICATA
                     </span>
                   </div>
                 </div>
@@ -1648,7 +1722,7 @@ export default function SpiegazioneFasiBoard({
               {/* ========================================================= */}
               <div className="w-[540px] flex flex-col items-center justify-end z-20">
                 {/* ZONA SUPERIORE: 6 PRESCELTI (2 FILE DA 3 - OMINI GRANDI) */}
-                <div className="w-full flex flex-col items-center justify-end h-[420px] pb-5">
+                <div className="w-full flex flex-col items-center justify-end h-[360px] pb-4">
                   <div
                     className={`transition-all duration-600 flex flex-col items-center gap-3.5 ${
                       showPodio1Avatars ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'
@@ -1667,33 +1741,38 @@ export default function SpiegazioneFasiBoard({
 
                     {/* Fila 1 di 3 omini (grandi e ben distanziati) */}
                     <div className="flex items-center gap-7 pt-1">
-                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
-                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
-                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-22 h-22 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-22 h-22 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-22 h-22 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
                     </div>
 
                     {/* Fila 2 di 3 omini */}
                     <div className="flex items-center gap-7">
-                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
-                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
-                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-22 h-22 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-22 h-22 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-22 h-22 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
                     </div>
                   </div>
                 </div>
 
-                {/* ZONA INFERIORE: BLOCCO PODIO 1 (h-[370px]) */}
-                <div className="w-full h-[370px] flex items-end">
+                {/* ZONA INFERIORE: BLOCCO PODIO 1 (h-[280px]) */}
+                <div className="w-full h-[280px] flex items-end">
                   <div
-                    className={`w-full transition-all duration-700 flex items-center justify-center rounded-t-3xl border-2 border-amber-300 shadow-[0_0_60px_rgba(245,158,11,0.6)] bg-gradient-to-t from-amber-800 via-amber-600 to-amber-500 relative overflow-hidden ${
-                      showPodio1 ? 'opacity-100 h-full' : 'opacity-0 h-0 pointer-events-none'
+                    className={`w-full h-full transition-all duration-700 flex flex-col items-center justify-center rounded-t-3xl border-2 relative overflow-hidden select-none ${
+                      showPodio1
+                        ? 'border-amber-300 shadow-[0_0_75px_rgba(245,158,11,0.75)] bg-gradient-to-t from-amber-800 via-amber-600 to-amber-500 ring-2 ring-amber-300/50'
+                        : 'border-amber-500/50 shadow-[0_0_25px_rgba(245,158,11,0.3)] bg-gradient-to-t from-amber-950/90 via-amber-900/80 to-amber-800/70 opacity-80'
                     }`}
                     style={{
                       animation: showPodio1 ? 'podium-rise 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
                     }}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent pointer-events-none" />
-                    <span className="text-[150px] font-black text-white drop-shadow-[0_6px_28px_rgba(0,0,0,0.9)] select-none leading-none">
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/25 to-transparent pointer-events-none" />
+                    <span className="text-[135px] font-black text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.95)] select-none leading-none">
                       1
+                    </span>
+                    <span className="text-sm font-mono font-black tracking-widest text-amber-100 uppercase mt-1.5">
+                      1ª CLASSIFICATA
                     </span>
                   </div>
                 </div>
@@ -1704,7 +1783,7 @@ export default function SpiegazioneFasiBoard({
               {/* ========================================================= */}
               <div className="w-[490px] flex flex-col items-center justify-end">
                 {/* ZONA SUPERIORE: 3 PRESCELTI (CENTRATI DIRETTAMENTE SU PODIO 3) */}
-                <div className="w-full flex flex-col items-center justify-end h-[620px] pb-5">
+                <div className="w-full flex flex-col items-center justify-end h-[500px] pb-4">
                   <div
                     className={`transition-all duration-600 flex flex-col items-center gap-3.5 ${
                       showPodio3Avatars ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6 pointer-events-none'
@@ -1723,32 +1802,52 @@ export default function SpiegazioneFasiBoard({
 
                     {/* 1 Fila da 3 omini (stessa dimensione generosa del 1° posto) */}
                     <div className="flex items-center gap-7 pt-1">
-                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
-                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
-                      <PersonIcon className="w-24 h-24 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-22 h-22 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-22 h-22 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
+                      <PersonIcon className="w-22 h-22 drop-shadow-[0_0_15px_rgba(56,189,248,0.7)]" />
                     </div>
                   </div>
                 </div>
 
-                {/* ZONA INFERIORE: BLOCCO PODIO 3 (h-[170px]) */}
-                <div className="w-full h-[170px] flex items-end">
+                {/* ZONA INFERIORE: BLOCCO PODIO 3 (h-[140px]) */}
+                <div className="w-full h-[140px] flex items-end">
                   <div
-                    className={`w-full transition-all duration-700 flex items-center justify-center rounded-t-3xl border-2 border-amber-700/80 shadow-[0_0_35px_rgba(180,83,9,0.35)] bg-gradient-to-t from-amber-950 via-amber-900 to-amber-800 relative overflow-hidden ${
-                      showPodio3 ? 'opacity-100 h-full' : 'opacity-0 h-0 pointer-events-none'
+                    className={`w-full h-full transition-all duration-700 flex flex-col items-center justify-center rounded-t-3xl border-2 relative overflow-hidden select-none ${
+                      showPodio3
+                        ? 'border-amber-600 shadow-[0_0_45px_rgba(180,83,9,0.6)] bg-gradient-to-t from-amber-950 via-amber-900 to-amber-700 ring-2 ring-amber-600/40'
+                        : 'border-amber-700/50 shadow-[0_0_20px_rgba(180,83,9,0.25)] bg-gradient-to-t from-amber-950/90 via-stone-900/80 to-amber-950/70 opacity-80'
                     }`}
                     style={{
                       animation: showPodio3 ? 'podium-rise 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
                     }}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent pointer-events-none" />
-                    <span className="text-[105px] font-black text-white drop-shadow-[0_5px_18px_rgba(0,0,0,0.9)] select-none leading-none">
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/15 to-transparent pointer-events-none" />
+                    <span className="text-[85px] font-black text-white drop-shadow-[0_5px_18px_rgba(0,0,0,0.95)] select-none leading-none">
                       3
+                    </span>
+                    <span className="text-[11px] font-mono font-bold tracking-widest text-amber-300 uppercase mt-0.5">
+                      3ª CLASSIFICATA
                     </span>
                   </div>
                 </div>
               </div>
             </div>
           </main>
+        </div>
+      )}
+
+      {/* Icona Play centrale quando in pausa all'inizio per avviare la voce narrante e le grafiche (visibile SOLO nel relatore) */}
+      {isPresenterMode && !isPlaying && manualStep === 0 && !isAllRevealed && interactive && (
+        <div
+          onClick={togglePlay}
+          className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] cursor-pointer transition-all duration-300 group"
+        >
+          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black flex items-center justify-center pl-2 text-5xl shadow-[0_0_50px_rgba(245,158,11,0.7)] group-hover:scale-110 active:scale-95 transition-transform mb-4">
+            ▶
+          </div>
+          <span className="text-base font-black tracking-widest uppercase text-amber-300 bg-black/70 px-6 py-2 rounded-full border border-amber-400/40 shadow-xl">
+            Avvia Spiegazione con Voce Narrante (Spazio)
+          </span>
         </div>
       )}
 

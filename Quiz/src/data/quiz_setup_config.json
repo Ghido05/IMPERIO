@@ -47,7 +47,7 @@
     "audioSpiegazione": "/Audio/spiegazione_fasi_audio.mp3"
   },
   "gioco1": {
-    "selectedQuestion": 7,
+    "selectedQuestion": 6,
     "videoSpiegazione": "",
     "questions": {
       "1": {
@@ -240,10 +240,10 @@
         "immagine": {
           "immagineJpg": "/Icone/nessuno_img/1_6_ritornoalfuturo.jpg",
           "indizi": [
-            "",
-            "",
-            "",
-            ""
+            "TRA INVENZIONI GENIALI E PURA FANTASCIENZA, SI VIAGGIA NEL TEMPO SFIDANDO LA SCIENZA",
+            "UN GIOVANE IN SKATE E UNO SCIENZIATO GENIALE, SFRECCIANO A BORDO DI UN'AUTO SPECIALE",
+            "FINITO NEGLI ANNI IN CUI STUDIAVA SUA MADRE, DEVE FAR Sì CHE S'INNAMORI SUO PADRE",
+            "CON UN FULMINE ESATTO IL MOTORE SI ACCENDE, E UN TORNARE A CIò CHE VERRà è IL TITOLO CHE T'ATTENDE!"
           ],
           "confermaAudio": "/Audio/strumenti/1_6_macchinadeltempo.mp3",
           "soluzione": "RITORNO AL FUTURO",
@@ -384,7 +384,7 @@
     "sfondoGenerale": "/Icone/sfondi/sfondo_box1_foresta_musicale.jpg"
   },
   "gioco2": {
-    "selectedQuestion": 6,
+    "selectedQuestion": 5,
     "videoSpiegazione": "",
     "questions": {
       "1": {
@@ -618,13 +618,13 @@
             "/Audio/strumenti/g02m05s07 organo dontstop.mp3"
           ],
           "risposte": [
-            "BBB",
-            "III",
-            "PPP",
-            "DDD",
-            "SSS",
-            "RRR",
-            "HHH"
+            "ME CONTRO TE",
+            "WHENGAMERSFAIL► LYON",
+            "FAVIJTV",
+            "IPANTELLAS",
+            "CICCIOGAMER89",
+            "ST3PNY",
+            "TWO PLAYERS ONE CONSOLE"
           ],
           "indizi": [
             "",
@@ -638,7 +638,8 @@
           "soluzioneAudio": "/Audio/soluzioni a conferma/g02m05soluzione.mp3",
           "titolo": "DON'T STOP THE MUSIC",
           "info": "?",
-          "artista": "RIHAN?"
+          "artista": "RIHAN?",
+          "domanda": "QUALE SONO I CANALI YOUTUBE ITALIANI CHE DETENGONO IL RECORD PER MAGGIOR NUMERO DI VISUALIZZAZIONI TOTALI?"
         },
         "immagine": {
           "lista10": [
@@ -656,7 +657,8 @@
           "immagineJpg": "",
           "soluzioneAudio": "",
           "soluzioneTesto": ""
-        }
+        },
+        "notePresentatore": "\"CONSIDERANDO I SOLI CREATOR E YOUTUBER DI CONTENUTI LUNGHI IN LINGUA ITALIANA, QUAL È IL CANALE CON IL MAGGIOR NUMERO DI VISUALIZZAZIONI TOTALI DELLA STORIA?\""
       },
       "6": {
         "tipo": "immagine",

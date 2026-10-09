@@ -29,12 +29,20 @@ interface SpiegazioneFasiBoardProps {
 class SoundFXEngine {
   private ctx: AudioContext | null = null;
 
+  public resume() {
+    this.getContext();
+  }
+
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
-    if (!this.ctx) {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return null;
+
+    if (!this.ctx || this.ctx.state === 'closed') {
+      try {
         this.ctx = new AudioCtx();
+      } catch (e) {
+        return null;
       }
     }
     if (this.ctx && this.ctx.state === 'suspended') {
@@ -44,21 +52,24 @@ class SoundFXEngine {
   }
 
   /**
-   * Rintocco cristallino "Tin" per la comparsa delle singole frecce e righe delta
+   * Rintocco cristallino "Tin" / Chime metallico brillante per le frecce e le righe delta.
+   * Frequenze ottimizzate (1kHz - 2.6kHz) per massima chiarezza e volume pieno.
    */
   playArrowTin() {
     const ctx = this.getContext();
     if (!ctx) return;
-    const now = ctx.currentTime;
+    const now = Math.max(ctx.currentTime, 0.05);
 
     const masterGain = ctx.createGain();
-    masterGain.gain.setValueAtTime(0.28, now);
-    masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+    // Attacco rapido senza click (4ms) e decadimento naturale (360ms) con volume pieno
+    masterGain.gain.setValueAtTime(0.001, now);
+    masterGain.gain.linearRampToValueAtTime(0.45, now + 0.004);
+    masterGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.36);
     masterGain.connect(ctx.destination);
 
-    // Armoniche di campanella metallica brillante (D7 + D8)
-    const harmonics = [2349.32, 4698.64, 7047.96];
-    const amplitudes = [0.65, 0.28, 0.1];
+    // Armoniche di campanella / sonaglio metallico nitido (C6, G6, C7, E7)
+    const harmonics = [1046.5, 1567.98, 2093.0, 2637.02];
+    const weights = [0.55, 0.35, 0.25, 0.12];
 
     harmonics.forEach((freq, idx) => {
       const osc = ctx.createOscillator();
@@ -66,13 +77,12 @@ class SoundFXEngine {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, now);
 
-      oscGain.gain.setValueAtTime(amplitudes[idx], now);
-      oscGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.26 - idx * 0.05);
+      oscGain.gain.setValueAtTime(weights[idx], now);
 
       osc.connect(oscGain);
       oscGain.connect(masterGain);
       osc.start(now);
-      osc.stop(now + 0.35);
+      osc.stop(now + 0.38);
     });
   }
 
@@ -82,7 +92,7 @@ class SoundFXEngine {
   playBoxActivation() {
     const ctx = this.getContext();
     if (!ctx) return;
-    const now = ctx.currentTime;
+    const now = Math.max(ctx.currentTime, 0.05);
 
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -97,15 +107,15 @@ class SoundFXEngine {
     filter.frequency.exponentialRampToValueAtTime(3200, now + 0.16);
 
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.22, now + 0.03);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+    gain.gain.linearRampToValueAtTime(0.28, now + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
 
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
 
     osc.start(now);
-    osc.stop(now + 0.28);
+    osc.stop(now + 0.30);
   }
 
   /**
@@ -114,7 +124,7 @@ class SoundFXEngine {
   playRewardChime() {
     const ctx = this.getContext();
     if (!ctx) return;
-    const now = ctx.currentTime;
+    const now = Math.max(ctx.currentTime, 0.05);
 
     const notes = [1318.51, 1760.0, 2093.0]; // E6, A6, C7
     notes.forEach((freq, i) => {
@@ -124,13 +134,13 @@ class SoundFXEngine {
       osc.frequency.setValueAtTime(freq, now + i * 0.07);
 
       gain.gain.setValueAtTime(0.001, now + i * 0.07);
-      gain.gain.linearRampToValueAtTime(0.18, now + i * 0.07 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.07 + 0.35);
+      gain.gain.linearRampToValueAtTime(0.25, now + i * 0.07 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.07 + 0.38);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now + i * 0.07);
-      osc.stop(now + i * 0.07 + 0.38);
+      osc.stop(now + i * 0.07 + 0.40);
     });
   }
 
@@ -140,28 +150,28 @@ class SoundFXEngine {
   playPodiumRise() {
     const ctx = this.getContext();
     if (!ctx) return;
-    const now = ctx.currentTime;
+    const now = Math.max(ctx.currentTime, 0.05);
 
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(90, now);
-    osc.frequency.exponentialRampToValueAtTime(175, now + 0.25);
+    osc.frequency.exponentialRampToValueAtTime(185, now + 0.25);
 
     const filter = ctx.createBiquadFilter();
     filter.type = 'lowpass';
     filter.frequency.setValueAtTime(180, now);
-    filter.frequency.exponentialRampToValueAtTime(750, now + 0.25);
+    filter.frequency.exponentialRampToValueAtTime(850, now + 0.25);
 
     gain.gain.setValueAtTime(0.001, now);
-    gain.gain.linearRampToValueAtTime(0.24, now + 0.04);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.38);
+    gain.gain.linearRampToValueAtTime(0.32, now + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.40);
 
     osc.connect(filter);
     filter.connect(gain);
     gain.connect(ctx.destination);
     osc.start(now);
-    osc.stop(now + 0.42);
+    osc.stop(now + 0.44);
   }
 
   /**
@@ -170,7 +180,7 @@ class SoundFXEngine {
   playTrophyVictory() {
     const ctx = this.getContext();
     if (!ctx) return;
-    const now = ctx.currentTime;
+    const now = Math.max(ctx.currentTime, 0.05);
 
     // Accordo C Maggiore epico brillante (C5, E5, G5, C6)
     const chord = [523.25, 659.25, 783.99, 1046.5];
@@ -181,18 +191,43 @@ class SoundFXEngine {
       osc.frequency.setValueAtTime(freq, now + idx * 0.05);
 
       gain.gain.setValueAtTime(0.001, now + idx * 0.05);
-      gain.gain.linearRampToValueAtTime(0.18, now + idx * 0.05 + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.05 + 0.65);
+      gain.gain.linearRampToValueAtTime(0.24, now + idx * 0.05 + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.05 + 0.70);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now + idx * 0.05);
-      osc.stop(now + idx * 0.05 + 0.7);
+      osc.stop(now + idx * 0.05 + 0.75);
     });
   }
 }
 
 const soundFX = new SoundFXEngine();
+
+// Mappatura deterministica dei punti di cue audio per sincronizzazione perfetta
+const SFX_CUES = [
+  { id: 'fase1_box', time: 2.6, scene: 'fasi' as const, play: () => soundFX.playBoxActivation() },
+  { id: 'fase1_a1', time: 6.4, scene: 'fasi' as const, play: () => soundFX.playArrowTin() },
+  { id: 'fase1_a2', time: 7.8, scene: 'fasi' as const, play: () => soundFX.playArrowTin() },
+  { id: 'fase1_bottom', time: 9.2, scene: 'fasi' as const, play: () => soundFX.playRewardChime() },
+  { id: 'fase2_box', time: 11.0, scene: 'fasi' as const, play: () => soundFX.playBoxActivation() },
+  { id: 'fase2_a1', time: 14.6, scene: 'fasi' as const, play: () => soundFX.playArrowTin() },
+  { id: 'fase2_a2', time: 15.6, scene: 'fasi' as const, play: () => soundFX.playArrowTin() },
+  { id: 'fase2_coins', time: 17.3, scene: 'fasi' as const, play: () => soundFX.playRewardChime() },
+  { id: 'fase2_bonus', time: 19.5, scene: 'fasi' as const, play: () => soundFX.playRewardChime() },
+  { id: 'fase3_box', time: 22.7, scene: 'fasi' as const, play: () => soundFX.playBoxActivation() },
+  { id: 'fase3_a1', time: 24.8, scene: 'fasi' as const, play: () => soundFX.playArrowTin() },
+  { id: 'fase3_trophy', time: 27.0, scene: 'fasi' as const, play: () => soundFX.playTrophyVictory() },
+  { id: 'term_header', time: 29.8, scene: 'termopili' as const, play: () => soundFX.playBoxActivation() },
+  { id: 'term_p1', time: 32.8, scene: 'termopili' as const, play: () => soundFX.playPodiumRise() },
+  { id: 'term_p1_avatars', time: 34.0, scene: 'termopili' as const, play: () => soundFX.playRewardChime() },
+  { id: 'term_p2', time: 37.8, scene: 'termopili' as const, play: () => soundFX.playPodiumRise() },
+  { id: 'term_delta_1', time: 41.2, scene: 'termopili' as const, play: () => soundFX.playArrowTin() },
+  { id: 'term_delta_2', time: 42.8, scene: 'termopili' as const, play: () => soundFX.playArrowTin() },
+  { id: 'term_delta_3', time: 44.5, scene: 'termopili' as const, play: () => soundFX.playArrowTin() },
+  { id: 'term_p3', time: 47.4, scene: 'termopili' as const, play: () => soundFX.playPodiumRise() },
+  { id: 'term_p3_avatars', time: 48.0, scene: 'termopili' as const, play: () => soundFX.playRewardChime() },
+];
 
 export default function SpiegazioneFasiBoard({
   interactive = true,
@@ -274,6 +309,7 @@ export default function SpiegazioneFasiBoard({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hideControlsTimer = useRef<NodeJS.Timeout | null>(null);
   const playedSoundsRef = useRef<Set<string>>(new Set());
+  const isSeekingRef = useRef<boolean>(false);
 
   // Pulizia e stop immediato dell'audio all'unmount
   useEffect(() => {
@@ -315,6 +351,7 @@ export default function SpiegazioneFasiBoard({
   useEffect(() => {
     if (!seekTrigger || isNaN(seekTrigger.time)) return;
     const target = Math.max(0, seekTrigger.time);
+    isSeekingRef.current = true;
     setCurrentTime(target);
     if (audioRef.current && !isNaN(target)) {
       try {
@@ -328,40 +365,28 @@ export default function SpiegazioneFasiBoard({
       setActiveScene('fasi');
     }
 
-    // Resetta i suoni futuri rispetto al nuovo tempo
-    const newPlayed = new Set<string>();
-    playedSoundsRef.current.forEach((key) => {
-      if (
-        (key === 'fase1_box' && target >= 2.6) ||
-        (key === 'fase1_a1' && target >= 6.4) ||
-        (key === 'fase1_a2' && target >= 7.8) ||
-        (key === 'fase1_bottom' && target >= 9.2) ||
-        (key === 'fase2_box' && target >= 11.0) ||
-        (key === 'fase2_a1' && target >= 14.6) ||
-        (key === 'fase2_a2' && target >= 15.6) ||
-        (key === 'fase2_coins' && target >= 17.3) ||
-        (key === 'fase2_bonus' && target >= 19.5) ||
-        (key === 'fase3_box' && target >= 22.7) ||
-        (key === 'fase3_a1' && target >= 24.8) ||
-        (key === 'fase3_trophy' && target >= 27.0) ||
-        (key === 'term_header' && target >= 29.8) ||
-        (key === 'term_p1' && target >= 32.8) ||
-        (key === 'term_p1_avatars' && target >= 34.0) ||
-        (key === 'term_p2' && target >= 37.8) ||
-        (key === 'term_delta_1' && target >= 41.0) ||
-        (key === 'term_delta_2' && target >= 42.6) ||
-        (key === 'term_delta_3' && target >= 44.2) ||
-        (key === 'term_p3' && target >= 47.4) ||
-        (key === 'term_p3_avatars' && target >= 48.0)
-      ) {
-        newPlayed.add(key);
-      }
-    });
-    playedSoundsRef.current = newPlayed;
+    // Resetta i suoni futuri rispetto al nuovo tempo in modo deterministico
+    if (target <= 0.5) {
+      playedSoundsRef.current.clear();
+    } else {
+      const newPlayed = new Set<string>();
+      SFX_CUES.forEach((cue) => {
+        if (target >= cue.time && playedSoundsRef.current.has(cue.id)) {
+          newPlayed.add(cue.id);
+        }
+      });
+      playedSoundsRef.current = newPlayed;
+    }
+
+    const timer = setTimeout(() => {
+      isSeekingRef.current = false;
+    }, 150);
+    return () => clearTimeout(timer);
   }, [seekTrigger, setActiveScene]);
 
   // Aggiornamento tempo audio
   const handleTimeUpdate = () => {
+    if (isSeekingRef.current) return;
     if (audioRef.current) {
       const t = audioRef.current.currentTime;
       if (!isNaN(t)) {
@@ -412,141 +437,46 @@ export default function SpiegazioneFasiBoard({
   const showPodio3 = isAllRevealed || (isPlaying && currentTime >= 47.4) || manualStep >= 7;
   const showPodio3Avatars = isAllRevealed || (isPlaying && currentTime >= 48.0) || manualStep >= 7;
 
-  // Riproduzione procedurale sincronizzata degli effetti sonori personalizzati
+  // Riproduzione procedurale sincronizzata degli effetti sonori durante la voce narrante
   const canPlaySFX = !isMuted && interactive;
 
   useEffect(() => {
-    if (!canPlaySFX || isAllRevealed) return;
+    if (!canPlaySFX || !isPlaying || isAllRevealed) return;
 
-    const played = playedSoundsRef.current;
-
-    // Parte 1 (Scena Fasi)
-    if (activeScene === 'fasi') {
-      if (showFase1Card && !played.has('fase1_box')) {
-        played.add('fase1_box');
-        soundFX.playBoxActivation();
+    SFX_CUES.forEach((cue) => {
+      if (
+        activeScene === cue.scene &&
+        currentTime >= cue.time &&
+        !playedSoundsRef.current.has(cue.id)
+      ) {
+        playedSoundsRef.current.add(cue.id);
+        cue.play();
       }
-      if (showFase1Arrow1 && !played.has('fase1_a1')) {
-        played.add('fase1_a1');
-        soundFX.playArrowTin();
-      }
-      if (showFase1Arrow2 && !played.has('fase1_a2')) {
-        played.add('fase1_a2');
-        soundFX.playArrowTin();
-      }
-      if (showFase1Bottom && !played.has('fase1_bottom')) {
-        played.add('fase1_bottom');
-        soundFX.playRewardChime();
-      }
-
-      if (showFase2Card && !played.has('fase2_box')) {
-        played.add('fase2_box');
-        soundFX.playBoxActivation();
-      }
-      if (showFase2Arrow1 && !played.has('fase2_a1')) {
-        played.add('fase2_a1');
-        soundFX.playArrowTin();
-      }
-      if (showFase2Arrow2 && !played.has('fase2_a2')) {
-        played.add('fase2_a2');
-        soundFX.playArrowTin();
-      }
-      if (showFase2Coins && !played.has('fase2_coins')) {
-        played.add('fase2_coins');
-        soundFX.playRewardChime();
-      }
-      if (showFase2Bonus && !played.has('fase2_bonus')) {
-        played.add('fase2_bonus');
-        soundFX.playRewardChime();
-      }
-
-      if (showFase3Card && !played.has('fase3_box')) {
-        played.add('fase3_box');
-        soundFX.playBoxActivation();
-      }
-      if (showFase3Arrow && !played.has('fase3_a1')) {
-        played.add('fase3_a1');
-        soundFX.playArrowTin();
-      }
-      if (showFase3Trophy && !played.has('fase3_trophy')) {
-        played.add('fase3_trophy');
-        soundFX.playTrophyVictory();
-      }
-    }
-
-    // Parte 2 (Scena Termopili)
-    if (activeScene === 'termopili') {
-      if (showTermopiliHeader && !played.has('term_header')) {
-        played.add('term_header');
-        soundFX.playBoxActivation();
-      }
-      if (showPodio1 && !played.has('term_p1')) {
-        played.add('term_p1');
-        soundFX.playPodiumRise();
-      }
-      if (showPodio1Avatars && !played.has('term_p1_avatars')) {
-        played.add('term_p1_avatars');
-        soundFX.playRewardChime();
-      }
-      if (showPodio2 && !played.has('term_p2')) {
-        played.add('term_p2');
-        soundFX.playPodiumRise();
-      }
-      if (showDeltaRow1 && !played.has('term_delta_1')) {
-        played.add('term_delta_1');
-        soundFX.playArrowTin();
-      }
-      if (showDeltaRow2 && !played.has('term_delta_2')) {
-        played.add('term_delta_2');
-        soundFX.playArrowTin();
-      }
-      if (showDeltaRow3 && !played.has('term_delta_3')) {
-        played.add('term_delta_3');
-        soundFX.playArrowTin();
-      }
-      if (showPodio3 && !played.has('term_p3')) {
-        played.add('term_p3');
-        soundFX.playPodiumRise();
-      }
-      if (showPodio3Avatars && !played.has('term_p3_avatars')) {
-        played.add('term_p3_avatars');
-        soundFX.playRewardChime();
-      }
-    }
-  }, [
-    canPlaySFX,
-    isAllRevealed,
-    activeScene,
-    showFase1Card,
-    showFase1Arrow1,
-    showFase1Arrow2,
-    showFase1Bottom,
-    showFase2Card,
-    showFase2Arrow1,
-    showFase2Arrow2,
-    showFase2Coins,
-    showFase2Bonus,
-    showFase3Card,
-    showFase3Arrow,
-    showFase3Trophy,
-    showTermopiliHeader,
-    showPodio1,
-    showPodio1Avatars,
-    showPodio2,
-    showDeltaRow1,
-    showDeltaRow2,
-    showDeltaRow3,
-    showPodio3,
-    showPodio3Avatars,
-  ]);
+    });
+  }, [canPlaySFX, isPlaying, isAllRevealed, activeScene, currentTime]);
 
   // Seek sincronizzato
   const seekTo = useCallback(
     (time: number) => {
+      soundFX.resume();
       const targetDuration = (!duration || isNaN(duration) || duration <= 0) ? 49.58 : duration;
       const targetTime = isNaN(time) ? 0 : time;
       const clamped = Math.max(0, Math.min(targetDuration, targetTime));
+      isSeekingRef.current = true;
       setCurrentTime(clamped);
+
+      if (clamped <= 0.5) {
+        playedSoundsRef.current.clear();
+      } else {
+        const newPlayed = new Set<string>();
+        SFX_CUES.forEach((cue) => {
+          if (clamped >= cue.time && playedSoundsRef.current.has(cue.id)) {
+            newPlayed.add(cue.id);
+          }
+        });
+        playedSoundsRef.current = newPlayed;
+      }
+
       if (audioRef.current && !isNaN(clamped)) {
         try {
           audioRef.current.currentTime = clamped;
@@ -558,6 +488,10 @@ export default function SpiegazioneFasiBoard({
         setActiveScene('fasi');
       }
       setSeekTrigger({ time: clamped, timestamp: Date.now() });
+
+      setTimeout(() => {
+        isSeekingRef.current = false;
+      }, 150);
     },
     [duration, setSeekTrigger, setActiveScene]
   );
@@ -565,7 +499,10 @@ export default function SpiegazioneFasiBoard({
   // Play / Pausa
   const togglePlay = useCallback(() => {
     if (!interactive) return;
-    if (currentTime >= 49.3) {
+    soundFX.resume();
+    // Se la slide è finita o era tutta svelata, riavvia pulito da 0
+    if (currentTime >= 48.5 || isAllRevealed) {
+      playedSoundsRef.current.clear();
       seekTo(0);
       setIsAllRevealed(false);
       setManualStep(0);
@@ -573,11 +510,12 @@ export default function SpiegazioneFasiBoard({
       return;
     }
     setIsPlaying((prev) => !prev);
-  }, [interactive, currentTime, seekTo, setIsAllRevealed, setManualStep, setIsPlaying]);
+  }, [interactive, currentTime, isAllRevealed, seekTo, setIsAllRevealed, setManualStep, setIsPlaying]);
 
   // Riavvia dall'inizio
   const restartPlayback = useCallback(() => {
     if (!interactive) return;
+    soundFX.resume();
     playedSoundsRef.current.clear();
     seekTo(0);
     setActiveScene('fasi');
@@ -589,6 +527,7 @@ export default function SpiegazioneFasiBoard({
   // Reset all
   const resetAllState = useCallback(() => {
     if (!interactive) return;
+    soundFX.resume();
     playedSoundsRef.current.clear();
     if (audioRef.current) {
       audioRef.current.pause();
@@ -936,6 +875,9 @@ export default function SpiegazioneFasiBoard({
           muted={isMuted}
           onTimeUpdate={handleTimeUpdate}
           onEnded={handleAudioEnded}
+          onSeeked={() => {
+            isSeekingRef.current = false;
+          }}
           onError={(e) => {
             console.warn('Errore riproduzione audio spiegazione:', e);
             if (audioRef.current && !audioRef.current.src.includes('spiegazione_fasi_audio.mp3')) {
@@ -1697,10 +1639,10 @@ export default function SpiegazioneFasiBoard({
                 {/* ZONA INFERIORE: BLOCCO PODIO 2 (h-[200px]) */}
                 <div className="w-full h-[200px] flex items-end">
                   <div
-                    className={`w-full h-full transition-all duration-700 flex flex-col items-center justify-center rounded-t-3xl border-2 relative overflow-hidden select-none ${
+                    className={`w-full h-full transition-all duration-700 flex flex-col items-center justify-center rounded-t-3xl relative overflow-hidden select-none ${
                       showPodio2
-                        ? 'border-slate-300 shadow-[0_0_55px_rgba(148,163,184,0.65)] bg-gradient-to-t from-slate-800 via-slate-700 to-slate-500 ring-2 ring-slate-300/40'
-                        : 'border-slate-500/50 shadow-[0_0_20px_rgba(148,163,184,0.25)] bg-gradient-to-t from-slate-950/90 via-slate-900/80 to-slate-800/70 opacity-80'
+                        ? 'border-2 border-slate-300 shadow-[0_0_55px_rgba(148,163,184,0.65)] bg-gradient-to-t from-slate-800 via-slate-700 to-slate-500 ring-2 ring-slate-300/40 opacity-100'
+                        : 'opacity-0 pointer-events-none'
                     }`}
                     style={{
                       animation: showPodio2 ? 'podium-rise 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
@@ -1758,10 +1700,10 @@ export default function SpiegazioneFasiBoard({
                 {/* ZONA INFERIORE: BLOCCO PODIO 1 (h-[280px]) */}
                 <div className="w-full h-[280px] flex items-end">
                   <div
-                    className={`w-full h-full transition-all duration-700 flex flex-col items-center justify-center rounded-t-3xl border-2 relative overflow-hidden select-none ${
+                    className={`w-full h-full transition-all duration-700 flex flex-col items-center justify-center rounded-t-3xl relative overflow-hidden select-none ${
                       showPodio1
-                        ? 'border-amber-300 shadow-[0_0_75px_rgba(245,158,11,0.75)] bg-gradient-to-t from-amber-800 via-amber-600 to-amber-500 ring-2 ring-amber-300/50'
-                        : 'border-amber-500/50 shadow-[0_0_25px_rgba(245,158,11,0.3)] bg-gradient-to-t from-amber-950/90 via-amber-900/80 to-amber-800/70 opacity-80'
+                        ? 'border-2 border-amber-300 shadow-[0_0_75px_rgba(245,158,11,0.75)] bg-gradient-to-t from-amber-800 via-amber-600 to-amber-500 ring-2 ring-amber-300/50 opacity-100'
+                        : 'opacity-0 pointer-events-none'
                     }`}
                     style={{
                       animation: showPodio1 ? 'podium-rise 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',
@@ -1812,10 +1754,10 @@ export default function SpiegazioneFasiBoard({
                 {/* ZONA INFERIORE: BLOCCO PODIO 3 (h-[140px]) */}
                 <div className="w-full h-[140px] flex items-end">
                   <div
-                    className={`w-full h-full transition-all duration-700 flex flex-col items-center justify-center rounded-t-3xl border-2 relative overflow-hidden select-none ${
+                    className={`w-full h-full transition-all duration-700 flex flex-col items-center justify-center rounded-t-3xl relative overflow-hidden select-none ${
                       showPodio3
-                        ? 'border-amber-600 shadow-[0_0_45px_rgba(180,83,9,0.6)] bg-gradient-to-t from-amber-950 via-amber-900 to-amber-700 ring-2 ring-amber-600/40'
-                        : 'border-amber-700/50 shadow-[0_0_20px_rgba(180,83,9,0.25)] bg-gradient-to-t from-amber-950/90 via-stone-900/80 to-amber-950/70 opacity-80'
+                        ? 'border-2 border-amber-600 shadow-[0_0_45px_rgba(180,83,9,0.6)] bg-gradient-to-t from-amber-950 via-amber-900 to-amber-700 ring-2 ring-amber-600/40 opacity-100'
+                        : 'opacity-0 pointer-events-none'
                     }`}
                     style={{
                       animation: showPodio3 ? 'podium-rise 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards' : 'none',

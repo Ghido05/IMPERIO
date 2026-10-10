@@ -39,14 +39,21 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   '1_2_Tuttoperunaragione_Benji.mp3': '/Audio/strumenti/1_2_Tuttoperunaragione_Benji.mp3',
   '1_8_thinkabouttheway.mp3': '/Audio/strumenti/1_8_thinkabouttheway.mp3',
   '4_7_Pedro_Carra.mp3': '/Audio/stacchetto/4_7_Pedro_Carra.mp3',
-  // Audio Spiegazione Box 0
-  'spiegazione_fasi_audio.mp3': '/Audio/spiegazione_fasi_audio.mp3',
-  '#4 Spiegazione.mp3': '/Audio/spiegazione_fasi_audio.mp3',
-  '4 Spiegazione.mp3': '/Audio/spiegazione_fasi_audio.mp3',
-  // Audio Spiegazione Box 1
-  'spiegazione_box1_audio.wav': '/Audio/spiegazione_box1_audio.wav',
-  'spiegazione_box1_audio.m4a': '/Audio/spiegazione_box1_audio.m4a',
-  'spiegazione_box1_audio.mp3': '/Audio/spiegazione_box1_audio.m4a',
+  // Audio Spiegazione Box 0 - 4 (nella cartella Spiegazioni)
+  'spiegazione_fasi_audio.mp3': '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3',
+  '#4 Spiegazione.mp3': '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3',
+  '4 Spiegazione.mp3': '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3',
+  'Spiegazione_box1.mp3': '/Audio/Spiegazioni/Spiegazione_box1.mp3',
+  'spiegazione_box1.mp3': '/Audio/Spiegazioni/Spiegazione_box1.mp3',
+  'spiegazione_box1_audio.wav': '/Audio/Spiegazioni/Spiegazione_box1.mp3',
+  'spiegazione_box1_audio.m4a': '/Audio/Spiegazioni/Spiegazione_box1.mp3',
+  'spiegazione_box1_audio.mp3': '/Audio/Spiegazioni/Spiegazione_box1.mp3',
+  'Spiegazione_box2.mp3': '/Audio/Spiegazioni/Spiegazione_box2.mp3',
+  'spiegazione_box2.mp3': '/Audio/Spiegazioni/Spiegazione_box2.mp3',
+  'Spiegazione_box3.mp3': '/Audio/Spiegazioni/Spiegazione_box3.mp3',
+  'spiegazione_box3.mp3': '/Audio/Spiegazioni/Spiegazione_box3.mp3',
+  'Spiegazione_box4.mp3': '/Audio/Spiegazioni/Spiegazione_box4.mp3',
+  'spiegazione_box4.mp3': '/Audio/Spiegazioni/Spiegazione_box4.mp3',
   // Audio Soluzioni
   'g01m01soluzione.mp3': '/Audio/soluzioni a conferma/g01m01soluzione.mp3',
   'g01m03soluzione.mp3': '/Audio/soluzioni a conferma/g01m03soluzione.mp3',
@@ -154,8 +161,11 @@ export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): 
     if (clean.includes('4_7_Ugolino') || clean.includes('4_7_ugolino')) return '/Icone/sfondi/4_7_Ugolino.jpg';
     if (clean.includes('4_7_Pedro_Carra') || clean.includes('4_7_pedro_carra')) return '/Audio/stacchetto/4_7_Pedro_Carra.mp3';
     if (clean.includes('spiegazione_box1_ambientazione') || clean.includes('ambientazione')) return '/Mappa/spiegazione_box1_ambientazione.jpg';
-    if (clean.includes('spiegazione_box1_audio') || (clean.includes('spiegazione_box1') && (clean.endsWith('.m4a') || clean.endsWith('.mp3') || clean.endsWith('.wav')))) return '/Audio/spiegazione_box1_audio.m4a';
-    if (clean.includes('spiegazione_fasi_audio')) return '/Audio/spiegazione_fasi_audio.mp3';
+    if (clean.toLowerCase().includes('spiegazione_box1') && (clean.endsWith('.m4a') || clean.endsWith('.mp3') || clean.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box1.mp3';
+    if (clean.toLowerCase().includes('spiegazione_box2') && (clean.endsWith('.m4a') || clean.endsWith('.mp3') || clean.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box2.mp3';
+    if (clean.toLowerCase().includes('spiegazione_box3') && (clean.endsWith('.m4a') || clean.endsWith('.mp3') || clean.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box3.mp3';
+    if (clean.toLowerCase().includes('spiegazione_box4') && (clean.endsWith('.m4a') || clean.endsWith('.mp3') || clean.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box4.mp3';
+    if (clean.includes('spiegazione_fasi_audio')) return '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3';
     if (clean.includes('/') || clean.includes('\\')) {
       return null;
     }
@@ -200,8 +210,11 @@ export function sanitizeSetupStateWithKnownAssets<T>(obj: T): T {
     if (obj.includes('4_6_Livingstone') || obj.includes('4_6_livingstone')) return '/Icone/sfondi/4_6_Livingstone.jpg' as unknown as T;
     if (obj.includes('4_7_Ugolino') || obj.includes('4_7_ugolino')) return '/Icone/sfondi/4_7_Ugolino.jpg' as unknown as T;
     if (obj.includes('spiegazione_box1_ambientazione') || (obj.includes('spiegazione_box1') && (obj.endsWith('.jpg') || obj.endsWith('.png')))) return '/Mappa/spiegazione_box1_ambientazione.jpg' as unknown as T;
-    if (obj.includes('spiegazione_box1_audio') || (obj.includes('spiegazione_box1') && (obj.endsWith('.m4a') || obj.endsWith('.mp3') || obj.endsWith('.wav')))) return '/Audio/spiegazione_box1_audio.m4a' as unknown as T;
-    if (obj.includes('spiegazione_fasi_audio')) return '/Audio/spiegazione_fasi_audio.mp3' as unknown as T;
+    if (obj.toLowerCase().includes('spiegazione_box1') && (obj.endsWith('.m4a') || obj.endsWith('.mp3') || obj.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box1.mp3' as unknown as T;
+    if (obj.toLowerCase().includes('spiegazione_box2') && (obj.endsWith('.m4a') || obj.endsWith('.mp3') || obj.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box2.mp3' as unknown as T;
+    if (obj.toLowerCase().includes('spiegazione_box3') && (obj.endsWith('.m4a') || obj.endsWith('.mp3') || obj.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box3.mp3' as unknown as T;
+    if (obj.toLowerCase().includes('spiegazione_box4') && (obj.endsWith('.m4a') || obj.endsWith('.mp3') || obj.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box4.mp3' as unknown as T;
+    if (obj.includes('spiegazione_fasi_audio')) return '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3' as unknown as T;
     if (obj.includes('exterior_00.webp')) return '/Icone/exterior_00.webp' as unknown as T;
     if (obj.includes('g01m05s01basso')) return '/Audio/strumenti/g01m05s01basso_nordsudovestest.mp3' as unknown as T;
     if (obj.includes('g01m05s02chitarra')) return '/Audio/strumenti/g01m05s02chitarra_nordsudovestest.mp3' as unknown as T;

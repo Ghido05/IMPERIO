@@ -73,6 +73,14 @@ export interface Box0Setup {
   sfondoSpiegazione?: string;
   videoSpiegazione?: string;
   audioSpiegazione?: string;
+  fase1Titolo?: string;
+  fase2Titolo?: string;
+  fase3Titolo?: string;
+  gioco1Titolo?: string;
+  gioco2Titolo?: string;
+  gioco3Titolo?: string;
+  gioco4Titolo?: string;
+  gioco5Titolo?: string;
 }
 
 export interface Gioco5Setup {
@@ -126,6 +134,7 @@ export interface Gioco3Question {
 
 export interface Gioco4Setup {
   titolo?: string;
+  sottotitolo?: string;
   note?: string;
   frasi: FraseTempoItem[];
   sfondoGenerale?: string;
@@ -155,6 +164,8 @@ export interface QuizSetupState {
   nadia?: NadiaSetup;
   box0?: Box0Setup;
   gioco1: {
+    titolo?: string;
+    sottotitolo?: string;
     selectedQuestion: number;
     videoSpiegazione?: string;
     sfondoSpiegazione?: string;
@@ -163,6 +174,8 @@ export interface QuizSetupState {
     sfondoGenerale?: string;
   };
   gioco2: {
+    titolo?: string;
+    sottotitolo?: string;
     selectedQuestion: number;
     videoSpiegazione?: string;
     sfondoSpiegazione?: string;
@@ -171,6 +184,8 @@ export interface QuizSetupState {
     sfondoGenerale?: string;
   };
   gioco3: {
+    titolo?: string;
+    sottotitolo?: string;
     selectedQuestion: number;
     videoSpiegazione?: string;
     sfondoSpiegazione?: string;
@@ -271,7 +286,15 @@ export function createDefaultBox0Setup(): Box0Setup {
     videoSigla: '',
     sfondoSpiegazione: '',
     videoSpiegazione: '',
-    audioSpiegazione: '/Audio/spiegazione_fasi_audio.mp3',
+    audioSpiegazione: '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3',
+    fase1Titolo: 'PRODROMI DELLO SCONTRO',
+    fase2Titolo: 'CORSA AGLI EQUIPAGGIAMENTI',
+    fase3Titolo: 'TERMOPILI APOCALITTICHE',
+    gioco1Titolo: '',
+    gioco2Titolo: '',
+    gioco3Titolo: '',
+    gioco4Titolo: '',
+    gioco5Titolo: '',
   };
 }
 
@@ -290,7 +313,15 @@ export function normalizeBox0(raw: any, def: Box0Setup): Box0Setup {
     videoSigla: raw.videoSigla || '',
     sfondoSpiegazione: sfondoSpieg,
     videoSpiegazione: sfondoSpieg,
-    audioSpiegazione: raw.audioSpiegazione || def.audioSpiegazione || '/Audio/spiegazione_fasi_audio.mp3',
+    audioSpiegazione: raw.audioSpiegazione || def.audioSpiegazione || '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3',
+    fase1Titolo: raw.fase1Titolo !== undefined ? raw.fase1Titolo : (def.fase1Titolo || 'PRODROMI DELLO SCONTRO'),
+    fase2Titolo: raw.fase2Titolo !== undefined ? raw.fase2Titolo : (def.fase2Titolo || 'CORSA AGLI EQUIPAGGIAMENTI'),
+    fase3Titolo: raw.fase3Titolo !== undefined ? raw.fase3Titolo : (def.fase3Titolo || 'TERMOPILI APOCALITTICHE'),
+    gioco1Titolo: raw.gioco1Titolo !== undefined ? raw.gioco1Titolo : (def.gioco1Titolo || ''),
+    gioco2Titolo: raw.gioco2Titolo !== undefined ? raw.gioco2Titolo : (def.gioco2Titolo || ''),
+    gioco3Titolo: raw.gioco3Titolo !== undefined ? raw.gioco3Titolo : (def.gioco3Titolo || ''),
+    gioco4Titolo: raw.gioco4Titolo !== undefined ? raw.gioco4Titolo : (def.gioco4Titolo || ''),
+    gioco5Titolo: raw.gioco5Titolo !== undefined ? raw.gioco5Titolo : (def.gioco5Titolo || ''),
   };
 }
 
@@ -301,10 +332,12 @@ function normalizeGioco3(
   if (!raw || typeof raw !== 'object') return def;
   const data = raw as any;
   return {
+    titolo: data.titolo !== undefined ? data.titolo : (def.titolo || 'Password & Bussolotti'),
+    sottotitolo: data.sottotitolo !== undefined ? data.sottotitolo : (def.sottotitolo || 'Sfida a Squadre & Bussolotti'),
     selectedQuestion: data.selectedQuestion !== undefined ? data.selectedQuestion : (def.selectedQuestion !== undefined ? def.selectedQuestion : 1),
     videoSpiegazione: data.videoSpiegazione || '',
     sfondoSpiegazione: data.sfondoSpiegazione || '',
-    audioSpiegazione: data.audioSpiegazione || '',
+    audioSpiegazione: data.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box3.mp3',
     questions: data.questions ? { ...def.questions, ...data.questions } : def.questions,
     sfondoGenerale: data.sfondoGenerale || '',
   };
@@ -323,21 +356,22 @@ function normalizeGioco4(raw: any, def: Gioco4Setup): Gioco4Setup {
     ? raw.frasi.map(normalizeFraseTempoItem)
     : def.frasi;
   return {
-    titolo: raw.titolo || def.titolo,
+    titolo: raw.titolo !== undefined ? raw.titolo : (def.titolo || 'Frase Tempo'),
+    sottotitolo: raw.sottotitolo !== undefined ? raw.sottotitolo : (def.sottotitolo || 'Corsa contro il Cronometro'),
     note: raw.note || def.note,
     frasi,
     sfondoGenerale: raw.sfondoGenerale || '',
     videoSpiegazione: raw.videoSpiegazione || '',
     sfondoSpiegazione: raw.sfondoSpiegazione || '',
-    audioSpiegazione: raw.audioSpiegazione || '',
+    audioSpiegazione: raw.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box4.mp3',
   };
 }
 
 function normalizeGioco5(raw: any, def: Gioco5Setup): Gioco5Setup {
   if (!raw) return def;
   return {
-    titolo: raw.titolo || def.titolo,
-    sottotitolo: raw.sottotitolo || def.sottotitolo || '',
+    titolo: raw.titolo !== undefined ? raw.titolo : (def.titolo || 'Finale a Squadre'),
+    sottotitolo: raw.sottotitolo !== undefined ? raw.sottotitolo : (def.sottotitolo || 'Sfida con dado, omini sui cubi 3D e 4 bonus per squadra'),
     sfondoGenerale: raw.sfondoGenerale !== undefined ? raw.sfondoGenerale : def.sfondoGenerale,
     numeroDomande: Number(raw.numeroDomande) || def.numeroDomande || 15,
     notePresentatore: raw.notePresentatore || '',
@@ -444,44 +478,51 @@ export function getDefaultSetupState(): QuizSetupState {
     nadia: createDefaultNadiaSetup(),
     box0: createDefaultBox0Setup(),
     gioco1: {
+      titolo: 'Il mio nome è nessuno',
+      sottotitolo: 'Musica & Immagini',
       selectedQuestion: 1,
       videoSpiegazione: '',
       sfondoSpiegazione: '/Mappa/spiegazione_box1_ambientazione.jpg',
-      audioSpiegazione: '/Audio/spiegazione_box1_audio.m4a',
+      audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_box1.mp3',
       questions: q1,
       sfondoGenerale: '/Icone/sfondi/sfondo_box1_foresta_musicale.jpg',
     },
     gioco2: {
+      titolo: 'Classifiche',
+      sottotitolo: 'Classifica & Classifica Musicale',
       selectedQuestion: 1,
       videoSpiegazione: '',
       sfondoSpiegazione: '',
-      audioSpiegazione: '',
+      audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_box2.mp3',
       questions: q2,
       sfondoGenerale: '/Icone/sfondi/sfondo_box2_cristalli.jpg',
     },
     gioco3: {
+      titolo: 'Password & Bussolotti',
+      sottotitolo: 'Sfida a Squadre & Bussolotti',
       selectedQuestion: 1,
       videoSpiegazione: '',
       sfondoSpiegazione: '',
-      audioSpiegazione: '',
+      audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_box3.mp3',
       questions: q3,
       sfondoGenerale: '',
     },
     gioco4: {
       titolo: 'Frase Tempo',
+      sottotitolo: 'Corsa contro il Cronometro',
       videoSpiegazione: '',
       sfondoSpiegazione: '',
-      audioSpiegazione: '',
+      audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_box4.mp3',
       note: 'Inserisci le frasi da indovinare per il gioco Frase Tempo',
       frasi: DEFAULT_FRASI_TEMPO.map((testo) => createDefaultFraseTempoItem(testo)),
       sfondoGenerale: '',
     },
     gioco5: {
-      titolo: 'GIOCO 5 - Finale a Squadre',
+      titolo: 'Finale a Squadre',
+      sottotitolo: 'Sfida con dado, omini sui cubi 3D e 4 bonus per squadra',
       videoSpiegazione: '',
       sfondoSpiegazione: '',
       audioSpiegazione: '',
-      sottotitolo: 'Sfida con dado, omini sui cubi 3D e 4 bonus per squadra',
       sfondoGenerale: '/sfondo_finale_acqua.jpg',
       numeroDomande: 15,
       notePresentatore: '',
@@ -872,21 +913,31 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           nadia: normalizeNadia(loadedState.nadia, def.nadia!),
           box0: normalizeBox0(loadedState.box0, def.box0!),
           gioco1: {
+            titolo: loadedState.gioco1?.titolo !== undefined ? loadedState.gioco1.titolo : def.gioco1.titolo,
+            sottotitolo: loadedState.gioco1?.sottotitolo !== undefined ? loadedState.gioco1.sottotitolo : def.gioco1.sottotitolo,
             selectedQuestion: loadedState.gioco1?.selectedQuestion !== undefined ? loadedState.gioco1.selectedQuestion : 1,
             videoSpiegazione: loadedState.gioco1?.videoSpiegazione || '',
             sfondoSpiegazione: (() => {
               const sf = loadedState.gioco1?.sfondoSpiegazione;
               return sf && !/\.(m4a|mp3|wav|ogg|aac)($|\?)/i.test(sf) ? sf : '/Mappa/spiegazione_box1_ambientazione.jpg';
             })(),
-            audioSpiegazione: loadedState.gioco1?.audioSpiegazione !== undefined ? loadedState.gioco1.audioSpiegazione : '/Audio/spiegazione_box1_audio.m4a',
+            audioSpiegazione: (() => {
+              const a = loadedState.gioco1?.audioSpiegazione;
+              if (!a || a === '/Audio/spiegazione_box1_audio.m4a' || a === '/Audio/Spiegazione_box1.mp3' || a === '/Audio/strumenti/Spiegazione_box1.mp3') {
+                return '/Audio/Spiegazioni/Spiegazione_box1.mp3';
+              }
+              return a;
+            })(),
             questions: { ...def.gioco1.questions, ...loadedState.gioco1?.questions },
             sfondoGenerale: loadedState.gioco1?.sfondoGenerale || '',
           },
           gioco2: {
+            titolo: loadedState.gioco2?.titolo !== undefined ? loadedState.gioco2.titolo : def.gioco2.titolo,
+            sottotitolo: loadedState.gioco2?.sottotitolo !== undefined ? loadedState.gioco2.sottotitolo : def.gioco2.sottotitolo,
             selectedQuestion: loadedState.gioco2?.selectedQuestion !== undefined ? loadedState.gioco2.selectedQuestion : 1,
             videoSpiegazione: loadedState.gioco2?.videoSpiegazione || '',
             sfondoSpiegazione: loadedState.gioco2?.sfondoSpiegazione || '',
-            audioSpiegazione: loadedState.gioco2?.audioSpiegazione || '',
+            audioSpiegazione: loadedState.gioco2?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box2.mp3',
             questions: { ...def.gioco2.questions, ...loadedState.gioco2?.questions },
             sfondoGenerale: loadedState.gioco2?.sfondoGenerale || '',
           },
@@ -1853,35 +1904,35 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   }}
                   className="w-full bg-[#120f1e] border border-amber-500/40 rounded-lg px-3 py-2.5 text-xs font-bold text-white focus:outline-none focus:border-amber-400"
                 >
-                  <optgroup label="BOX 1 — Il mio nome è nessuno (10 Domande)">
+                  <optgroup label={`BOX 1 — ${state.gioco1?.titolo || 'Il mio nome è nessuno'} (10 Domande)`}>
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                       <option key={`1_${n}`} value={`1_${n}`}>
                         BOX 1 — Domanda #{n}
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="BOX 2 — Classifiche (6 Domande)">
+                  <optgroup label={`BOX 2 — ${state.gioco2?.titolo || 'Classifiche'} (6 Domande)`}>
                     {[1, 2, 3, 4, 5, 6].map((n) => (
                       <option key={`2_${n}`} value={`2_${n}`}>
                         BOX 2 — Domanda #{n}
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="BOX 3 — Password Squadre & Prescelti (3 Manches)">
+                  <optgroup label={`BOX 3 — ${state.gioco3?.titolo || 'Password Squadre & Prescelti'} (3 Manches)`}>
                     {[1, 2, 3].map((n) => (
                       <option key={`3_${n}`} value={`3_${n}`}>
                         BOX 3 — Manche #{n}
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="BOX 4 — Frase Tempo (Frasi)">
+                  <optgroup label={`BOX 4 — ${state.gioco4?.titolo || 'Frase Tempo'} (Frasi)`}>
                     {[1, 2, 3, 4].map((n) => (
                       <option key={`4_${n}`} value={`4_${n}`}>
                         BOX 4 — Frase #{n}
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="BOX 5 — Finale Squadre">
+                  <optgroup label={`BOX 5 — ${state.gioco5?.titolo || 'Finale Squadre'}`}>
                     <option value="5_1">BOX 5 — Finale a Squadre</option>
                   </optgroup>
                 </select>
@@ -2371,6 +2422,165 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               </div>
             </div>
           </div>
+
+          {/* 5. Nomi Fasi e Giochi (Badge Spiegazione Fasi) */}
+          <div className="bg-[#120f1e] p-5 rounded-xl border border-indigo-500/30 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/10 pb-2 gap-1">
+              <div>
+                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-2">
+                  <span>🏷️</span> 5. Personalizzazione Nomi Fasi & Badge Giochi (Spiegazione Fasi Box 0)
+                </span>
+                <p className="text-[10px] text-white/50 mt-0.5">
+                  Questi nomi compaiono sui badge animati (G1, G2, G3, G4, FINALE) e sulle intestazioni delle fasi. Se lasci vuoto il nome di un gioco, eredita automaticamente il nome impostato nel rispettivo Box sottostante.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* FASE 1 */}
+              <div className="bg-black/30 p-3.5 rounded-lg border border-red-500/30 space-y-3">
+                <div className="flex items-center justify-between border-b border-red-500/20 pb-1.5">
+                  <span className="text-xs font-black text-red-400 uppercase tracking-wider">Fase 1</span>
+                  <span className="text-[10px] text-red-300/60 font-mono">2 Giochi</span>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Titolo Fase 1:</label>
+                  <input
+                    type="text"
+                    value={state.box0?.fase1Titolo ?? 'PRODROMI DELLO SCONTRO'}
+                    placeholder="PRODROMI DELLO SCONTRO"
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: { ...(prev.box0 || createDefaultBox0Setup()), fase1Titolo: e.target.value }
+                    }))}
+                    className="w-full bg-black/50 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-red-400 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1 flex items-center justify-between">
+                    <span>Badge Gioco 1 (G1):</span>
+                    <span className="text-[9px] text-red-400/80 font-normal">Default: Box 1</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={state.box0?.gioco1Titolo ?? ''}
+                    placeholder={state.gioco1?.titolo || 'IL MIO NOME È NESSUNO'}
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: { ...(prev.box0 || createDefaultBox0Setup()), gioco1Titolo: e.target.value }
+                    }))}
+                    className="w-full bg-black/50 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-red-400 font-bold uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1 flex items-center justify-between">
+                    <span>Badge Gioco 2 (G2):</span>
+                    <span className="text-[9px] text-red-400/80 font-normal">Default: Box 2</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={state.box0?.gioco2Titolo ?? ''}
+                    placeholder={state.gioco2?.titolo || 'GIOCO A CLASSIFICA'}
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: { ...(prev.box0 || createDefaultBox0Setup()), gioco2Titolo: e.target.value }
+                    }))}
+                    className="w-full bg-black/50 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-red-400 font-bold uppercase"
+                  />
+                </div>
+              </div>
+
+              {/* FASE 2 */}
+              <div className="bg-black/30 p-3.5 rounded-lg border border-emerald-500/30 space-y-3">
+                <div className="flex items-center justify-between border-b border-emerald-500/20 pb-1.5">
+                  <span className="text-xs font-black text-emerald-400 uppercase tracking-wider">Fase 2</span>
+                  <span className="text-[10px] text-emerald-300/60 font-mono">2 Giochi + Bonus</span>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Titolo Fase 2:</label>
+                  <input
+                    type="text"
+                    value={state.box0?.fase2Titolo ?? 'CORSA AGLI EQUIPAGGIAMENTI'}
+                    placeholder="CORSA AGLI EQUIPAGGIAMENTI"
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: { ...(prev.box0 || createDefaultBox0Setup()), fase2Titolo: e.target.value }
+                    }))}
+                    className="w-full bg-black/50 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1 flex items-center justify-between">
+                    <span>Badge Gioco 3 (G3):</span>
+                    <span className="text-[9px] text-emerald-400/80 font-normal">Default: Box 3</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={state.box0?.gioco3Titolo ?? ''}
+                    placeholder={state.gioco3?.titolo || 'PASSWORD'}
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: { ...(prev.box0 || createDefaultBox0Setup()), gioco3Titolo: e.target.value }
+                    }))}
+                    className="w-full bg-black/50 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400 font-bold uppercase"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1 flex items-center justify-between">
+                    <span>Badge Gioco 4 (G4):</span>
+                    <span className="text-[9px] text-emerald-400/80 font-normal">Default: Box 4</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={state.box0?.gioco4Titolo ?? ''}
+                    placeholder={state.gioco4?.titolo || 'FRASE TEMPO'}
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: { ...(prev.box0 || createDefaultBox0Setup()), gioco4Titolo: e.target.value }
+                    }))}
+                    className="w-full bg-black/50 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400 font-bold uppercase"
+                  />
+                </div>
+              </div>
+
+              {/* FASE 3 */}
+              <div className="bg-black/30 p-3.5 rounded-lg border border-sky-500/30 space-y-3">
+                <div className="flex items-center justify-between border-b border-sky-500/20 pb-1.5">
+                  <span className="text-xs font-black text-sky-400 uppercase tracking-wider">Fase 3 (Finale)</span>
+                  <span className="text-[10px] text-sky-300/60 font-mono">Scontro Finale</span>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Titolo Fase 3:</label>
+                  <input
+                    type="text"
+                    value={state.box0?.fase3Titolo ?? 'TERMOPILI APOCALITTICHE'}
+                    placeholder="TERMOPILI APOCALITTICHE"
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: { ...(prev.box0 || createDefaultBox0Setup()), fase3Titolo: e.target.value }
+                    }))}
+                    className="w-full bg-black/50 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-sky-400 font-semibold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1 flex items-center justify-between">
+                    <span>Badge Finale (G5):</span>
+                    <span className="text-[9px] text-sky-400/80 font-normal">Default: Box 5</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={state.box0?.gioco5Titolo ?? ''}
+                    placeholder={state.gioco5?.titolo || 'TERMOPILI APOCALITTICHE'}
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: { ...(prev.box0 || createDefaultBox0Setup()), gioco5Titolo: e.target.value }
+                    }))}
+                    className="w-full bg-black/50 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-sky-400 font-bold uppercase"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* 5 Boxes Container Grid */}
@@ -2385,13 +2595,47 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   1
                 </span>
                 <div>
-                  <h3 className="text-lg font-bold text-white">GIOCO 1 - Il mio nome è nessuno</h3>
+                  <h3 className="text-lg font-bold text-white">GIOCO 1 — {state.gioco1?.titolo || 'Il mio nome è nessuno'}</h3>
                   <p className="text-[11px] text-slate-400">Modulo 10 domande</p>
                 </div>
               </div>
               <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded bg-[#d24726]/10 text-[#d24726] border border-[#d24726]/20">
                 10 Domande
               </span>
+            </div>
+
+            {/* Configurazione Nome e Sottotitolo Gioco 1 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white/5 p-3.5 rounded-xl border border-[#d24726]/30">
+              <div>
+                <label className="block text-xs font-bold text-white mb-1 flex items-center gap-1.5">
+                  <span>✏️</span> Nome / Titolo Gioco 1:
+                </label>
+                <input
+                  type="text"
+                  value={state.gioco1?.titolo ?? 'Il mio nome è nessuno'}
+                  placeholder="Il mio nome è nessuno"
+                  onChange={(e) => setState(prev => ({
+                    ...prev,
+                    gioco1: { ...prev.gioco1, titolo: e.target.value }
+                  }))}
+                  className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white font-bold placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Sottotitolo Gioco 1:
+                </label>
+                <input
+                  type="text"
+                  value={state.gioco1?.sottotitolo ?? 'Musica & Immagini'}
+                  placeholder="Musica & Immagini"
+                  onChange={(e) => setState(prev => ({
+                    ...prev,
+                    gioco1: { ...prev.gioco1, sottotitolo: e.target.value }
+                  }))}
+                  className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
+                />
+              </div>
             </div>
 
             {/* Controls Bar: Question & Type Selectors */}
@@ -2553,7 +2797,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                         </span>
                         <button
                           type="button"
-                          onClick={() => setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, audioSpiegazione: '/Audio/spiegazione_box1_audio.m4a' } }))}
+                          onClick={() => setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_box1.mp3' } }))}
                           className="text-amber-400 hover:text-amber-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
                         >
                           Ripristina Default
@@ -2562,8 +2806,8 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     ) : (
                       <input
                         type="text"
-                        placeholder="Percorso audio (default: /Audio/spiegazione_box1_audio.m4a)..."
-                        value={state.gioco1.audioSpiegazione !== undefined ? state.gioco1.audioSpiegazione : '/Audio/spiegazione_box1_audio.m4a'}
+                        placeholder="Percorso audio (default: /Audio/Spiegazioni/Spiegazione_box1.mp3)..."
+                        value={state.gioco1.audioSpiegazione !== undefined ? state.gioco1.audioSpiegazione : '/Audio/Spiegazioni/Spiegazione_box1.mp3'}
                         onChange={(e) => {
                           const val = e.target.value;
                           setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, audioSpiegazione: val } }));
@@ -2575,14 +2819,14 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     {/* Bottone Ascolta / Pausa */}
                     <button
                       type="button"
-                      onClick={() => togglePreviewAudio(state.gioco1.audioSpiegazione || '/Audio/spiegazione_box1_audio.m4a')}
+                      onClick={() => togglePreviewAudio(state.gioco1.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box1.mp3')}
                       className={`px-2.5 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors ${
-                        previewAudioUrl === (state.gioco1.audioSpiegazione || '/Audio/spiegazione_box1_audio.m4a')
+                        previewAudioUrl === (state.gioco1.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box1.mp3')
                           ? 'bg-amber-500 text-slate-950 font-black'
                           : 'bg-white/10 hover:bg-white/15 text-white'
                       }`}
                     >
-                      {previewAudioUrl === (state.gioco1.audioSpiegazione || '/Audio/spiegazione_box1_audio.m4a') ? '⏸ Ferma' : '▶ Ascolta'}
+                      {previewAudioUrl === (state.gioco1.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box1.mp3') ? '⏸ Ferma' : '▶ Ascolta'}
                     </button>
 
                     <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
@@ -3243,13 +3487,47 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   2
                 </span>
                 <div>
-                  <h3 className="text-lg font-bold text-white">GIOCO 2 - nome gioco</h3>
+                  <h3 className="text-lg font-bold text-white">GIOCO 2 — {state.gioco2?.titolo || 'Classifiche'}</h3>
                   <p className="text-[11px] text-slate-400">Modulo 6 domande</p>
                 </div>
               </div>
               <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
                 6 Domande
               </span>
+            </div>
+
+            {/* Configurazione Nome e Sottotitolo Gioco 2 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white/5 p-3.5 rounded-xl border border-indigo-500/30">
+              <div>
+                <label className="block text-xs font-bold text-white mb-1 flex items-center gap-1.5">
+                  <span>✏️</span> Nome / Titolo Gioco 2:
+                </label>
+                <input
+                  type="text"
+                  value={state.gioco2?.titolo ?? 'Classifiche'}
+                  placeholder="Classifiche"
+                  onChange={(e) => setState(prev => ({
+                    ...prev,
+                    gioco2: { ...prev.gioco2, titolo: e.target.value }
+                  }))}
+                  className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white font-bold placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Sottotitolo Gioco 2:
+                </label>
+                <input
+                  type="text"
+                  value={state.gioco2?.sottotitolo ?? 'Classifica & Classifica Musicale'}
+                  placeholder="Classifica & Classifica Musicale"
+                  onChange={(e) => setState(prev => ({
+                    ...prev,
+                    gioco2: { ...prev.gioco2, sottotitolo: e.target.value }
+                  }))}
+                  className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                />
+              </div>
             </div>
 
             {/* Controls Bar: Question & Type Selectors */}
@@ -3405,7 +3683,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     ) : (
                       <input
                         type="text"
-                        placeholder="Percorso audio (es. /Audio/spiegazione_box2.mp3)..."
+                        placeholder="Percorso audio (default: /Audio/Spiegazioni/Spiegazione_box2.mp3)..."
                         value={state.gioco2.audioSpiegazione || ''}
                         onChange={(e) => {
                           const val = e.target.value;
@@ -4113,13 +4391,53 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 3
               </span>
               <div>
-                <h3 className="text-lg font-bold text-white">BOX 3 — Terzo Gioco</h3>
+                <h3 className="text-lg font-bold text-white">BOX 3 — {state.gioco3?.titolo || 'Password & Bussolotti'}</h3>
                 <p className="text-[11px] text-slate-400">Modulo Password</p>
               </div>
             </div>
             <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               3 Domande
             </span>
+          </div>
+
+          {/* Configurazione Nome e Sottotitolo Gioco 3 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white/5 p-3.5 rounded-xl border border-emerald-500/30 max-w-xl">
+            <div>
+              <label className="block text-xs font-bold text-white mb-1 flex items-center gap-1.5">
+                <span>✏️</span> Nome / Titolo Gioco 3:
+              </label>
+              <input
+                type="text"
+                value={state.gioco3?.titolo ?? 'Password & Bussolotti'}
+                placeholder="Password & Bussolotti"
+                onChange={(e) => setState(prev => {
+                  const g3 = normalizeGioco3(prev.gioco3, getDefaultSetupState().gioco3);
+                  return {
+                    ...prev,
+                    gioco3: { ...g3, titolo: e.target.value }
+                  };
+                })}
+                className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white font-bold placeholder:text-white/30 focus:outline-none focus:border-emerald-400"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Sottotitolo Gioco 3:
+              </label>
+              <input
+                type="text"
+                value={state.gioco3?.sottotitolo ?? 'Sfida a Squadre & Bussolotti'}
+                placeholder="Sfida a Squadre & Bussolotti"
+                onChange={(e) => setState(prev => {
+                  const g3 = normalizeGioco3(prev.gioco3, getDefaultSetupState().gioco3);
+                  return {
+                    ...prev,
+                    gioco3: { ...g3, sottotitolo: e.target.value }
+                  };
+                })}
+                className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400"
+              />
+            </div>
           </div>
 
           {/* Question selector 0 = Spiegazione, 1–3 */}
@@ -4256,7 +4574,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   ) : (
                     <input
                       type="text"
-                      placeholder="Percorso audio (es. /Audio/spiegazione_box3.mp3)..."
+                      placeholder="Percorso audio (default: /Audio/Spiegazioni/Spiegazione_box3.mp3)..."
                       value={state.gioco3.audioSpiegazione || ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -4740,7 +5058,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 </span>
                 <div>
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    GIOCO 4 - Asta
+                    GIOCO 4 — {state.gioco4?.titolo || 'Frase Tempo'}
                   </h3>
                   <p className="text-xs text-slate-400">
                     Inserisci e modifica le frasi misteriose da indovinare.
@@ -4750,6 +5068,40 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                 Frase Tempo
               </span>
+            </div>
+
+            {/* Configurazione Nome e Sottotitolo Gioco 4 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white/5 p-3.5 rounded-xl border border-cyan-500/30 max-w-xl">
+              <div>
+                <label className="block text-xs font-bold text-white mb-1 flex items-center gap-1.5">
+                  <span>✏️</span> Nome / Titolo Gioco 4:
+                </label>
+                <input
+                  type="text"
+                  value={state.gioco4?.titolo ?? 'Frase Tempo'}
+                  placeholder="Frase Tempo"
+                  onChange={(e) => setState(prev => ({
+                    ...prev,
+                    gioco4: { ...prev.gioco4, titolo: e.target.value }
+                  }))}
+                  className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white font-bold placeholder:text-white/30 focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Sottotitolo Gioco 4:
+                </label>
+                <input
+                  type="text"
+                  value={state.gioco4?.sottotitolo ?? 'Corsa contro il Cronometro'}
+                  placeholder="Corsa contro il Cronometro"
+                  onChange={(e) => setState(prev => ({
+                    ...prev,
+                    gioco4: { ...prev.gioco4, sottotitolo: e.target.value }
+                  }))}
+                  className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-400"
+                />
+              </div>
             </div>
 
             {/* Sfondo Generale Box 4 */}
@@ -5206,7 +5558,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 </span>
                 <div>
                   <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                    GIOCO 5 — Finale a Squadre (Box 5)
+                    GIOCO 5 — {state.gioco5?.titolo || 'Finale a Squadre'}
                   </h3>
                   <p className="text-xs text-slate-400">
                     Sfida ad eliminazione diretta con il dado, piedistalli 3D a piramide e i 4 bonus (Dado, Switch, Arco, Scudo).
@@ -5216,6 +5568,40 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded-md bg-red-500/10 text-red-400 border border-red-500/20">
                 Gran Finale
               </span>
+            </div>
+
+            {/* Configurazione Nome e Sottotitolo Gioco 5 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white/5 p-3.5 rounded-xl border border-red-500/30 max-w-xl">
+              <div>
+                <label className="block text-xs font-bold text-white mb-1 flex items-center gap-1.5">
+                  <span>✏️</span> Nome / Titolo Gioco 5 (Finale):
+                </label>
+                <input
+                  type="text"
+                  value={state.gioco5?.titolo ?? 'Finale a Squadre'}
+                  placeholder="Finale a Squadre"
+                  onChange={(e) => setState(prev => ({
+                    ...prev,
+                    gioco5: { ...prev.gioco5, titolo: e.target.value }
+                  }))}
+                  className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white font-bold placeholder:text-white/30 focus:outline-none focus:border-red-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  Sottotitolo Gioco 5:
+                </label>
+                <input
+                  type="text"
+                  value={state.gioco5?.sottotitolo ?? 'Sfida con dado, omini sui cubi 3D e 4 bonus per squadra'}
+                  placeholder="Sfida con dado, omini sui cubi 3D..."
+                  onChange={(e) => setState(prev => ({
+                    ...prev,
+                    gioco5: { ...prev.gioco5, sottotitolo: e.target.value }
+                  }))}
+                  className="w-full bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-red-400"
+                />
+              </div>
             </div>
 
             {/* Sfondo Generale Box 5 */}

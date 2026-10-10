@@ -9,6 +9,7 @@ interface SpiegazioneBox1Data {
   sfondo?: string;
   sfondoSpiegazione?: string;
   titolo?: string;
+  titoloGioco?: string;
   sottotitolo?: string;
   slideId?: string;
   audioUrl?: string;
@@ -19,6 +20,7 @@ interface SpiegazioneBox1BoardProps {
   interactive?: boolean;
   revealAll?: boolean;
   isPresenter?: boolean;
+  onReturnToMap?: () => void;
 }
 
 // =========================================================================
@@ -224,22 +226,23 @@ class SoundFXEngine {
 
 const soundFX = new SoundFXEngine();
 
-// Cue temporali deterministici per sincronizzazione con la traccia audio (23.3s totali)
+// Cue temporali deterministici sincronizzati con la nuova traccia audio (21.6s totali)
 const SFX_CUES = [
-  { id: 'b1_pill_obiettivo', time: 2.6, play: () => soundFX.playBoxActivation() },
-  { id: 'b1_card_obiettivo', time: 4.2, play: () => soundFX.playArrowTin() },
-  { id: 'b1_pill_punteggio', time: 7.5, play: () => soundFX.playBoxActivation() },
-  { id: 'b1_card_punteggio', time: 8.8, play: () => soundFX.playRewardChime() },
-  { id: 'b1_pill_prenotazione', time: 11.2, play: () => soundFX.playBoxActivation() },
-  { id: 'b1_card_prenotazione', time: 13.5, play: () => soundFX.playRadarLock() },
-  { id: 'b1_call_pulsante', time: 18.5, play: () => soundFX.playBuzzerReady() },
-  { id: 'b1_finish_victory', time: 22.8, play: () => soundFX.playTrophyVictory() },
+  { id: 'b1_pill_obiettivo', time: 0.8, play: () => soundFX.playBoxActivation() },
+  { id: 'b1_card_obiettivo', time: 2.2, play: () => soundFX.playArrowTin() },
+  { id: 'b1_pill_punteggio', time: 6.5, play: () => soundFX.playBoxActivation() },
+  { id: 'b1_card_punteggio', time: 7.8, play: () => soundFX.playRewardChime() },
+  { id: 'b1_pill_prenotazione', time: 10.2, play: () => soundFX.playBoxActivation() },
+  { id: 'b1_card_prenotazione', time: 12.0, play: () => soundFX.playRadarLock() },
+  { id: 'b1_call_pulsante', time: 16.5, play: () => soundFX.playBuzzerReady() },
+  { id: 'b1_finish_victory', time: 20.8, play: () => soundFX.playTrophyVictory() },
 ];
 
 export default function SpiegazioneBox1Board({
   interactive = true,
   revealAll = false,
   isPresenter,
+  onReturnToMap,
 }: SpiegazioneBox1BoardProps) {
   const data = useGameData<SpiegazioneBox1Data>();
   const slideId = data?.slideId || 'box1_spiegazione';
@@ -248,9 +251,25 @@ export default function SpiegazioneBox1Board({
     ? rawSfondo
     : '/Mappa/spiegazione_box1_ambientazione.jpg';
 
-  // File audio estratto dalla registrazione schermo (spiegazione_box1_audio.m4a)
+  // Configurazione setup con fallback su localStorage
+  const setupConfig = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('imperio_quiz_setup_config_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return null;
+  }, []);
+
+  // Rimuove qualsiasi prefisso 'Spiegazione —' o 'Spiegazione:' per mostrare solo il nome puro del gioco
+  const rawTitle = data?.titoloGioco || (data?.titolo ? data.titolo.replace(/^SPIEGAZIONE\s*[-—:]*\s*/i, '') : '') || setupConfig?.gioco1?.titolo || 'IL MIO NOME È NESSUNO';
+  const titoloGioco = rawTitle.replace(/^SPIEGAZIONE\s*[-—:]*\s*/i, '').trim().toUpperCase();
+  const sottotitoloGioco = data?.sottotitolo || setupConfig?.gioco1?.sottotitolo || 'Regolamento & Meccaniche di Sfida tra le Squadre';
+
+  // File audio spiegazione (Spiegazione_box1.mp3)
   const audioSrc = useMemo(() => {
-    const rawUrl = data?.audioUrl || data?.audioSpiegazione || '/Audio/spiegazione_box1_audio.m4a';
+    const rawUrl = data?.audioUrl || data?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box1.mp3';
     return assetUrl(rawUrl);
   }, [data?.audioUrl, data?.audioSpiegazione]);
 
@@ -305,7 +324,7 @@ export default function SpiegazioneBox1Board({
   );
 
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(23.31);
+  const [duration, setDuration] = useState(21.63);
   const [isMuted, setIsMuted] = useState(isMultiWindowRelatore);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -378,7 +397,7 @@ export default function SpiegazioneBox1Board({
       if (audioRef.current.duration && !isNaN(audioRef.current.duration) && audioRef.current.duration > 0) {
         setDuration(audioRef.current.duration);
       }
-      if (t >= 23.1) {
+      if (t >= 21.2) {
         setIsPlaying(false);
         setIsAllRevealed(true);
       }
@@ -392,16 +411,16 @@ export default function SpiegazioneBox1Board({
 
 
 
-  const showObiettivoPill = isAllRevealed || (isPlaying && currentTime >= 2.6) || manualStep >= 1;
-  const showObiettivoCard = isAllRevealed || (isPlaying && currentTime >= 4.2) || manualStep >= 1;
+  const showObiettivoPill = isAllRevealed || (isPlaying && currentTime >= 0.8) || manualStep >= 1;
+  const showObiettivoCard = isAllRevealed || (isPlaying && currentTime >= 2.2) || manualStep >= 1;
 
-  const showPunteggioPill = isAllRevealed || (isPlaying && currentTime >= 7.5) || manualStep >= 2;
-  const showPunteggioCard = isAllRevealed || (isPlaying && currentTime >= 8.8) || manualStep >= 2;
+  const showPunteggioPill = isAllRevealed || (isPlaying && currentTime >= 6.5) || manualStep >= 2;
+  const showPunteggioCard = isAllRevealed || (isPlaying && currentTime >= 7.8) || manualStep >= 2;
 
-  const showPrenotazionePill = isAllRevealed || (isPlaying && currentTime >= 11.2) || manualStep >= 3;
-  const showPrenotazioneCard = isAllRevealed || (isPlaying && currentTime >= 13.5) || manualStep >= 3;
+  const showPrenotazionePill = isAllRevealed || (isPlaying && currentTime >= 10.2) || manualStep >= 3;
+  const showPrenotazioneCard = isAllRevealed || (isPlaying && currentTime >= 12.0) || manualStep >= 3;
 
-  const showPulsanteCallout = isAllRevealed || (isPlaying && currentTime >= 18.5) || manualStep >= 4;
+  const showPulsanteCallout = isAllRevealed || (isPlaying && currentTime >= 16.5) || manualStep >= 4;
 
   // Riproduzione procedurale sincronizzata degli effetti sonori durante la voce narrante
   const canPlaySFX = !isMuted && interactive;
@@ -495,6 +514,15 @@ export default function SpiegazioneBox1Board({
     }, 450);
   }, [interactive, setIsTransitioningToQ1]);
 
+  // Ritorno alla mappa dell'isola
+  const returnToMap = useCallback(() => {
+    if (onReturnToMap) {
+      onReturnToMap();
+    } else {
+      window.dispatchEvent(new CustomEvent('imperio-return-to-map'));
+    }
+  }, [onReturnToMap]);
+
   // Step avanti / indietro manuali
   const nextStep = useCallback(() => {
     if (!interactive) return;
@@ -502,11 +530,11 @@ export default function SpiegazioneBox1Board({
     if (manualStep < 4) {
       const n = manualStep + 1;
       setManualStep(n);
-      if (n === 1) seekTo(2.6);
-      else if (n === 2) seekTo(7.5);
-      else if (n === 3) seekTo(11.2);
+      if (n === 1) seekTo(0.8);
+      else if (n === 2) seekTo(6.5);
+      else if (n === 3) seekTo(10.2);
       else if (n === 4) {
-        seekTo(18.5);
+        seekTo(16.5);
         revealEverything();
       }
     } else {
@@ -520,18 +548,20 @@ export default function SpiegazioneBox1Board({
     if (isAllRevealed) {
       setIsAllRevealed(false);
       setManualStep(3);
-      seekTo(11.2);
+      seekTo(10.2);
       return;
     }
     if (manualStep > 0) {
       const p = manualStep - 1;
       setManualStep(p);
       if (p === 0) seekTo(0);
-      else if (p === 1) seekTo(2.6);
-      else if (p === 2) seekTo(7.5);
-      else if (p === 3) seekTo(11.2);
+      else if (p === 1) seekTo(0.8);
+      else if (p === 2) seekTo(6.5);
+      else if (p === 3) seekTo(10.2);
+    } else {
+      returnToMap();
     }
-  }, [interactive, isAllRevealed, manualStep, setIsAllRevealed, setManualStep, seekTo]);
+  }, [interactive, isAllRevealed, manualStep, setIsAllRevealed, setManualStep, seekTo, returnToMap]);
 
   // Scorciatoie da tastiera
   useEffect(() => {
@@ -556,15 +586,15 @@ export default function SpiegazioneBox1Board({
       } else if (e.key.toLowerCase() === 'r') {
         e.preventDefault();
         resetAllState();
-      } else if (e.key.toLowerCase() === 'm') {
+      } else if (e.key.toLowerCase() === 'm' || e.key === 'Escape') {
         e.preventDefault();
-        setIsMuted((prev) => !prev);
+        returnToMap();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, togglePlay, revealEverything, nextStep, prevStep, resetAllState]);
+  }, [interactive, togglePlay, revealEverything, nextStep, prevStep, resetAllState, returnToMap]);
 
   const progressPercent = Math.min(100, Math.max(0, (currentTime / duration) * 100));
 
@@ -661,10 +691,10 @@ export default function SpiegazioneBox1Board({
           </div>
 
           <h1 className="text-5xl lg:text-6xl font-black tracking-tight uppercase text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-500 drop-shadow-[0_4px_24px_rgba(245,158,11,0.6)] text-center font-serif">
-            IL MIO NOME È NESSUNO
+            {titoloGioco}
           </h1>
           <p className="text-xs lg:text-sm font-semibold tracking-[0.3em] uppercase text-slate-300/80 mt-1">
-            Regolamento & Meccaniche di Sfida tra le Squadre
+            {sottotitoloGioco}
           </p>
         </header>
 
@@ -789,7 +819,7 @@ export default function SpiegazioneBox1Board({
               </div>
             </div>
 
-            {/* CARD 2: PUNTEGGIO (+3.000) (DX - 7 COLONNE) */}
+            {/* CARD 2: PUNTEGGIO A SCALARE (DA 5.000 A 1.000 PT) (DX - 7 COLONNE) */}
             <div className="col-span-7 pr-4">
               <div
                 className={`transition-all duration-700 transform ${
@@ -802,30 +832,52 @@ export default function SpiegazioneBox1Board({
                   <div className="absolute -bottom-10 right-10 w-44 h-44 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
                   <div className="flex items-center gap-5">
-                    {/* Bollino medaglione dorato con checkmark verde */}
+                    {/* Bollino medaglione dorato con icona fulmine/stella */}
                     <div className="relative shrink-0 w-16 h-16 rounded-full bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-200 p-1 shadow-[0_0_30px_rgba(245,158,11,0.6)] flex items-center justify-center">
                       <div className="w-full h-full rounded-full bg-slate-950/80 flex items-center justify-center">
-                        <span className="text-2xl font-black text-emerald-400">✓</span>
+                        <span className="text-2xl font-black text-amber-300">⚡</span>
                       </div>
                     </div>
 
                     <div>
                       <span className="text-[11px] font-mono font-bold tracking-widest text-amber-400/90 uppercase block">
-                        Ricompensa Esatta
+                        Punteggio a Scalare
                       </span>
-                      <p className="text-sm lg:text-base font-semibold text-slate-300">
-                        Premio assegnato alla squadra che indovina per prima
+                      <p className="text-sm lg:text-base font-semibold text-slate-200">
+                        Prima indovinerete la risposta, più punti otterrete
                       </p>
+                      {/* Sequenza step punti dinamici */}
+                      <div className="flex items-center gap-1.5 mt-2 text-[11px] font-mono font-black text-amber-300">
+                        <span className="px-2 py-0.5 rounded-md bg-amber-400/20 border border-amber-400/40 text-amber-200 shadow-sm">
+                          5.000
+                        </span>
+                        <span className="text-amber-400/50">›</span>
+                        <span className="px-2 py-0.5 rounded-md bg-amber-400/15 border border-amber-400/30 text-amber-300">
+                          4.000
+                        </span>
+                        <span className="text-amber-400/50">›</span>
+                        <span className="px-2 py-0.5 rounded-md bg-amber-400/15 border border-amber-400/30 text-amber-300">
+                          3.000
+                        </span>
+                        <span className="text-amber-400/50">›</span>
+                        <span className="px-2 py-0.5 rounded-md bg-amber-400/15 border border-amber-400/30 text-amber-300">
+                          2.000
+                        </span>
+                        <span className="text-amber-400/50">›</span>
+                        <span className="px-2 py-0.5 rounded-md bg-amber-400/10 border border-amber-400/20 text-amber-400/80">
+                          1.000 pt
+                        </span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Badge enorme del punteggio 3.000 */}
-                  <div className="shrink-0 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-yellow-500/30 to-amber-500/20 border-2 border-amber-400/70 shadow-[0_0_35px_rgba(245,158,11,0.5)] flex items-center gap-2.5">
-                    <span className="text-3xl lg:text-4xl font-black tracking-wider text-amber-300 font-mono drop-shadow">
-                      +3.000
+                  {/* Badge del range punti */}
+                  <div className="shrink-0 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-yellow-500/30 to-amber-500/20 border-2 border-amber-400/70 shadow-[0_0_35px_rgba(245,158,11,0.5)] flex flex-col items-center justify-center text-center">
+                    <span className="text-2xl lg:text-3xl font-black tracking-wider text-amber-300 font-mono drop-shadow">
+                      5.000 - 1.000
                     </span>
-                    <span className="text-xs font-black uppercase tracking-widest text-amber-200/80">
-                      Punti
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-200/80 mt-0.5">
+                      Punti Round
                     </span>
                   </div>
                 </div>

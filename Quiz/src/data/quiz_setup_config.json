@@ -44,13 +44,23 @@
     "videoSigla": "",
     "sfondoSpiegazione": "/Icone/nessuno_img/sfondo_finale_acqua.jpg",
     "videoSpiegazione": "/Icone/nessuno_img/sfondo_finale_acqua.jpg",
-    "audioSpiegazione": "/Audio/spiegazione_fasi_audio.mp3"
+    "audioSpiegazione": "/Audio/Spiegazioni/spiegazione_fasi_audio.mp3",
+    "fase1Titolo": "PRODROMI DELLO SCONTRO",
+    "fase2Titolo": "CORSA AGLI EQUIPAGGIAMENTI",
+    "fase3Titolo": "TERMOPILI APOCALITTICHE",
+    "gioco1Titolo": "",
+    "gioco2Titolo": "",
+    "gioco3Titolo": "",
+    "gioco4Titolo": "",
+    "gioco5Titolo": ""
   },
   "gioco1": {
+    "titolo": "Il mio nome è nessuno",
+    "sottotitolo": "Musica & Immagini",
     "selectedQuestion": 0,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Mappa/spiegazione_box1_ambientazione.jpg",
-    "audioSpiegazione": "/Audio/spiegazione_box1_audio.m4a",
+    "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box1.mp3",
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -386,6 +396,8 @@
     "sfondoGenerale": "/Icone/sfondi/sfondo_box1_foresta_musicale.jpg"
   },
   "gioco2": {
+    "titolo": "Classifiche",
+    "sottotitolo": "Classifica & Classifica Musicale",
     "selectedQuestion": 0,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "",
@@ -722,6 +734,8 @@
     "sfondoGenerale": "/Icone/sfondi/sfondo_box2_cristalli.jpg"
   },
   "gioco3": {
+    "titolo": "Password & Bussolotti",
+    "sottotitolo": "Sfida a Squadre & Bussolotti",
     "selectedQuestion": 0,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "",
@@ -1015,6 +1029,7 @@
   },
   "gioco4": {
     "titolo": "Gioco 4",
+    "sottotitolo": "Corsa contro il Cronometro",
     "note": "Modulo Gioco 4 (in arrivo)",
     "frasi": [
       {

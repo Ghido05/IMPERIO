@@ -337,10 +337,45 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
     }
   }, [activeBox]);
 
+  // Configurazione setup con fallback su localStorage
+  const setupConfig = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('imperio_quiz_setup_config_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return null;
+  }, []);
+
+  const dynamicZones = useMemo(() => {
+    return ZONES.map((z) => {
+      let customTitle = z.title;
+      let customSubtitle = z.subtitle;
+      if (z.id === 1 && setupConfig?.gioco1?.titolo) {
+        customTitle = setupConfig.gioco1.titolo.toUpperCase();
+        if (setupConfig.gioco1.sottotitolo) customSubtitle = setupConfig.gioco1.sottotitolo;
+      } else if (z.id === 2 && setupConfig?.gioco2?.titolo) {
+        customTitle = setupConfig.gioco2.titolo.toUpperCase();
+        if (setupConfig.gioco2.sottotitolo) customSubtitle = setupConfig.gioco2.sottotitolo;
+      } else if (z.id === 3 && setupConfig?.gioco3?.titolo) {
+        customTitle = setupConfig.gioco3.titolo.toUpperCase();
+        if (setupConfig.gioco3.sottotitolo) customSubtitle = setupConfig.gioco3.sottotitolo;
+      } else if (z.id === 4 && setupConfig?.gioco4?.titolo) {
+        customTitle = setupConfig.gioco4.titolo.toUpperCase();
+        if (setupConfig.gioco4.sottotitolo) customSubtitle = setupConfig.gioco4.sottotitolo;
+      } else if (z.id === 5 && setupConfig?.gioco5?.titolo) {
+        customTitle = setupConfig.gioco5.titolo.toUpperCase();
+        if (setupConfig.gioco5.sottotitolo) customSubtitle = setupConfig.gioco5.sottotitolo;
+      }
+      return { ...z, title: customTitle, subtitle: customSubtitle };
+    });
+  }, [setupConfig]);
+
   // Trova la zona corrente attiva
   const targetZone = useMemo(() => {
-    return ZONES.find((z) => z.id === activeBox) || ZONES[0];
-  }, [activeBox]);
+    return dynamicZones.find((z) => z.id === activeBox) || dynamicZones[0];
+  }, [dynamicZones, activeBox]);
 
   // Gestione dell'animazione di marcia dei personaggi lungo la curva Bézier
   useEffect(() => {
@@ -382,14 +417,14 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
   // Calcola la posizione attuale (x, y) dei 3 personaggi in percentuale (1920x1080)
   const currentTokenPos = useMemo(() => {
     if (activeBox === 1) {
-      return { x: ZONES[0].x, y: ZONES[0].y };
+      return { x: dynamicZones[0].x, y: dynamicZones[0].y };
     }
     const curve = SEGMENT_CURVES[activeBox];
     if (!curve) {
       return { x: targetZone.x, y: targetZone.y };
     }
     return getPointOnCubicBezier(curve, animProgress);
-  }, [activeBox, animProgress, targetZone]);
+  }, [activeBox, animProgress, targetZone, dynamicZones]);
 
   // La sezione è considerata visivamente scoperta quando i personaggi hanno quasi completato la marcia
   const isSectionRevealed = activeBox === 1 || animProgress >= 0.85;
@@ -454,11 +489,13 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           setUnlockedStep(0);
         }
       } else if (e.key === 'Enter' || e.key === ' ' || e.key === 'v' || e.key === 'V') {
-        e.preventDefault();
-        if (activeBox > 1 && unlockedStep === 0) {
-          setUnlockedStep(1);
-        } else {
-          handleToggleZoom();
+        if (!isZoomed) {
+          e.preventDefault();
+          if (activeBox > 1 && unlockedStep === 0) {
+            setUnlockedStep(1);
+          } else {
+            handleToggleZoom();
+          }
         }
       } else if (e.key === 'm' || e.key === 'M' || e.key === 'Escape') {
         if (isZoomed) {
@@ -475,6 +512,15 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [interactive, isZoomed, activeBox, unlockedStep, setUnlockedStep, animProgress, setIsZoomed, handleToggleZoom, handleReturnToMap]);
+
+  // Listener per eventi di ritorno alla mappa da componenti figli
+  useEffect(() => {
+    const onReturn = () => {
+      handleReturnToMap();
+    };
+    window.addEventListener('imperio-return-to-map', onReturn);
+    return () => window.removeEventListener('imperio-return-to-map', onReturn);
+  }, [handleReturnToMap]);
 
   return (
     <div className="relative w-[1920px] h-[1080px] bg-[#07090e] text-white overflow-hidden font-sans select-none">
@@ -834,7 +880,7 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
         </div>
 
         {/* RENDERING DELLE 5 ZONE CON PIN E COPERTURA NUVOLE */}
-        {ZONES.map((zone) => {
+        {dynamicZones.map((zone) => {
           // Una zona è completata se il suo ID è inferiore al box attivo (o se siamo nel box attivo e siamo già avanzati oltre)
           const isCompleted = zone.id < activeBox;
           const isCurrent = zone.id === activeBox;
@@ -1094,15 +1140,21 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
                   src: rawVideoUrl,
                   sfondo: data?.sfondoSpiegazione || '/Mappa/spiegazione_box1_ambientazione.jpg',
                   sfondoSpiegazione: data?.sfondoSpiegazione || '/Mappa/spiegazione_box1_ambientazione.jpg',
-                  audioUrl: data?.audioSpiegazione || rawVideoUrl || '/Audio/spiegazione_box1_audio.m4a',
-                  audioSpiegazione: data?.audioSpiegazione || rawVideoUrl || '/Audio/spiegazione_box1_audio.m4a',
-                  titolo: `SPIEGAZIONE — ${targetZone.title}`,
+                  audioUrl: data?.audioSpiegazione || rawVideoUrl || '/Audio/Spiegazioni/Spiegazione_box1.mp3',
+                  audioSpiegazione: data?.audioSpiegazione || rawVideoUrl || '/Audio/Spiegazioni/Spiegazione_box1.mp3',
+                  titolo: targetZone.title,
+                  titoloGioco: targetZone.title,
                   sottotitolo: targetZone.subtitle,
                   slideId: `${slideId}_spiegazione_box1`,
                   notePresentatore: data?.notePresentatore || '',
                 }}
               >
-                <SpiegazioneBox1Board interactive={interactive} revealAll={revealAll} isPresenter={isPresenterMode} />
+                <SpiegazioneBox1Board
+                  interactive={interactive}
+                  revealAll={revealAll}
+                  isPresenter={isPresenterMode}
+                  onReturnToMap={handleReturnToMap}
+                />
               </GameDataProvider>
 
               {/* Pulsante per Tornare alla Mappa in Alto a Destra (Solo Relatore) */}

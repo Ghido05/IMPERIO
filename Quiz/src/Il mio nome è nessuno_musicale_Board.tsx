@@ -518,7 +518,7 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
               PRIMA DOMANDA
             </h2>
             <span className="text-sm font-mono font-bold tracking-[0.25em] text-slate-300 uppercase">
-              IL MIO NOME È NESSUNO
+              {gameData?.titoloGioco || gameData?.titolo || 'IL MIO NOME È NESSUNO'}
             </span>
           </div>
         </div>

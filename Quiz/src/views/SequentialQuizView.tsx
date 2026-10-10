@@ -78,6 +78,14 @@ export function getSlideForBoxQuestion(
         audioUrl: setupState.box0?.audioSpiegazione || '/Audio/spiegazione_fasi_audio.mp3',
         titolo: 'SPIEGAZIONE FASI DEL QUIZ',
         sottotitolo: 'Regolamento Generale del Torneo',
+        fase1Titolo: setupState.box0?.fase1Titolo,
+        fase2Titolo: setupState.box0?.fase2Titolo,
+        fase3Titolo: setupState.box0?.fase3Titolo,
+        gioco1Titolo: setupState.box0?.gioco1Titolo || setupState.gioco1?.titolo,
+        gioco2Titolo: setupState.box0?.gioco2Titolo || setupState.gioco2?.titolo,
+        gioco3Titolo: setupState.box0?.gioco3Titolo || setupState.gioco3?.titolo,
+        gioco4Titolo: setupState.box0?.gioco4Titolo || setupState.gioco4?.titolo,
+        gioco5Titolo: setupState.box0?.gioco5Titolo || setupState.gioco5?.titolo,
         slideId: 'box0_spiegazione',
         notePresentatore: 'Animazione esplicativa del regolamento globale e delle 3 fasi',
       },
@@ -87,11 +95,11 @@ export function getSlideForBoxQuestion(
   // Mappa dell'Isola e Video Spiegazione specifico per ciascun gioco (prima della domanda 1)
   if (questionNum === 0) {
     const boxTitles: Record<number, string> = {
-      1: 'BOX 1 — Il mio nome è nessuno',
-      2: 'BOX 2 — Classifiche',
-      3: 'BOX 3 — Password',
-      4: 'BOX 4 — Frase Tempo',
-      5: 'BOX 5 — Termopili (Scontro Finale)',
+      1: `BOX 1 — ${setupState.gioco1?.titolo || 'Il mio nome è nessuno'}`,
+      2: `BOX 2 — ${setupState.gioco2?.titolo || 'Classifiche'}`,
+      3: `BOX 3 — ${setupState.gioco3?.titolo || 'Password & Bussolotti'}`,
+      4: `BOX 4 — ${setupState.gioco4?.titolo || 'Frase Tempo'}`,
+      5: `BOX 5 — ${setupState.gioco5?.titolo || 'Finale a Squadre'}`,
     };
     const boxVideos: Record<number, string> = {
       1: setupState.gioco1?.videoSpiegazione || '',
@@ -111,10 +119,10 @@ export function getSlideForBoxQuestion(
       5: (setupState.gioco5 as any)?.sfondoSpiegazione || '',
     };
     const boxAudios: Record<number, string> = {
-      1: setupState.gioco1?.audioSpiegazione || '',
-      2: setupState.gioco2?.audioSpiegazione || '',
-      3: setupState.gioco3?.audioSpiegazione || '',
-      4: (setupState.gioco4 as any)?.audioSpiegazione || '',
+      1: setupState.gioco1?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box1.mp3',
+      2: setupState.gioco2?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box2.mp3',
+      3: setupState.gioco3?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box3.mp3',
+      4: (setupState.gioco4 as any)?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box4.mp3',
       5: (setupState.gioco5 as any)?.audioSpiegazione || '',
     };
     const currentVideo = boxVideos[boxNum] || '';
@@ -129,7 +137,8 @@ export function getSlideForBoxQuestion(
         videoUrl: currentVideo,
         sfondoSpiegazione: currentSfondo,
         audioSpiegazione: currentAudio,
-        titolo: `MAPPA & SPIEGAZIONE — ${boxTitles[boxNum] || `BOX ${boxNum}`}`,
+        titolo: boxTitles[boxNum] || `BOX ${boxNum}`,
+        titoloGioco: (setupState as any)[`gioco${boxNum}`]?.titolo,
         sottotitolo: `Mappa dell'Isola e Spiegazione Regole`,
         slideId: `box${boxNum}_mappa_spiegazione`,
         notePresentatore: `Mappa dell'Isola e Spiegazione per ${boxTitles[boxNum] || `Box ${boxNum}`}`,
@@ -142,6 +151,7 @@ export function getSlideForBoxQuestion(
     const sf = q1.sfondo || setupState.gioco1?.sfondoGenerale || '/Icone/sfondi/sfondo_box1_foresta_musicale.jpg';
     if (q1.tipo === 'canzone') {
       const data = {
+        titoloGioco: setupState.gioco1?.titolo || 'Il mio nome è nessuno',
         indizi: [
           { id: 1, color: '#009200', text: q1.canzone.indizi[0] || '' },
           { id: 2, color: '#FF0000', text: q1.canzone.indizi[1] || '' },
@@ -197,6 +207,7 @@ export function getSlideForBoxQuestion(
       return { id: `box1_q${questionNum}`, type: 'music', data };
     } else {
       const data = {
+        titoloGioco: setupState.gioco1?.titolo || 'Il mio nome è nessuno',
         sfondo: sf,
         immagineSegreta: q1.immagine.immagineJpg || '',
         audio: q1.immagine.confermaAudio || '',

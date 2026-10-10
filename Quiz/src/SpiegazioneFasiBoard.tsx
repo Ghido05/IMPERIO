@@ -15,6 +15,11 @@ interface SpiegazioneData {
   fase1Titolo?: string;
   fase2Titolo?: string;
   fase3Titolo?: string;
+  gioco1Titolo?: string;
+  gioco2Titolo?: string;
+  gioco3Titolo?: string;
+  gioco4Titolo?: string;
+  gioco5Titolo?: string;
 }
 
 interface SpiegazioneFasiBoardProps {
@@ -244,9 +249,65 @@ export default function SpiegazioneFasiBoard({
     return assetUrl(rawUrl);
   }, [data?.audioUrl]);
 
-  const fase1Title = data?.fase1Titolo || 'PRODROMI DELLO SCONTRO';
-  const fase2Title = data?.fase2Titolo || 'CORSA AGLI EQUIPAGGIAMENTI';
-  const fase3Title = data?.fase3Titolo || 'TERMOPILI APOCALITTICHE';
+  // Configurazione setup condivisa con fallback su localStorage
+  const setupConfig = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('imperio_quiz_setup_config_v1');
+      if (raw) return JSON.parse(raw);
+    } catch {
+      // ignore
+    }
+    return null;
+  }, []);
+
+  const fase1Title = data?.fase1Titolo || setupConfig?.box0?.fase1Titolo || 'PRODROMI DELLO SCONTRO';
+  const fase2Title = data?.fase2Titolo || setupConfig?.box0?.fase2Titolo || 'CORSA AGLI EQUIPAGGIAMENTI';
+  const fase3Title = data?.fase3Titolo || setupConfig?.box0?.fase3Titolo || 'TERMOPILI APOCALITTICHE';
+
+  const g1Title = useMemo(() => {
+    return (
+      data?.gioco1Titolo ||
+      setupConfig?.box0?.gioco1Titolo ||
+      setupConfig?.gioco1?.titolo ||
+      'IL MIO NOME È NESSUNO'
+    );
+  }, [data?.gioco1Titolo, setupConfig]);
+
+  const g2Title = useMemo(() => {
+    return (
+      data?.gioco2Titolo ||
+      setupConfig?.box0?.gioco2Titolo ||
+      setupConfig?.gioco2?.titolo ||
+      'GIOCO A CLASSIFICA'
+    );
+  }, [data?.gioco2Titolo, setupConfig]);
+
+  const g3Title = useMemo(() => {
+    return (
+      data?.gioco3Titolo ||
+      setupConfig?.box0?.gioco3Titolo ||
+      setupConfig?.gioco3?.titolo ||
+      'PASSWORD'
+    );
+  }, [data?.gioco3Titolo, setupConfig]);
+
+  const g4Title = useMemo(() => {
+    return (
+      data?.gioco4Titolo ||
+      setupConfig?.box0?.gioco4Titolo ||
+      setupConfig?.gioco4?.titolo ||
+      'FRASE TEMPO'
+    );
+  }, [data?.gioco4Titolo, setupConfig]);
+
+  const g5Title = useMemo(() => {
+    return (
+      data?.gioco5Titolo ||
+      setupConfig?.box0?.gioco5Titolo ||
+      setupConfig?.gioco5?.titolo ||
+      'TERMOPILI APOCALITTICHE'
+    );
+  }, [data?.gioco5Titolo, setupConfig]);
 
   // Identificazione modalità Relatore vs Schermo Pubblico
   const isPresenterMode = useMemo(() => {
@@ -1118,7 +1179,7 @@ export default function SpiegazioneFasiBoard({
                       G1
                     </span>
                     <span className="text-sm lg:text-[15px] font-black uppercase text-white tracking-wide">
-                      IL MIO NOME È NESSUNO
+                      {g1Title}
                     </span>
                   </div>
 
@@ -1131,7 +1192,7 @@ export default function SpiegazioneFasiBoard({
                       G2
                     </span>
                     <span className="text-sm lg:text-[15px] font-black uppercase text-white tracking-wide">
-                      GIOCO A CLASSIFICA
+                      {g2Title}
                     </span>
                   </div>
                 </div>
@@ -1288,7 +1349,7 @@ export default function SpiegazioneFasiBoard({
                       G3
                     </span>
                     <span className="text-sm lg:text-[15px] font-black uppercase text-white tracking-wide">
-                      PASSWORD
+                      {g3Title}
                     </span>
                   </div>
 
@@ -1301,7 +1362,7 @@ export default function SpiegazioneFasiBoard({
                       G4
                     </span>
                     <span className="text-sm lg:text-[15px] font-black uppercase text-white tracking-wide">
-                      FRASE TEMPO
+                      {g4Title}
                     </span>
                   </div>
                 </div>
@@ -1450,7 +1511,7 @@ export default function SpiegazioneFasiBoard({
                       FINALE
                     </span>
                     <span className="text-sm lg:text-[15px] font-black uppercase text-white tracking-wide">
-                      TERMOPILI APOCALITTICHE
+                      {g5Title}
                     </span>
                   </div>
                 </div>

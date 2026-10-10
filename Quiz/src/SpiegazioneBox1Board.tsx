@@ -12,6 +12,7 @@ interface SpiegazioneBox1Data {
   sottotitolo?: string;
   slideId?: string;
   audioUrl?: string;
+  audioSpiegazione?: string;
 }
 
 interface SpiegazioneBox1BoardProps {
@@ -242,13 +243,16 @@ export default function SpiegazioneBox1Board({
 }: SpiegazioneBox1BoardProps) {
   const data = useGameData<SpiegazioneBox1Data>();
   const slideId = data?.slideId || 'box1_spiegazione';
-  const customSfondo = data?.sfondo || data?.sfondoSpiegazione;
+  const rawSfondo = data?.sfondo || data?.sfondoSpiegazione;
+  const customSfondo = rawSfondo && !/\.(m4a|mp3|wav|ogg|aac)($|\?)/i.test(rawSfondo)
+    ? rawSfondo
+    : '/Mappa/spiegazione_box1_ambientazione.jpg';
 
   // File audio estratto dalla registrazione schermo (spiegazione_box1_audio.m4a)
   const audioSrc = useMemo(() => {
-    const rawUrl = data?.audioUrl || '/Audio/spiegazione_box1_audio.m4a';
+    const rawUrl = data?.audioUrl || data?.audioSpiegazione || '/Audio/spiegazione_box1_audio.m4a';
     return assetUrl(rawUrl);
-  }, [data?.audioUrl]);
+  }, [data?.audioUrl, data?.audioSpiegazione]);
 
   // Identificazione modalità Relatore vs Schermo Pubblico
   const isPresenterMode = useMemo(() => {
@@ -294,14 +298,17 @@ export default function SpiegazioneBox1Board({
     `playstate_${slideId}_seek`,
     null
   );
+  // Transizione cinematica sincronizzata verso la Domanda 1
+  const [isTransitioningToQ1, setIsTransitioningToQ1] = useSyncedState<boolean>(
+    'playstate_box1_transition',
+    false
+  );
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(23.31);
   const [isMuted, setIsMuted] = useState(isMultiWindowRelatore);
-  const [showControls, setShowControls] = useState(true);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const hideControlsTimer = useRef<NodeJS.Timeout | null>(null);
   const playedSoundsRef = useRef<Set<string>>(new Set());
   const isSeekingRef = useRef<boolean>(false);
 
@@ -383,8 +390,7 @@ export default function SpiegazioneBox1Board({
     setIsAllRevealed(true);
   };
 
-  // Visibilità dinamica delle sezioni (supporta sia riproduzione audio che step manuali)
-  const showIntroBoot = !isAllRevealed && ((isPlaying && currentTime <= 2.0) || manualStep === 0);
+
 
   const showObiettivoPill = isAllRevealed || (isPlaying && currentTime >= 2.6) || manualStep >= 1;
   const showObiettivoCard = isAllRevealed || (isPlaying && currentTime >= 4.2) || manualStep >= 1;
@@ -478,6 +484,17 @@ export default function SpiegazioneBox1Board({
     }
   }, [interactive, setIsAllRevealed, setManualStep, setIsPlaying, canPlaySFX]);
 
+  // Avanzamento animato alla Domanda 1
+  const handleAdvanceToQ1 = useCallback(() => {
+    if (!interactive) return;
+    soundFX.resume();
+    soundFX.playBuzzerReady();
+    setIsTransitioningToQ1(true);
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('imperio-advance-to-q1'));
+    }, 450);
+  }, [interactive, setIsTransitioningToQ1]);
+
   // Step avanti / indietro manuali
   const nextStep = useCallback(() => {
     if (!interactive) return;
@@ -493,9 +510,9 @@ export default function SpiegazioneBox1Board({
         revealEverything();
       }
     } else {
-      revealEverything();
+      handleAdvanceToQ1();
     }
-  }, [interactive, manualStep, setManualStep, seekTo, revealEverything]);
+  }, [interactive, manualStep, setManualStep, seekTo, revealEverything, handleAdvanceToQ1]);
 
   const prevStep = useCallback(() => {
     if (!interactive) return;
@@ -549,17 +566,6 @@ export default function SpiegazioneBox1Board({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [interactive, togglePlay, revealEverything, nextStep, prevStep, resetAllState]);
 
-  // Gestione comparsa controlli su movimento mouse
-  const handleMouseMove = () => {
-    setShowControls(true);
-    if (hideControlsTimer.current) clearTimeout(hideControlsTimer.current);
-    hideControlsTimer.current = setTimeout(() => {
-      if (isPlaying) {
-        setShowControls(false);
-      }
-    }, 3500);
-  };
-
   const progressPercent = Math.min(100, Math.max(0, (currentTime / duration) * 100));
 
   const formatTime = (secs: number) => {
@@ -571,14 +577,7 @@ export default function SpiegazioneBox1Board({
 
   return (
     <div
-      onMouseMove={handleMouseMove}
-      className="relative w-full h-full bg-[#060913] text-white overflow-hidden select-none font-sans flex flex-col items-center justify-center"
-      style={{
-        aspectRatio: '16/9',
-        width: '100%',
-        height: '100%',
-        maxHeight: '100vh',
-      }}
+      className="relative w-[1920px] h-[1080px] overflow-hidden select-none bg-[#060913] text-white flex flex-col items-center justify-between font-sans px-12 py-8"
     >
       {/* Audio Element nativo */}
       <audio
@@ -602,7 +601,7 @@ export default function SpiegazioneBox1Board({
               alt="Sfondo Spiegazione Box 1"
               className="absolute inset-0 w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-b from-[#060913]/80 via-[#060913]/60 to-[#060913]/85" />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#060913]/55 via-[#060913]/35 to-[#060913]/60" />
           </>
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-[#060913] via-[#080e22] to-[#050814]" />
@@ -641,18 +640,13 @@ export default function SpiegazioneBox1Board({
           <line x1="1620" y1="50" x2="1780" y2="50" stroke="currentColor" strokeWidth="1" strokeDasharray="4 4" />
         </svg>
 
-        {/* Linea di scansione laser iniziale */}
-        {showIntroBoot && (
-          <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-24 flex items-center justify-center pointer-events-none z-30 opacity-90 transition-opacity duration-700">
-            <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_25px_#38bdf8]" />
-          </div>
-        )}
+
       </div>
 
       {/* ========================================================================= */}
       {/* CONTENUTO PRINCIPALE                                                      */}
       {/* ========================================================================= */}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-between px-12 py-7 max-w-[1820px]">
+      <div className="relative z-10 w-full h-full flex flex-col items-center justify-between">
         {/* HEADER: BADGE E TITOLO DEL GIOCO */}
         <header className="relative w-full flex flex-col items-center shrink-0 pt-1">
           <div className="flex items-center gap-3 px-5 py-1.5 rounded-full bg-slate-900/80 border border-amber-400/30 backdrop-blur-md shadow-[0_0_25px_rgba(245,158,11,0.25)] mb-2">
@@ -676,230 +670,246 @@ export default function SpiegazioneBox1Board({
 
         {/* ========================================================================= */}
         {/* AREA CENTRALE: LE 3 REGOLE CARDINALI (OBIETTIVO, PUNTEGGIO, PRENOTAZIONE) */}
+        {/* Allineate e centrate a coppie riga per riga (Sx 5 col vs Dx 7 col)        */}
         {/* ========================================================================= */}
-        <main className="w-full flex-1 grid grid-cols-12 gap-8 items-center max-w-[1680px] my-auto py-2">
-          {/* COLONNA SINISTRA (5 COLONNE): LE 3 PILLOLE HUD PRINCIPALI */}
-          <div className="col-span-5 flex flex-col justify-center gap-6 pl-4">
-            {/* 1. PILL OBIETTIVO */}
-            <div
-              className={`transition-all duration-700 transform ${
-                showObiettivoPill
-                  ? 'opacity-100 translate-x-0 scale-100'
-                  : 'opacity-0 -translate-x-12 scale-95'
-              }`}
-            >
-              <div className="relative group p-1 rounded-3xl bg-gradient-to-r from-cyan-500/40 via-sky-500/20 to-transparent">
-                <div className="px-8 py-5 rounded-[22px] bg-slate-950/85 border border-cyan-400/50 shadow-[0_0_30px_rgba(6,182,212,0.3)] backdrop-blur-md flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-2xl shadow-inner">
-                      🎯
+        <main className="w-full flex-1 flex flex-col justify-center gap-5 max-w-[1780px] my-auto py-2">
+          {/* RIGA 1: OBIETTIVO */}
+          <div className="w-full grid grid-cols-12 gap-8 items-center">
+            {/* 1. PILL OBIETTIVO (SX - 5 COLONNE) */}
+            <div className="col-span-5 pl-4">
+              <div
+                className={`transition-all duration-700 transform ${
+                  showObiettivoPill
+                    ? 'opacity-100 translate-x-0 scale-100'
+                    : 'opacity-0 -translate-x-12 scale-95'
+                }`}
+              >
+                <div className="relative group p-1 rounded-3xl bg-gradient-to-r from-cyan-500/40 via-sky-500/20 to-transparent">
+                  <div className="px-8 py-5 rounded-[22px] bg-slate-950/85 border border-cyan-400/50 shadow-[0_0_30px_rgba(6,182,212,0.3)] backdrop-blur-md flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-cyan-500/20 border border-cyan-400/50 flex items-center justify-center text-2xl shadow-inner">
+                        🎯
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-mono font-bold tracking-widest text-cyan-400/80 uppercase">
+                          Regola 01
+                        </span>
+                        <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-white">
+                          OBIETTIVO
+                        </h2>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-[10px] font-mono font-bold tracking-widest text-cyan-400/80 uppercase">
-                        Regola 01
-                      </span>
-                      <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-white">
-                        OBIETTIVO
-                      </h2>
-                    </div>
+                    <span className="text-cyan-400 font-mono text-xs px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30">
+                      SCOPRI IL MISTERO
+                    </span>
                   </div>
-                  <span className="text-cyan-400 font-mono text-xs px-2.5 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30">
-                    SCOPRI IL MISTERO
-                  </span>
                 </div>
               </div>
             </div>
 
-            {/* 2. PILL PUNTEGGIO */}
-            <div
-              className={`transition-all duration-700 transform delay-100 ${
-                showPunteggioPill
-                  ? 'opacity-100 translate-x-0 scale-100'
-                  : 'opacity-0 -translate-x-12 scale-95'
-              }`}
-            >
-              <div className="relative group p-1 rounded-3xl bg-gradient-to-r from-amber-500/40 via-yellow-500/20 to-transparent">
-                <div className="px-8 py-5 rounded-[22px] bg-slate-950/85 border border-amber-400/50 shadow-[0_0_30px_rgba(245,158,11,0.3)] backdrop-blur-md flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-2xl shadow-inner">
-                      💰
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-mono font-bold tracking-widest text-amber-400/80 uppercase">
-                        Regola 02
-                      </span>
-                      <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-white">
-                        PUNTEGGIO
-                      </h2>
-                    </div>
-                  </div>
-                  <span className="text-amber-400 font-mono text-xs px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-400/30">
-                    PREMIO DI ROUND
-                  </span>
-                </div>
-              </div>
-            </div>
+            {/* CARD 1: OBIETTIVO DETTAGLIATO (DX - 7 COLONNE) */}
+            <div className="col-span-7 pr-4">
+              <div
+                className={`transition-all duration-700 transform ${
+                  showObiettivoCard
+                    ? 'opacity-100 translate-y-0 scale-100'
+                    : 'opacity-0 translate-y-8 scale-95'
+                }`}
+              >
+                <div className="p-6 rounded-3xl bg-slate-900/80 border border-cyan-400/35 shadow-2xl backdrop-blur-md flex items-center gap-6 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-44 h-44 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
 
-            {/* 3. PILL PRENOTAZIONE */}
-            <div
-              className={`transition-all duration-700 transform delay-200 ${
-                showPrenotazionePill
-                  ? 'opacity-100 translate-x-0 scale-100'
-                  : 'opacity-0 -translate-x-12 scale-95'
-              }`}
-            >
-              <div className="relative group p-1 rounded-3xl bg-gradient-to-r from-rose-500/40 via-purple-500/20 to-transparent">
-                <div className="px-8 py-5 rounded-[22px] bg-slate-950/85 border border-rose-400/50 shadow-[0_0_30px_rgba(244,63,94,0.3)] backdrop-blur-md flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-400/50 flex items-center justify-center text-2xl shadow-inner">
-                      🚨
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-mono font-bold tracking-widest text-rose-400/80 uppercase">
-                        Regola 03
-                      </span>
-                      <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-white">
-                        PRENOTAZIONE
-                      </h2>
+                  {/* Icona fumetto hi-tech stilizzata */}
+                  <div className="shrink-0 flex flex-col items-center justify-center">
+                    <div className="relative w-20 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-green-400 p-0.5 shadow-[0_0_25px_rgba(34,197,94,0.5)] flex items-center justify-center">
+                      <div className="w-full h-full rounded-[14px] bg-slate-950/80 flex items-center justify-center gap-1.5">
+                        <div className="w-2.5 h-1.5 rounded bg-emerald-400 animate-pulse" />
+                        <div className="w-4 h-1.5 rounded bg-emerald-400 animate-pulse delay-75" />
+                        <div className="w-2.5 h-1.5 rounded bg-emerald-400 animate-pulse delay-150" />
+                      </div>
+                      {/* Becco del fumetto */}
+                      <div className="absolute -bottom-1.5 left-4 w-3 h-3 bg-emerald-400 rotate-45" />
                     </div>
                   </div>
-                  <span className="text-rose-400 font-mono text-xs px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-400/30 font-bold">
-                    ONE SHOT
-                  </span>
+
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-400/40 text-[10px] font-black uppercase text-cyan-300">
+                        🎵 5 Strumenti Audio
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-[10px] font-black uppercase text-emerald-300">
+                        🖼️ Griglia a Tasselli
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-md bg-purple-500/20 border border-purple-400/40 text-[10px] font-black uppercase text-purple-300">
+                        👤 Personaggio Misterioso
+                      </span>
+                    </div>
+                    <p className="text-base lg:text-lg font-medium text-slate-200 leading-snug">
+                      L'obiettivo è indovinare il <strong className="text-cyan-300 font-bold">nome</strong>,{' '}
+                      <strong className="text-emerald-300 font-bold">titolo della canzone</strong> o{' '}
+                      <strong className="text-amber-300 font-bold">immagine</strong> che gli indizi progressivi celano.
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* COLONNA DESTRA (7 COLONNE): LE CARD GRAFICHE DI SPIEGAZIONE */}
-          <div className="col-span-7 flex flex-col justify-center gap-6 pr-4">
-            {/* CARD 1: OBIETTIVO DETTAGLIATO */}
-            <div
-              className={`transition-all duration-700 transform ${
-                showObiettivoCard
-                  ? 'opacity-100 translate-y-0 scale-100'
-                  : 'opacity-0 translate-y-8 scale-95'
-              }`}
-            >
-              <div className="p-6 rounded-3xl bg-slate-900/80 border border-cyan-400/35 shadow-2xl backdrop-blur-md flex items-center gap-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-44 h-44 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
-
-                {/* Icona fumetto hi-tech stilizzata */}
-                <div className="shrink-0 flex flex-col items-center justify-center">
-                  <div className="relative w-20 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-green-400 p-0.5 shadow-[0_0_25px_rgba(34,197,94,0.5)] flex items-center justify-center">
-                    <div className="w-full h-full rounded-[14px] bg-slate-950/80 flex items-center justify-center gap-1.5">
-                      <div className="w-2.5 h-1.5 rounded bg-emerald-400 animate-pulse" />
-                      <div className="w-4 h-1.5 rounded bg-emerald-400 animate-pulse delay-75" />
-                      <div className="w-2.5 h-1.5 rounded bg-emerald-400 animate-pulse delay-150" />
+          {/* RIGA 2: PUNTEGGIO */}
+          <div className="w-full grid grid-cols-12 gap-8 items-center">
+            {/* 2. PILL PUNTEGGIO (SX - 5 COLONNE) */}
+            <div className="col-span-5 pl-4">
+              <div
+                className={`transition-all duration-700 transform delay-100 ${
+                  showPunteggioPill
+                    ? 'opacity-100 translate-x-0 scale-100'
+                    : 'opacity-0 -translate-x-12 scale-95'
+                }`}
+              >
+                <div className="relative group p-1 rounded-3xl bg-gradient-to-r from-amber-500/40 via-yellow-500/20 to-transparent">
+                  <div className="px-8 py-5 rounded-[22px] bg-slate-950/85 border border-amber-400/50 shadow-[0_0_30px_rgba(245,158,11,0.3)] backdrop-blur-md flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400/50 flex items-center justify-center text-2xl shadow-inner">
+                        💰
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-mono font-bold tracking-widest text-amber-400/80 uppercase">
+                          Regola 02
+                        </span>
+                        <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-white">
+                          PUNTEGGIO
+                        </h2>
+                      </div>
                     </div>
-                    {/* Becco del fumetto */}
-                    <div className="absolute -bottom-1.5 left-4 w-3 h-3 bg-emerald-400 rotate-45" />
-                  </div>
-                </div>
-
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2.5 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-400/40 text-[10px] font-black uppercase text-cyan-300">
-                      🎵 5 Strumenti Audio
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-[10px] font-black uppercase text-emerald-300">
-                      🖼️ Griglia a Tasselli
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-md bg-purple-500/20 border border-purple-400/40 text-[10px] font-black uppercase text-purple-300">
-                      👤 Personaggio Misterioso
+                    <span className="text-amber-400 font-mono text-xs px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-400/30">
+                      PREMIO DI ROUND
                     </span>
                   </div>
-                  <p className="text-base lg:text-lg font-medium text-slate-200 leading-snug">
-                    L'obiettivo è indovinare il <strong className="text-cyan-300 font-bold">nome</strong>,{' '}
-                    <strong className="text-emerald-300 font-bold">titolo della canzone</strong> o{' '}
-                    <strong className="text-amber-300 font-bold">immagine</strong> che gli indizi progressivi celano.
-                  </p>
                 </div>
               </div>
             </div>
 
-            {/* CARD 2: PUNTEGGIO (+3.000) */}
-            <div
-              className={`transition-all duration-700 transform ${
-                showPunteggioCard
-                  ? 'opacity-100 translate-y-0 scale-100'
-                  : 'opacity-0 translate-y-8 scale-95'
-              }`}
-            >
-              <div className="p-6 rounded-3xl bg-slate-900/80 border border-amber-400/35 shadow-2xl backdrop-blur-md flex items-center justify-between gap-6 relative overflow-hidden">
-                <div className="absolute -bottom-10 right-10 w-44 h-44 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
+            {/* CARD 2: PUNTEGGIO (+3.000) (DX - 7 COLONNE) */}
+            <div className="col-span-7 pr-4">
+              <div
+                className={`transition-all duration-700 transform ${
+                  showPunteggioCard
+                    ? 'opacity-100 translate-y-0 scale-100'
+                    : 'opacity-0 translate-y-8 scale-95'
+                }`}
+              >
+                <div className="p-6 rounded-3xl bg-slate-900/80 border border-amber-400/35 shadow-2xl backdrop-blur-md flex items-center justify-between gap-6 relative overflow-hidden">
+                  <div className="absolute -bottom-10 right-10 w-44 h-44 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
 
-                <div className="flex items-center gap-5">
-                  {/* Bollino medaglione dorato con checkmark verde */}
-                  <div className="relative shrink-0 w-16 h-16 rounded-full bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-200 p-1 shadow-[0_0_30px_rgba(245,158,11,0.6)] flex items-center justify-center">
-                    <div className="w-full h-full rounded-full bg-slate-950/80 flex items-center justify-center">
-                      <span className="text-2xl font-black text-emerald-400">✓</span>
+                  <div className="flex items-center gap-5">
+                    {/* Bollino medaglione dorato con checkmark verde */}
+                    <div className="relative shrink-0 w-16 h-16 rounded-full bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-200 p-1 shadow-[0_0_30px_rgba(245,158,11,0.6)] flex items-center justify-center">
+                      <div className="w-full h-full rounded-full bg-slate-950/80 flex items-center justify-center">
+                        <span className="text-2xl font-black text-emerald-400">✓</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] font-mono font-bold tracking-widest text-amber-400/90 uppercase block">
+                        Ricompensa Esatta
+                      </span>
+                      <p className="text-sm lg:text-base font-semibold text-slate-300">
+                        Premio assegnato alla squadra che indovina per prima
+                      </p>
                     </div>
                   </div>
 
-                  <div>
-                    <span className="text-[11px] font-mono font-bold tracking-widest text-amber-400/90 uppercase block">
-                      Ricompensa Esatta
+                  {/* Badge enorme del punteggio 3.000 */}
+                  <div className="shrink-0 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-yellow-500/30 to-amber-500/20 border-2 border-amber-400/70 shadow-[0_0_35px_rgba(245,158,11,0.5)] flex items-center gap-2.5">
+                    <span className="text-3xl lg:text-4xl font-black tracking-wider text-amber-300 font-mono drop-shadow">
+                      +3.000
                     </span>
-                    <p className="text-sm lg:text-base font-semibold text-slate-300">
-                      Premio assegnato alla squadra che indovina per prima
+                    <span className="text-xs font-black uppercase tracking-widest text-amber-200/80">
+                      Punti
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGA 3: PRENOTAZIONE */}
+          <div className="w-full grid grid-cols-12 gap-8 items-center">
+            {/* 3. PILL PRENOTAZIONE (SX - 5 COLONNE) */}
+            <div className="col-span-5 pl-4">
+              <div
+                className={`transition-all duration-700 transform delay-200 ${
+                  showPrenotazionePill
+                    ? 'opacity-100 translate-x-0 scale-100'
+                    : 'opacity-0 -translate-x-12 scale-95'
+                }`}
+              >
+                <div className="relative group p-1 rounded-3xl bg-gradient-to-r from-rose-500/40 via-purple-500/20 to-transparent">
+                  <div className="px-8 py-5 rounded-[22px] bg-slate-950/85 border border-rose-400/50 shadow-[0_0_30px_rgba(244,63,94,0.3)] backdrop-blur-md flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-400/50 flex items-center justify-center text-2xl shadow-inner">
+                        🚨
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-mono font-bold tracking-widest text-rose-400/80 uppercase">
+                          Regola 03
+                        </span>
+                        <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-white">
+                          PRENOTAZIONE
+                        </h2>
+                      </div>
+                    </div>
+                    <span className="text-rose-400 font-mono text-xs px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-400/30 font-bold">
+                      ONE SHOT
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 3: PRENOTAZIONE (ONE SHOT & RADAR TARGET) (DX - 7 COLONNE) */}
+            <div className="col-span-7 pr-4">
+              <div
+                className={`transition-all duration-700 transform ${
+                  showPrenotazioneCard
+                    ? 'opacity-100 translate-y-0 scale-100'
+                    : 'opacity-0 translate-y-8 scale-95'
+                }`}
+              >
+                <div className="p-6 rounded-3xl bg-slate-900/80 border border-rose-400/35 shadow-2xl backdrop-blur-md flex items-center gap-6 relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-44 h-44 bg-rose-500/10 rounded-full blur-2xl pointer-events-none" />
+
+                  {/* Mirino radar crosshairs stilizzato in SVG */}
+                  <div className="shrink-0 relative w-16 h-16 rounded-2xl bg-rose-950/60 border border-yellow-400/60 p-2 shadow-[0_0_25px_rgba(234,179,8,0.4)] flex items-center justify-center">
+                    <svg viewBox="0 0 100 100" className="w-full h-full text-yellow-400">
+                      <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.4" />
+                      <circle cx="50" cy="50" r="26" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.8" />
+                      <circle cx="50" cy="50" r="12" stroke="currentColor" strokeWidth="4" fill="none" />
+                      <line x1="50" y1="2" x2="50" y2="98" stroke="currentColor" strokeWidth="4" />
+                      <line x1="2" y1="50" x2="98" y2="50" stroke="currentColor" strokeWidth="4" />
+                    </svg>
+                    {/* Punto rosso pulsante al centro */}
+                    <div className="absolute w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                  </div>
+
+                  <div className="flex-1 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full bg-rose-500/25 border border-rose-400/50 text-[10px] font-black uppercase text-rose-300 tracking-wider">
+                        ⚠️ 1 Tentativo per Squadra
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-yellow-500/25 border border-yellow-400/50 text-[10px] font-black uppercase text-yellow-300 tracking-wider">
+                        Round Locked
+                      </span>
+                    </div>
+                    <p className="text-base lg:text-lg font-medium text-slate-200 leading-snug">
+                      La prenotazione sarà <strong className="text-yellow-300 font-black">ONE SHOT</strong>:{' '}
+                      se una squadra <strong className="text-rose-400 font-bold">sbaglia il nome</strong>,{' '}
+                      <span className="underline decoration-rose-500 decoration-2 underline-offset-4 text-white">
+                        non potrà più riprenotarsi
+                      </span>{' '}
+                      per tutto quel round!
                     </p>
                   </div>
-                </div>
-
-                {/* Badge enorme del punteggio 3.000 */}
-                <div className="shrink-0 px-8 py-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-yellow-500/30 to-amber-500/20 border-2 border-amber-400/70 shadow-[0_0_35px_rgba(245,158,11,0.5)] flex items-center gap-2.5">
-                  <span className="text-3xl lg:text-4xl font-black tracking-wider text-amber-300 font-mono drop-shadow">
-                    +3.000
-                  </span>
-                  <span className="text-xs font-black uppercase tracking-widest text-amber-200/80">
-                    Punti
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* CARD 3: PRENOTAZIONE (ONE SHOT & RADAR TARGET) */}
-            <div
-              className={`transition-all duration-700 transform ${
-                showPrenotazioneCard
-                  ? 'opacity-100 translate-y-0 scale-100'
-                  : 'opacity-0 translate-y-8 scale-95'
-              }`}
-            >
-              <div className="p-6 rounded-3xl bg-slate-900/80 border border-rose-400/35 shadow-2xl backdrop-blur-md flex items-center gap-6 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-44 h-44 bg-rose-500/10 rounded-full blur-2xl pointer-events-none" />
-
-                {/* Mirino radar crosshairs stilizzato in SVG */}
-                <div className="shrink-0 relative w-16 h-16 rounded-2xl bg-rose-950/60 border border-yellow-400/60 p-2 shadow-[0_0_25px_rgba(234,179,8,0.4)] flex items-center justify-center">
-                  <svg viewBox="0 0 100 100" className="w-full h-full text-yellow-400">
-                    <circle cx="50" cy="50" r="40" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.4" />
-                    <circle cx="50" cy="50" r="26" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.8" />
-                    <circle cx="50" cy="50" r="12" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <line x1="50" y1="2" x2="50" y2="98" stroke="currentColor" strokeWidth="4" />
-                    <line x1="2" y1="50" x2="98" y2="50" stroke="currentColor" strokeWidth="4" />
-                  </svg>
-                  {/* Punto rosso pulsante al centro */}
-                  <div className="absolute w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                </div>
-
-                <div className="flex-1 space-y-1.5">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-0.5 rounded-full bg-rose-500/25 border border-rose-400/50 text-[10px] font-black uppercase text-rose-300 tracking-wider">
-                      ⚠️ 1 Tentativo per Squadra
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-yellow-500/25 border border-yellow-400/50 text-[10px] font-black uppercase text-yellow-300 tracking-wider">
-                      Round Locked
-                    </span>
-                  </div>
-                  <p className="text-base lg:text-lg font-medium text-slate-200 leading-snug">
-                    La prenotazione sarà <strong className="text-yellow-300 font-black">ONE SHOT</strong>:{' '}
-                    se una squadra <strong className="text-rose-400 font-bold">sbaglia il nome</strong>,{' '}
-                    <span className="underline decoration-rose-500 decoration-2 underline-offset-4 text-white">
-                      non potrà più riprenotarsi
-                    </span>{' '}
-                    per tutto quel round!
-                  </p>
                 </div>
               </div>
             </div>
@@ -908,6 +918,7 @@ export default function SpiegazioneBox1Board({
 
         {/* ========================================================================= */}
         {/* BANNER INFERIORE: "MANO SUL PULSANTE - PRIMA DOMANDA!"                     */}
+        {/* Cliccabile nel monitor Relatore per avviare la transizione alla Domanda 1 */}
         {/* ========================================================================= */}
         <div className="w-full max-w-[1680px] shrink-0 mt-1 mb-2">
           <div
@@ -917,7 +928,13 @@ export default function SpiegazioneBox1Board({
                 : 'opacity-0 translate-y-6 scale-95 pointer-events-none'
             }`}
           >
-            <div className="relative p-1 rounded-2xl bg-gradient-to-r from-cyan-500/50 via-amber-500/60 to-cyan-500/50 shadow-[0_0_40px_rgba(245,158,11,0.45)]">
+            <div
+              onClick={isPresenterMode ? handleAdvanceToQ1 : undefined}
+              className={`relative p-1 rounded-2xl bg-gradient-to-r from-cyan-500/50 via-amber-500/60 to-cyan-500/50 shadow-[0_0_40px_rgba(245,158,11,0.45)] transition-all duration-300 ${
+                isPresenterMode ? 'cursor-pointer hover:scale-[1.01] active:scale-[0.99] group' : ''
+              }`}
+              title={isPresenterMode ? 'Clicca per avviare la Domanda 1' : undefined}
+            >
               <div className="px-8 py-3.5 rounded-[14px] bg-slate-950/90 border border-white/20 backdrop-blur-md flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="text-2xl animate-bounce">⚡</span>
@@ -926,10 +943,10 @@ export default function SpiegazioneBox1Board({
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-bold tracking-wider text-slate-400 uppercase">
-                    Avanti per iniziare
+                  <span className="text-xs font-mono font-bold tracking-wider text-slate-400 group-hover:text-amber-300 uppercase transition-colors">
+                    {isPresenterMode ? 'Clicca per iniziare la Domanda 1' : 'Avanti per iniziare'}
                   </span>
-                  <span className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-400/60 text-amber-300 flex items-center justify-center font-bold text-sm animate-pulse">
+                  <span className="w-7 h-7 rounded-lg bg-amber-500/20 border border-amber-400/60 text-amber-300 flex items-center justify-center font-bold text-sm animate-pulse group-hover:bg-amber-500 group-hover:text-black transition-all">
                     →
                   </span>
                 </div>
@@ -940,157 +957,188 @@ export default function SpiegazioneBox1Board({
 
         {/* ========================================================================= */}
         {/* PANNELLO DI CONTROLLO PRESENTER & TIMELINE SCRUBBER                      */}
+        {/* Visibile sempre e solo nel monitor Relatore                              */}
         {/* ========================================================================= */}
-        <footer
-          className={`w-full max-w-[1680px] shrink-0 transition-opacity duration-300 ${
-            showControls || isPresenterMode ? 'opacity-100' : 'opacity-0 pointer-events-none'
-          }`}
-        >
-          <div className="p-3 rounded-2xl bg-slate-950/90 border border-white/10 shadow-2xl backdrop-blur-md flex items-center justify-between gap-6">
-            {/* Pulsanti di Controllo Principali */}
-            <div className="flex items-center gap-2 shrink-0">
-              {/* Play / Pausa */}
-              <button
-                type="button"
-                onClick={togglePlay}
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs tracking-wider uppercase shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer"
-                title="Riproduci / Metti in pausa (Barra Spazio o P)"
-              >
-                <span>{isPlaying ? '⏸️ Pausa' : '▶️ Avvia Spiegazione'}</span>
-              </button>
-
-              {/* Riavvia dall'inizio */}
-              <button
-                type="button"
-                onClick={restartPlayback}
-                className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs tracking-wider uppercase transition-colors cursor-pointer"
-                title="Ricomincia dall'inizio"
-              >
-                🔄 Riavvia
-              </button>
-
-              {/* Svela tutto */}
-              <button
-                type="button"
-                onClick={revealEverything}
-                className="px-3.5 py-2 rounded-xl bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-400/40 text-cyan-300 font-bold text-xs tracking-wider uppercase transition-colors cursor-pointer"
-                title="Svela tutto subito (Tasto S o Invio)"
-              >
-                👁️ Svela Tutto
-              </button>
-
-              {/* Reset */}
-              <button
-                type="button"
-                onClick={resetAllState}
-                className="px-3 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-300 font-bold text-xs tracking-wider uppercase transition-colors cursor-pointer"
-                title="Reset stato completo (Tasto R)"
-              >
-                Reset
-              </button>
-            </div>
-
-            {/* Timeline Progress Bar Interattiva */}
-            <div className="flex-1 flex items-center gap-3">
-              <span className="text-[11px] font-mono text-slate-400 shrink-0">
-                {formatTime(currentTime)}
-              </span>
-              <div
-                onClick={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const clickX = e.clientX - rect.left;
-                  const ratio = Math.max(0, Math.min(1, clickX / rect.width));
-                  seekTo(ratio * duration);
-                }}
-                className="relative flex-1 h-2 rounded-full bg-slate-800/80 cursor-pointer overflow-hidden border border-white/10 group"
-                title="Clicca per spostarti sulla timeline"
-              >
-                <div
-                  className="h-full bg-gradient-to-r from-cyan-400 via-amber-400 to-yellow-400 transition-all duration-100 relative"
-                  style={{ width: `${progressPercent}%` }}
+        {isPresenterMode && interactive && (
+          <footer className="w-full max-w-[1680px] shrink-0 transition-opacity duration-300 opacity-100 z-40">
+            <div className="p-3 rounded-2xl bg-slate-950/90 border border-white/10 shadow-2xl backdrop-blur-md flex items-center justify-between gap-6">
+              {/* Pulsanti di Controllo Principali */}
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Play / Pausa */}
+                <button
+                  type="button"
+                  onClick={togglePlay}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs tracking-wider uppercase shadow-lg transition-transform hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer"
+                  title="Riproduci / Metti in pausa (Barra Spazio o P)"
                 >
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md" />
-                </div>
+                  <span>{isPlaying ? '⏸️ Pausa' : '▶️ Avvia Spiegazione'}</span>
+                </button>
+
+                {/* Riavvia dall'inizio */}
+                <button
+                  type="button"
+                  onClick={restartPlayback}
+                  className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-white font-bold text-xs tracking-wider uppercase transition-colors cursor-pointer"
+                  title="Ricomincia dall'inizio"
+                >
+                  🔄 Riavvia
+                </button>
+
+                {/* Svela tutto */}
+                <button
+                  type="button"
+                  onClick={revealEverything}
+                  className="px-3.5 py-2 rounded-xl bg-cyan-600/30 hover:bg-cyan-600/50 border border-cyan-400/40 text-cyan-300 font-bold text-xs tracking-wider uppercase transition-colors cursor-pointer"
+                  title="Svela tutto subito (Tasto S o Invio)"
+                >
+                  👁️ Svela Tutto
+                </button>
+
+                {/* Reset */}
+                <button
+                  type="button"
+                  onClick={resetAllState}
+                  className="px-3 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-300 font-bold text-xs tracking-wider uppercase transition-colors cursor-pointer"
+                  title="Reset stato completo (Tasto R)"
+                >
+                  Reset
+                </button>
               </div>
-              <span className="text-[11px] font-mono text-slate-400 shrink-0">
-                {formatTime(duration)}
-              </span>
+
+              {/* Timeline Progress Bar Interattiva */}
+              <div className="flex-1 flex items-center gap-3">
+                <span className="text-[11px] font-mono text-slate-400 shrink-0">
+                  {formatTime(currentTime)}
+                </span>
+                <div
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+                    seekTo(ratio * duration);
+                  }}
+                  className="relative flex-1 h-2 rounded-full bg-slate-800/80 cursor-pointer overflow-hidden border border-white/10 group"
+                  title="Clicca per spostarti sulla timeline"
+                >
+                  <div
+                    className="h-full bg-gradient-to-r from-cyan-400 via-amber-400 to-yellow-400 transition-all duration-100 relative"
+                    style={{ width: `${progressPercent}%` }}
+                  >
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md" />
+                  </div>
+                </div>
+                <span className="text-[11px] font-mono text-slate-400 shrink-0">
+                  {formatTime(duration)}
+                </span>
+              </div>
+
+              {/* Salti Rapidi alle Regole & Mute */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualStep(1);
+                    seekTo(2.6);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                    manualStep === 1 || (currentTime >= 2.6 && currentTime < 7.5)
+                      ? 'bg-cyan-500 text-slate-950 font-black'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                  }`}
+                >
+                  1. Obiettivo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualStep(2);
+                    seekTo(7.5);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                    manualStep === 2 || (currentTime >= 7.5 && currentTime < 11.2)
+                      ? 'bg-amber-500 text-slate-950 font-black'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                  }`}
+                >
+                  2. Punteggio
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualStep(3);
+                    seekTo(11.2);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                    manualStep === 3 || (currentTime >= 11.2 && currentTime < 18.5)
+                      ? 'bg-rose-500 text-white font-black'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                  }`}
+                >
+                  3. Prenotazione
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualStep(4);
+                    seekTo(18.5);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
+                    manualStep === 4 || currentTime >= 18.5
+                      ? 'bg-emerald-500 text-slate-950 font-black'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-300'
+                  }`}
+                >
+                  4. Via!
+                </button>
+
+                {/* Toggle Audio Mute */}
+                <button
+                  type="button"
+                  onClick={() => setIsMuted((prev) => !prev)}
+                  className={`ml-2 p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+                    isMuted ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white'
+                  }`}
+                  title={isMuted ? 'Audio Disattivato (M per attivare)' : 'Audio Attivo (M per silenziare)'}
+                >
+                  {isMuted ? '🔇' : '🔊'}
+                </button>
+              </div>
             </div>
+          </footer>
+        )}
+      </div>
 
-            {/* Salti Rapidi alle Regole & Mute */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setManualStep(1);
-                  seekTo(2.6);
-                }}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                  manualStep === 1 || (currentTime >= 2.6 && currentTime < 7.5)
-                    ? 'bg-cyan-500 text-slate-950 font-black'
-                    : 'bg-white/5 hover:bg-white/10 text-slate-300'
-                }`}
-              >
-                1. Obiettivo
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setManualStep(2);
-                  seekTo(7.5);
-                }}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                  manualStep === 2 || (currentTime >= 7.5 && currentTime < 11.2)
-                    ? 'bg-amber-500 text-slate-950 font-black'
-                    : 'bg-white/5 hover:bg-white/10 text-slate-300'
-                }`}
-              >
-                2. Punteggio
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setManualStep(3);
-                  seekTo(11.2);
-                }}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                  manualStep === 3 || (currentTime >= 11.2 && currentTime < 18.5)
-                    ? 'bg-rose-500 text-white font-black'
-                    : 'bg-white/5 hover:bg-white/10 text-slate-300'
-                }`}
-              >
-                3. Prenotazione
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setManualStep(4);
-                  seekTo(18.5);
-                }}
-                className={`px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all cursor-pointer ${
-                  manualStep === 4 || currentTime >= 18.5
-                    ? 'bg-emerald-500 text-slate-950 font-black'
-                    : 'bg-white/5 hover:bg-white/10 text-slate-300'
-                }`}
-              >
-                4. Via!
-              </button>
+      {/* Icona Play centrale quando in pausa all'inizio (visibile SOLO nel monitor Relatore) */}
+      {isPresenterMode && !isPlaying && manualStep === 0 && !isAllRevealed && interactive && !isTransitioningToQ1 && (
+        <div
+          onClick={togglePlay}
+          className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] cursor-pointer transition-all duration-300 group"
+        >
+          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 text-black flex items-center justify-center pl-2 text-5xl shadow-[0_0_50px_rgba(245,158,11,0.7)] group-hover:scale-110 active:scale-95 transition-transform mb-4">
+            ▶
+          </div>
+          <span className="text-base font-black tracking-widest uppercase text-amber-300 bg-black/70 px-6 py-2 rounded-full border border-amber-400/40 shadow-xl">
+            Avvia Spiegazione con Voce Narrante (Spazio)
+          </span>
+        </div>
+      )}
 
-              {/* Toggle Audio Mute */}
-              <button
-                type="button"
-                onClick={() => setIsMuted((prev) => !prev)}
-                className={`ml-2 p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
-                  isMuted ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-white'
-                }`}
-                title={isMuted ? 'Audio Disattivato (M per attivare)' : 'Audio Attivo (M per silenziare)'}
-              >
-                {isMuted ? '🔇' : '🔊'}
-              </button>
+      {/* OVERLAY DI TRANSIZIONE CINEMATICA VERSO LA DOMANDA 1 */}
+      {isTransitioningToQ1 && (
+        <div className="absolute inset-0 z-50 pointer-events-none flex flex-col items-center justify-center bg-black/75 backdrop-blur-md animate-fade-in transition-all duration-500">
+          <div className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden">
+            {/* Raggio laser dorato orizzontale */}
+            <div className="w-full h-[3px] bg-gradient-to-r from-transparent via-amber-400 to-transparent shadow-[0_0_40px_#f59e0b] animate-pulse" />
+            <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-amber-500/15 to-cyan-500/10" />
+            <div className="flex items-center gap-4 px-8 py-4 rounded-3xl bg-slate-950/90 border border-amber-400/60 shadow-[0_0_50px_rgba(245,158,11,0.6)] animate-zoom-in">
+              <span className="text-3xl animate-bounce">⚡</span>
+              <span className="text-2xl font-black uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 font-serif">
+                PREPARARSI... DOMANDA 1 AL VIA!
+              </span>
             </div>
           </div>
-        </footer>
-      </div>
+        </div>
+      )}
     </div>
   );
 }

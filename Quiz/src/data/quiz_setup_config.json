@@ -47,8 +47,10 @@
     "audioSpiegazione": "/Audio/spiegazione_fasi_audio.mp3"
   },
   "gioco1": {
-    "selectedQuestion": 6,
+    "selectedQuestion": 0,
     "videoSpiegazione": "",
+    "sfondoSpiegazione": "/Mappa/spiegazione_box1_ambientazione.jpg",
+    "audioSpiegazione": "/Audio/spiegazione_box1_audio.m4a",
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -384,8 +386,10 @@
     "sfondoGenerale": "/Icone/sfondi/sfondo_box1_foresta_musicale.jpg"
   },
   "gioco2": {
-    "selectedQuestion": 5,
+    "selectedQuestion": 0,
     "videoSpiegazione": "",
+    "sfondoSpiegazione": "",
+    "audioSpiegazione": "",
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -718,8 +722,10 @@
     "sfondoGenerale": "/Icone/sfondi/sfondo_box2_cristalli.jpg"
   },
   "gioco3": {
-    "selectedQuestion": 1,
+    "selectedQuestion": 0,
     "videoSpiegazione": "",
+    "sfondoSpiegazione": "",
+    "audioSpiegazione": "",
     "questions": {
       "1": {
         "sfondo": "/Icone/nessuno_img/3_1_superereoi.png",
@@ -1215,7 +1221,9 @@
       }
     ],
     "sfondoGenerale": "",
-    "videoSpiegazione": ""
+    "videoSpiegazione": "",
+    "sfondoSpiegazione": "",
+    "audioSpiegazione": ""
   },
   "gioco5": {
     "titolo": "Gioco 5",
@@ -1223,7 +1231,9 @@
     "sfondoGenerale": "/sfondo_finale_acqua.jpg",
     "numeroDomande": 15,
     "notePresentatore": "",
-    "videoSpiegazione": ""
+    "videoSpiegazione": "",
+    "sfondoSpiegazione": "",
+    "audioSpiegazione": ""
   },
   "punteggi": {
     "sfondo": "/Icone/sfondi/sfondo_generale_torneo.jpg",

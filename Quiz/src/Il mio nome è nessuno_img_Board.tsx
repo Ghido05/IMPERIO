@@ -43,6 +43,20 @@ const GameBoard = ({ interactive = true, revealAll = false }: { interactive?: bo
   const [bookedTeam, setBookedTeam] = useSyncedState<number | null>(`playstate_${slideId}_booked_team`, null);
   const [lockedStep, setLockedStep] = useSyncedState<number | null>(`playstate_${slideId}_locked_step`, null);
 
+  // Transizione d'ingresso cinematica dalla spiegazione alla prima domanda
+  const [showIntroTransition, setShowIntroTransition] = useState(() => {
+    return slideId === 'box1_q1' || slideId.endsWith('_q1');
+  });
+
+  useEffect(() => {
+    if (showIntroTransition) {
+      const timer = setTimeout(() => {
+        setShowIntroTransition(false);
+      }, 1800);
+      return () => clearTimeout(timer);
+    }
+  }, [showIntroTransition]);
+
   const getPointsForStep = (currentStep: number) => {
     if (currentStep <= 0) return 5000;
     if (currentStep >= 9) return 0;
@@ -300,6 +314,50 @@ const GameBoard = ({ interactive = true, revealAll = false }: { interactive?: bo
       className={`relative w-full h-full ${currentSfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
       style={currentSfondo ? { backgroundImage: assetUrlCss(currentSfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
+      <style>{`
+        @keyframes curtainIntroReveal {
+          0% {
+            opacity: 1;
+            transform: scale(1.04);
+          }
+          65% {
+            opacity: 1;
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(1);
+            visibility: hidden;
+          }
+        }
+      `}</style>
+
+      {/* Overlay di transizione d'ingresso fluida dalla Spiegazione (nessun taglio secco) */}
+      {showIntroTransition && (
+        <div
+          className="absolute inset-0 z-[120] pointer-events-none flex flex-col items-center justify-center overflow-hidden"
+          style={{ animation: 'curtainIntroReveal 1.8s cubic-bezier(0.16, 1, 0.3, 1) forwards' }}
+        >
+          {/* Velo scuro che si apre dolcemente */}
+          <div className="absolute inset-0 bg-[#060913]/90 backdrop-blur-md" />
+          
+          {/* Fascio laser orizzontale olografico */}
+          <div className="w-full h-[2px] bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_35px_#38bdf8] animate-pulse" />
+          
+          {/* Titolo broadcast TV di apertura prima domanda */}
+          <div className="relative z-10 flex flex-col items-center gap-3 p-8 rounded-3xl bg-slate-950/85 border border-cyan-400/40 shadow-[0_0_60px_rgba(6,182,212,0.4)] animate-zoom-in">
+            <div className="flex items-center gap-2 px-3.5 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-[11px] font-mono font-bold tracking-widest text-cyan-300 uppercase">
+              IMPERIO VIII • GIOCO 1
+            </div>
+            <h2 className="text-5xl lg:text-6xl font-black uppercase tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 font-serif drop-shadow-[0_4px_25px_rgba(245,158,11,0.6)]">
+              PRIMA DOMANDA
+            </h2>
+            <span className="text-sm font-mono font-bold tracking-[0.25em] text-slate-300 uppercase">
+              IL MIO NOME È NESSUNO
+            </span>
+          </div>
+        </div>
+      )}
       {/* Overlay Errore */}
       {showError && (
         <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center">

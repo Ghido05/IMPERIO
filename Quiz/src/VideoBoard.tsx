@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { assetUrl } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
@@ -15,15 +15,32 @@ interface VideoData {
 interface VideoBoardProps {
   interactive?: boolean;
   revealAll?: boolean;
+  isPresenter?: boolean;
 }
 
-export default function VideoBoard({ interactive = true }: VideoBoardProps) {
+export default function VideoBoard({ interactive = true, isPresenter }: VideoBoardProps) {
   const data = useGameData<VideoData>();
   const slideId = data?.slideId || 'video_slide';
   const rawSrc = data?.src || data?.videoUrl || '';
   const videoSrc = rawSrc ? assetUrl(rawSrc) : '';
   const titolo = data?.titolo || 'Video';
   const sottotitolo = data?.sottotitolo || 'Riproduzione Video';
+
+  // Identificazione modalità Relatore vs Schermo Pubblico
+  const isPresenterMode = useMemo(() => {
+    if (isPresenter !== undefined) return isPresenter;
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('sandbox') === 'true') return true;
+    if (
+      params.get('mode') === 'games' ||
+      params.get('mode') === 'scores' ||
+      params.get('project') === 'true'
+    ) {
+      return false;
+    }
+    return true;
+  }, [isPresenter]);
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -151,8 +168,8 @@ export default function VideoBoard({ interactive = true }: VideoBoardProps) {
             }}
           />
 
-          {/* Icona Play centrale quando in pausa */}
-          {!isPlaying && interactive && (
+          {/* Icona Play centrale quando in pausa - solo nel relatore */}
+          {!isPlaying && interactive && isPresenterMode && (
             <div 
               onClick={togglePlay}
               className="absolute inset-0 flex items-center justify-center bg-black/35 backdrop-blur-[1px] cursor-pointer transition-all duration-300"
@@ -163,8 +180,8 @@ export default function VideoBoard({ interactive = true }: VideoBoardProps) {
             </div>
           )}
 
-          {/* Barra di Controllo Inferiore Flottante */}
-          {interactive && (
+          {/* Barra di Controllo Inferiore Flottante - solo nel relatore */}
+          {interactive && isPresenterMode && (
             <div 
               className={`absolute bottom-6 left-12 right-12 bg-[#18181b]/90 border border-white/15 rounded-2xl p-4 shadow-2xl backdrop-blur-md flex flex-col gap-2 transition-all duration-300 ${
                 showControls || !isPlaying ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'

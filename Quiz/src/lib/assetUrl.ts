@@ -135,6 +135,8 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   'password1.png': '/Icone/Sfondi Password/password1.png',
   'password2.png': '/Icone/Sfondi Password/password2.png',
   'exterior_00.webp': '/Icone/exterior_00.webp',
+  'spiegazione_box1_ambientazione.jpg': '/Mappa/spiegazione_box1_ambientazione.jpg',
+  'imperio_island_map.jpg': '/Mappa/imperio_island_map.jpg',
 };
 
 export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): string | null {
@@ -151,8 +153,9 @@ export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): 
     if (clean.includes('4_6_Livingstone') || clean.includes('4_6_livingstone')) return '/Icone/sfondi/4_6_Livingstone.jpg';
     if (clean.includes('4_7_Ugolino') || clean.includes('4_7_ugolino')) return '/Icone/sfondi/4_7_Ugolino.jpg';
     if (clean.includes('4_7_Pedro_Carra') || clean.includes('4_7_pedro_carra')) return '/Audio/stacchetto/4_7_Pedro_Carra.mp3';
-    if (clean.includes('spiegazione_box1') || clean.includes('spiegazione_box1_audio')) return '/Audio/spiegazione_box1_audio.m4a';
-    if (clean.includes('Spiegazione') || clean.includes('spiegazione_fasi_audio')) return '/Audio/spiegazione_fasi_audio.mp3';
+    if (clean.includes('spiegazione_box1_ambientazione') || clean.includes('ambientazione')) return '/Mappa/spiegazione_box1_ambientazione.jpg';
+    if (clean.includes('spiegazione_box1_audio') || (clean.includes('spiegazione_box1') && (clean.endsWith('.m4a') || clean.endsWith('.mp3') || clean.endsWith('.wav')))) return '/Audio/spiegazione_box1_audio.m4a';
+    if (clean.includes('spiegazione_fasi_audio')) return '/Audio/spiegazione_fasi_audio.mp3';
     if (clean.includes('/') || clean.includes('\\')) {
       return null;
     }
@@ -196,9 +199,9 @@ export function sanitizeSetupStateWithKnownAssets<T>(obj: T): T {
     if (obj.includes('4_3_ArtemisIII') || obj.includes('4_3_artemis')) return '/Icone/sfondi/4_3_ArtemisIII.jpg' as unknown as T;
     if (obj.includes('4_6_Livingstone') || obj.includes('4_6_livingstone')) return '/Icone/sfondi/4_6_Livingstone.jpg' as unknown as T;
     if (obj.includes('4_7_Ugolino') || obj.includes('4_7_ugolino')) return '/Icone/sfondi/4_7_Ugolino.jpg' as unknown as T;
-    if (obj.includes('4_7_Pedro_Carra') || obj.includes('4_7_pedro_carra')) return '/Audio/stacchetto/4_7_Pedro_Carra.mp3' as unknown as T;
-    if (obj.includes('spiegazione_box1') || obj.includes('spiegazione_box1_audio')) return '/Audio/spiegazione_box1_audio.m4a' as unknown as T;
-    if (obj.includes('Spiegazione') || obj.includes('spiegazione_fasi_audio')) return '/Audio/spiegazione_fasi_audio.mp3' as unknown as T;
+    if (obj.includes('spiegazione_box1_ambientazione') || (obj.includes('spiegazione_box1') && (obj.endsWith('.jpg') || obj.endsWith('.png')))) return '/Mappa/spiegazione_box1_ambientazione.jpg' as unknown as T;
+    if (obj.includes('spiegazione_box1_audio') || (obj.includes('spiegazione_box1') && (obj.endsWith('.m4a') || obj.endsWith('.mp3') || obj.endsWith('.wav')))) return '/Audio/spiegazione_box1_audio.m4a' as unknown as T;
+    if (obj.includes('spiegazione_fasi_audio')) return '/Audio/spiegazione_fasi_audio.mp3' as unknown as T;
     if (obj.includes('exterior_00.webp')) return '/Icone/exterior_00.webp' as unknown as T;
     if (obj.includes('g01m05s01basso')) return '/Audio/strumenti/g01m05s01basso_nordsudovestest.mp3' as unknown as T;
     if (obj.includes('g01m05s02chitarra')) return '/Audio/strumenti/g01m05s02chitarra_nordsudovestest.mp3' as unknown as T;

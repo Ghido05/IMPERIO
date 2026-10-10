@@ -82,6 +82,8 @@ export interface Gioco5Setup {
   numeroDomande?: number;
   notePresentatore?: string;
   videoSpiegazione?: string;
+  sfondoSpiegazione?: string;
+  audioSpiegazione?: string;
 }
 
 export interface BoxGenericSetup {
@@ -129,6 +131,8 @@ export interface Gioco4Setup {
   sfondoGenerale?: string;
   notePresentatore?: string;
   videoSpiegazione?: string;
+  sfondoSpiegazione?: string;
+  audioSpiegazione?: string;
 }
 
 export interface NadiaQuestionItem {
@@ -153,18 +157,24 @@ export interface QuizSetupState {
   gioco1: {
     selectedQuestion: number;
     videoSpiegazione?: string;
+    sfondoSpiegazione?: string;
+    audioSpiegazione?: string;
     questions: Record<number, Gioco1Question>;
     sfondoGenerale?: string;
   };
   gioco2: {
     selectedQuestion: number;
     videoSpiegazione?: string;
+    sfondoSpiegazione?: string;
+    audioSpiegazione?: string;
     questions: Record<number, Gioco2Question>;
     sfondoGenerale?: string;
   };
   gioco3: {
     selectedQuestion: number;
     videoSpiegazione?: string;
+    sfondoSpiegazione?: string;
+    audioSpiegazione?: string;
     questions: Record<number, Gioco3Question>;
     sfondoGenerale?: string;
   };
@@ -291,8 +301,10 @@ function normalizeGioco3(
   if (!raw || typeof raw !== 'object') return def;
   const data = raw as any;
   return {
-    selectedQuestion: data.selectedQuestion || 1,
+    selectedQuestion: data.selectedQuestion !== undefined ? data.selectedQuestion : (def.selectedQuestion !== undefined ? def.selectedQuestion : 1),
     videoSpiegazione: data.videoSpiegazione || '',
+    sfondoSpiegazione: data.sfondoSpiegazione || '',
+    audioSpiegazione: data.audioSpiegazione || '',
     questions: data.questions ? { ...def.questions, ...data.questions } : def.questions,
     sfondoGenerale: data.sfondoGenerale || '',
   };
@@ -316,6 +328,8 @@ function normalizeGioco4(raw: any, def: Gioco4Setup): Gioco4Setup {
     frasi,
     sfondoGenerale: raw.sfondoGenerale || '',
     videoSpiegazione: raw.videoSpiegazione || '',
+    sfondoSpiegazione: raw.sfondoSpiegazione || '',
+    audioSpiegazione: raw.audioSpiegazione || '',
   };
 }
 
@@ -328,6 +342,8 @@ function normalizeGioco5(raw: any, def: Gioco5Setup): Gioco5Setup {
     numeroDomande: Number(raw.numeroDomande) || def.numeroDomande || 15,
     notePresentatore: raw.notePresentatore || '',
     videoSpiegazione: raw.videoSpiegazione || '',
+    sfondoSpiegazione: raw.sfondoSpiegazione || '',
+    audioSpiegazione: raw.audioSpiegazione || '',
   };
 }
 
@@ -430,24 +446,32 @@ export function getDefaultSetupState(): QuizSetupState {
     gioco1: {
       selectedQuestion: 1,
       videoSpiegazione: '',
+      sfondoSpiegazione: '/Mappa/spiegazione_box1_ambientazione.jpg',
+      audioSpiegazione: '/Audio/spiegazione_box1_audio.m4a',
       questions: q1,
       sfondoGenerale: '/Icone/sfondi/sfondo_box1_foresta_musicale.jpg',
     },
     gioco2: {
       selectedQuestion: 1,
       videoSpiegazione: '',
+      sfondoSpiegazione: '',
+      audioSpiegazione: '',
       questions: q2,
       sfondoGenerale: '/Icone/sfondi/sfondo_box2_cristalli.jpg',
     },
     gioco3: {
       selectedQuestion: 1,
       videoSpiegazione: '',
+      sfondoSpiegazione: '',
+      audioSpiegazione: '',
       questions: q3,
       sfondoGenerale: '',
     },
     gioco4: {
       titolo: 'Frase Tempo',
       videoSpiegazione: '',
+      sfondoSpiegazione: '',
+      audioSpiegazione: '',
       note: 'Inserisci le frasi da indovinare per il gioco Frase Tempo',
       frasi: DEFAULT_FRASI_TEMPO.map((testo) => createDefaultFraseTempoItem(testo)),
       sfondoGenerale: '',
@@ -455,6 +479,8 @@ export function getDefaultSetupState(): QuizSetupState {
     gioco5: {
       titolo: 'GIOCO 5 - Finale a Squadre',
       videoSpiegazione: '',
+      sfondoSpiegazione: '',
+      audioSpiegazione: '',
       sottotitolo: 'Sfida con dado, omini sui cubi 3D e 4 bonus per squadra',
       sfondoGenerale: '/sfondo_finale_acqua.jpg',
       numeroDomande: 15,
@@ -846,14 +872,21 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           nadia: normalizeNadia(loadedState.nadia, def.nadia!),
           box0: normalizeBox0(loadedState.box0, def.box0!),
           gioco1: {
-            selectedQuestion: loadedState.gioco1?.selectedQuestion || 1,
+            selectedQuestion: loadedState.gioco1?.selectedQuestion !== undefined ? loadedState.gioco1.selectedQuestion : 1,
             videoSpiegazione: loadedState.gioco1?.videoSpiegazione || '',
+            sfondoSpiegazione: (() => {
+              const sf = loadedState.gioco1?.sfondoSpiegazione;
+              return sf && !/\.(m4a|mp3|wav|ogg|aac)($|\?)/i.test(sf) ? sf : '/Mappa/spiegazione_box1_ambientazione.jpg';
+            })(),
+            audioSpiegazione: loadedState.gioco1?.audioSpiegazione !== undefined ? loadedState.gioco1.audioSpiegazione : '/Audio/spiegazione_box1_audio.m4a',
             questions: { ...def.gioco1.questions, ...loadedState.gioco1?.questions },
             sfondoGenerale: loadedState.gioco1?.sfondoGenerale || '',
           },
           gioco2: {
-            selectedQuestion: loadedState.gioco2?.selectedQuestion || 1,
+            selectedQuestion: loadedState.gioco2?.selectedQuestion !== undefined ? loadedState.gioco2.selectedQuestion : 1,
             videoSpiegazione: loadedState.gioco2?.videoSpiegazione || '',
+            sfondoSpiegazione: loadedState.gioco2?.sfondoSpiegazione || '',
+            audioSpiegazione: loadedState.gioco2?.audioSpiegazione || '',
             questions: { ...def.gioco2.questions, ...loadedState.gioco2?.questions },
             sfondoGenerale: loadedState.gioco2?.sfondoGenerale || '',
           },
@@ -1371,6 +1404,33 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     audio.onended = () => setNadiaAudioPlaying(false);
   };
 
+  // Preview audio generico per spiegazioni e test audio nei box
+  const [previewAudioUrl, setPreviewAudioUrl] = useState<string | null>(null);
+  const previewAudioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  const togglePreviewAudio = (src: string) => {
+    if (!src) return;
+    if (previewAudioUrl === src && previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.currentTime = 0;
+      setPreviewAudioUrl(null);
+      return;
+    }
+    if (previewAudioRef.current) {
+      previewAudioRef.current.pause();
+      previewAudioRef.current.currentTime = 0;
+    }
+    const audio = new Audio(assetUrl(src));
+    previewAudioRef.current = audio;
+    audio.play()
+      .then(() => setPreviewAudioUrl(src))
+      .catch((err) => {
+        console.warn('Errore riproduzione preview audio:', err);
+        setPreviewAudioUrl(null);
+      });
+    audio.onended = () => setPreviewAudioUrl(null);
+  };
+
   // Box 1 Question & Data getters/setters
   const currentQ1Num = state.gioco1.selectedQuestion;
   const currentQ1 = state.gioco1.questions[currentQ1Num] || createDefaultGioco1Question();
@@ -1405,7 +1465,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     }));
   };
 
-  const currentQ3Num = state.gioco3?.selectedQuestion || 1;
+  const currentQ3Num = state.gioco3?.selectedQuestion !== undefined ? state.gioco3.selectedQuestion : 1;
   const rawQ3 = state.gioco3?.questions?.[currentQ3Num] || createDefaultGioco3Question();
   const currentQ3: Gioco3Question = {
     ...createDefaultGioco3Question(),
@@ -2336,10 +2396,10 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
             {/* Controls Bar: Question & Type Selectors */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
-              {/* Question Selector (1 to 10) */}
+              {/* Question Selector (0 = Spiegazione, 1 to 10) */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Seleziona Domanda (1 - 10):
+                  Seleziona Contenuto Box 1:
                 </label>
                 <select
                   value={currentQ1Num}
@@ -2354,6 +2414,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   }
                   className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-[#d24726]"
                 >
+                  <option value={0}>🗺️ Spiegazione Regole</option>
                   {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                     <option key={n} value={n}>
                       Domanda #{n}
@@ -2362,26 +2423,236 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 </select>
               </div>
 
-              {/* Type Selector ("canzone" | "immagine") */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Tipo di Domanda:
-                </label>
-                <select
-                  value={currentQ1.tipo}
-                  onChange={(e) =>
-                    updateQ1((prev) => ({
-                      ...prev,
-                      tipo: e.target.value as 'canzone' | 'immagine',
-                    }))
-                  }
-                  className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-[#d24726]"
-                >
-                  <option value="canzone">🎵 Canzone</option>
-                  <option value="immagine">🖼️ Immagine</option>
-                </select>
-              </div>
+              {/* Type Selector ("canzone" | "immagine") o Badge Spiegazione */}
+              {currentQ1Num === 0 ? (
+                <div className="flex flex-col justify-center">
+                  <span className="block text-xs font-semibold text-slate-400 mb-1.5">
+                    Contenuto Attivo:
+                  </span>
+                  <div className="px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-xs flex items-center gap-2">
+                    <span>🗺️</span> Spiegazione Regole Olografica
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Tipo di Domanda:
+                  </label>
+                  <select
+                    value={currentQ1.tipo}
+                    onChange={(e) =>
+                      updateQ1((prev) => ({
+                        ...prev,
+                        tipo: e.target.value as 'canzone' | 'immagine',
+                      }))
+                    }
+                    className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-[#d24726]"
+                  >
+                    <option value="canzone">🎵 Canzone</option>
+                    <option value="immagine">🖼️ Immagine</option>
+                  </select>
+                </div>
+              )}
             </div>
+
+            {currentQ1Num === 0 ? (
+              /* ==================== PANNELLO SPIEGAZIONE BOX 1 ==================== */
+              <div className="space-y-4">
+                {/* 1. Sfondo Spiegazione Regole Box 1 */}
+                <div className="bg-[#120f1e] p-4 rounded-xl border border-amber-500/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🖼️</span> Sfondo Spiegazione Regole Box 1
+                    </span>
+                    <span className="text-[10px] text-white/40">Immagine olografica di sfondo per la spiegazione</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.gioco1.sfondoSpiegazione?.startsWith('data:') || state.gioco1.sfondoSpiegazione?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                          🖼️ {formatBase64Info(state.gioco1.sfondoSpiegazione)?.name || 'Sfondo Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, sfondoSpiegazione: '' } }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Percorso URL sfondo (default: /Mappa/spiegazione_box1_ambientazione.jpg)..."
+                        value={state.gioco1.sfondoSpiegazione && !/\.(m4a|mp3|wav|ogg|aac)($|\?)/i.test(state.gioco1.sfondoSpiegazione) ? state.gioco1.sfondoSpiegazione : '/Mappa/spiegazione_box1_ambientazione.jpg'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, sfondoSpiegazione: val } }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
+                      />
+                    )}
+                    {state.gioco1.sfondoSpiegazione !== '/Mappa/spiegazione_box1_ambientazione.jpg' && (
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, sfondoSpiegazione: '/Mappa/spiegazione_box1_ambientazione.jpg' } }))}
+                        className="px-2 py-1 text-[10px] font-semibold bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded cursor-pointer shrink-0 text-center"
+                      >
+                        Default Mappa
+                      </button>
+                    )}
+                    <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🖼️ Sfoglia
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, sfondoSpiegazione: base64 } }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  {/* Thumbnail Preview */}
+                  {(() => {
+                    const previewPath = (state.gioco1.sfondoSpiegazione && !/\.(m4a|mp3|wav|ogg|aac)($|\?)/i.test(state.gioco1.sfondoSpiegazione))
+                      ? state.gioco1.sfondoSpiegazione
+                      : '/Mappa/spiegazione_box1_ambientazione.jpg';
+                    return (
+                      <div className="relative w-full h-36 rounded-lg overflow-hidden border border-white/10 bg-black/40 mt-2">
+                        <img
+                          key={previewPath}
+                          src={assetUrl(previewPath)}
+                          alt="Anteprima Sfondo Spiegazione Box 1"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2.5">
+                          <span className="text-[11px] text-white/80 font-medium">Anteprima Sfondo Spiegazione Box 1</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* 2. Audio Spiegazione Regole Box 1 (Voce Narrante) */}
+                <div className="bg-[#120f1e] p-4 rounded-xl border border-amber-500/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🎵</span> Audio Spiegazione Box 1 (Voce Narrante)
+                    </span>
+                    <span className="text-[10px] text-white/40">Traccia audio sincronizzata con le 4 regole</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.gioco1.audioSpiegazione?.startsWith('data:') || state.gioco1.audioSpiegazione?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                          🎵 {formatBase64Info(state.gioco1.audioSpiegazione)?.name || 'Audio Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, audioSpiegazione: '/Audio/spiegazione_box1_audio.m4a' } }))}
+                          className="text-amber-400 hover:text-amber-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Ripristina Default
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Percorso audio (default: /Audio/spiegazione_box1_audio.m4a)..."
+                        value={state.gioco1.audioSpiegazione !== undefined ? state.gioco1.audioSpiegazione : '/Audio/spiegazione_box1_audio.m4a'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, audioSpiegazione: val } }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
+                      />
+                    )}
+
+                    {/* Bottone Ascolta / Pausa */}
+                    <button
+                      type="button"
+                      onClick={() => togglePreviewAudio(state.gioco1.audioSpiegazione || '/Audio/spiegazione_box1_audio.m4a')}
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors ${
+                        previewAudioUrl === (state.gioco1.audioSpiegazione || '/Audio/spiegazione_box1_audio.m4a')
+                          ? 'bg-amber-500 text-slate-950 font-black'
+                          : 'bg-white/10 hover:bg-white/15 text-white'
+                      }`}
+                    >
+                      {previewAudioUrl === (state.gioco1.audioSpiegazione || '/Audio/spiegazione_box1_audio.m4a') ? '⏸ Ferma' : '▶ Ascolta'}
+                    </button>
+
+                    <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🎵 Sfoglia
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, audioSpiegazione: base64 } }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* 3. Video Spiegazione Box 1 (Opzionale) */}
+                <div className="bg-[#120f1e] p-4 rounded-xl border border-amber-500/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🎬</span> Video Spiegazione Box 1 (Opzionale)
+                    </span>
+                    <span className="text-[10px] text-white/40">Se preferisci un video al posto della scheda interattiva</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.gioco1.videoSpiegazione?.startsWith('data:') || state.gioco1.videoSpiegazione?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                          🎬 {formatBase64Info(state.gioco1.videoSpiegazione)?.name || 'Video Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, videoSpiegazione: '' } }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Percorso o URL video opzionale..."
+                        value={state.gioco1.videoSpiegazione || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, videoSpiegazione: val } }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
+                      />
+                    )}
+                    <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🎬 Sfoglia
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, videoSpiegazione: base64 } }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
 
             {/* Sezione Sfondi Box 1 */}
             <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
@@ -2489,55 +2760,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               </div>
             </div>
 
-            {/* Video Spiegazione Box 1 */}
-            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>🎬</span> Video Spiegazione Box 1
-                </span>
-                <span className="text-[10px] text-white/50">Mostrato prima della Domanda #1</span>
-              </div>
-              <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
-                {state.gioco1.videoSpiegazione?.startsWith('data:') || state.gioco1.videoSpiegazione?.startsWith('idb://') ? (
-                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
-                    <span className="text-emerald-400 font-medium truncate max-w-[200px]">
-                      🎬 {formatBase64Info(state.gioco1.videoSpiegazione)?.name || 'Video Caricato'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, videoSpiegazione: '' } }))}
-                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
-                    >
-                      Rimuovi
-                    </button>
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="Percorso o URL video spiegazione (es. /Video/spiegazione_box1.mp4)..."
-                    value={state.gioco1.videoSpiegazione || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, videoSpiegazione: val } }));
-                    }}
-                    className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-[#d24726]"
-                  />
-                )}
-                <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                  🎬 Sfoglia
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={(e) =>
-                      handleFileUpload(e, (base64) =>
-                        setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, videoSpiegazione: base64 } }))
-                      )
-                    }
-                  />
-                </label>
-              </div>
-            </div>
+
 
             {/* Dynamic Form based on Type */}
             {currentQ1.tipo === 'canzone' ? (
@@ -3007,6 +3230,8 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-500 transition-colors resize-none"
               />
             </div>
+              </>
+            )}
           </div>
 
           {/* ==================== BOX 2: GIOCO 2 ==================== */}
@@ -3029,10 +3254,10 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
             {/* Controls Bar: Question & Type Selectors */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
-              {/* Question Selector (1 to 6) */}
+              {/* Question Selector (0 = Spiegazione, 1 to 6) */}
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Seleziona Domanda (1 - 6):
+                  Seleziona Contenuto Box 2:
                 </label>
                 <select
                   value={currentQ2Num}
@@ -3047,6 +3272,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   }
                   className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500"
                 >
+                  <option value={0}>🗺️ Spiegazione Regole</option>
                   {[1, 2, 3, 4, 5, 6].map((n) => (
                     <option key={n} value={n}>
                       Domanda #{n}
@@ -3055,26 +3281,223 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 </select>
               </div>
 
-              {/* Type Selector ("canzone" | "immagine") */}
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Tipo di Domanda:
-                </label>
-                <select
-                  value={currentQ2.tipo}
-                  onChange={(e) =>
-                    updateQ2((prev) => ({
-                      ...prev,
-                      tipo: e.target.value as 'canzone' | 'immagine',
-                    }))
-                  }
-                  className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500"
-                >
-                  <option value="canzone">🎵 Canzone</option>
-                  <option value="immagine">🖼️ Immagine</option>
-                </select>
-              </div>
+              {/* Type Selector ("canzone" | "immagine") o Badge Spiegazione */}
+              {currentQ2Num === 0 ? (
+                <div className="flex flex-col justify-center">
+                  <span className="block text-xs font-semibold text-slate-400 mb-1.5">
+                    Contenuto Attivo:
+                  </span>
+                  <div className="px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-bold text-xs flex items-center gap-2">
+                    <span>🗺️</span> Spiegazione Regole Classifiche
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                    Tipo di Domanda:
+                  </label>
+                  <select
+                    value={currentQ2.tipo}
+                    onChange={(e) =>
+                      updateQ2((prev) => ({
+                        ...prev,
+                        tipo: e.target.value as 'canzone' | 'immagine',
+                      }))
+                    }
+                    className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value="canzone">🎵 Canzone</option>
+                    <option value="immagine">🖼️ Immagine</option>
+                  </select>
+                </div>
+              )}
             </div>
+
+            {currentQ2Num === 0 ? (
+              /* ==================== PANNELLO SPIEGAZIONE BOX 2 ==================== */
+              <div className="space-y-4">
+                {/* 1. Sfondo Spiegazione Regole Box 2 */}
+                <div className="bg-[#120f1e] p-4 rounded-xl border border-indigo-500/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🖼️</span> Sfondo Spiegazione Regole Box 2
+                    </span>
+                    <span className="text-[10px] text-white/40">Immagine di sfondo per la spiegazione</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.gioco2.sfondoSpiegazione?.startsWith('data:') || state.gioco2.sfondoSpiegazione?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                          🖼️ {formatBase64Info(state.gioco2.sfondoSpiegazione)?.name || 'Sfondo Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, sfondoSpiegazione: '' } }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Percorso URL sfondo (default: sfondo cristalli / blu)..."
+                        value={state.gioco2.sfondoSpiegazione || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, sfondoSpiegazione: val } }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                      />
+                    )}
+                    <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🖼️ Sfoglia
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, sfondoSpiegazione: base64 } }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+
+                  {/* Thumbnail Preview se presente */}
+                  {state.gioco2.sfondoSpiegazione && (
+                    <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/10 bg-black/40">
+                      <img
+                        src={assetUrl(state.gioco2.sfondoSpiegazione)}
+                        alt="Anteprima Sfondo Spiegazione Box 2"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2.5">
+                        <span className="text-[11px] text-white/80 font-medium">Anteprima Sfondo Spiegazione Box 2</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 2. Audio Spiegazione Regole Box 2 */}
+                <div className="bg-[#120f1e] p-4 rounded-xl border border-indigo-500/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🎵</span> Audio Spiegazione Box 2
+                    </span>
+                    <span className="text-[10px] text-white/40">Traccia audio della spiegazione</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.gioco2.audioSpiegazione?.startsWith('data:') || state.gioco2.audioSpiegazione?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                          🎵 {formatBase64Info(state.gioco2.audioSpiegazione)?.name || 'Audio Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, audioSpiegazione: '' } }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Percorso audio (es. /Audio/spiegazione_box2.mp3)..."
+                        value={state.gioco2.audioSpiegazione || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, audioSpiegazione: val } }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                      />
+                    )}
+
+                    {/* Bottone Ascolta / Pausa */}
+                    {state.gioco2.audioSpiegazione && (
+                      <button
+                        type="button"
+                        onClick={() => togglePreviewAudio(state.gioco2.audioSpiegazione!)}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors ${
+                          previewAudioUrl === state.gioco2.audioSpiegazione
+                            ? 'bg-indigo-500 text-white font-black'
+                            : 'bg-white/10 hover:bg-white/15 text-white'
+                        }`}
+                      >
+                        {previewAudioUrl === state.gioco2.audioSpiegazione ? '⏸ Ferma' : '▶ Ascolta'}
+                      </button>
+                    )}
+
+                    <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🎵 Sfoglia
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, audioSpiegazione: base64 } }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* 3. Video Spiegazione Box 2 (Opzionale) */}
+                <div className="bg-[#120f1e] p-4 rounded-xl border border-indigo-500/20 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🎬</span> Video Spiegazione Box 2 (Opzionale)
+                    </span>
+                    <span className="text-[10px] text-white/40">Se preferisci un video prima della domanda 1</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.gioco2.videoSpiegazione?.startsWith('data:') || state.gioco2.videoSpiegazione?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                          🎬 {formatBase64Info(state.gioco2.videoSpiegazione)?.name || 'Video Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, videoSpiegazione: '' } }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Percorso o URL video opzionale..."
+                        value={state.gioco2.videoSpiegazione || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, videoSpiegazione: val } }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
+                      />
+                    )}
+                    <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🎬 Sfoglia
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, videoSpiegazione: base64 } }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
 
             {/* Sezione Sfondi Box 2 */}
             <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
@@ -3182,55 +3605,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               </div>
             </div>
 
-            {/* Video Spiegazione Box 2 */}
-            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>🎬</span> Video Spiegazione Box 2
-                </span>
-                <span className="text-[10px] text-white/50">Mostrato prima della Domanda #1</span>
-              </div>
-              <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
-                {state.gioco2.videoSpiegazione?.startsWith('data:') || state.gioco2.videoSpiegazione?.startsWith('idb://') ? (
-                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
-                    <span className="text-emerald-400 font-medium truncate max-w-[200px]">
-                      🎬 {formatBase64Info(state.gioco2.videoSpiegazione)?.name || 'Video Caricato'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, videoSpiegazione: '' } }))}
-                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
-                    >
-                      Rimuovi
-                    </button>
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="Percorso o URL video spiegazione (es. /Video/spiegazione_box2.mp4)..."
-                    value={state.gioco2.videoSpiegazione || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, videoSpiegazione: val } }));
-                    }}
-                    className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500"
-                  />
-                )}
-                <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                  🎬 Sfoglia
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={(e) =>
-                      handleFileUpload(e, (base64) =>
-                        setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, videoSpiegazione: base64 } }))
-                      )
-                    }
-                  />
-                </label>
-              </div>
-            </div>
+
 
             {/* Dynamic Form based on Type */}
             {currentQ2.tipo === 'canzone' ? (
@@ -3724,6 +4099,8 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-500 transition-colors resize-none"
               />
             </div>
+              </>
+            )}
           </div>
 
         </div>
@@ -3745,34 +4122,242 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </span>
           </div>
 
-          {/* Question selector 1–3 */}
-          <div className="bg-white/5 p-4 rounded-xl border border-white/5 max-w-xs">
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-              Seleziona Domanda (1 - 3):
-            </label>
-            <select
-              value={currentQ3Num}
-              onChange={(e) =>
-                setState((prev) => {
-                  const gioco3 = normalizeGioco3(prev.gioco3, getDefaultSetupState().gioco3);
-                  return {
-                    ...prev,
-                    gioco3: {
-                      ...gioco3,
-                      selectedQuestion: Number(e.target.value),
-                    },
-                  };
-                })
-              }
-              className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-emerald-500"
-            >
-              {[1, 2, 3].map((n) => (
-                <option key={n} value={n}>
-                  Domanda #{n}
-                </option>
-              ))}
-            </select>
+          {/* Question selector 0 = Spiegazione, 1–3 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5 max-w-xl">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+                Seleziona Contenuto Box 3:
+              </label>
+              <select
+                value={currentQ3Num}
+                onChange={(e) =>
+                  setState((prev) => {
+                    const gioco3 = normalizeGioco3(prev.gioco3, getDefaultSetupState().gioco3);
+                    return {
+                      ...prev,
+                      gioco3: {
+                        ...gioco3,
+                        selectedQuestion: Number(e.target.value),
+                      },
+                    };
+                  })
+                }
+                className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-emerald-500"
+              >
+                <option value={0}>🗺️ Spiegazione Regole</option>
+                {[1, 2, 3].map((n) => (
+                  <option key={n} value={n}>
+                    Domanda #{n}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {currentQ3Num === 0 && (
+              <div className="flex flex-col justify-center">
+                <span className="block text-xs font-semibold text-slate-400 mb-1.5">
+                  Contenuto Attivo:
+                </span>
+                <div className="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-bold text-xs flex items-center gap-2">
+                  <span>🗺️</span> Spiegazione Regole Password
+                </div>
+              </div>
+            )}
           </div>
+
+          {currentQ3Num === 0 ? (
+            /* ==================== PANNELLO SPIEGAZIONE BOX 3 ==================== */
+            <div className="space-y-4">
+              {/* 1. Sfondo Spiegazione Regole Box 3 */}
+              <div className="bg-[#120f1e] p-4 rounded-xl border border-emerald-500/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🖼️</span> Sfondo Spiegazione Regole Box 3
+                  </span>
+                  <span className="text-[10px] text-white/40">Immagine di sfondo per la spiegazione</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco3.sfondoSpiegazione?.startsWith('data:') || state.gioco3.sfondoSpiegazione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                        🖼️ {formatBase64Info(state.gioco3.sfondoSpiegazione)?.name || 'Sfondo Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({ ...prev, gioco3: { ...prev.gioco3, sfondoSpiegazione: '' } }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso URL sfondo (default: tema smeraldo / isola)..."
+                      value={state.gioco3.sfondoSpiegazione || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({ ...prev, gioco3: { ...prev.gioco3, sfondoSpiegazione: val } }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400"
+                    />
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🖼️ Sfoglia
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({ ...prev, gioco3: { ...prev.gioco3, sfondoSpiegazione: base64 } }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+
+                {/* Thumbnail Preview se presente */}
+                {state.gioco3.sfondoSpiegazione && (
+                  <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/10 bg-black/40">
+                    <img
+                      src={assetUrl(state.gioco3.sfondoSpiegazione)}
+                      alt="Anteprima Sfondo Spiegazione Box 3"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-2.5">
+                      <span className="text-[11px] text-white/80 font-medium">Anteprima Sfondo Spiegazione Box 3</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Audio Spiegazione Regole Box 3 */}
+              <div className="bg-[#120f1e] p-4 rounded-xl border border-emerald-500/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🎵</span> Audio Spiegazione Box 3
+                  </span>
+                  <span className="text-[10px] text-white/40">Traccia audio della spiegazione</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco3.audioSpiegazione?.startsWith('data:') || state.gioco3.audioSpiegazione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                        🎵 {formatBase64Info(state.gioco3.audioSpiegazione)?.name || 'Audio Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({ ...prev, gioco3: { ...prev.gioco3, audioSpiegazione: '' } }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso audio (es. /Audio/spiegazione_box3.mp3)..."
+                      value={state.gioco3.audioSpiegazione || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({ ...prev, gioco3: { ...prev.gioco3, audioSpiegazione: val } }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400"
+                    />
+                  )}
+
+                  {/* Bottone Ascolta / Pausa */}
+                  {state.gioco3.audioSpiegazione && (
+                    <button
+                      type="button"
+                      onClick={() => togglePreviewAudio(state.gioco3.audioSpiegazione!)}
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors ${
+                        previewAudioUrl === state.gioco3.audioSpiegazione
+                          ? 'bg-emerald-500 text-slate-950 font-black'
+                          : 'bg-white/10 hover:bg-white/15 text-white'
+                      }`}
+                    >
+                      {previewAudioUrl === state.gioco3.audioSpiegazione ? '⏸ Ferma' : '▶ Ascolta'}
+                    </button>
+                  )}
+
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎵 Sfoglia
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({ ...prev, gioco3: { ...prev.gioco3, audioSpiegazione: base64 } }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* 3. Video Spiegazione Box 3 (Opzionale) */}
+              <div className="bg-[#120f1e] p-4 rounded-xl border border-emerald-500/20 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🎬</span> Video Spiegazione Box 3 (Opzionale)
+                  </span>
+                  <span className="text-[10px] text-white/40">Se preferisci un video prima della manche 1</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco3.videoSpiegazione?.startsWith('data:') || state.gioco3.videoSpiegazione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                        🎬 {formatBase64Info(state.gioco3.videoSpiegazione)?.name || 'Video Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({
+                          ...prev,
+                          gioco3: { ...prev.gioco3, videoSpiegazione: '' }
+                        }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso o URL video opzionale..."
+                      value={state.gioco3.videoSpiegazione || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({
+                          ...prev,
+                          gioco3: { ...prev.gioco3, videoSpiegazione: val }
+                        }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                    />
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎬 Sfoglia
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({
+                            ...prev,
+                            gioco3: { ...prev.gioco3, videoSpiegazione: base64 }
+                          }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
 
           {/* Sezione Sfondi e Musica Intro Box 3 */}
           <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
@@ -3877,64 +4462,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </div>
           </div>
 
-          {/* Video Spiegazione Box 3 */}
-          <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                <span>🎬</span> Video Spiegazione Box 3
-              </span>
-              <span className="text-[10px] text-white/50">Mostrato prima della Manche #1</span>
-            </div>
-            <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
-              {state.gioco3.videoSpiegazione?.startsWith('data:') || state.gioco3.videoSpiegazione?.startsWith('idb://') ? (
-                <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
-                  <span className="text-emerald-400 font-medium truncate max-w-[200px]">
-                    🎬 {formatBase64Info(state.gioco3.videoSpiegazione)?.name || 'Video Caricato'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setState(prev => ({
-                      ...prev,
-                      gioco3: { ...prev.gioco3, videoSpiegazione: '' }
-                    }))}
-                    className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
-                  >
-                    Rimuovi
-                  </button>
-                </div>
-              ) : (
-                <input
-                  type="text"
-                  placeholder="Percorso o URL video spiegazione (es. /Video/spiegazione_box3.mp4)..."
-                  value={state.gioco3.videoSpiegazione || ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setState(prev => ({
-                      ...prev,
-                      gioco3: { ...prev.gioco3, videoSpiegazione: val }
-                    }));
-                  }}
-                  className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
-                />
-              )}
-              <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                🎬 Sfoglia
-                <input
-                  type="file"
-                  accept="video/*"
-                  className="hidden"
-                  onChange={(e) =>
-                    handleFileUpload(e, (base64) =>
-                      setState(prev => ({
-                        ...prev,
-                        gioco3: { ...prev.gioco3, videoSpiegazione: base64 }
-                      }))
-                    )
-                  }
-                />
-              </label>
-            </div>
-          </div>
+
 
           <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-4">
             <div className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -4198,6 +4726,8 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500 transition-colors resize-none"
             />
           </div>
+            </>
+          )}
         </div>
 
         {/* BOX 4 — Frase Tempo (Full Width, BOX 5 rimosso dal setup) */}
@@ -4276,62 +4806,185 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               </div>
             </div>
 
-            {/* Video Spiegazione Box 4 */}
-            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
+            {/* Spiegazione Regole Box 4 */}
+            <div className="bg-[#18181b]/80 p-4 rounded-xl border border-cyan-500/20 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>🎬</span> Video Spiegazione Box 4
+                <span className="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🗺️</span> Spiegazione Regole Box 4 (Frase Tempo)
                 </span>
-                <span className="text-[10px] text-white/50">Mostrato prima della Frase #1</span>
+                <span className="text-[10px] text-cyan-400/60">Mostrata prima della Frase #1</span>
               </div>
-              <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
-                {state.gioco4.videoSpiegazione?.startsWith('data:') || state.gioco4.videoSpiegazione?.startsWith('idb://') ? (
-                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
-                    <span className="text-emerald-400 font-medium truncate max-w-[200px]">
-                      🎬 {formatBase64Info(state.gioco4.videoSpiegazione)?.name || 'Video Caricato'}
-                    </span>
+
+              {/* 1. Sfondo Spiegazione Box 4 */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-300">
+                  Sfondo Spiegazione Box 4:
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco4.sfondoSpiegazione?.startsWith('data:') || state.gioco4.sfondoSpiegazione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                        🖼️ {formatBase64Info(state.gioco4.sfondoSpiegazione)?.name || 'Sfondo Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({ ...prev, gioco4: { ...prev.gioco4, sfondoSpiegazione: '' } }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso URL sfondo spiegazione..."
+                      value={state.gioco4.sfondoSpiegazione || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({ ...prev, gioco4: { ...prev.gioco4, sfondoSpiegazione: val } }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-400"
+                    />
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🖼️ Sfoglia
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({ ...prev, gioco4: { ...prev.gioco4, sfondoSpiegazione: base64 } }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+                {state.gioco4.sfondoSpiegazione && (
+                  <div className="relative w-full h-28 rounded-lg overflow-hidden border border-white/10 bg-black/40 mt-2">
+                    <img
+                      src={assetUrl(state.gioco4.sfondoSpiegazione)}
+                      alt="Anteprima Sfondo Spiegazione Box 4"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Audio Spiegazione Box 4 */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-300">
+                  Audio Spiegazione Box 4 (Voce Narrante / Audio):
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco4.audioSpiegazione?.startsWith('data:') || state.gioco4.audioSpiegazione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                        🎵 {formatBase64Info(state.gioco4.audioSpiegazione)?.name || 'Audio Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({ ...prev, gioco4: { ...prev.gioco4, audioSpiegazione: '' } }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso URL audio spiegazione..."
+                      value={state.gioco4.audioSpiegazione || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({ ...prev, gioco4: { ...prev.gioco4, audioSpiegazione: val } }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-400"
+                    />
+                  )}
+                  {state.gioco4.audioSpiegazione && (
                     <button
                       type="button"
-                      onClick={() => setState(prev => ({
-                        ...prev,
-                        gioco4: { ...prev.gioco4, videoSpiegazione: '' }
-                      }))}
-                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      onClick={() => togglePreviewAudio(state.gioco4.audioSpiegazione!)}
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors ${
+                        previewAudioUrl === state.gioco4.audioSpiegazione
+                          ? 'bg-cyan-500 text-slate-950 font-black'
+                          : 'bg-white/10 hover:bg-white/15 text-white'
+                      }`}
                     >
-                      Rimuovi
+                      {previewAudioUrl === state.gioco4.audioSpiegazione ? '⏸ Ferma' : '▶ Ascolta'}
                     </button>
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="Percorso o URL video spiegazione (es. /Video/spiegazione_box4.mp4)..."
-                    value={state.gioco4.videoSpiegazione || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setState(prev => ({
-                        ...prev,
-                        gioco4: { ...prev.gioco4, videoSpiegazione: val }
-                      }));
-                    }}
-                    className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500"
-                  />
-                )}
-                <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                  🎬 Sfoglia
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={(e) =>
-                      handleFileUpload(e, (base64) =>
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎵 Sfoglia
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({ ...prev, gioco4: { ...prev.gioco4, audioSpiegazione: base64 } }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* 3. Video Spiegazione Box 4 (Opzionale) */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-300">
+                  Video Spiegazione Box 4 (Opzionale):
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco4.videoSpiegazione?.startsWith('data:') || state.gioco4.videoSpiegazione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                        🎬 {formatBase64Info(state.gioco4.videoSpiegazione)?.name || 'Video Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({
+                          ...prev,
+                          gioco4: { ...prev.gioco4, videoSpiegazione: '' }
+                        }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso o URL video spiegazione (es. /Video/spiegazione_box4.mp4)..."
+                      value={state.gioco4.videoSpiegazione || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
                         setState(prev => ({
                           ...prev,
-                          gioco4: { ...prev.gioco4, videoSpiegazione: base64 }
-                        }))
-                      )
-                    }
-                  />
-                </label>
+                          gioco4: { ...prev.gioco4, videoSpiegazione: val }
+                        }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-500"
+                    />
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎬 Sfoglia
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({
+                            ...prev,
+                            gioco4: { ...prev.gioco4, videoSpiegazione: base64 }
+                          }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -4635,62 +5288,179 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               )}
             </div>
 
-            {/* Video Spiegazione Box 5 */}
-            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-2">
+            {/* Spiegazione Regole Box 5 */}
+            <div className="bg-[#18181b]/80 p-4 rounded-xl border border-red-500/20 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>🎬</span> Video Spiegazione Box 5
+                <span className="text-xs font-bold text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🗺️</span> Spiegazione Regole Box 5 (Finale a Squadre)
                 </span>
-                <span className="text-[10px] text-white/50">Mostrato prima del Gioco Finale</span>
+                <span className="text-[10px] text-red-400/60">Mostrata prima dell'inizio del gioco</span>
               </div>
-              <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
-                {state.gioco5.videoSpiegazione?.startsWith('data:') || state.gioco5.videoSpiegazione?.startsWith('idb://') ? (
-                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
-                    <span className="text-emerald-400 font-medium truncate max-w-[200px]">
-                      🎬 {formatBase64Info(state.gioco5.videoSpiegazione)?.name || 'Video Caricato'}
-                    </span>
+
+              {/* 1. Sfondo Spiegazione Box 5 */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-300">
+                  Sfondo Spiegazione Box 5:
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco5.sfondoSpiegazione?.startsWith('data:') || state.gioco5.sfondoSpiegazione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                        🖼️ {formatBase64Info(state.gioco5.sfondoSpiegazione)?.name || 'Sfondo Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({ ...prev, gioco5: { ...prev.gioco5, sfondoSpiegazione: '' } }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso URL sfondo spiegazione..."
+                      value={state.gioco5.sfondoSpiegazione || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({ ...prev, gioco5: { ...prev.gioco5, sfondoSpiegazione: val } }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-red-400"
+                    />
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🖼️ Sfoglia
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({ ...prev, gioco5: { ...prev.gioco5, sfondoSpiegazione: base64 } }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+                {state.gioco5.sfondoSpiegazione && (
+                  <div className="relative w-full h-28 rounded-lg overflow-hidden border border-white/10 bg-black/40 mt-2">
+                    <img
+                      src={assetUrl(state.gioco5.sfondoSpiegazione)}
+                      alt="Anteprima Sfondo Spiegazione Box 5"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Audio Spiegazione Box 5 */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-300">
+                  Audio Spiegazione Box 5 (Voce Narrante / Audio):
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco5.audioSpiegazione?.startsWith('data:') || state.gioco5.audioSpiegazione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                        🎵 {formatBase64Info(state.gioco5.audioSpiegazione)?.name || 'Audio Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({ ...prev, gioco5: { ...prev.gioco5, audioSpiegazione: '' } }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso URL audio spiegazione..."
+                      value={state.gioco5.audioSpiegazione || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({ ...prev, gioco5: { ...prev.gioco5, audioSpiegazione: val } }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-red-400"
+                    />
+                  )}
+                  {state.gioco5.audioSpiegazione && (
                     <button
                       type="button"
-                      onClick={() => setState(prev => ({
-                        ...prev,
-                        gioco5: { ...prev.gioco5, videoSpiegazione: '' }
-                      }))}
-                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      onClick={() => togglePreviewAudio(state.gioco5.audioSpiegazione!)}
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors ${
+                        previewAudioUrl === state.gioco5.audioSpiegazione
+                          ? 'bg-red-500 text-white font-black'
+                          : 'bg-white/10 hover:bg-white/15 text-white'
+                      }`}
                     >
-                      Rimuovi
+                      {previewAudioUrl === state.gioco5.audioSpiegazione ? '⏸ Ferma' : '▶ Ascolta'}
                     </button>
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="Percorso o URL video spiegazione (es. /Video/spiegazione_box5.mp4)..."
-                    value={state.gioco5.videoSpiegazione || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setState(prev => ({
-                        ...prev,
-                        gioco5: { ...prev.gioco5, videoSpiegazione: val }
-                      }));
-                    }}
-                    className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-red-500"
-                  />
-                )}
-                <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
-                  🎬 Sfoglia
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    onChange={(e) =>
-                      handleFileUpload(e, (base64) =>
-                        setState(prev => ({
-                          ...prev,
-                          gioco5: { ...prev.gioco5, videoSpiegazione: base64 }
-                        }))
-                      )
-                    }
-                  />
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎵 Sfoglia
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({ ...prev, gioco5: { ...prev.gioco5, audioSpiegazione: base64 } }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* 3. Video Spiegazione Box 5 (Opzionale) */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-slate-300">
+                  Video Spiegazione Box 5 (Opzionale):
                 </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco5.videoSpiegazione?.startsWith('data:') || state.gioco5.videoSpiegazione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                        🎬 {formatBase64Info(state.gioco5.videoSpiegazione)?.name || 'Video Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({
+                          ...prev,
+                          gioco5: { ...prev.gioco5, videoSpiegazione: '' }
+                        }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso o URL video spiegazione (es. /Video/spiegazione_box5.mp4)..."
+                      value={state.gioco5.videoSpiegazione || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({ ...prev, gioco5: { ...prev.gioco5, videoSpiegazione: val } }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-red-500"
+                    />
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎬 Sfoglia
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({ ...prev, gioco5: { ...prev.gioco5, videoSpiegazione: base64 } }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
               </div>
             </div>
 

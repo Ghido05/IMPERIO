@@ -37,7 +37,7 @@ export default function SlideRenderer({ type, interactive = true, revealAll = fa
       {type === 'classifica_generale' && <ClassificaGeneraleBoard />}
       {type === 'finale_squadre' && <FinaleSquadreBoard />}
       {type === 'scenetta' && <ScenettaBoard interactive={interactive} revealAll={revealAll} />}
-      {type === 'video' && <VideoBoard interactive={interactive} revealAll={revealAll} />}
+      {type === 'video' && <VideoBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
       {type === 'mappa_torneo' && <MappaTorneoBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
       {type === 'spiegazione_fasi' && <SpiegazioneFasiBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
       {type === 'spiegazione_box1' && <SpiegazioneBox1Board interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}

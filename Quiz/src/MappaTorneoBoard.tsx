@@ -13,6 +13,8 @@ export interface MappaTorneoData {
   sottotitolo?: string;
   slideId?: string;
   notePresentatore?: string;
+  sfondoSpiegazione?: string;
+  audioSpiegazione?: string;
 }
 
 interface MappaTorneoBoardProps {
@@ -254,6 +256,22 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
   const slideId = data?.slideId || `box${activeBox}_mappa_spiegazione`;
   const rawVideoUrl = data?.videoUrl || data?.src || '';
   const hasVideo = Boolean(rawVideoUrl);
+
+  // Identificazione modalità Relatore vs Schermo Pubblico
+  const isPresenterMode = useMemo(() => {
+    if (isPresenter !== undefined) return isPresenter;
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('sandbox') === 'true') return true;
+    if (
+      params.get('mode') === 'games' ||
+      params.get('mode') === 'scores' ||
+      params.get('project') === 'true'
+    ) {
+      return false;
+    }
+    return true;
+  }, [isPresenter]);
 
   // Nomi squadre sincronizzati dal setup
   const [teamNames, setTeamNames] = useState<string[]>(() => {
@@ -1074,18 +1092,21 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
               <GameDataProvider
                 data={{
                   src: rawVideoUrl,
-                  audioUrl: rawVideoUrl || '/Audio/spiegazione_box1_audio.m4a',
+                  sfondo: data?.sfondoSpiegazione || '/Mappa/spiegazione_box1_ambientazione.jpg',
+                  sfondoSpiegazione: data?.sfondoSpiegazione || '/Mappa/spiegazione_box1_ambientazione.jpg',
+                  audioUrl: data?.audioSpiegazione || rawVideoUrl || '/Audio/spiegazione_box1_audio.m4a',
+                  audioSpiegazione: data?.audioSpiegazione || rawVideoUrl || '/Audio/spiegazione_box1_audio.m4a',
                   titolo: `SPIEGAZIONE — ${targetZone.title}`,
                   sottotitolo: targetZone.subtitle,
                   slideId: `${slideId}_spiegazione_box1`,
                   notePresentatore: data?.notePresentatore || '',
                 }}
               >
-                <SpiegazioneBox1Board interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />
+                <SpiegazioneBox1Board interactive={interactive} revealAll={revealAll} isPresenter={isPresenterMode} />
               </GameDataProvider>
 
-              {/* Pulsante per Tornare alla Mappa in Alto a Destra */}
-              {interactive && (
+              {/* Pulsante per Tornare alla Mappa in Alto a Destra (Solo Relatore) */}
+              {interactive && isPresenterMode && (
                 <button
                   type="button"
                   onClick={handleReturnToMap}
@@ -1112,11 +1133,11 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
                   notePresentatore: data?.notePresentatore || '',
                 }}
               >
-                <VideoBoard interactive={interactive} revealAll={revealAll} />
+                <VideoBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenterMode} />
               </GameDataProvider>
 
-              {/* Pulsante per Tornare alla Mappa in Alto a Destra */}
-              {interactive && (
+              {/* Pulsante per Tornare alla Mappa in Alto a Destra (Solo Relatore) */}
+              {interactive && isPresenterMode && (
                 <button
                   type="button"
                   onClick={handleReturnToMap}
@@ -1144,15 +1165,17 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
                 <strong className="text-amber-300">{targetZone.title}</strong>.<br />
                 Puoi caricarlo dalla schermata <em>Setup Quiz</em>, oppure tornare alla mappa.
               </p>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleReturnToMap}
-                  className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
-                >
-                  🗺️ Torna alla Mappa
-                </button>
-              </div>
+              {isPresenterMode && (
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={handleReturnToMap}
+                    className="px-6 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                  >
+                    🗺️ Torna alla Mappa
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

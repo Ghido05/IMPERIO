@@ -100,7 +100,26 @@ export function getSlideForBoxQuestion(
       4: (setupState.gioco4 as any)?.videoSpiegazione || '',
       5: (setupState.gioco5 as any)?.videoSpiegazione || '',
     };
+    const boxSfondi: Record<number, string> = {
+      1: (() => {
+        const sf = setupState.gioco1?.sfondoSpiegazione;
+        return sf && !/\.(m4a|mp3|wav|ogg|aac)($|\?)/i.test(sf) ? sf : '/Mappa/spiegazione_box1_ambientazione.jpg';
+      })(),
+      2: setupState.gioco2?.sfondoSpiegazione || '',
+      3: setupState.gioco3?.sfondoSpiegazione || '',
+      4: (setupState.gioco4 as any)?.sfondoSpiegazione || '',
+      5: (setupState.gioco5 as any)?.sfondoSpiegazione || '',
+    };
+    const boxAudios: Record<number, string> = {
+      1: setupState.gioco1?.audioSpiegazione || '',
+      2: setupState.gioco2?.audioSpiegazione || '',
+      3: setupState.gioco3?.audioSpiegazione || '',
+      4: (setupState.gioco4 as any)?.audioSpiegazione || '',
+      5: (setupState.gioco5 as any)?.audioSpiegazione || '',
+    };
     const currentVideo = boxVideos[boxNum] || '';
+    const currentSfondo = boxSfondi[boxNum] || '';
+    const currentAudio = boxAudios[boxNum] || '';
     return {
       id: `box${boxNum}_mappa_spiegazione`,
       type: 'mappa_torneo',
@@ -108,6 +127,8 @@ export function getSlideForBoxQuestion(
         boxNum,
         src: currentVideo,
         videoUrl: currentVideo,
+        sfondoSpiegazione: currentSfondo,
+        audioSpiegazione: currentAudio,
         titolo: `MAPPA & SPIEGAZIONE — ${boxTitles[boxNum] || `BOX ${boxNum}`}`,
         sottotitolo: `Mappa dell'Isola e Spiegazione Regole`,
         slideId: `box${boxNum}_mappa_spiegazione`,
@@ -637,6 +658,9 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   const nadiaAudioRef = useRef<HTMLAudioElement | null>(null);
   const [nadiaAudioPlaying, setNadiaAudioPlaying] = useState(false);
 
+  // Transizione cinematica Box 1: da Spiegazione a Domanda 1
+  const [, setIsBox1Transitioning] = useSyncedState<boolean>('playstate_box1_transition', false);
+
   const teamNames = setupState.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
 
   // Trova se per lo slot corrente (Box + Domanda/Frase) c'è una domanda di Nadia assegnata
@@ -897,6 +921,14 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     } else {
       if (activeQuestion === 0) {
         // From Video Spiegazione to Question 1
+        if (activeBox === 1) {
+          setIsBox1Transitioning(true);
+          setTimeout(() => {
+            setActiveQuestion(1);
+            setIsBox1Transitioning(false);
+          }, 450);
+          return;
+        }
         setActiveQuestion(1);
         if (activeBox === 4) {
           setActivePhraseIndex(0);
@@ -955,6 +987,18 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
       }
     }
   };
+
+  // Ascolta l'evento di avanzamento dalla spiegazione del Box 1 alla Domanda 1
+  useEffect(() => {
+    const handleAdvanceEvent = () => {
+      if (activeBox === 1 && activeQuestion === 0) {
+        setActiveQuestion(1);
+        setIsBox1Transitioning(false);
+      }
+    };
+    window.addEventListener('imperio-advance-to-q1', handleAdvanceEvent);
+    return () => window.removeEventListener('imperio-advance-to-q1', handleAdvanceEvent);
+  }, [activeBox, activeQuestion, setIsBox1Transitioning]);
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#121214] text-white overflow-hidden font-sans">

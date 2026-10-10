@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useGameData, GameDataProvider } from './context/GameDataContext';
 import { useSyncedState } from './hooks/useSyncedState';
 import VideoBoard from './VideoBoard';
+import SpiegazioneBox1Board from './SpiegazioneBox1Board';
 import { assetUrl } from './lib/assetUrl';
 
 export interface MappaTorneoData {
@@ -17,6 +18,7 @@ export interface MappaTorneoData {
 interface MappaTorneoBoardProps {
   interactive?: boolean;
   revealAll?: boolean;
+  isPresenter?: boolean;
 }
 
 interface ZoneInfo {
@@ -246,7 +248,7 @@ function HeavyCloudBlanket({ isDissolving = false }: { isDissolving?: boolean })
   );
 }
 
-export default function MappaTorneoBoard({ interactive = true, revealAll = false }: MappaTorneoBoardProps) {
+export default function MappaTorneoBoard({ interactive = true, revealAll = false, isPresenter }: MappaTorneoBoardProps) {
   const data = useGameData<MappaTorneoData>();
   const activeBox = data?.boxNum && data.boxNum >= 1 && data.boxNum <= 5 ? data.boxNum : 1;
   const slideId = data?.slideId || `box${activeBox}_mappa_spiegazione`;
@@ -1066,7 +1068,38 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           ========================================================================= */}
       {showVideoOverlay && (
         <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center animate-fade-in">
-          {hasVideo ? (
+          {targetZone.id === 1 && (!hasVideo || rawVideoUrl.includes('spiegazione_box1') || rawVideoUrl.endsWith('.m4a') || rawVideoUrl.endsWith('.wav')) ? (
+            <div className="relative w-full h-full flex items-center justify-center">
+              {/* Scheda Spiegazione Regole Ufficiale Gioco 1 (Il mio nome è nessuno) */}
+              <GameDataProvider
+                data={{
+                  src: rawVideoUrl,
+                  audioUrl: rawVideoUrl || '/Audio/spiegazione_box1_audio.m4a',
+                  titolo: `SPIEGAZIONE — ${targetZone.title}`,
+                  sottotitolo: targetZone.subtitle,
+                  slideId: `${slideId}_spiegazione_box1`,
+                  notePresentatore: data?.notePresentatore || '',
+                }}
+              >
+                <SpiegazioneBox1Board interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />
+              </GameDataProvider>
+
+              {/* Pulsante per Tornare alla Mappa in Alto a Destra */}
+              {interactive && (
+                <button
+                  type="button"
+                  onClick={handleReturnToMap}
+                  className="absolute top-6 right-6 z-50 px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/20 text-white font-bold text-xs tracking-wider uppercase shadow-2xl backdrop-blur-md flex items-center gap-2 cursor-pointer transition-all hover:scale-105"
+                  title="Torna alla Mappa dell'Isola (M o ESC)"
+                >
+                  <span>🗺️ Torna alla Mappa</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 font-mono text-amber-300">
+                    M
+                  </span>
+                </button>
+              )}
+            </div>
+          ) : hasVideo ? (
             <div className="relative w-full h-full flex items-center justify-center">
               {/* Istanza di VideoBoard isolata per il video spiegazione del Box corrente */}
               <GameDataProvider

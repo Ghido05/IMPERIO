@@ -20,7 +20,8 @@ export type SlideType =
   | 'scenetta'
   | 'video'
   | 'mappa_torneo'
-  | 'spiegazione_fasi';
+  | 'spiegazione_fasi'
+  | 'spiegazione_box1';
 
 export interface Slide {
   id: string;

@@ -22,6 +22,7 @@ export const defaultGameDataMap: Record<Exclude<SlideType, 'empty'>, unknown> = 
   video: {},
   mappa_torneo: {},
   spiegazione_fasi: {},
+  spiegazione_box1: {},
 };
 
 export function cloneDefaultData(type: SlideType): unknown {

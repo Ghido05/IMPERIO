@@ -12,6 +12,7 @@ import PasswordPresceltiBoard from './Gioco password_prescelti_Board';
 import ClassificaGeneraleBoard from './ClassificaGenerale_Board';
 import FinaleSquadreBoard from './FinaleSquadre_Board';
 import SpiegazioneFasiBoard from './SpiegazioneFasiBoard';
+import SpiegazioneBox1Board from './SpiegazioneBox1Board';
 
 import defaultImgData from './data/Il mio nome è nessuno_img_Data.json';
 import defaultMusicData from './data/Il mio nome è nessuno_musicale_Data.json';
@@ -33,10 +34,11 @@ const defaultGameDataMap: Record<string, any> = {
   classifica_generale: {}, // Non ha JSON
   finale_squadre: {},
   spiegazione_fasi: {},
+  spiegazione_box1: {},
 };
 
 function App() {
-  const [game, setGame] = useState<'img' | 'music' | 'classifica' | 'classifica_musicale' | 'cruciverba' | 'gioco_frase_tempo' | 'password_squadre' | 'password_prescelti' | 'classifica_generale' | 'finale_squadre' | 'spiegazione_fasi'>(() => {
+  const [game, setGame] = useState<'img' | 'music' | 'classifica' | 'classifica_musicale' | 'cruciverba' | 'gioco_frase_tempo' | 'password_squadre' | 'password_prescelti' | 'classifica_generale' | 'finale_squadre' | 'spiegazione_fasi' | 'spiegazione_box1'>(() => {
     const params = new URLSearchParams(window.location.search);
     const gameParam = params.get('game');
     if (gameParam === 'musica') return 'music';
@@ -49,6 +51,7 @@ function App() {
     if (gameParam === 'classifica_generale') return 'classifica_generale';
     if (gameParam === 'finale_squadre') return 'finale_squadre';
     if (gameParam === 'spiegazione_fasi') return 'spiegazione_fasi';
+    if (gameParam === 'spiegazione_box1') return 'spiegazione_box1';
     return 'img';
   });
 
@@ -69,7 +72,8 @@ function App() {
         'password_prescelti': 'password_prescelti',
         'classifica_generale': 'classifica_generale',
         'finale_squadre': 'finale_squadre',
-        'spiegazione_fasi': 'spiegazione_fasi'
+        'spiegazione_fasi': 'spiegazione_fasi',
+        'spiegazione_box1': 'spiegazione_box1'
       };
       url.searchParams.set('game', paramMap[newGame] || newGame);
     }
@@ -92,6 +96,7 @@ function App() {
         {game === 'classifica_generale' && <ClassificaGeneraleBoard />}
         {game === 'finale_squadre' && <FinaleSquadreBoard />}
         {game === 'spiegazione_fasi' && <SpiegazioneFasiBoard />}
+        {game === 'spiegazione_box1' && <SpiegazioneBox1Board />}
       </GameDataProvider>
       
       {/* Piccolo selettore rapido in alto a sinistra - Nascosto in modalità proiezione */}
@@ -156,6 +161,12 @@ function App() {
             className={`px-3 py-1 rounded text-xs font-bold ${game === 'spiegazione_fasi' ? 'bg-amber-600 text-white' : 'bg-gray-800 text-gray-400'}`}
           >
             SPIEGAZIONE FASI
+          </button>
+          <button 
+            onClick={() => changeGame('spiegazione_box1')}
+            className={`px-3 py-1 rounded text-xs font-bold ${game === 'spiegazione_box1' ? 'bg-cyan-600 text-white' : 'bg-gray-800 text-gray-400'}`}
+          >
+            SPIEGAZIONE BOX 1
           </button>
           <button 
             onClick={() => window.open('?game=classifica_generale&project=true', '_blank', 'width=1280,height=720')}

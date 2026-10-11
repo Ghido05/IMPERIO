@@ -141,8 +141,8 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   // Sfondi Password
   'password1.png': '/Icone/Sfondi Password/password1.png',
   'password2.png': '/Icone/Sfondi Password/password2.png',
-  'exterior_00.webp': '/Icone/exterior_00.webp',
   'spiegazione_box1_ambientazione.jpg': '/Mappa/spiegazione_box1_ambientazione.jpg',
+  'sfondo_box4_orologi_tempo.jpg': '/Icone/sfondi/sfondo_box4_orologi_tempo.jpg',
   'imperio_island_map.jpg': '/Mappa/imperio_island_map.jpg',
 };
 

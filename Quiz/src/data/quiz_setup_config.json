@@ -398,10 +398,10 @@
   "gioco2": {
     "titolo": "Classifiche",
     "sottotitolo": "Classifica & Classifica Musicale",
-    "selectedQuestion": 0,
+    "selectedQuestion": 5,
     "videoSpiegazione": "",
-    "sfondoSpiegazione": "",
-    "audioSpiegazione": "",
+    "sfondoSpiegazione": "/Icone/sfondi/sfondo_box2_cristalli.jpg",
+    "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box2.mp3",
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -674,7 +674,7 @@
           "soluzioneAudio": "",
           "soluzioneTesto": ""
         },
-        "notePresentatore": "\"CONSIDERANDO I SOLI CREATOR E YOUTUBER DI CONTENUTI LUNGHI IN LINGUA ITALIANA, QUAL È IL CANALE CON IL MAGGIOR NUMERO DI VISUALIZZAZIONI TOTALI DELLA STORIA?\""
+        "notePresentatore": "\"CONSIDERANDO I SOLI CREATOR E YOUTUBER DI CONTENUTI LUNGHI IN LINGUA ITALIANA, QUAL È IL CANALE CON IL MAGGIOR NUMERO DI VISUALIZZAZIONI TOTALI DELLA STORIA?\"\n\nAccettiamo come risposta il nome dello youtuber"
       },
       "6": {
         "tipo": "immagine",
@@ -734,12 +734,12 @@
     "sfondoGenerale": "/Icone/sfondi/sfondo_box2_cristalli.jpg"
   },
   "gioco3": {
-    "titolo": "Password & Bussolotti",
+    "titolo": "Password",
     "sottotitolo": "Sfida a Squadre & Bussolotti",
     "selectedQuestion": 0,
     "videoSpiegazione": "",
-    "sfondoSpiegazione": "",
-    "audioSpiegazione": "",
+    "sfondoSpiegazione": "/Icone/sfondi/sfondo_box3_forzieri.jpg",
+    "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box3.mp3",
     "questions": {
       "1": {
         "sfondo": "/Icone/nessuno_img/3_1_superereoi.png",
@@ -1028,7 +1028,7 @@
     "sfondoGenerale": ""
   },
   "gioco4": {
-    "titolo": "Gioco 4",
+    "titolo": "Ultimo Colpo",
     "sottotitolo": "Corsa contro il Cronometro",
     "note": "Modulo Gioco 4 (in arrivo)",
     "frasi": [
@@ -1237,8 +1237,8 @@
     ],
     "sfondoGenerale": "",
     "videoSpiegazione": "",
-    "sfondoSpiegazione": "",
-    "audioSpiegazione": ""
+    "sfondoSpiegazione": "/Icone/sfondi/sfondo_box4_orologi_tempo.jpg",
+    "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box4.mp3"
   },
   "gioco5": {
     "titolo": "Gioco 5",

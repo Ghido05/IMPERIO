@@ -327,24 +327,6 @@ const ClassificaGenerale_Board: React.FC = () => {
     prevBoxRef.current = activeBox;
   }, [activeBox]);
 
-  // Supporto scorciatoia da tastiera "T" per rivedere la transizione dei punteggi e dello sfondo
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (
-        document.activeElement?.tagName === 'INPUT' ||
-        document.activeElement?.tagName === 'TEXTAREA'
-      ) {
-        return;
-      }
-      if (e.key === 't' || e.key === 'T') {
-        e.preventDefault();
-        setIsTransitioning(true);
-        setTimeout(() => setIsTransitioning(false), 2800);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
 
   return (
     <div className="relative w-[1920px] h-[1080px] bg-[#0a0a0a] text-white flex flex-col px-10 py-8 overflow-hidden font-sans select-none">

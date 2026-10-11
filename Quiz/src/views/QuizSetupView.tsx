@@ -511,7 +511,7 @@ export function getDefaultSetupState(): QuizSetupState {
       titolo: 'Frase Tempo',
       sottotitolo: 'Corsa contro il Cronometro',
       videoSpiegazione: '',
-      sfondoSpiegazione: '',
+      sfondoSpiegazione: '/Icone/sfondi/sfondo_box4_orologi_tempo.jpg',
       audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_box4.mp3',
       note: 'Inserisci le frasi da indovinare per il gioco Frase Tempo',
       frasi: DEFAULT_FRASI_TEMPO.map((testo) => createDefaultFraseTempoItem(testo)),
@@ -5189,7 +5189,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   ) : (
                     <input
                       type="text"
-                      placeholder="Percorso URL sfondo spiegazione..."
+                      placeholder="Percorso URL sfondo (default: /Icone/sfondi/sfondo_box4_orologi_tempo.jpg)..."
                       value={state.gioco4.sfondoSpiegazione || ''}
                       onChange={(e) => {
                         const val = e.target.value;

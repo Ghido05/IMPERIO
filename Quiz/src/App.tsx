@@ -21,7 +21,10 @@ export type SlideType =
   | 'video'
   | 'mappa_torneo'
   | 'spiegazione_fasi'
-  | 'spiegazione_box1';
+  | 'spiegazione_box1'
+  | 'spiegazione_box2'
+  | 'spiegazione_box3'
+  | 'spiegazione_box4';
 
 export interface Slide {
   id: string;

@@ -113,9 +113,18 @@ export function getSlideForBoxQuestion(
         const sf = setupState.gioco1?.sfondoSpiegazione;
         return sf && !/\.(m4a|mp3|wav|ogg|aac)($|\?)/i.test(sf) ? sf : '/Mappa/spiegazione_box1_ambientazione.jpg';
       })(),
-      2: setupState.gioco2?.sfondoSpiegazione || '',
-      3: setupState.gioco3?.sfondoSpiegazione || '',
-      4: (setupState.gioco4 as any)?.sfondoSpiegazione || '',
+      2: (() => {
+        const sf = setupState.gioco2?.sfondoSpiegazione;
+        return sf && !/\.(m4a|mp3|wav|ogg|aac)($|\?)/i.test(sf) ? sf : '/Icone/sfondi/sfondo_box2_cristalli.jpg';
+      })(),
+      3: (() => {
+        const sf = setupState.gioco3?.sfondoSpiegazione;
+        return sf && !/\.(m4a|mp3|wav|ogg|aac)($|\?)/i.test(sf) ? sf : '/Icone/sfondi/sfondo_box3_forzieri.jpg';
+      })(),
+      4: (() => {
+        const sf = (setupState.gioco4 as any)?.sfondoSpiegazione;
+        return sf && !/\.(m4a|mp3|wav|ogg|aac)($|\?)/i.test(sf) ? sf : '/Icone/sfondi/sfondo_box4_orologi_tempo.jpg';
+      })(),
       5: (setupState.gioco5 as any)?.sfondoSpiegazione || '',
     };
     const boxAudios: Record<number, string> = {
@@ -999,17 +1008,17 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     }
   };
 
-  // Ascolta l'evento di avanzamento dalla spiegazione del Box 1 alla Domanda 1
+  // Ascolta l'evento di avanzamento dalla spiegazione del Box corrente alla Domanda / Manche 1
   useEffect(() => {
     const handleAdvanceEvent = () => {
-      if (activeBox === 1 && activeQuestion === 0) {
+      if (activeQuestion === 0) {
         setActiveQuestion(1);
         setIsBox1Transitioning(false);
       }
     };
     window.addEventListener('imperio-advance-to-q1', handleAdvanceEvent);
     return () => window.removeEventListener('imperio-advance-to-q1', handleAdvanceEvent);
-  }, [activeBox, activeQuestion, setIsBox1Transitioning]);
+  }, [activeQuestion, setIsBox1Transitioning]);
 
   return (
     <div className="flex flex-col h-screen w-full bg-[#121214] text-white overflow-hidden font-sans">

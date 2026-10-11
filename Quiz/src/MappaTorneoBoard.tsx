@@ -3,6 +3,9 @@ import { useGameData, GameDataProvider } from './context/GameDataContext';
 import { useSyncedState } from './hooks/useSyncedState';
 import VideoBoard from './VideoBoard';
 import SpiegazioneBox1Board from './SpiegazioneBox1Board';
+import SpiegazioneBox2Board from './SpiegazioneBox2Board';
+import SpiegazioneBox3Board from './SpiegazioneBox3Board';
+import SpiegazioneBox4Board from './SpiegazioneBox4Board';
 import { assetUrl } from './lib/assetUrl';
 
 export interface MappaTorneoData {
@@ -481,10 +484,7 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           }
         }
       } else if (e.key === 'ArrowLeft') {
-        if (isZoomed) {
-          e.preventDefault();
-          setIsZoomed(false);
-        } else if (activeBox > 1 && unlockedStep === 1) {
+        if (!isZoomed && activeBox > 1 && unlockedStep === 1) {
           e.preventDefault();
           setUnlockedStep(0);
         }
@@ -502,10 +502,6 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           e.preventDefault();
           handleReturnToMap();
         }
-      } else if (e.key === 't' || e.key === 'T') {
-        e.preventDefault();
-        setIsIslandIntro(true);
-        setTimeout(() => setIsIslandIntro(false), 2600);
       }
     };
 
@@ -1150,6 +1146,126 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
                 }}
               >
                 <SpiegazioneBox1Board
+                  interactive={interactive}
+                  revealAll={revealAll}
+                  isPresenter={isPresenterMode}
+                  onReturnToMap={handleReturnToMap}
+                />
+              </GameDataProvider>
+
+              {/* Pulsante per Tornare alla Mappa in Alto a Destra (Solo Relatore) */}
+              {interactive && isPresenterMode && (
+                <button
+                  type="button"
+                  onClick={handleReturnToMap}
+                  className="absolute top-6 right-6 z-50 px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/20 text-white font-bold text-xs tracking-wider uppercase shadow-2xl backdrop-blur-md flex items-center gap-2 cursor-pointer transition-all hover:scale-105"
+                  title="Torna alla Mappa dell'Isola (M o ESC)"
+                >
+                  <span>🗺️ Torna alla Mappa</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 font-mono text-amber-300">
+                    M
+                  </span>
+                </button>
+              )}
+            </div>
+          ) : targetZone.id === 2 && (!hasVideo || rawVideoUrl.includes('spiegazione_box2') || rawVideoUrl.endsWith('.m4a') || rawVideoUrl.endsWith('.wav') || rawVideoUrl.endsWith('.mp3')) ? (
+            <div className="relative w-full h-full flex items-center justify-center">
+              {/* Scheda Spiegazione Regole Ufficiale Gioco 2 (Top 10 / Classifiche) */}
+              <GameDataProvider
+                data={{
+                  src: rawVideoUrl,
+                  sfondo: data?.sfondoSpiegazione || '/Icone/sfondi/sfondo_box2_cristalli.jpg',
+                  sfondoSpiegazione: data?.sfondoSpiegazione || '/Icone/sfondi/sfondo_box2_cristalli.jpg',
+                  audioUrl: data?.audioSpiegazione || rawVideoUrl || '/Audio/Spiegazioni/Spiegazione_box2.mp3',
+                  audioSpiegazione: data?.audioSpiegazione || rawVideoUrl || '/Audio/Spiegazioni/Spiegazione_box2.mp3',
+                  titolo: targetZone.title,
+                  titoloGioco: targetZone.title,
+                  sottotitolo: targetZone.subtitle,
+                  slideId: `${slideId}_spiegazione_box2`,
+                  notePresentatore: data?.notePresentatore || '',
+                }}
+              >
+                <SpiegazioneBox2Board
+                  interactive={interactive}
+                  revealAll={revealAll}
+                  isPresenter={isPresenterMode}
+                  onReturnToMap={handleReturnToMap}
+                />
+              </GameDataProvider>
+
+              {/* Pulsante per Tornare alla Mappa in Alto a Destra (Solo Relatore) */}
+              {interactive && isPresenterMode && (
+                <button
+                  type="button"
+                  onClick={handleReturnToMap}
+                  className="absolute top-6 right-6 z-50 px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/20 text-white font-bold text-xs tracking-wider uppercase shadow-2xl backdrop-blur-md flex items-center gap-2 cursor-pointer transition-all hover:scale-105"
+                  title="Torna alla Mappa dell'Isola (M o ESC)"
+                >
+                  <span>🗺️ Torna alla Mappa</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 font-mono text-amber-300">
+                    M
+                  </span>
+                </button>
+              )}
+            </div>
+          ) : targetZone.id === 3 && (!hasVideo || rawVideoUrl.includes('spiegazione_box3') || rawVideoUrl.endsWith('.m4a') || rawVideoUrl.endsWith('.wav') || rawVideoUrl.endsWith('.mp3')) ? (
+            <div className="relative w-full h-full flex items-center justify-center">
+              {/* Scheda Spiegazione Regole Ufficiale Gioco 3 (Password & Bussolotti) */}
+              <GameDataProvider
+                data={{
+                  src: rawVideoUrl,
+                  sfondo: data?.sfondoSpiegazione || '/Icone/sfondi/sfondo_box3_forzieri.jpg',
+                  sfondoSpiegazione: data?.sfondoSpiegazione || '/Icone/sfondi/sfondo_box3_forzieri.jpg',
+                  audioUrl: data?.audioSpiegazione || rawVideoUrl || '/Audio/Spiegazioni/Spiegazione_box3.mp3',
+                  audioSpiegazione: data?.audioSpiegazione || rawVideoUrl || '/Audio/Spiegazioni/Spiegazione_box3.mp3',
+                  titolo: targetZone.title,
+                  titoloGioco: targetZone.title,
+                  sottotitolo: targetZone.subtitle,
+                  slideId: `${slideId}_spiegazione_box3`,
+                  notePresentatore: data?.notePresentatore || '',
+                }}
+              >
+                <SpiegazioneBox3Board
+                  interactive={interactive}
+                  revealAll={revealAll}
+                  isPresenter={isPresenterMode}
+                  onReturnToMap={handleReturnToMap}
+                />
+              </GameDataProvider>
+
+              {/* Pulsante per Tornare alla Mappa in Alto a Destra (Solo Relatore) */}
+              {interactive && isPresenterMode && (
+                <button
+                  type="button"
+                  onClick={handleReturnToMap}
+                  className="absolute top-6 right-6 z-50 px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/20 text-white font-bold text-xs tracking-wider uppercase shadow-2xl backdrop-blur-md flex items-center gap-2 cursor-pointer transition-all hover:scale-105"
+                  title="Torna alla Mappa dell'Isola (M o ESC)"
+                >
+                  <span>🗺️ Torna alla Mappa</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 font-mono text-amber-300">
+                    M
+                  </span>
+                </button>
+              )}
+            </div>
+          ) : targetZone.id === 4 && (!hasVideo || rawVideoUrl.includes('spiegazione_box4') || rawVideoUrl.endsWith('.m4a') || rawVideoUrl.endsWith('.wav') || rawVideoUrl.endsWith('.mp3')) ? (
+            <div className="relative w-full h-full flex items-center justify-center">
+              {/* Scheda Spiegazione Regole Ufficiale Gioco 4 (Frase a Tempo) */}
+              <GameDataProvider
+                data={{
+                  src: rawVideoUrl,
+                  sfondo: data?.sfondoSpiegazione || '/Icone/sfondi/sfondo_box4_orologi_tempo.jpg',
+                  sfondoSpiegazione: data?.sfondoSpiegazione || '/Icone/sfondi/sfondo_box4_orologi_tempo.jpg',
+                  audioUrl: data?.audioSpiegazione || rawVideoUrl || '/Audio/Spiegazioni/Spiegazione_box4.mp3',
+                  audioSpiegazione: data?.audioSpiegazione || rawVideoUrl || '/Audio/Spiegazioni/Spiegazione_box4.mp3',
+                  titolo: targetZone.title,
+                  titoloGioco: targetZone.title,
+                  sottotitolo: targetZone.subtitle,
+                  slideId: `${slideId}_spiegazione_box4`,
+                  notePresentatore: data?.notePresentatore || '',
+                }}
+              >
+                <SpiegazioneBox4Board
                   interactive={interactive}
                   revealAll={revealAll}
                   isPresenter={isPresenterMode}

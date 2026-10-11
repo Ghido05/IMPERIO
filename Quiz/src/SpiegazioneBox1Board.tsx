@@ -545,10 +545,19 @@ export default function SpiegazioneBox1Board({
   const prevStep = useCallback(() => {
     if (!interactive) return;
     soundFX.resume();
+    if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    setIsPlaying(false);
+
     if (isAllRevealed) {
       setIsAllRevealed(false);
-      setManualStep(3);
-      seekTo(10.2);
+      const target = manualStep > 0 ? manualStep - 1 : 3;
+      setManualStep(target);
+      if (target === 0) seekTo(0);
+      else if (target === 1) seekTo(0.8);
+      else if (target === 2) seekTo(6.5);
+      else if (target === 3) seekTo(10.2);
       return;
     }
     if (manualStep > 0) {
@@ -558,10 +567,8 @@ export default function SpiegazioneBox1Board({
       else if (p === 1) seekTo(0.8);
       else if (p === 2) seekTo(6.5);
       else if (p === 3) seekTo(10.2);
-    } else {
-      returnToMap();
     }
-  }, [interactive, isAllRevealed, manualStep, setIsAllRevealed, setManualStep, seekTo, returnToMap]);
+  }, [interactive, isAllRevealed, manualStep, setIsAllRevealed, setManualStep, seekTo, setIsPlaying]);
 
   // Scorciatoie da tastiera
   useEffect(() => {
@@ -573,21 +580,27 @@ export default function SpiegazioneBox1Board({
 
       if (e.code === 'Space' || e.key.toLowerCase() === 'p') {
         e.preventDefault();
+        e.stopPropagation();
         togglePlay();
       } else if (e.key.toLowerCase() === 's' || e.key === 'Enter') {
         e.preventDefault();
+        e.stopPropagation();
         revealEverything();
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
+        e.stopPropagation();
         nextStep();
       } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
+        e.stopPropagation();
         prevStep();
       } else if (e.key.toLowerCase() === 'r') {
         e.preventDefault();
+        e.stopPropagation();
         resetAllState();
       } else if (e.key.toLowerCase() === 'm' || e.key === 'Escape') {
         e.preventDefault();
+        e.stopPropagation();
         returnToMap();
       }
     };

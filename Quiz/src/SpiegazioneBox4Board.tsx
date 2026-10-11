@@ -804,17 +804,6 @@ export default function SpiegazioneBox4Board({
                   </div>
 
                   <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-md bg-purple-500/20 border border-purple-400/40 text-[9px] font-black uppercase text-purple-300">
-                        📖 Frase Nascosta
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-violet-500/20 border border-violet-400/40 text-[9px] font-black uppercase text-violet-300">
-                        ⏱️ Corsa contro il Tempo
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/40 text-[9px] font-black uppercase text-amber-300">
-                        💡 Indizio di Tema
-                      </span>
-                    </div>
                     <p className="text-sm lg:text-base font-medium text-slate-200 leading-snug">
                       L'obiettivo del gioco è <strong className="text-purple-300 font-bold">indovinare la frase misteriosa</strong> prima che il tabellone sveli tutte le sue caselle!
                     </p>
@@ -880,14 +869,6 @@ export default function SpiegazioneBox4Board({
                     </div>
 
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/40 text-[9px] font-black uppercase text-amber-300">
-                          🎁 Premio in Palio
-                        </span>
-                        <span className="px-2 py-0.5 rounded-md bg-yellow-500/20 border border-yellow-400/40 text-[9px] font-black uppercase text-yellow-300">
-                          🏺 Bussolotto Esclusivo
-                        </span>
-                      </div>
                       <p className="text-sm lg:text-base font-medium text-slate-200 leading-snug">
                         Come ricompensa c'è l'<strong className="text-amber-300 font-bold">assegnazione del Bussolotto</strong> con il{' '}
                         <strong className="text-yellow-300 font-bold">premio corrispondente</strong> alla manche!
@@ -959,14 +940,6 @@ export default function SpiegazioneBox4Board({
                   </div>
 
                   <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-400/40 text-[9px] font-black uppercase text-cyan-300">
-                        📉 Meno Consonanti Chiama la Squadra
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-sky-500/20 border border-sky-400/40 text-[9px] font-black uppercase text-sky-300">
-                        ✋ Diritto di Risposta
-                      </span>
-                    </div>
                     <p className="text-sm lg:text-base font-medium text-slate-200 leading-snug">
                       Tramite un'<strong className="text-cyan-300 font-bold">asta al ribasso</strong> sul numero di consonanti da chiamare sarà possibile{' '}
                       <strong className="text-white underline decoration-cyan-400 decoration-2 underline-offset-4">

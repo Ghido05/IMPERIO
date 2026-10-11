@@ -143,6 +143,9 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   'password2.png': '/Icone/Sfondi Password/password2.png',
   'spiegazione_box1_ambientazione.jpg': '/Mappa/spiegazione_box1_ambientazione.jpg',
   'sfondo_box4_orologi_tempo.jpg': '/Icone/sfondi/sfondo_box4_orologi_tempo.jpg',
+  'sfondo_box5_arena_acqua.jpg': '/Icone/sfondi/sfondo_box5_arena_acqua.jpg',
+  'Spiegazione_box5.mp3': '/Audio/Spiegazioni/Spiegazione_box5.mp3',
+  'spiegazione_box5.mp3': '/Audio/Spiegazioni/Spiegazione_box5.mp3',
   'imperio_island_map.jpg': '/Mappa/imperio_island_map.jpg',
 };
 
@@ -165,6 +168,8 @@ export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): 
     if (clean.toLowerCase().includes('spiegazione_box2') && (clean.endsWith('.m4a') || clean.endsWith('.mp3') || clean.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box2.mp3';
     if (clean.toLowerCase().includes('spiegazione_box3') && (clean.endsWith('.m4a') || clean.endsWith('.mp3') || clean.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box3.mp3';
     if (clean.toLowerCase().includes('spiegazione_box4') && (clean.endsWith('.m4a') || clean.endsWith('.mp3') || clean.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box4.mp3';
+    if (clean.toLowerCase().includes('spiegazione_box5') && (clean.endsWith('.m4a') || clean.endsWith('.mp3') || clean.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box5.mp3';
+    if (clean.includes('sfondo_box5_arena_acqua')) return '/Icone/sfondi/sfondo_box5_arena_acqua.jpg';
     if (clean.includes('spiegazione_fasi_audio')) return '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3';
     if (clean.includes('/') || clean.includes('\\')) {
       return null;

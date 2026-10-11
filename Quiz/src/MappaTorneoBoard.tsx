@@ -6,6 +6,7 @@ import SpiegazioneBox1Board from './SpiegazioneBox1Board';
 import SpiegazioneBox2Board from './SpiegazioneBox2Board';
 import SpiegazioneBox3Board from './SpiegazioneBox3Board';
 import SpiegazioneBox4Board from './SpiegazioneBox4Board';
+import SpiegazioneBox5Board from './SpiegazioneBox5Board';
 import { assetUrl } from './lib/assetUrl';
 
 export interface MappaTorneoData {
@@ -328,17 +329,19 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
   const zoomTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Transizione cinematica di ingresso dell'isola di gioco (all'inizio del Box 1 dalla spiegazione)
-  const [isIslandIntro, setIsIslandIntro] = useState<boolean>(activeBox === 1);
+  const [isIslandIntro, setIsIslandIntro] = useState<boolean>(activeBox === 1 && !isZoomed);
 
   useEffect(() => {
-    if (activeBox === 1) {
+    if (activeBox === 1 && !isZoomed) {
       setIsIslandIntro(true);
       const timer = setTimeout(() => {
         setIsIslandIntro(false);
-      }, 2600);
+      }, 2200);
       return () => clearTimeout(timer);
+    } else {
+      setIsIslandIntro(false);
     }
-  }, [activeBox]);
+  }, [activeBox, isZoomed]);
 
   // Configurazione setup con fallback su localStorage
   const setupConfig = useMemo(() => {
@@ -435,10 +438,11 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
   // Gestione del timing per dissolvenza video durante lo zoom
   useEffect(() => {
     if (isZoomed) {
+      setIsIslandIntro(false);
       if (zoomTimerRef.current) clearTimeout(zoomTimerRef.current);
       zoomTimerRef.current = setTimeout(() => {
         setShowVideoOverlay(true);
-      }, 700);
+      }, 720);
     } else {
       setShowVideoOverlay(false);
       if (zoomTimerRef.current) clearTimeout(zoomTimerRef.current);
@@ -448,16 +452,17 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
     };
   }, [isZoomed]);
 
-
   const handleToggleZoom = useCallback(() => {
     if (activeBox > 1 && unlockedStep === 0) {
       setUnlockedStep(1);
     } else {
+      setIsIslandIntro(false);
       setIsZoomed(!isZoomed);
     }
   }, [activeBox, unlockedStep, setUnlockedStep, isZoomed, setIsZoomed]);
 
   const handleReturnToMap = useCallback(() => {
+    setShowVideoOverlay(false);
     setIsZoomed(false);
   }, [setIsZoomed]);
 
@@ -480,6 +485,7 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
             setUnlockedStep(1);
           } else if (unlockedStep === 1 && animProgress >= 0.95) {
             e.preventDefault();
+            setIsIslandIntro(false);
             setIsZoomed(true);
           }
         }
@@ -621,12 +627,11 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           animation: questionPulse 2.5s ease-in-out infinite;
         }
 
-        /* KEYFRAMES TRANSIZIONE DI INGRESSO ISOLA DI GIOCO */
-        @keyframes islandIntroZoom {
+        /* TRANSIZIONE DI INGRESSO ISOLA DI GIOCO (SOLO OPACITA E LUMINOSITA, NESSUN CONFLITTO CON TRANSFORM) */
+        @keyframes islandIntroFade {
           0% {
             opacity: 0;
-            transform: scale(1.08);
-            filter: brightness(0.35) blur(8px);
+            filter: brightness(0.35) blur(6px);
           }
           40% {
             opacity: 1;
@@ -634,7 +639,6 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           }
           100% {
             opacity: 1;
-            transform: scale(1);
             filter: brightness(1) blur(0px);
           }
         }
@@ -781,12 +785,13 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
 
       {/* CONTENITORE MAPPA ISOLA CON ZOOM DINAMICO ED ENTRATA CINEMATICA */}
       <div
-        className="absolute inset-0 w-full h-full origin-center"
+        className="absolute inset-0 w-full h-full"
         style={{
-          transformOrigin: isZoomed ? `${targetZone.zoomX}% ${targetZone.zoomY}%` : '50% 50%',
+          transformOrigin: `${targetZone.zoomX}% ${targetZone.zoomY}%`,
           transform: isZoomed ? 'scale(2.75)' : 'scale(1)',
-          transition: 'transform 1.25s cubic-bezier(0.22, 1, 0.36, 1)',
-          animation: isIslandIntro ? 'islandIntroZoom 2.2s cubic-bezier(0.16, 1, 0.3, 1) forwards' : undefined,
+          transition: 'transform 0.85s cubic-bezier(0.25, 1, 0.5, 1)',
+          willChange: 'transform',
+          animation: isIslandIntro ? 'islandIntroFade 2.0s cubic-bezier(0.16, 1, 0.3, 1) forwards' : undefined,
         }}
       >
         {/* SFONDO ISOLA ISOMETRICA 3D */}
@@ -1128,7 +1133,7 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
           ========================================================================= */}
       {showVideoOverlay && (
         <div className="absolute inset-0 z-50 bg-black flex flex-col items-center justify-center animate-fade-in">
-          {targetZone.id === 1 && (!hasVideo || rawVideoUrl.includes('spiegazione_box1') || rawVideoUrl.endsWith('.m4a') || rawVideoUrl.endsWith('.wav')) ? (
+          {targetZone.id === 1 && (!hasVideo || rawVideoUrl.includes('spiegazione_box1') || rawVideoUrl.endsWith('.m4a') || rawVideoUrl.endsWith('.wav') || rawVideoUrl.endsWith('.mp3')) ? (
             <div className="relative w-full h-full flex items-center justify-center">
               {/* Scheda Spiegazione Regole Ufficiale Gioco 1 (Il mio nome è nessuno) */}
               <GameDataProvider
@@ -1266,6 +1271,46 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
                 }}
               >
                 <SpiegazioneBox4Board
+                  interactive={interactive}
+                  revealAll={revealAll}
+                  isPresenter={isPresenterMode}
+                  onReturnToMap={handleReturnToMap}
+                />
+              </GameDataProvider>
+
+              {/* Pulsante per Tornare alla Mappa in Alto a Destra (Solo Relatore) */}
+              {interactive && isPresenterMode && (
+                <button
+                  type="button"
+                  onClick={handleReturnToMap}
+                  className="absolute top-6 right-6 z-50 px-5 py-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-white/20 text-white font-bold text-xs tracking-wider uppercase shadow-2xl backdrop-blur-md flex items-center gap-2 cursor-pointer transition-all hover:scale-105"
+                  title="Torna alla Mappa dell'Isola (M o ESC)"
+                >
+                  <span>🗺️ Torna alla Mappa</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/10 font-mono text-amber-300">
+                    M
+                  </span>
+                </button>
+              )}
+            </div>
+          ) : targetZone.id === 5 && (!hasVideo || rawVideoUrl.includes('spiegazione_box5') || rawVideoUrl.endsWith('.m4a') || rawVideoUrl.endsWith('.wav') || rawVideoUrl.endsWith('.mp3')) ? (
+            <div className="relative w-full h-full flex items-center justify-center">
+              {/* Scheda Spiegazione Regole Ufficiale Gioco 5 (Termopili - Scontro Finale) */}
+              <GameDataProvider
+                data={{
+                  src: rawVideoUrl,
+                  sfondo: data?.sfondoSpiegazione || '/Icone/sfondi/sfondo_box5_arena_acqua.jpg',
+                  sfondoSpiegazione: data?.sfondoSpiegazione || '/Icone/sfondi/sfondo_box5_arena_acqua.jpg',
+                  audioUrl: data?.audioSpiegazione || rawVideoUrl || '/Audio/Spiegazioni/Spiegazione_box5.mp3',
+                  audioSpiegazione: data?.audioSpiegazione || rawVideoUrl || '/Audio/Spiegazioni/Spiegazione_box5.mp3',
+                  titolo: targetZone.title,
+                  titoloGioco: targetZone.title,
+                  sottotitolo: targetZone.subtitle,
+                  slideId: `${slideId}_spiegazione_box5`,
+                  notePresentatore: data?.notePresentatore || '',
+                }}
+              >
+                <SpiegazioneBox5Board
                   interactive={interactive}
                   revealAll={revealAll}
                   isPresenter={isPresenterMode}

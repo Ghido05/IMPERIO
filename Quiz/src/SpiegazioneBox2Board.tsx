@@ -760,17 +760,6 @@ export default function SpiegazioneBox2Board({
                   </div>
 
                   <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-[9px] font-black uppercase text-emerald-300">
-                        📋 10 Indizi Categoria
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/40 text-[9px] font-black uppercase text-amber-300">
-                        🏆 Premio 5.000 Punti
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-400/40 text-[9px] font-black uppercase text-cyan-300">
-                        🎵 Canzone / 🖼️ Immagine
-                      </span>
-                    </div>
                     <p className="text-sm lg:text-base font-medium text-slate-200 leading-snug">
                       Indovinare la <strong className="text-cyan-300 font-bold">canzone</strong> o l'<strong className="text-amber-300 font-bold">immagine misteriosa</strong>! Il compito di sbloccare gli indizi spetta a voi rispondendo alla domanda categoria.
                     </p>
@@ -899,17 +888,6 @@ export default function SpiegazioneBox2Board({
                   </div>
 
                   <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-md bg-blue-500/20 border border-blue-400/40 text-[9px] font-black uppercase text-blue-300">
-                        🔵 Indizi 1-5 (Facili)
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-[9px] font-black uppercase text-emerald-300">
-                        🟢 Indizi 6-8 (Medi)
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/40 text-[9px] font-black uppercase text-amber-300">
-                        🟡 Indizi 9-10 (Decisivi)
-                      </span>
-                    </div>
                     <p className="text-sm lg:text-base font-medium text-slate-200 leading-snug">
                       Punteggi crescenti in base alla difficoltà: <strong className="text-blue-300 font-bold">1.000 pt</strong> per le risposte blu,{' '}
                       <strong className="text-emerald-300 font-bold">2.000 pt</strong> verdi e <strong className="text-amber-300 font-bold">3.000 pt</strong> gialle!
@@ -976,14 +954,6 @@ export default function SpiegazioneBox2Board({
                   </div>
 
                   <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/40 text-[9px] font-black uppercase text-amber-300">
-                        ➔ Risposta Finale Immediata
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-400/40 text-[9px] font-black uppercase text-cyan-300">
-                        🔄 Dinamica Continua
-                      </span>
-                    </div>
                     <p className="text-sm lg:text-base font-medium text-slate-200 leading-snug">
                       Il <strong className="text-amber-300 font-bold">tentativo di risposta finale</strong> è consentito <strong className="text-cyan-300 font-bold">ogni qualvolta</strong> viene data una risposta corretta alla domanda categoria!
                     </p>

@@ -16,6 +16,7 @@ import SpiegazioneBox1Board from './SpiegazioneBox1Board';
 import SpiegazioneBox2Board from './SpiegazioneBox2Board';
 import SpiegazioneBox3Board from './SpiegazioneBox3Board';
 import SpiegazioneBox4Board from './SpiegazioneBox4Board';
+import SpiegazioneBox5Board from './SpiegazioneBox5Board';
 
 import defaultImgData from './data/Il mio nome è nessuno_img_Data.json';
 import defaultMusicData from './data/Il mio nome è nessuno_musicale_Data.json';
@@ -41,10 +42,11 @@ const defaultGameDataMap: Record<string, any> = {
   spiegazione_box2: {},
   spiegazione_box3: {},
   spiegazione_box4: {},
+  spiegazione_box5: {},
 };
 
 function App() {
-  const [game, setGame] = useState<'img' | 'music' | 'classifica' | 'classifica_musicale' | 'cruciverba' | 'gioco_frase_tempo' | 'password_squadre' | 'password_prescelti' | 'classifica_generale' | 'finale_squadre' | 'spiegazione_fasi' | 'spiegazione_box1' | 'spiegazione_box2' | 'spiegazione_box3' | 'spiegazione_box4'>(() => {
+  const [game, setGame] = useState<'img' | 'music' | 'classifica' | 'classifica_musicale' | 'cruciverba' | 'gioco_frase_tempo' | 'password_squadre' | 'password_prescelti' | 'classifica_generale' | 'finale_squadre' | 'spiegazione_fasi' | 'spiegazione_box1' | 'spiegazione_box2' | 'spiegazione_box3' | 'spiegazione_box4' | 'spiegazione_box5'>(() => {
     const params = new URLSearchParams(window.location.search);
     const gameParam = params.get('game');
     if (gameParam === 'musica') return 'music';
@@ -61,6 +63,7 @@ function App() {
     if (gameParam === 'spiegazione_box2') return 'spiegazione_box2';
     if (gameParam === 'spiegazione_box3') return 'spiegazione_box3';
     if (gameParam === 'spiegazione_box4') return 'spiegazione_box4';
+    if (gameParam === 'spiegazione_box5') return 'spiegazione_box5';
     return 'img';
   });
 
@@ -109,6 +112,7 @@ function App() {
         {game === 'spiegazione_box2' && <SpiegazioneBox2Board />}
         {game === 'spiegazione_box3' && <SpiegazioneBox3Board />}
         {game === 'spiegazione_box4' && <SpiegazioneBox4Board />}
+        {game === 'spiegazione_box5' && <SpiegazioneBox5Board />}
       </GameDataProvider>
       
       {/* Piccolo selettore rapido in alto a sinistra - Nascosto in modalità proiezione */}
@@ -197,6 +201,12 @@ function App() {
             className={`px-3 py-1 rounded text-xs font-bold ${game === 'spiegazione_box4' ? 'bg-purple-600 text-white' : 'bg-gray-800 text-gray-400'}`}
           >
             SPIEGAZIONE BOX 4
+          </button>
+          <button 
+            onClick={() => changeGame('spiegazione_box5')}
+            className={`px-3 py-1 rounded text-xs font-bold ${game === 'spiegazione_box5' ? 'bg-red-600 text-white' : 'bg-gray-800 text-gray-400'}`}
+          >
+            SPIEGAZIONE BOX 5
           </button>
           <button 
             onClick={() => window.open('?game=classifica_generale&project=true', '_blank', 'width=1280,height=720')}

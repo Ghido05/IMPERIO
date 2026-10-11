@@ -17,6 +17,7 @@ import SpiegazioneBox1Board from '../SpiegazioneBox1Board';
 import SpiegazioneBox2Board from '../SpiegazioneBox2Board';
 import SpiegazioneBox3Board from '../SpiegazioneBox3Board';
 import SpiegazioneBox4Board from '../SpiegazioneBox4Board';
+import SpiegazioneBox5Board from '../SpiegazioneBox5Board';
 
 interface SlideRendererProps {
   type: SlideType;
@@ -47,6 +48,7 @@ export default function SlideRenderer({ type, interactive = true, revealAll = fa
       {type === 'spiegazione_box2' && <SpiegazioneBox2Board interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
       {type === 'spiegazione_box3' && <SpiegazioneBox3Board interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
       {type === 'spiegazione_box4' && <SpiegazioneBox4Board interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
+      {type === 'spiegazione_box5' && <SpiegazioneBox5Board interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
     </>
   );
 }

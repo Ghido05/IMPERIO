@@ -1241,14 +1241,14 @@
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box4.mp3"
   },
   "gioco5": {
-    "titolo": "Gioco 5",
-    "sottotitolo": "Sfida con dado, omini sui cubi 3D e 4 bonus per squadra",
+    "titolo": "TERMOPILI — SCONTRO FINALE",
+    "sottotitolo": "Arena d'Acqua • Sfida Diretta a Eliminazione",
     "sfondoGenerale": "/sfondo_finale_acqua.jpg",
     "numeroDomande": 15,
     "notePresentatore": "",
     "videoSpiegazione": "",
-    "sfondoSpiegazione": "",
-    "audioSpiegazione": ""
+    "sfondoSpiegazione": "/Icone/sfondi/sfondo_box5_arena_acqua.jpg",
+    "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box5.mp3"
   },
   "punteggi": {
     "sfondo": "/Icone/sfondi/sfondo_generale_torneo.jpg",

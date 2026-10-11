@@ -821,17 +821,6 @@ export default function SpiegazioneBox3Board({
                   </div>
 
                   <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-[9px] font-black uppercase text-emerald-300">
-                        👥 3 Squadre
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-teal-500/20 border border-teal-400/40 text-[9px] font-black uppercase text-teal-300">
-                        🔑 3 Parole Ciascuna
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/40 text-[9px] font-black uppercase text-amber-300">
-                        🗣️ Indizi dei Prescelti
-                      </span>
-                    </div>
                     <p className="text-sm lg:text-base font-medium text-slate-200 leading-snug">
                       Indovinare le <strong className="text-emerald-300 font-bold">tre parole associate</strong> alla propria squadra tramite gli indizi forniti dai{' '}
                       <strong className="text-amber-300 font-bold">Prescelti</strong>!
@@ -897,17 +886,6 @@ export default function SpiegazioneBox3Board({
                   </div>
 
                   <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-400/40 text-[9px] font-black uppercase text-cyan-300">
-                        ⚡ A Rotazione
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-sky-500/20 border border-sky-400/40 text-[9px] font-black uppercase text-sky-300">
-                        1 Parola alla Volta
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-400/40 text-[9px] font-black uppercase text-indigo-300">
-                        Tabellone Comune
-                      </span>
-                    </div>
                     <p className="text-sm lg:text-base font-medium text-slate-200 leading-snug">
                       Ogni squadra <strong className="text-cyan-300 font-bold">alternativamente</strong> chiamerà una parola fra quelle proposte sul tabellone.
                     </p>
@@ -973,14 +951,6 @@ export default function SpiegazioneBox3Board({
                     </div>
 
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/40 text-[9px] font-black uppercase text-amber-300">
-                          🥇 1ª Squadra = Premio Diretto
-                        </span>
-                        <span className="px-2 py-0.5 rounded-md bg-yellow-500/20 border border-yellow-400/40 text-[9px] font-black uppercase text-yellow-300">
-                          🎲 Altre Squadre = Sfida della Sorte
-                        </span>
-                      </div>
                       <p className="text-sm lg:text-base font-medium text-slate-200 leading-snug">
                         La prima squadra che scoprirà le proprie parole <strong className="text-amber-300 font-bold">avrà il premio</strong>; le altre dovranno provare ad aggiudicarselo tramite la sorte con i{' '}
                         <strong className="text-yellow-300 font-bold">Bussolotti</strong>!
@@ -1059,17 +1029,6 @@ export default function SpiegazioneBox3Board({
                   </div>
 
                   <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-md bg-rose-500/25 border border-rose-400/50 text-[9px] font-black uppercase text-rose-300">
-                        🚫 Esclusione Immediata
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-red-500/25 border border-red-400/50 text-[9px] font-black uppercase text-red-300">
-                        Manche Persa
-                      </span>
-                      <span className="px-2 py-0.5 rounded-md bg-amber-500/25 border border-amber-400/50 text-[9px] font-black uppercase text-amber-300">
-                        ⚠️ Cautela Massima
-                      </span>
-                    </div>
                     <p className="text-sm lg:text-base font-medium text-slate-200 leading-snug">
                       Chi sceglie la <strong className="text-rose-400 font-black">parola bomba</strong> sarà{' '}
                       <strong className="text-white underline decoration-rose-500 decoration-2 underline-offset-4">

@@ -776,17 +776,6 @@ export default function SpiegazioneBox1Board({
                   </div>
 
                   <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2.5 py-0.5 rounded-md bg-cyan-500/20 border border-cyan-400/40 text-[10px] font-black uppercase text-cyan-300">
-                        🎵 5 Strumenti Audio
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 border border-emerald-400/40 text-[10px] font-black uppercase text-emerald-300">
-                        🖼️ Griglia a Tasselli
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-md bg-purple-500/20 border border-purple-400/40 text-[10px] font-black uppercase text-purple-300">
-                        👤 Personaggio Misterioso
-                      </span>
-                    </div>
                     <p className="text-base lg:text-lg font-medium text-slate-200 leading-snug">
                       L'obiettivo è indovinare il <strong className="text-cyan-300 font-bold">nome</strong>,{' '}
                       <strong className="text-emerald-300 font-bold">titolo della canzone</strong> o{' '}
@@ -958,14 +947,6 @@ export default function SpiegazioneBox1Board({
                   </div>
 
                   <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="px-2.5 py-0.5 rounded-full bg-rose-500/25 border border-rose-400/50 text-[10px] font-black uppercase text-rose-300 tracking-wider">
-                        ⚠️ 1 Tentativo per Squadra
-                      </span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-yellow-500/25 border border-yellow-400/50 text-[10px] font-black uppercase text-yellow-300 tracking-wider">
-                        Round Locked
-                      </span>
-                    </div>
                     <p className="text-base lg:text-lg font-medium text-slate-200 leading-snug">
                       La prenotazione sarà <strong className="text-yellow-300 font-black">ONE SHOT</strong>:{' '}
                       se una squadra <strong className="text-rose-400 font-bold">sbaglia il nome</strong>,{' '}

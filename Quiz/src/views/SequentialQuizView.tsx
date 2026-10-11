@@ -125,14 +125,17 @@ export function getSlideForBoxQuestion(
         const sf = (setupState.gioco4 as any)?.sfondoSpiegazione;
         return sf && !/\.(m4a|mp3|wav|ogg|aac)($|\?)/i.test(sf) ? sf : '/Icone/sfondi/sfondo_box4_orologi_tempo.jpg';
       })(),
-      5: (setupState.gioco5 as any)?.sfondoSpiegazione || '',
+      5: (() => {
+        const sf = (setupState.gioco5 as any)?.sfondoSpiegazione;
+        return sf && !/\.(m4a|mp3|wav|ogg|aac)($|\?)/i.test(sf) ? sf : '/Icone/sfondi/sfondo_box5_arena_acqua.jpg';
+      })(),
     };
     const boxAudios: Record<number, string> = {
       1: setupState.gioco1?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box1.mp3',
       2: setupState.gioco2?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box2.mp3',
       3: setupState.gioco3?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box3.mp3',
       4: (setupState.gioco4 as any)?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box4.mp3',
-      5: (setupState.gioco5 as any)?.audioSpiegazione || '',
+      5: (setupState.gioco5 as any)?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box5.mp3',
     };
     const currentVideo = boxVideos[boxNum] || '';
     const currentSfondo = boxSfondi[boxNum] || '';

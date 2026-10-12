@@ -55,7 +55,7 @@
     "gioco5Titolo": ""
   },
   "gioco1": {
-    "titolo": "Il mio nome è nessuno",
+    "titolo": "IL MIO NOME è NESSUNO",
     "sottotitolo": "Musica & Immagini",
     "selectedQuestion": 0,
     "videoSpiegazione": "",
@@ -396,9 +396,9 @@
     "sfondoGenerale": "/Icone/sfondi/sfondo_box1_foresta_musicale.jpg"
   },
   "gioco2": {
-    "titolo": "Classifiche",
+    "titolo": "TOP TEN",
     "sottotitolo": "Classifica & Classifica Musicale",
-    "selectedQuestion": 5,
+    "selectedQuestion": 0,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box2_cristalli.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box2.mp3",
@@ -1028,8 +1028,8 @@
     "sfondoGenerale": ""
   },
   "gioco4": {
-    "titolo": "Ultimo Colpo",
-    "sottotitolo": "Corsa contro il Cronometro",
+    "titolo": "L'ULTIMO COLPO",
+    "sottotitolo": "ASTA LETTERALE",
     "note": "Modulo Gioco 4 (in arrivo)",
     "frasi": [
       {
@@ -1233,9 +1233,19 @@
         "bonus": "",
         "punti": 1000,
         "notePresentatore": ""
+      },
+      {
+        "testo": "FRASE BIBBIA",
+        "sfondo": "",
+        "confermaAudio": "",
+        "lettereVisibili": [],
+        "indizio": "",
+        "bonus": "",
+        "punti": 1000,
+        "notePresentatore": ""
       }
     ],
-    "sfondoGenerale": "",
+    "sfondoGenerale": "/Icone/nessuno_img/sfondo_box4_orologi_tempo.jpg",
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box4_orologi_tempo.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box4.mp3"

@@ -398,7 +398,7 @@
   "gioco2": {
     "titolo": "TOP TEN",
     "sottotitolo": "Classifica & Classifica Musicale",
-    "selectedQuestion": 0,
+    "selectedQuestion": 2,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box2_cristalli.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box2.mp3",
@@ -506,7 +506,7 @@
             "💀 TESCHIO"
           ],
           "immagineJpg": "/Icone/nessuno_img/2_2_faraonamitrata.jpeg",
-          "soluzioneAudio": "/Audio/strumenti/Samba do Brasil_[cut_17sec].mp3",
+          "soluzioneAudio": "/Audio/strumenti/2_2_SambaduBrasil.mp3",
           "soluzioneTesto": "FARAONA",
           "categoria": "ANIMALE",
           "domanda": "10 EMOTICON PIÙ UTILIZZATE A LIVELLO GLOBALE"
@@ -1235,11 +1235,29 @@
         "notePresentatore": ""
       },
       {
-        "testo": "FRASE BIBBIA",
-        "sfondo": "",
-        "confermaAudio": "",
-        "lettereVisibili": [],
-        "indizio": "",
+        "testo": "ABRAMO SACRIFICA UN ARIETE CON LE CORNA IMPIGLIATE IN UN CESPUGLIO",
+        "sfondo": "/Icone/nessuno_img/4_10_Abramo.jpg",
+        "confermaAudio": "/Audio/strumenti/4_10_cestlavie.mp3",
+        "lettereVisibili": [
+          3,
+          5,
+          11,
+          15,
+          17,
+          22,
+          25,
+          28,
+          32,
+          38,
+          43,
+          47,
+          49,
+          51,
+          54,
+          58,
+          64
+        ],
+        "indizio": "TERRITORIO DI MORIA, 2000 a. C. CIRCA",
         "bonus": "",
         "punti": 1000,
         "notePresentatore": ""

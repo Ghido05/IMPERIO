@@ -744,78 +744,40 @@
       "1": {
         "sfondo": "/Icone/nessuno_img/3_1_superereoi.png",
         "squadra1": [
-          {
-            "parola": "BATMAN",
-            "indizi": [
-              "MANTELLO",
-              "ALFRED"
-            ]
-          },
-          {
-            "parola": "TOPOLINO",
-            "indizi": [
-              "1928",
-              "1948"
-            ]
-          },
-          {
-            "parola": "SPONGEBOB",
-            "indizi": [
-              "TRITONI",
-              "BIKINI"
-            ]
-          }
+          { "parola": "BATMAN" },
+          { "parola": "TOPOLINO" },
+          { "parola": "SPONGEBOB" }
         ],
         "squadra2": [
-          {
-            "parola": "SUPERMAN",
-            "indizi": [
-              "METROPOLIS",
-              "NEW YORK"
-            ]
-          },
-          {
-            "parola": "LUPO ALBERTO",
-            "indizi": [
-              "SILVER",
-              "GOLDEN"
-            ]
-          },
-          {
-            "parola": "TEX WILLER",
-            "indizi": [
-              "NECROMANTE",
-              "NOTTE"
-            ]
-          }
+          { "parola": "SUPERMAN" },
+          { "parola": "LUPO ALBERTO" },
+          { "parola": "TEX WILLER" }
         ],
         "squadra3": [
-          {
-            "parola": "LARA CROFT",
-            "indizi": [
-              "ANGELINA JOLIE",
-              "ARCHEOLOGIA"
-            ]
-          },
-          {
-            "parola": "SPIDERMAN",
-            "indizi": [
-              "LONDRA",
-              "QUEENS"
-            ]
-          },
-          {
-            "parola": "GANDALF",
-            "indizi": [
-              "COMPAGNIA",
-              "TORRE DI ASTRONOMIA"
-            ]
-          }
+          { "parola": "LARA CROFT" },
+          { "parola": "SPIDERMAN" },
+          { "parola": "GANDALF" }
         ],
         "parolaBomba": "HARRY POTTER",
         "paroleNulle": [
           "INDIANA JONES",
           "JAMES BOND"
+        ],
+        "suggerimenti": [
+          "MANTELLO",
+          "ALFRED",
+          "1928",
+          "BIKINI",
+          "METROPOLIS",
+          "NEW YORK",
+          "SILVER",
+          "NOTTE",
+          "ANGELINA JOLIE",
+          "ARCHEOLOGIA",
+          "QUEENS",
+          "COMPAGNIA",
+          "TRITONI",
+          "BACCHETTA"
         ],
         "bussolotti": {
           "immagine_premio_squadra1": "dado",
@@ -839,78 +801,40 @@
       "2": {
         "sfondo": "/Icone/nessuno_img/3_2_dolci.jpg",
         "squadra1": [
-          {
-            "parola": "torta di mele",
-            "indizi": [
-              "fefe\\",
-              "cdfv"
-            ]
-          },
-          {
-            "parola": "babà",
-            "indizi": [
-              "sc",
-              "f"
-            ]
-          },
-          {
-            "parola": "cannolo",
-            "indizi": [
-              "sfe",
-              "rfwerf\\"
-            ]
-          }
+          { "parola": "torta di mele" },
+          { "parola": "babà" },
+          { "parola": "cannolo" }
         ],
         "squadra2": [
-          {
-            "parola": "cheesecake ",
-            "indizi": [
-              "\\cwr",
-              "rfer"
-            ]
-          },
-          {
-            "parola": "tiramisù",
-            "indizi": [
-              "cwfr",
-              "cfref\\"
-            ]
-          },
-          {
-            "parola": "cookies",
-            "indizi": [
-              "dwew",
-              "we"
-            ]
-          }
+          { "parola": "cheesecake " },
+          { "parola": "tiramisù" },
+          { "parola": "cookies" }
         ],
         "squadra3": [
-          {
-            "parola": "zuppa inglese",
-            "indizi": [
-              "dwe",
-              "fw"
-            ]
-          },
-          {
-            "parola": "panettone",
-            "indizi": [
-              "dewdw\\",
-              "wedw"
-            ]
-          },
-          {
-            "parola": "ciambella",
-            "indizi": [
-              "dqwedw",
-              "dwedw"
-            ]
-          }
+          { "parola": "zuppa inglese" },
+          { "parola": "panettone" },
+          { "parola": "ciambella" }
         ],
         "parolaBomba": "cassata",
         "paroleNulle": [
           "struffoli",
           "panna cotta"
+        ],
+        "suggerimenti": [
+          "CANNELLA",
+          "RUM",
+          "RICOTTA",
+          "FORNO",
+          "CAFFÈ",
+          "CIOCCOLATO",
+          "SAVOIARDI",
+          "NATALE",
+          "ALCHÈRMES",
+          "GLASSA",
+          "CANDITI",
+          "MASCARPONE",
+          "ZUCCHERO A VELO",
+          "PASTA SFOGLIA"
         ],
         "bussolotti": {
           "immagine_premio_squadra1": "dado",
@@ -933,78 +857,40 @@
       "3": {
         "sfondo": "/Icone/nessuno_img/3_3_programmiTV.jpg",
         "squadra1": [
-          {
-            "parola": "GRANDE FRATELLO",
-            "indizi": [
-              "",
-              ""
-            ]
-          },
-          {
-            "parola": "BALLANDO CON LE STELLE",
-            "indizi": [
-              "",
-              ""
-            ]
-          },
-          {
-            "parola": "TU SI QUE VALES",
-            "indizi": [
-              "",
-              ""
-            ]
-          }
+          { "parola": "GRANDE FRATELLO" },
+          { "parola": "BALLANDO CON LE STELLE" },
+          { "parola": "TU SI QUE VALES" }
         ],
         "squadra2": [
-          {
-            "parola": "ZELIG",
-            "indizi": [
-              "",
-              ""
-            ]
-          },
-          {
-            "parola": "CIAO DARWIN",
-            "indizi": [
-              "",
-              ""
-            ]
-          },
-          {
-            "parola": "MONEY DROP",
-            "indizi": [
-              "",
-              ""
-            ]
-          }
+          { "parola": "ZELIG" },
+          { "parola": "CIAO DARWIN" },
+          { "parola": "MONEY DROP" }
         ],
         "squadra3": [
-          {
-            "parola": "CHI VUOL ESSER MILIONARIO?",
-            "indizi": [
-              "",
-              ""
-            ]
-          },
-          {
-            "parola": "AFFARI TUOI",
-            "indizi": [
-              "",
-              ""
-            ]
-          },
-          {
-            "parola": "TALE E QUALE SHOW",
-            "indizi": [
-              "",
-              ""
-            ]
-          }
+          { "parola": "CHI VUOL ESSER MILIONARIO?" },
+          { "parola": "AFFARI TUOI" },
+          { "parola": "TALE E QUALE SHOW" }
         ],
         "parolaBomba": "LA RUOTA DELLA FORTUNA",
         "paroleNulle": [
           "STRISCIA LA NOTIZIA",
           "REAZIONE A CATENA"
+        ],
+        "suggerimenti": [
+          "TELEVOTO",
+          "CARLO CONTI",
+          "GERRY SCOTTI",
+          "PAOLO BONOLIS",
+          "COMICITÀ",
+          "PACCHI",
+          "DOTTORE",
+          "TRASFORMAZIONE",
+          "CABARET",
+          "BOTOLA",
+          "BALLERINI",
+          "CONFESSIONALE",
+          "CANALE 5",
+          "TALENT"
         ],
         "bussolotti": {
           "immagine_premio_squadra1": "dado",

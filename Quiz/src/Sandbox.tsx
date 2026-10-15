@@ -99,8 +99,8 @@ function App() {
       <GameDataProvider data={defaultGameDataMap[game]}>
         {game === 'img' && <ImgBoard />}
         {game === 'music' && <MusicBoard />}
-        {game === 'classifica' && <ClassificaBoard />}
-        {game === 'classifica_musicale' && <ClassificaMusicaleBoard />}
+        {game === 'classifica' && <ClassificaBoard isPresenter={!isProjecting} />}
+        {game === 'classifica_musicale' && <ClassificaMusicaleBoard isPresenter={!isProjecting} />}
         {game === 'cruciverba' && <CruciverbaBoard />}
         {game === 'gioco_frase_tempo' && <GiocoFraseTempoBoard />}
         {game === 'password_squadre' && <PasswordSquadreBoard />}

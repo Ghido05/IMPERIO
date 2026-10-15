@@ -105,10 +105,10 @@ export interface PunteggiSetup {
   iconeBonus?: string[];
 }
 
-/** Una parola di squadra + 2 indizi (come Password: round ↔ parola) */
+/** Una parola di squadra del Gioco 3 */
 export interface Gioco3TeamWord {
   parola: string;
-  indizi: [string, string];
+  indizi?: [string, string];
 }
 
 /** Una domanda/manche del Gioco 3 (Password) */
@@ -121,6 +121,8 @@ export interface Gioco3Question {
   parolaBomba: string;
   /** Come password `altre[1..]` — 2 parole nulle */
   paroleNulle: [string, string];
+  /** 14 parole di suggerimento per tutta la manche */
+  suggerimenti: string[];
   bussolotti?: {
     immagine_premio: string;
     immagine_premio_squadra1?: string;
@@ -249,7 +251,7 @@ export function createDefaultGioco2Question(): Gioco2Question {
 }
 
 function createDefaultGioco3TeamWord(): Gioco3TeamWord {
-  return { parola: '', indizi: ['', ''] };
+  return { parola: '' };
 }
 
 export function createDefaultGioco3Question(): Gioco3Question {
@@ -261,6 +263,7 @@ export function createDefaultGioco3Question(): Gioco3Question {
     squadra3: [createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord(), createDefaultGioco3TeamWord()],
     parolaBomba: '',
     paroleNulle: ['', ''],
+    suggerimenti: Array(14).fill(''),
     bussolotti: {
       immagine_premio: '/Icone/premio_bonus.png',
       schede_2_posto: ['bonus', 'vuoto', 'vuoto'],
@@ -325,12 +328,79 @@ export function normalizeBox0(raw: any, def: Box0Setup): Box0Setup {
   };
 }
 
+function normalizeGioco3Question(rawQ: any, defQ: Gioco3Question): Gioco3Question {
+  if (!rawQ || typeof rawQ !== 'object') return defQ;
+
+  // Extract legacy indizi if present
+  const legacyIndizi: string[] = [];
+  ['squadra1', 'squadra2', 'squadra3'].forEach((sk) => {
+    if (Array.isArray(rawQ[sk])) {
+      rawQ[sk].forEach((w: any) => {
+        if (w && Array.isArray(w.indizi)) {
+          w.indizi.forEach((ind: string) => {
+            if (ind && typeof ind === 'string' && ind.trim()) {
+              legacyIndizi.push(ind.trim());
+            }
+          });
+        }
+      });
+    }
+  });
+
+  let suggerimenti: string[] = [];
+  if (Array.isArray(rawQ.suggerimenti)) {
+    suggerimenti = [...rawQ.suggerimenti];
+  } else if (legacyIndizi.length > 0) {
+    suggerimenti = [...legacyIndizi];
+  } else if (Array.isArray(defQ.suggerimenti)) {
+    suggerimenti = [...defQ.suggerimenti];
+  }
+  while (suggerimenti.length < 14) {
+    suggerimenti.push('');
+  }
+  suggerimenti = suggerimenti.slice(0, 14);
+
+  const normalizeTeam = (teamArr: any, defTeam: [Gioco3TeamWord, Gioco3TeamWord, Gioco3TeamWord]): [Gioco3TeamWord, Gioco3TeamWord, Gioco3TeamWord] => {
+    return [0, 1, 2].map((i) => {
+      const item = Array.isArray(teamArr) && teamArr[i] ? teamArr[i] : (defTeam[i] || {});
+      return {
+        parola: typeof item === 'string' ? item : (item.parola || ''),
+      };
+    }) as [Gioco3TeamWord, Gioco3TeamWord, Gioco3TeamWord];
+  };
+
+  return {
+    ...defQ,
+    ...rawQ,
+    sfondo: rawQ.sfondo !== undefined ? rawQ.sfondo : (defQ.sfondo || ''),
+    musicaIntro: rawQ.musicaIntro !== undefined ? rawQ.musicaIntro : (defQ.musicaIntro || ''),
+    squadra1: normalizeTeam(rawQ.squadra1, defQ.squadra1),
+    squadra2: normalizeTeam(rawQ.squadra2, defQ.squadra2),
+    squadra3: normalizeTeam(rawQ.squadra3, defQ.squadra3),
+    parolaBomba: rawQ.parolaBomba !== undefined ? rawQ.parolaBomba : (defQ.parolaBomba || ''),
+    paroleNulle: Array.isArray(rawQ.paroleNulle) ? [rawQ.paroleNulle[0] || '', rawQ.paroleNulle[1] || ''] : defQ.paroleNulle,
+    suggerimenti,
+    bussolotti: {
+      ...defQ.bussolotti!,
+      ...(rawQ.bussolotti || {})
+    },
+    notePresentatore: rawQ.notePresentatore !== undefined ? rawQ.notePresentatore : (defQ.notePresentatore || ''),
+  };
+}
+
 function normalizeGioco3(
   raw: unknown,
   def: QuizSetupState['gioco3']
 ): QuizSetupState['gioco3'] {
   if (!raw || typeof raw !== 'object') return def;
   const data = raw as any;
+  const questions: Record<number, Gioco3Question> = {};
+  [1, 2, 3].forEach((num) => {
+    const rawQ = data.questions ? data.questions[num] : undefined;
+    const defQ = def.questions ? def.questions[num] : createDefaultGioco3Question();
+    questions[num] = normalizeGioco3Question(rawQ, defQ || createDefaultGioco3Question());
+  });
+
   return {
     titolo: data.titolo !== undefined ? data.titolo : (def.titolo || 'Password & Bussolotti'),
     sottotitolo: data.sottotitolo !== undefined ? data.sottotitolo : (def.sottotitolo || 'Sfida a Squadre & Bussolotti'),
@@ -338,7 +408,7 @@ function normalizeGioco3(
     videoSpiegazione: data.videoSpiegazione || '',
     sfondoSpiegazione: data.sfondoSpiegazione || '',
     audioSpiegazione: data.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box3.mp3',
-    questions: data.questions ? { ...def.questions, ...data.questions } : def.questions,
+    questions,
     sfondoGenerale: data.sfondoGenerale || '',
   };
 }
@@ -1222,10 +1292,15 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           const words = q[sk];
           return `<div class="sub-group">${squadreNomi[si]}
             <table>${(words || []).map((w, wi) =>
-              `<tr><th>Parola ${wi + 1}</th><td>${w.parola || '—'} &nbsp;|&nbsp; Ind.1: ${w.indizi?.[0] || '—'} &nbsp;|&nbsp; Ind.2: ${w.indizi?.[1] || '—'}</td></tr>`
+              `<tr><th>Parola ${wi + 1}</th><td>${w.parola || '—'}</td></tr>`
             ).join('')}</table>
           </div>`;
         }).join('')}
+        ${(q.suggerimenti && q.suggerimenti.some(Boolean)) ? `
+          <div class="sub-group">Suggerimenti Manche (${q.suggerimenti.filter(Boolean).length} parole)
+            <p style="font-size: 11px; margin-top: 4px; line-height: 1.5; color: #333;">${q.suggerimenti.filter(Boolean).map((s, idx) => `<strong>${idx + 1}.</strong> ${s}`).join(' &nbsp;•&nbsp; ')}</p>
+          </div>
+        ` : ''}
       </div>`;
     }
     sectionsHtml += `</section>`;
@@ -1550,23 +1625,17 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
   ) => {
     updateQ3((prev) => {
       const words = [...prev[squadraKey]] as Gioco3Question[typeof squadraKey];
-      words[wordIdx] = { ...words[wordIdx], ...patch, indizi: patch.indizi ?? words[wordIdx].indizi };
+      words[wordIdx] = { ...words[wordIdx], ...patch };
       return { ...prev, [squadraKey]: words };
     });
   };
 
-  const updateSquadraIndizio = (
-    squadraKey: 'squadra1' | 'squadra2' | 'squadra3',
-    wordIdx: number,
-    indizioIdx: 0 | 1,
-    value: string
-  ) => {
+  const updateSuggerimento = (idx: number, val: string) => {
     updateQ3((prev) => {
-      const words = [...prev[squadraKey]] as Gioco3Question[typeof squadraKey];
-      const indizi = [...words[wordIdx].indizi] as [string, string];
-      indizi[indizioIdx] = value;
-      words[wordIdx] = { ...words[wordIdx], indizi };
-      return { ...prev, [squadraKey]: words };
+      const list = [...(prev.suggerimenti || Array(14).fill(''))];
+      while (list.length < 14) list.push('');
+      list[idx] = val;
+      return { ...prev, suggerimenti: list };
     });
   };
 
@@ -4917,7 +4986,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </div>
           </div>
 
-          {/* Team words + 2 indizi each */}
+          {/* Team words (3 parole per squadra) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {teamMeta.map(({ key, label, accent }) => (
               <div
@@ -4927,50 +4996,64 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 <h4 className={`text-xs font-bold uppercase tracking-wider ${accent.split(' ').slice(1).join(' ')}`}>
                   {label} — 3 parole
                 </h4>
-                {[0, 1, 2].map((wordIdx) => (
-                  <div key={wordIdx} className="space-y-2 bg-black/30 rounded-lg p-3 border border-white/5">
-                    <label className="block text-[10px] font-semibold text-slate-400 uppercase">
-                      Parola {wordIdx + 1}
-                    </label>
-                    <input
-                      type="text"
-                      placeholder={`Parola ${wordIdx + 1}...`}
-                      value={currentQ3[key][wordIdx].parola}
-                      onChange={(e) =>
-                        updateSquadraWord(key, wordIdx, { parola: e.target.value })
-                      }
-                      className="w-full bg-[#1c1c21] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
-                    />
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[10px] text-slate-500 mb-0.5">Indizio 1</label>
-                        <input
-                          type="text"
-                          placeholder="Indizio 1..."
-                          value={currentQ3[key][wordIdx].indizi[0]}
-                          onChange={(e) =>
-                            updateSquadraIndizio(key, wordIdx, 0, e.target.value)
-                          }
-                          className="w-full bg-[#1c1c21] border border-white/10 rounded px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] text-slate-500 mb-0.5">Indizio 2</label>
-                        <input
-                          type="text"
-                          placeholder="Indizio 2..."
-                          value={currentQ3[key][wordIdx].indizi[1]}
-                          onChange={(e) =>
-                            updateSquadraIndizio(key, wordIdx, 1, e.target.value)
-                          }
-                          className="w-full bg-[#1c1c21] border border-white/10 rounded px-2 py-1.5 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
-                        />
-                      </div>
+                <div className="space-y-2.5">
+                  {[0, 1, 2].map((wordIdx) => (
+                    <div key={wordIdx} className="bg-black/30 rounded-lg p-2.5 border border-white/5 space-y-1">
+                      <label className="block text-[10px] font-semibold text-slate-400 uppercase">
+                        Parola {wordIdx + 1}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={`Parola ${wordIdx + 1}...`}
+                        value={currentQ3[key][wordIdx].parola}
+                        onChange={(e) =>
+                          updateSquadraWord(key, wordIdx, { parola: e.target.value })
+                        }
+                        className="w-full bg-[#1c1c21] border border-white/10 rounded px-2.5 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-500"
+                      />
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             ))}
+          </div>
+
+          {/* 14 Suggerimenti per tutta la Manche */}
+          <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <div className="text-xs font-bold text-yellow-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>💡 Lista Suggerimenti Manche #{currentQ3Num} (14 Parole)</span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Queste 14 parole saranno disponibili per l'intera manche. I prescelti sull'iPad o il relatore potranno cliccare su una di queste parole per inviarla alla presentazione.
+                </p>
+              </div>
+              <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 self-start sm:self-auto">
+                {(currentQ3.suggerimenti || []).filter(Boolean).length} / 14 impostate
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 pt-2">
+              {Array.from({ length: 14 }).map((_, idx) => (
+                <div
+                  key={idx}
+                  className="bg-[#141417] p-2 rounded-lg border border-white/10 hover:border-yellow-500/50 transition-colors focus-within:border-yellow-400 focus-within:ring-1 focus-within:ring-yellow-400/50"
+                >
+                  <label className="block text-[10px] font-bold text-yellow-400 uppercase mb-1 flex items-center justify-between">
+                    <span>Parola {idx + 1}</span>
+                    <span className="text-[9px] text-slate-500 font-mono">#{idx + 1}</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={`Suggerimento ${idx + 1}...`}
+                    value={(currentQ3.suggerimenti || [])[idx] || ''}
+                    onChange={(e) => updateSuggerimento(idx, e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs font-semibold text-white placeholder:text-white/20 focus:outline-none focus:border-yellow-400"
+                  />
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Bomba + nulle */}

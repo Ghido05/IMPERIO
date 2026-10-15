@@ -299,6 +299,24 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
   const gameData = manches[currentManche] || manches[0];
 
   const [audioPlaying, setAudioPlaying] = useSyncedState<boolean>('playstate_password_squadre_audio_playing', false);
+  const [presentationStep, setPresentationStep] = useSyncedState<number>(
+    `playstate_password_step_m${currentManche}`,
+    revealAll ? 2 : 0
+  );
+  const effectiveStep = revealAll ? 2 : presentationStep;
+
+  const sfondoSpiegazione = (gameDataRaw as any)?.sfondoSpiegazione ||
+    (() => {
+      try {
+        const raw = localStorage.getItem('imperio_quiz_setup_config_v1');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.gioco3?.sfondoSpiegazione) return parsed.gioco3.sfondoSpiegazione;
+        }
+      } catch {}
+      return '/Icone/sfondi/sfondo_box3_forzieri.jpg';
+    })();
+
   const musicaIntro = (gameData as any).musicaIntro;
 
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -313,6 +331,17 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
   useEffect(() => {
     setAudioPlaying(false);
   }, [currentManche]);
+
+  // Gestione automatica avvio/stop musica in base allo step
+  useEffect(() => {
+    if (presentationStep === 1) {
+      if (musicaIntro) {
+        setAudioPlaying(true);
+      }
+    } else if (presentationStep === 0) {
+      setAudioPlaying(false);
+    }
+  }, [presentationStep, musicaIntro, setAudioPlaying]);
 
   useEffect(() => {
     if (!shouldPlayAudio) return;
@@ -361,7 +390,13 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
       ) {
         return;
       }
-      if (e.key.toLowerCase() === 'm') {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        setPresentationStep(prev => Math.min(prev + 1, 2));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        setPresentationStep(prev => Math.max(prev - 1, 0));
+      } else if (activeBussolottiRank === null && (e.key === '0' || e.key === '1' || e.key === '2')) {
+        setPresentationStep(parseInt(e.key, 10));
+      } else if (e.key.toLowerCase() === 'm') {
         if (musicaIntro) {
           setAudioPlaying(prev => !prev);
         }
@@ -370,7 +405,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, musicaIntro]);
+  }, [interactive, musicaIntro, activeBussolottiRank, setPresentationStep, setAudioPlaying]);
 
   useEffect(() => {
     const handleStorage = () => {
@@ -717,14 +752,28 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
   }, []);
 
   return (
-    <div className="relative w-full min-h-screen bg-neutral-900 text-white flex flex-col items-center p-8 font-sans select-none overflow-hidden">
+    <div className="relative w-full min-h-screen bg-neutral-900 text-white flex flex-col items-center justify-center font-sans select-none overflow-hidden">
       {/* Sfondo base scuro */}
       <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(50,50,50,1)_0%,rgba(10,10,10,1)_100%)] z-0" />
       
-      {/* Immagine di sfondo con trasparenza */}
+      {/* Step 0 e Step 1: Sfondo del gioco (quello della spiegazione / forzieri) */}
+      <div 
+        className={`absolute top-0 left-0 w-full h-full z-0 transition-opacity duration-1000 ease-in-out pointer-events-none ${
+          effectiveStep <= 1 ? 'opacity-60' : 'opacity-0'
+        }`}
+        style={{
+          backgroundImage: assetUrlCss(sfondoSpiegazione),
+          backgroundSize: 'cover',
+          backgroundPosition: 'center'
+        }}
+      />
+
+      {/* Step 2: Sfondo della manche attiva con trasparenza */}
       {gameData.sfondo && (
         <div 
-          className="absolute top-0 left-0 w-full h-full z-0 transition-all duration-1000 opacity-30" 
+          className={`absolute top-0 left-0 w-full h-full z-0 transition-opacity duration-1000 ease-in-out pointer-events-none ${
+            effectiveStep === 2 ? 'opacity-30' : 'opacity-0'
+          }`}
           style={{
             backgroundImage: assetUrlCss(gameData.sfondo),
             backgroundSize: 'cover',
@@ -743,83 +792,152 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
         />
       )}
 
-      <div className="relative z-10 w-full max-w-6xl flex flex-col items-center">
-        <div className="flex flex-col items-center mb-4">
-          <h1 className="text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500">
+      {/* STEP 0: Solo sfondo del gioco (quello della spiegazione) e titolo */}
+      <div 
+        className={`absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-8 transition-all duration-700 ease-in-out ${
+          effectiveStep === 0 
+            ? 'opacity-100 scale-100 pointer-events-auto' 
+            : 'opacity-0 scale-95 pointer-events-none'
+        }`}
+      >
+        <div className="mb-4 inline-flex items-center gap-2 px-6 py-2 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-black text-sm uppercase tracking-widest shadow-lg">
+          <span>⚔️</span> GIOCO 3 — BOX 3
+        </div>
+        <h1 className="text-7xl md:text-9xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-gray-400 drop-shadow-2xl mb-4">
+          PASSWORD
+        </h1>
+        <p className="text-2xl md:text-4xl font-black text-amber-400 uppercase tracking-widest drop-shadow-lg">
+          MANCHE {currentManche + 1}
+        </p>
+      </div>
+
+      {/* STEP 1: Canzone con immagine centrale */}
+      <div 
+        className={`absolute inset-0 z-10 flex flex-col items-center justify-center p-8 transition-all duration-700 ease-in-out ${
+          effectiveStep === 1 
+            ? 'opacity-100 scale-100 pointer-events-auto' 
+            : effectiveStep === 0
+              ? 'opacity-0 scale-95 pointer-events-none'
+              : 'opacity-0 scale-125 blur-sm pointer-events-none'
+        }`}
+      >
+        <div className="flex flex-col items-center mb-6">
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-lg">
             PASSWORD
           </h1>
-          <p className="text-xl font-bold text-gray-400 uppercase tracking-widest">MANCHE {currentManche + 1}</p>
+          <p className="text-lg md:text-xl font-bold text-yellow-400 uppercase tracking-widest mt-1">
+            MANCHE {currentManche + 1}
+          </p>
         </div>
 
-        <div className="flex w-full justify-between mb-12">
-          {[1, 2, 3].map(t => {
-            const rank = getTeamRank(t);
-            const hasFinished = rank !== null;
-            const isActive = currentTeam === t;
-            const isExcluded = excludedTeams.includes(t);
-            const medal = getMedal(t);
-            const currentTeamName = boardTeamNames[t - 1] || `SQUADRA ${t}`;
-            
-            let borderColor = 'border-gray-700';
-            if (rank === 1) {
-              borderColor = 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.4)] bg-yellow-400/20';
-            } else if (rank === 2) {
-              borderColor = 'border-gray-300 shadow-[0_0_20px_rgba(209,213,219,0.4)] bg-gray-300/20';
-            } else if (rank === 3 && !isExcluded) {
-              borderColor = 'border-amber-600 shadow-[0_0_15px_rgba(217,119,6,0.4)] bg-amber-600/20';
-            } else if (isActive && !isExcluded) {
-              borderColor = t === 1 ? 'border-red-600 bg-red-600/10' : t === 2 ? 'border-blue-600 bg-blue-600/10' : 'border-green-600 bg-green-600/10';
-            }
+        {gameData.sfondo ? (
+          <div className="relative rounded-2xl overflow-hidden border-4 border-yellow-500/60 shadow-[0_0_60px_rgba(234,179,8,0.35)] max-w-4xl max-h-[60vh] flex items-center justify-center bg-black/60 p-2">
+            <img
+              src={assetUrl(gameData.sfondo)}
+              alt={`Tema Manche ${currentManche + 1}`}
+              className="max-h-[56vh] max-w-full rounded-xl object-contain shadow-2xl"
+            />
+          </div>
+        ) : (
+          <div className="w-[500px] h-[320px] rounded-2xl border-2 border-dashed border-slate-600 flex items-center justify-center text-slate-400 text-base">
+            Nessuna immagine per questa manche
+          </div>
+        )}
 
-            return (
-              <div key={t} className={`flex flex-col items-center w-1/4 p-4 rounded-xl border-4 transition-all duration-500
-                ${borderColor}
-                ${isActive && !hasFinished ? 'scale-105 shadow-[0_0_15px_rgba(255,255,255,0.1)]' : 'bg-gray-800/50'}
-                ${isExcluded ? 'opacity-50 grayscale border-gray-800' : ''}`}>
-                <h2 className={`text-2xl font-bold mb-4 ${t === 1 ? 'text-red-500' : t === 2 ? 'text-blue-500' : 'text-green-500'}`}>
-                  {currentTeamName} {isExcluded && "(BOMBA)"} {medal}
-                </h2>
-                <div className="flex flex-col gap-2 w-full">
-                  {getTeamWords(`team${t}` as WordType).map((w, i) => (
-                    <div key={i} className={`${teamColors[w.type]} text-white px-3 py-1 rounded text-center font-bold animate-bounce`}>
-                      {w.word}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        {musicaIntro && (
+          <div className="mt-6 flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-slate-800/90 border border-yellow-500/50 text-yellow-300 text-sm font-extrabold shadow-xl animate-pulse">
+            <span>🎵</span>
+            <span className="tracking-wide uppercase">Brano Intro in Riproduzione</span>
+          </div>
+        )}
+      </div>
 
-        <div className="flex gap-12 items-start">
-          <div className="grid grid-cols-3 gap-4 bg-gray-800 p-6 rounded-2xl shadow-2xl border border-gray-700">
-            {grid.map((item, i) => {
-              const isGuessedOrReveal = item.guessed || revealAll;
+      {/* STEP 2: Parole e cerchio suggerimenti */}
+      <div 
+        className={`absolute inset-0 z-10 flex flex-col items-center justify-center p-8 transition-all duration-700 ease-out ${
+          effectiveStep === 2 
+            ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' 
+            : 'opacity-0 scale-95 translate-y-8 pointer-events-none'
+        }`}
+      >
+        <div className="relative z-10 w-full max-w-6xl flex flex-col items-center">
+          <div className="flex flex-col items-center mb-4">
+            <h1 className="text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500">
+              PASSWORD
+            </h1>
+            <p className="text-xl font-bold text-gray-400 uppercase tracking-widest">MANCHE {currentManche + 1}</p>
+          </div>
+
+          <div className="flex w-full justify-between mb-12">
+            {[1, 2, 3].map(t => {
+              const rank = getTeamRank(t);
+              const hasFinished = rank !== null;
+              const isActive = currentTeam === t;
+              const isExcluded = excludedTeams.includes(t);
+              const medal = getMedal(t);
+              const currentTeamName = boardTeamNames[t - 1] || `SQUADRA ${t}`;
+              
+              let borderColor = 'border-gray-700';
+              if (rank === 1) {
+                borderColor = 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.4)] bg-yellow-400/20';
+              } else if (rank === 2) {
+                borderColor = 'border-gray-300 shadow-[0_0_20px_rgba(209,213,219,0.4)] bg-gray-300/20';
+              } else if (rank === 3 && !isExcluded) {
+                borderColor = 'border-amber-600 shadow-[0_0_15px_rgba(217,119,6,0.4)] bg-amber-600/20';
+              } else if (isActive && !isExcluded) {
+                borderColor = t === 1 ? 'border-red-600 bg-red-600/10' : t === 2 ? 'border-blue-600 bg-blue-600/10' : 'border-green-600 bg-green-600/10';
+              }
+
               return (
-                <div
-                  key={i}
-                  onClick={() => handleWordClick(i)}
-                  className={`
-                    w-40 h-24 flex items-center justify-center text-center p-2 rounded-lg cursor-pointer font-bold text-lg transition-all duration-500 transform
-                    ${isGuessedOrReveal 
-                      ? item.type === 'neutral' 
-                        ? 'bg-zinc-700/60 border border-zinc-650 text-white/50 scale-95' 
-                        : `${teamColors[item.type]} text-white scale-110 shadow-[0_0_20px_rgba(255,255,255,0.3)]` 
-                      : 'bg-gray-100 text-gray-900 hover:bg-white hover:scale-105'}
-                  `}
-                >
-                  {!isGuessedOrReveal || item.type !== 'neutral' || revealAll ? item.word : ''}
+                <div key={t} className={`flex flex-col items-center w-1/4 p-4 rounded-xl border-4 transition-all duration-500
+                  ${borderColor}
+                  ${isActive && !hasFinished ? 'scale-105 shadow-[0_0_15px_rgba(255,255,255,0.1)]' : 'bg-gray-800/50'}
+                  ${isExcluded ? 'opacity-50 grayscale border-gray-800' : ''}`}>
+                  <h2 className={`text-2xl font-bold mb-4 ${t === 1 ? 'text-red-500' : t === 2 ? 'text-blue-500' : 'text-green-500'}`}>
+                    {currentTeamName} {isExcluded && "(BOMBA)"} {medal}
+                  </h2>
+                  <div className="flex flex-col gap-2 w-full">
+                    {getTeamWords(`team${t}` as WordType).map((w, i) => (
+                      <div key={i} className={`${teamColors[w.type]} text-white px-3 py-1 rounded text-center font-bold animate-bounce`}>
+                        {w.word}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="flex flex-col items-center gap-6">
-            <div className="w-64 h-64 bg-gray-800 border-4 border-dashed border-gray-600 rounded-full flex flex-col items-center justify-center p-8 text-center">
-              <span className="text-gray-500 text-sm uppercase tracking-widest mb-2">Suggerimento</span>
-              <span className="text-3xl font-black text-yellow-400 drop-shadow-md">
-                {chosenSuggestion || "???"}
-              </span>
+          <div className="flex gap-12 items-start">
+            <div className="grid grid-cols-3 gap-4 bg-gray-800 p-6 rounded-2xl shadow-2xl border border-gray-700">
+              {grid.map((item, i) => {
+                const isGuessedOrReveal = item.guessed || revealAll;
+                return (
+                  <div
+                    key={i}
+                    onClick={() => handleWordClick(i)}
+                    className={`
+                      w-40 h-24 flex items-center justify-center text-center p-2 rounded-lg cursor-pointer font-bold text-lg transition-all duration-500 transform
+                      ${isGuessedOrReveal 
+                        ? item.type === 'neutral' 
+                          ? 'bg-zinc-700/60 border border-zinc-650 text-white/50 scale-95' 
+                          : `${teamColors[item.type]} text-white scale-110 shadow-[0_0_20px_rgba(255,255,255,0.3)]` 
+                        : 'bg-gray-100 text-gray-900 hover:bg-white hover:scale-105'}
+                    `}
+                  >
+                    {!isGuessedOrReveal || item.type !== 'neutral' || revealAll ? item.word : ''}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-col items-center gap-6">
+              <div className="w-64 h-64 bg-gray-800 border-4 border-dashed border-gray-600 rounded-full flex flex-col items-center justify-center p-8 text-center">
+                <span className="text-gray-500 text-sm uppercase tracking-widest mb-2">Suggerimento</span>
+                <span className="text-3xl font-black text-yellow-400 drop-shadow-md">
+                  {chosenSuggestion || "???"}
+                </span>
+              </div>
             </div>
           </div>
         </div>

@@ -146,29 +146,32 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
   const setupManches = [1, 2, 3].map((num) => {
     const q = setup.gioco3?.questions?.[num];
     if (!q) return null;
+    const defManche = defaultPasswordData.manches?.[num - 1] || {};
+    const rawSuggerimenti = (q.suggerimenti && Array.isArray(q.suggerimenti)) ? q.suggerimenti : [];
+    const legacySuggerimenti = [
+      ...(q.squadra1?.[0]?.indizi || []),
+      ...(q.squadra2?.[0]?.indizi || []),
+      ...(q.squadra3?.[0]?.indizi || []),
+      ...(q.squadra1?.[1]?.indizi || []),
+      ...(q.squadra2?.[1]?.indizi || []),
+      ...(q.squadra3?.[1]?.indizi || []),
+      ...(q.squadra1?.[2]?.indizi || []),
+      ...(q.squadra2?.[2]?.indizi || []),
+      ...(q.squadra3?.[2]?.indizi || []),
+    ].filter(Boolean);
+    const chosenList = rawSuggerimenti.some(Boolean)
+      ? rawSuggerimenti
+      : (legacySuggerimenti.length > 0 ? legacySuggerimenti : (defManche.suggerimenti || []));
+    const suggerimenti = chosenList.map((s: string) => (s || '').toUpperCase().trim()).filter(Boolean);
+
     return {
       sfondo: q.sfondo || setup.gioco3.sfondoGenerale || `/Password/password${num}.png`,
+      musicaIntro: q.musicaIntro || '',
       squadra1: [q.squadra1[0].parola, q.squadra1[1].parola, q.squadra1[2].parola].map(w => w.toUpperCase()),
       squadra2: [q.squadra2[0].parola, q.squadra2[1].parola, q.squadra2[2].parola].map(w => w.toUpperCase()),
       squadra3: [q.squadra3[0].parola, q.squadra3[1].parola, q.squadra3[2].parola].map(w => w.toUpperCase()),
       altre: [q.parolaBomba, q.paroleNulle[0], q.paroleNulle[1]].map(w => w.toUpperCase()),
-      suggerimenti_turni: [
-        [
-          [q.squadra1[0].indizi[0], q.squadra1[0].indizi[1]],
-          [q.squadra2[0].indizi[0], q.squadra2[0].indizi[1]],
-          [q.squadra3[0].indizi[0], q.squadra3[0].indizi[1]],
-        ],
-        [
-          [q.squadra1[1].indizi[0], q.squadra1[1].indizi[1]],
-          [q.squadra2[1].indizi[0], q.squadra2[1].indizi[1]],
-          [q.squadra3[1].indizi[0], q.squadra3[1].indizi[1]],
-        ],
-        [
-          [q.squadra1[2].indizi[0], q.squadra1[2].indizi[1]],
-          [q.squadra2[2].indizi[0], q.squadra2[2].indizi[1]],
-          [q.squadra3[2].indizi[0], q.squadra3[2].indizi[1]],
-        ]
-      ],
+      suggerimenti,
       bussolotti: (() => {
         const oldB = defaultPasswordData.manches[num - 1]?.bussolotti || {
           immagine_premio: "/Icone/premio_bonus.png",
@@ -209,7 +212,8 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
   }).filter(Boolean);
 
   const mappedPasswordData = {
-    manches: setupManches.length > 0 ? setupManches : defaultPasswordData.manches
+    manches: setupManches.length > 0 ? setupManches : defaultPasswordData.manches,
+    sfondoSpiegazione: setup.gioco3?.sfondoSpiegazione || '/Icone/sfondi/sfondo_box3_forzieri.jpg'
   };
 
   const staticSlides: Slide[] = [
@@ -784,8 +788,11 @@ export default function PresenterView() {
                       interactive={
                         activeSlide.type === 'password_squadre' ||
                         activeSlide.type === 'password_prescelti' ||
-                        activeSlide.type === 'finale_squadre'
+                        activeSlide.type === 'finale_squadre' ||
+                        activeSlide.type === 'classifica' ||
+                        activeSlide.type === 'classifica_musicale'
                       }
+                      isPresenter={true}
                       viewportMode="none"
                     />
                   ) : null}

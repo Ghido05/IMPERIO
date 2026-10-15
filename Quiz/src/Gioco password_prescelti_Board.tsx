@@ -50,6 +50,10 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
   const gameData = manches[currentManche] || manches[0];
 
   const [audioPlaying, setAudioPlaying] = useSyncedState<boolean>('playstate_password_squadre_audio_playing', false);
+  const [presentationStep, setPresentationStep] = useSyncedState<number>(
+    `playstate_password_step_m${currentManche}`,
+    0
+  );
   const [bussolottiStatus, setBussolottiStatus] = useState<Record<RankType, BussolottiStatus>>(() => {
     const stored = localStorage.getItem('password_bussolotti_status');
     try {
@@ -174,7 +178,13 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       ) {
         return;
       }
-      if (e.key.toLowerCase() === 'm') {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        setPresentationStep(prev => Math.min(prev + 1, 2));
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        setPresentationStep(prev => Math.max(prev - 1, 0));
+      } else if (activeBussolottiRank === null && (e.key === '0' || e.key === '1' || e.key === '2')) {
+        setPresentationStep(parseInt(e.key, 10));
+      } else if (e.key.toLowerCase() === 'm') {
         if (musicaIntro) {
           setAudioPlaying(prev => !prev);
         }
@@ -183,7 +193,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, musicaIntro]);
+  }, [interactive, musicaIntro, activeBussolottiRank, setPresentationStep, setAudioPlaying]);
 
   useEffect(() => {
     const handleStorage = () => {
@@ -303,12 +313,13 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
   }, [currentManche, gameData]);
 
   const selectSuggestion = (sugg: string) => {
-    setChosenSuggestion(sugg);
-    localStorage.setItem(`password_chosen_suggestion_m${currentManche}`, sugg);
-    localStorage.setItem('password_chosen_suggestion', sugg);
+    const newSugg = chosenSuggestion === sugg ? "" : sugg;
+    setChosenSuggestion(newSugg);
+    localStorage.setItem(`password_chosen_suggestion_m${currentManche}`, newSugg);
+    localStorage.setItem('password_chosen_suggestion', newSugg);
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new CustomEvent('local-storage-update', {
-      detail: { key: 'password_chosen_suggestion', value: sugg }
+      detail: { key: 'password_chosen_suggestion', value: newSugg }
     }));
   };
 
@@ -540,7 +551,8 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       'password_active_bussolotti',
       'password_bussolotti_manche',
       'playstate_password_bussolotti_selected_idx',
-      'playstate_password_bussolotti_show_all'
+      'playstate_password_bussolotti_show_all',
+      'playstate_password_squadre_audio_playing'
     ];
     // Rimuovi anche le chiavi per manche
     for (let m = 0; m < 10; m++) {
@@ -552,10 +564,13 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
         `password_bussolotti_status_m${m}`,
         `password_active_bussolotti_m${m}`,
         `password_current_team_m${m}`,
-        `password_current_round_m${m}`
+        `password_current_round_m${m}`,
+        `playstate_password_step_m${m}`
       );
     }
     keysToRemove.forEach(k => localStorage.removeItem(k));
+    setPresentationStep(0);
+    setAudioPlaying(false);
     
     setCurrentManche(0);
     setCurrentRound(1);
@@ -589,7 +604,17 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     }
   }, []);
 
-  const currentPair = gameData.suggerimenti_turni[currentRound - 1]?.[currentTeam - 1] || [];
+  const rawSuggerimenti = (gameData as any).suggerimenti;
+  const legacySuggerimenti = (gameData as any).suggerimenti_turni 
+    ? (gameData as any).suggerimenti_turni.flat(2) 
+    : [];
+  const suggestionsSource: string[] = (Array.isArray(rawSuggerimenti) && rawSuggerimenti.some(Boolean))
+    ? rawSuggerimenti
+    : legacySuggerimenti;
+  
+  const mancheSuggestions: string[] = suggestionsSource
+    .map((s: string) => (s || '').trim())
+    .filter(Boolean);
 
   const isWordGuessed = (word: string) => {
     return grid.find(w => w.word === word.toUpperCase())?.guessed;
@@ -597,12 +622,12 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
   return (
     <div className={`w-full min-h-screen bg-slate-900 text-white font-sans ${ipadMode ? 'p-3 sm:p-6' : 'p-8'}`}>
       {!ipadMode ? (
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex justify-between items-center mb-8 gap-4 flex-wrap">
           <div>
             <h1 className="text-4xl font-bold text-yellow-500">
               VISTA PRESCELTI / CONDUTTORE
             </h1>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 mt-1">
               <p className="text-slate-400 font-bold">MANCHE {currentManche + 1} di {manches.length}</p>
               {(gameData as any).musicaIntro && (
                 <button
@@ -619,6 +644,47 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
               )}
             </div>
           </div>
+
+          {/* Controller Step Presentazione */}
+          <div className="flex items-center gap-2 bg-slate-800/90 px-3 py-2 rounded-2xl border border-slate-700 shadow-xl">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 mr-1">
+              Schermo Pubblico:
+            </span>
+            <button
+              type="button"
+              onClick={() => setPresentationStep(0)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                presentationStep === 0
+                  ? 'bg-yellow-500 text-slate-950 shadow-md ring-2 ring-yellow-400/50'
+                  : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300'
+              }`}
+            >
+              Step 0: Sfondo
+            </button>
+            <button
+              type="button"
+              onClick={() => setPresentationStep(1)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                presentationStep === 1
+                  ? 'bg-yellow-500 text-slate-950 shadow-md ring-2 ring-yellow-400/50'
+                  : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300'
+              }`}
+            >
+              Step 1: Canzone & Immagine
+            </button>
+            <button
+              type="button"
+              onClick={() => setPresentationStep(2)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                presentationStep === 2
+                  ? 'bg-yellow-500 text-slate-950 shadow-md ring-2 ring-yellow-400/50'
+                  : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300'
+              }`}
+            >
+              Step 2: Parole & Cerchio
+            </button>
+          </div>
+
           <button 
             onClick={resetGame}
             className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded font-bold text-sm cursor-pointer"
@@ -627,15 +693,69 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
           </button>
         </div>
       ) : (
-        <div className="flex justify-between items-center mb-4 bg-slate-800/50 p-3 rounded-xl border border-slate-700/50">
-          <div>
-            <span className="text-[10px] text-yellow-500 font-black tracking-widest uppercase block">GIOCO 3: PASSWORD PRESCELTI</span>
-            <span className="text-sm font-bold">MANCHE {currentManche + 1} / {manches.length}</span>
+        <div className="flex flex-col gap-2.5 mb-4 bg-slate-800/60 p-3 rounded-xl border border-slate-700/50 shadow-md">
+          <div className="flex justify-between items-center">
+            <div>
+              <span className="text-[10px] text-yellow-500 font-black tracking-widest uppercase block">GIOCO 3: PASSWORD PRESCELTI</span>
+              <span className="text-sm font-bold">MANCHE {currentManche + 1} / {manches.length}</span>
+            </div>
+            {(gameData as any).musicaIntro && (
+              <button
+                type="button"
+                onClick={() => setAudioPlaying(prev => !prev)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${
+                  audioPlaying 
+                    ? 'bg-emerald-600 text-white animate-pulse' 
+                    : 'bg-slate-700 text-slate-350 border border-slate-600'
+                }`}
+              >
+                {audioPlaying ? '🔊 Stop Intro' : '🎵 Play Intro'}
+              </button>
+            )}
+          </div>
+          {/* Step Selector per iPad */}
+          <div className="flex items-center gap-1.5 pt-2 border-t border-slate-700/60">
+            <span className="text-[10px] font-black uppercase text-slate-400 shrink-0">
+              Schermo:
+            </span>
+            <button
+              type="button"
+              onClick={() => setPresentationStep(0)}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black transition-all cursor-pointer text-center truncate ${
+                presentationStep === 0
+                  ? 'bg-yellow-500 text-slate-950 shadow ring-1 ring-yellow-400'
+                  : 'bg-slate-700/80 text-slate-300'
+              }`}
+            >
+              0: Sfondo
+            </button>
+            <button
+              type="button"
+              onClick={() => setPresentationStep(1)}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black transition-all cursor-pointer text-center truncate ${
+                presentationStep === 1
+                  ? 'bg-yellow-500 text-slate-950 shadow ring-1 ring-yellow-400'
+                  : 'bg-slate-700/80 text-slate-300'
+              }`}
+            >
+              1: Canzone & Img
+            </button>
+            <button
+              type="button"
+              onClick={() => setPresentationStep(2)}
+              className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black transition-all cursor-pointer text-center truncate ${
+                presentationStep === 2
+                  ? 'bg-yellow-500 text-slate-950 shadow ring-1 ring-yellow-400'
+                  : 'bg-slate-700/80 text-slate-300'
+              }`}
+            >
+              2: Gioco
+            </button>
           </div>
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-4 lg:gap-8 mb-8">
+      <div className="flex flex-col xl:flex-row gap-4 xl:gap-8 mb-8">
         <div className="flex-1">
           <h2 className="text-lg sm:text-2xl font-bold mb-3 sm:mb-4 text-slate-300">Mappa Parole (Griglia)</h2>
           <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
@@ -657,52 +777,112 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
           </div>
         </div>
 
-        <div className="w-full lg:w-96 flex flex-col gap-4">
-          <div className="bg-slate-800 p-4 sm:p-6 rounded-xl border border-slate-700 shadow-xl">
-            <div className="flex justify-between items-center mb-4 sm:mb-6">
+        <div className="w-full xl:w-[480px] flex flex-col gap-4">
+          <div className="bg-slate-800 p-4 sm:p-5 rounded-xl border border-slate-700 shadow-xl flex flex-col">
+            <div className="flex justify-between items-center mb-3 sm:mb-4 bg-slate-900/60 p-3 rounded-xl border border-slate-700/60">
               <div>
                 <span className="text-slate-400 text-[10px] sm:text-xs uppercase font-black block">Round</span>
-                <span className="text-xl sm:text-3xl font-black text-white">{currentRound} / 3</span>
+                <span className="text-xl sm:text-2xl font-black text-white">{currentRound} / 3</span>
               </div>
               <div className="text-right">
                 <span className="text-slate-400 text-[10px] sm:text-xs uppercase font-black block">Turno di</span>
-                <span className={`text-xl sm:text-3xl font-black ${currentTeam === 1 ? 'text-red-500' : currentTeam === 2 ? 'text-blue-500' : 'text-green-500'}`}>
+                <span className={`text-xl sm:text-2xl font-black ${currentTeam === 1 ? 'text-red-400' : currentTeam === 2 ? 'text-blue-400' : 'text-green-400'}`}>
                   {presceltiTeamNames[currentTeam - 1] || `SQUADRA ${currentTeam}`}
                 </span>
               </div>
             </div>
 
-            <h2 className="text-sm sm:text-xl font-bold mb-3 sm:mb-4 text-yellow-400">Suggerimenti Manche {currentManche + 1}:</h2>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-              {currentPair.map((s: string, i: number) => (
+            <div className="flex items-center justify-between mb-2.5">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs sm:text-sm font-black text-yellow-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <span>💡 Suggerimenti</span>
+                  <span className="text-slate-400 text-[11px] font-normal lowercase">(Manche {currentManche + 1})</span>
+                </h2>
+                <span className="text-[10px] font-bold text-slate-300 bg-slate-700/60 px-2 py-0.5 rounded-full border border-slate-600">
+                  {mancheSuggestions.length} parole
+                </span>
+              </div>
+              {chosenSuggestion && (
                 <button
-                  key={i}
-                  onClick={() => selectSuggestion(s)}
-                  className={`py-3 sm:py-6 px-2 sm:px-4 rounded-xl font-black text-md sm:text-xl transition-all border-2 sm:border-4 ${chosenSuggestion === s ? 'bg-yellow-500 text-black border-white scale-105 shadow-lg' : 'bg-slate-700 border-slate-600 hover:border-yellow-500'}`}
+                  type="button"
+                  onClick={() => selectSuggestion("")}
+                  className="text-[11px] text-red-400 hover:text-red-300 font-bold underline cursor-pointer"
                 >
-                  {s}
+                  Deseleziona
                 </button>
-              ))}
+              )}
+            </div>
+
+            {/* Griglia delle 14 parole di suggerimento */}
+            <div className="grid grid-cols-2 gap-2 mb-3 max-h-[360px] overflow-y-auto pr-1">
+              {mancheSuggestions.map((s: string, i: number) => {
+                const isSelected = chosenSuggestion === s;
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => selectSuggestion(s)}
+                    className={`py-2 sm:py-2.5 px-2.5 sm:px-3 rounded-xl font-bold text-xs sm:text-sm transition-all border-2 flex items-center justify-between text-left cursor-pointer active:scale-95 ${
+                      isSelected
+                        ? 'bg-yellow-500 text-black border-white shadow-lg shadow-yellow-500/25 scale-[1.02] ring-2 ring-yellow-400 font-black'
+                        : 'bg-slate-700/80 hover:bg-slate-650 text-white border-slate-600 hover:border-yellow-400/60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`text-[10px] font-mono shrink-0 ${isSelected ? 'text-black/60' : 'text-slate-400'}`}>
+                        {i + 1}.
+                      </span>
+                      <span className="truncate uppercase font-extrabold">{s}</span>
+                    </div>
+                    {isSelected && (
+                      <span className="text-black font-black text-xs shrink-0 ml-1">✓</span>
+                    )}
+                  </button>
+                );
+              })}
+              {mancheSuggestions.length === 0 && (
+                <div className="col-span-2 p-4 text-center text-xs text-slate-400 bg-slate-900/50 rounded-lg border border-dashed border-slate-700">
+                  Nessun suggerimento configurato per questa manche.
+                </div>
+              )}
             </div>
 
             <div className="flex gap-2">
               <button
+                type="button"
                 onClick={prevTurn}
-                className="flex-1 py-3 sm:py-4 bg-slate-600 text-white font-black text-xs sm:text-sm rounded-xl hover:bg-slate-500 transition-all shadow-lg uppercase tracking-tighter cursor-pointer"
+                className="flex-1 py-2.5 sm:py-3 bg-slate-700 hover:bg-slate-650 text-white font-black text-xs sm:text-sm rounded-xl transition-all shadow border border-slate-600 uppercase tracking-tighter cursor-pointer"
               >
                 ← Indietro
               </button>
               <button
+                type="button"
                 onClick={nextTurn}
-                className="flex-1 py-3 sm:py-4 bg-white text-black font-black text-xs sm:text-sm rounded-xl hover:bg-yellow-400 transition-all shadow-lg uppercase tracking-tighter cursor-pointer"
+                className="flex-1 py-2.5 sm:py-3 bg-white hover:bg-yellow-400 text-black font-black text-xs sm:text-sm rounded-xl transition-all shadow-lg uppercase tracking-tighter cursor-pointer"
               >
                 Prossimo →
               </button>
             </div>
             
-            {chosenSuggestion && (
-              <div className="mt-3 p-3 bg-yellow-500 text-black rounded-lg text-center text-sm font-black animate-pulse">
-                INVIATO: {chosenSuggestion}
+            {chosenSuggestion ? (
+              <div className="mt-3 p-2.5 bg-yellow-500 text-black rounded-xl flex items-center justify-between shadow-lg animate-pulse font-black">
+                <div className="flex items-center gap-2 truncate">
+                  <span className="text-[9px] uppercase tracking-wider bg-black/20 text-black px-1.5 py-0.5 rounded font-black">
+                    INVIATO A SCHERMO
+                  </span>
+                  <span className="text-sm font-black truncate">{chosenSuggestion}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => selectSuggestion("")}
+                  className="text-[10px] bg-black/20 hover:bg-black/30 px-2 py-1 rounded text-black font-bold uppercase shrink-0 cursor-pointer ml-2"
+                >
+                  ✕ Rimuovi
+                </button>
+              </div>
+            ) : (
+              <div className="mt-3 p-2 bg-slate-900/50 border border-slate-700/60 rounded-xl text-center text-[11px] text-slate-400">
+                👆 Clicca su uno dei 14 suggerimenti per mostrarlo sullo schermo
               </div>
             )}
           </div>

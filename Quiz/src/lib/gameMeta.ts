@@ -44,6 +44,7 @@ export const FIELD_LABELS: Record<string, string> = {
   squadra2: 'Squadra 2',
   squadra3: 'Squadra 3',
   altre: 'Altre parole',
+  suggerimenti: 'Suggerimenti',
   suggerimenti_turni: 'Suggerimenti per turno',
   bussolotti: 'Bussolotti bonus',
   immagine_premio: 'Immagine premio',

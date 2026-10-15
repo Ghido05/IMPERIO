@@ -292,6 +292,24 @@ export function getSlideForBoxQuestion(
     const setupManches = [1, 2, 3].map((num) => {
       const q = setupState.gioco3?.questions?.[num];
       if (!q) return null;
+      const defManche = defaultData.manches?.[num - 1] || {};
+      const rawSuggerimenti = (q.suggerimenti && Array.isArray(q.suggerimenti)) ? q.suggerimenti : [];
+      const legacySuggerimenti = [
+        ...(q.squadra1?.[0]?.indizi || []),
+        ...(q.squadra2?.[0]?.indizi || []),
+        ...(q.squadra3?.[0]?.indizi || []),
+        ...(q.squadra1?.[1]?.indizi || []),
+        ...(q.squadra2?.[1]?.indizi || []),
+        ...(q.squadra3?.[1]?.indizi || []),
+        ...(q.squadra1?.[2]?.indizi || []),
+        ...(q.squadra2?.[2]?.indizi || []),
+        ...(q.squadra3?.[2]?.indizi || []),
+      ].filter(Boolean);
+      const chosenList = rawSuggerimenti.some(Boolean)
+        ? rawSuggerimenti
+        : (legacySuggerimenti.length > 0 ? legacySuggerimenti : (defManche.suggerimenti || []));
+      const suggerimenti = chosenList.map((s: string) => (s || '').toUpperCase().trim()).filter(Boolean);
+
       return {
         sfondo: q.sfondo || `/Password/password${num}.png`,
         musicaIntro: q.musicaIntro || '',
@@ -299,23 +317,7 @@ export function getSlideForBoxQuestion(
         squadra2: [q.squadra2[0].parola, q.squadra2[1].parola, q.squadra2[2].parola].map(w => w.toUpperCase()),
         squadra3: [q.squadra3[0].parola, q.squadra3[1].parola, q.squadra3[2].parola].map(w => w.toUpperCase()),
         altre: [q.parolaBomba, q.paroleNulle[0], q.paroleNulle[1]].map(w => w.toUpperCase()),
-        suggerimenti_turni: [
-          [
-            [q.squadra1[0].indizi[0], q.squadra1[0].indizi[1]],
-            [q.squadra2[0].indizi[0], q.squadra2[0].indizi[1]],
-            [q.squadra3[0].indizi[0], q.squadra3[0].indizi[1]],
-          ],
-          [
-            [q.squadra1[1].indizi[0], q.squadra1[1].indizi[1]],
-            [q.squadra2[1].indizi[0], q.squadra2[1].indizi[1]],
-            [q.squadra3[1].indizi[0], q.squadra3[1].indizi[1]],
-          ],
-          [
-            [q.squadra1[2].indizi[0], q.squadra1[2].indizi[1]],
-            [q.squadra2[2].indizi[0], q.squadra2[2].indizi[1]],
-            [q.squadra3[2].indizi[0], q.squadra3[2].indizi[1]],
-          ]
-        ],
+        suggerimenti,
         bussolotti: (() => {
           const oldB = defaultData.manches[num - 1]?.bussolotti || {
             immagine_premio: "/Icone/premio_bonus.png",
@@ -359,6 +361,7 @@ export function getSlideForBoxQuestion(
     const data = {
       manches: setupManches.length > 0 ? setupManches : defaultData.manches,
       notePresentatore: setupState.gioco3?.questions?.[questionNum]?.notePresentatore || '',
+      sfondoSpiegazione: setupState.gioco3?.sfondoSpiegazione || '/Icone/sfondi/sfondo_box3_forzieri.jpg',
     };
     return { id: 'password_squadre', type: 'password_squadre', data };
   }

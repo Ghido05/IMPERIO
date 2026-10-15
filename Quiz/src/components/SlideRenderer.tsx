@@ -32,8 +32,8 @@ export default function SlideRenderer({ type, interactive = true, revealAll = fa
       <style>{`.min-h-screen { min-height: 1080px !important; height: 1080px !important; }`}</style>
       {type === 'img' && <ImgBoard interactive={interactive} revealAll={revealAll} />}
       {type === 'music' && <MusicBoard interactive={interactive} revealAll={revealAll} />}
-      {type === 'classifica' && <ClassificaBoard interactive={interactive} revealAll={revealAll} />}
-      {type === 'classifica_musicale' && <ClassificaMusicaleBoard interactive={interactive} revealAll={revealAll} />}
+      {type === 'classifica' && <ClassificaBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
+      {type === 'classifica_musicale' && <ClassificaMusicaleBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
       {type === 'cruciverba' && <CruciverbaBoard interactive={interactive} revealAll={revealAll} />}
       {type === 'gioco_frase_tempo' && <GiocoFraseTempoBoard interactive={interactive} revealAll={revealAll} />}
       {type === 'password_squadre' && <PasswordSquadreBoard interactive={interactive} revealAll={revealAll} />}

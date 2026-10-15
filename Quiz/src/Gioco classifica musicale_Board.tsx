@@ -112,7 +112,15 @@ const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false, onClo
   );
 };
 
-const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { interactive?: boolean; revealAll?: boolean }): React.JSX.Element => {
+const ClassificaMusicaleBoard = ({ 
+  interactive = true, 
+  revealAll = false,
+  isPresenter = false
+}: { 
+  interactive?: boolean; 
+  revealAll?: boolean;
+  isPresenter?: boolean;
+}): React.JSX.Element => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -123,6 +131,9 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     const match = slideId.match(/q(\d+)/);
     return match ? parseInt(match[1], 10) : 1;
   }, [slideId]);
+
+  const [step, setStep] = useSyncedState<number>(`playstate_${slideId}_step`, revealAll ? 2 : 0);
+  const effectiveStep = revealAll ? 2 : step;
 
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
   const [pointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
@@ -568,7 +579,17 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
       }
 
       const key = e.key;
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        setStep(prev => Math.min(prev + 1, 2));
+        return;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        setStep(prev => Math.max(prev - 1, 0));
+        return;
+      }
+
       if (key >= '1' && key <= '7') {
+        if (effectiveStep < 1) return; // Non rivelare prima dello step 1
         if (showSolution) return; // Non avviare né toccare gli stems se la soluzione è già attiva
         const numKey = Number(key);
         if (!revealed[numKey]) {
@@ -583,7 +604,11 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
           setIsPlaying(true);
         }
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
-        handleGiveSolution();
+        if (effectiveStep < 2) {
+          setStep(2);
+        } else {
+          handleGiveSolution();
+        }
       } else if (key === 'Escape' || key === 'Backspace') {
         if (showSolution) {
           setShowSolution(false);
@@ -602,7 +627,7 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
     if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, revealed, showSolution, handleGiveSolution, setShowSolution, getActiveTeamIdx, addScore, setRevealed, setLatestClue, setPlayTrigger, setIsPlaying]);
+  }, [interactive, revealed, showSolution, handleGiveSolution, setShowSolution, getActiveTeamIdx, addScore, setRevealed, setLatestClue, setPlayTrigger, setIsPlaying, setStep, effectiveStep]);
 
   const rankingMarkers = [
     { value: 7, top: "34.070%" }, // Giallo (1 indizio)
@@ -651,151 +676,211 @@ const ClassificaMusicaleBoard = ({ interactive = true, revealAll = false }: { in
       {/* Frame 16:9 scalato automaticamente sul viewport */}
       <div className="relative w-full max-w-[1920px] aspect-[16/9]">
         
-        {/* Riquadro sinistro (Frasi da svelare) */}
-        <div
-          className="absolute left-[5.026%] top-[29.907%] w-[35.794%] h-[65.315%] border-[#8e3600] bg-black/40 backdrop-blur-md overflow-hidden flex-shrink-0 p-4"
-          style={{ borderWidth: "clamp(6px, 1.0417vw, 20px)" }}
-        >
-          <div className="w-full h-full flex flex-col justify-around gap-2">
-            {[...gameData.elementi].reverse().map((el: any) => {
-              const isRevealed = revealAll || !!revealed[el.posizione];
-              const iconPath = getInstrumentIcon(el.audio, el.testo, el.frase);
-              return (
-                <div 
-                  key={el.posizione}
-                  className={`flex-1 flex items-center justify-between px-4 rounded-xl transition-all duration-700 ${getPhraseStyle(el.posizione, isRevealed)}`}
-                  style={{ boxShadow: isRevealed ? "inset 0 0 20px rgba(255,255,255,0.2)" : "none" }}
-                >
-                  <span className={`font-black tracking-tight text-[clamp(14px,1.5vw,28px)] text-left flex-1 transition-all duration-700 ${isRevealed ? 'opacity-100 scale-100' : 'opacity-0 scale-90 text-transparent'}`}>
-                    {(el as any).frase || el.testo}
-                  </span>
-                  {isRevealed && (
-                    <div className="h-[85%] max-h-[76px] aspect-square flex items-center justify-center shrink-0 ml-3 transition-transform duration-300 hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] animate-zoom-in">
-                      <img
-                        src={assetUrl(iconPath)}
-                        alt="Strumento"
-                        className="w-full h-full object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Pill superiore centrale (Titolo) */}
-        <div
-          className={`absolute left-[28.75%] top-[7.87%] w-[42.5%] h-[14.444%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-1000 ${showTitle || revealAll ? 'shadow-[0_0_40px_rgba(121,43,166,0.6)]' : ''}`}
-          style={{
-            borderWidth: "clamp(4px, 0.5208vw, 10px)",
-            borderRadius: "clamp(30px, 6.5vw, 124px)"
-          }}
-        >
-          <h1 className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,42px)] text-center leading-none">
-            {gameData.titolo}
-          </h1>
-        </div>
-
-        {/* ========================================================== */}
-        {/* BOX BACKGROUNDS DESTRA - FISSI                             */}
-        {/* ========================================================== */}
-        
-        {/* Box Yellow (7) */}
-        <div
-          className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#f7f700] top-[29.907%] h-[12.685%] transition-all duration-700"
-          style={{
-            borderWidth: "clamp(2px, 0.2604vw, 5px)",
-            borderRadius: "clamp(6px, 0.5208vw, 10px)"
-          }}
-        />
-
-        {/* Box Green (5, 6) */}
-        <div
-          className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#00ff00] top-[45.556%] h-[17.87%] transition-all duration-700"
-          style={{
-            borderWidth: "clamp(2px, 0.2604vw, 5px)",
-            borderRadius: "clamp(6px, 0.5208vw, 10px)"
-          }}
-        />
-
-        {/* Box Blue (1, 2, 3, 4) */}
-        <div
-          className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#00b3f6] top-[66.111%] h-[29.111%] transition-all duration-700"
-          style={{
-            borderWidth: "clamp(2px, 0.2604vw, 5px)",
-            borderRadius: "clamp(6px, 0.5208vw, 10px)"
-          }}
-        />
-
-        {/* ========================================================== */}
-        {/* TESTI INDIZI E MARKER NUMERICI                             */}
-        {/* ========================================================== */}
-        {rankingMarkers.map((marker) => {
-          const el = gameData.elementi[marker.value - 1];
-          const isRevealed = (revealed[marker.value] || revealAll);
-          return (
-            <React.Fragment key={marker.value}>
-              {/* Testo dell'indizio (Allineato e centrato esattamente al marker) */}
-              <div
-                className="absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[3%]"
-                style={{
-                  top: marker.top,
-                  height: "4.352%"
-                }}
-              >
-                <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${marker.value <= 4 ? 'text-white' : 'text-[#1b1b1b]'}`}>
-                  {isRevealed ? el?.testo : ""}
-                </p>
-              </div>
-
-              {/* Marker numerico a destra */}
-              <div
-                className="absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group"
-                style={{
-                  top: marker.top,
-                  borderWidth: "clamp(2px, 0.2083vw, 4px)",
-                  borderRadius: "clamp(6px, 0.5208vw, 10px)"
-                }}
-              >
-                <span className="text-white font-black text-[clamp(12px,1.56vw,30px)] leading-none">
-                  {marker.value}
-                </span>
-
-                {/* Mostra il pallino colorato della squadra che ha indovinato */}
-                {pointsAssigned[marker.value] !== undefined && pointsAssigned[marker.value] !== 0 && (
-                  <div 
-                    className={`absolute left-full ml-2 w-[clamp(20px,2vw,40px)] h-[clamp(20px,2vw,40px)] rounded-full font-black text-white text-[clamp(12px,1.2vw,24px)] flex items-center justify-center border-2 border-white/30 shadow-md animate-zoom-in ${
-                      pointsAssigned[marker.value] === 1 ? 'bg-red-600' : pointsAssigned[marker.value] === 2 ? 'bg-blue-600' : 'bg-green-600'
-                    }`}
-                  >
-                    {pointsAssigned[marker.value]}
-                  </div>
-                )}
-              </div>
-            </React.Fragment>
-          );
-        })}
-
-        {/* Pulsante per riaprire la soluzione se chiusa e tutti gli elementi sono svelati */}
-        {!showSolution && !revealAll && Object.values(revealed).filter(Boolean).length >= 7 && (
-          <div className="absolute left-[5.052%] top-[82%] z-40">
+        {/* Barra di controllo Step per il Relatore */}
+        {isPresenter && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 px-4 py-2 rounded-2xl shadow-2xl backdrop-blur-md">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 mr-1">
+              Schermo Pubblico:
+            </span>
             <button
               type="button"
-              onClick={handleGiveSolution}
-              className="px-5 py-2.5 rounded-2xl bg-[#792ba6]/90 hover:bg-[#792ba6] text-white border-2 border-white/30 text-xs font-black uppercase tracking-wider shadow-[0_0_25px_rgba(121,43,166,0.6)] flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+              onClick={() => setStep(0)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                effectiveStep === 0
+                  ? 'bg-yellow-500 text-slate-950 shadow-md ring-2 ring-yellow-400/50'
+                  : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300'
+              }`}
             >
-              <span>🎵</span> Mostra Soluzione [S]
+              Step 0: Sfondo
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                effectiveStep === 1
+                  ? 'bg-yellow-500 text-slate-950 shadow-md ring-2 ring-yellow-400/50'
+                  : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300'
+              }`}
+            >
+              Step 1: Canzone & Indizi
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                effectiveStep === 2
+                  ? 'bg-yellow-500 text-slate-950 shadow-md ring-2 ring-yellow-400/50'
+                  : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300'
+              }`}
+            >
+              Step 2: Domanda & Risposte
             </button>
           </div>
         )}
 
-        {/* Solution Overlay */}
-        <Solution 
-          isVisible={showSolution || revealAll} 
-          revealAll={revealAll}
-          onClose={() => setShowSolution(false)}
-        />
+        {/* Step 1+: Scritta CANZONE sopra la lista di indizi */}
+        {effectiveStep >= 1 && (
+          <div
+            className="absolute left-[5.026%] top-[7.87%] w-[35.794%] h-[14.444%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-700 shadow-[0_0_40px_rgba(121,43,166,0.6)] animate-in fade-in"
+            style={{
+              borderWidth: "clamp(4px, 0.5208vw, 10px)",
+              borderRadius: "clamp(30px, 6.5vw, 124px)"
+            }}
+          >
+            <h2 className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,42px)] text-center leading-none">
+              CANZONE
+            </h2>
+          </div>
+        )}
+
+        {/* Step 1+: Riquadro sinistro (Frasi da svelare / Stems indizi) */}
+        {effectiveStep >= 1 && (
+          <div
+            className="absolute left-[5.026%] top-[29.907%] w-[35.794%] h-[65.315%] border-[#8e3600] bg-black/40 backdrop-blur-md overflow-hidden flex-shrink-0 p-4 transition-all duration-700 animate-in fade-in"
+            style={{ borderWidth: "clamp(6px, 1.0417vw, 20px)" }}
+          >
+            <div className="w-full h-full flex flex-col justify-around gap-2">
+              {[...gameData.elementi].reverse().map((el: any) => {
+                const isRevealed = revealAll || !!revealed[el.posizione];
+                const iconPath = getInstrumentIcon(el.audio, el.testo, el.frase);
+                return (
+                  <div 
+                    key={el.posizione}
+                    className={`flex-1 flex items-center justify-between px-4 rounded-xl transition-all duration-700 ${getPhraseStyle(el.posizione, isRevealed)}`}
+                    style={{ boxShadow: isRevealed ? "inset 0 0 20px rgba(255,255,255,0.2)" : "none" }}
+                  >
+                    <span className={`font-black tracking-tight text-[clamp(14px,1.5vw,28px)] text-left flex-1 transition-all duration-700 ${isRevealed ? 'opacity-100 scale-100' : 'opacity-0 scale-90 text-transparent'}`}>
+                      {(el as any).frase || el.testo}
+                    </span>
+                    {isRevealed && (
+                      <div className="h-[85%] max-h-[76px] aspect-square flex items-center justify-center shrink-0 ml-3 transition-transform duration-300 hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] animate-zoom-in">
+                        <img
+                          src={assetUrl(iconPath)}
+                          alt="Strumento"
+                          className="w-full h-full object-contain filter drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Step 2+: Pill superiore destra (Domanda Categoria - centrata sopra la lista) */}
+        {effectiveStep >= 2 && (
+          <div
+            className={`absolute left-[48.438%] top-[7.87%] w-[42.5%] h-[14.444%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-1000 ${showTitle || revealAll ? 'shadow-[0_0_40px_rgba(121,43,166,0.6)]' : ''} animate-in fade-in`}
+            style={{
+              borderWidth: "clamp(4px, 0.5208vw, 10px)",
+              borderRadius: "clamp(30px, 6.5vw, 124px)"
+            }}
+          >
+            <h1 className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,42px)] text-center leading-none">
+              {gameData.titolo}
+            </h1>
+          </div>
+        )}
+
+        {/* Step 2+: BOX BACKGROUNDS DESTRA & RISPOSTE */}
+        {effectiveStep >= 2 && (
+          <>
+            {/* Box Yellow (7) */}
+            <div
+              className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#f7f700] top-[29.907%] h-[12.685%] transition-all duration-700 animate-in fade-in"
+              style={{
+                borderWidth: "clamp(2px, 0.2604vw, 5px)",
+                borderRadius: "clamp(6px, 0.5208vw, 10px)"
+              }}
+            />
+
+            {/* Box Green (5, 6) */}
+            <div
+              className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#00ff00] top-[45.556%] h-[17.87%] transition-all duration-700 animate-in fade-in"
+              style={{
+                borderWidth: "clamp(2px, 0.2604vw, 5px)",
+                borderRadius: "clamp(6px, 0.5208vw, 10px)"
+              }}
+            />
+
+            {/* Box Blue (1, 2, 3, 4) */}
+            <div
+              className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#00b3f6] top-[66.111%] h-[29.111%] transition-all duration-700 animate-in fade-in"
+              style={{
+                borderWidth: "clamp(2px, 0.2604vw, 5px)",
+                borderRadius: "clamp(6px, 0.5208vw, 10px)"
+              }}
+            />
+
+            {/* TESTI INDIZI E MARKER NUMERICI */}
+            {rankingMarkers.map((marker) => {
+              const el = gameData.elementi[marker.value - 1];
+              const isRevealed = (revealed[marker.value] || revealAll);
+              return (
+                <React.Fragment key={marker.value}>
+                  {/* Testo dell'indizio (Allineato e centrato esattamente al marker) */}
+                  <div
+                    className="absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[3%]"
+                    style={{
+                      top: marker.top,
+                      height: "4.352%"
+                    }}
+                  >
+                    <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${marker.value <= 4 ? 'text-white' : 'text-[#1b1b1b]'}`}>
+                      {isRevealed ? el?.testo : ""}
+                    </p>
+                  </div>
+
+                  {/* Marker numerico a destra */}
+                  <div
+                    className="absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group"
+                    style={{
+                      top: marker.top,
+                      borderWidth: "clamp(2px, 0.2083vw, 4px)",
+                      borderRadius: "clamp(6px, 0.5208vw, 10px)"
+                    }}
+                  >
+                    <span className="text-white font-black text-[clamp(12px,1.56vw,30px)] leading-none">
+                      {marker.value}
+                    </span>
+
+                    {/* Mostra il pallino colorato della squadra che ha indovinato */}
+                    {pointsAssigned[marker.value] !== undefined && pointsAssigned[marker.value] !== 0 && (
+                      <div 
+                        className={`absolute left-full ml-2 w-[clamp(20px,2vw,40px)] h-[clamp(20px,2vw,40px)] rounded-full font-black text-white text-[clamp(12px,1.2vw,24px)] flex items-center justify-center border-2 border-white/30 shadow-md animate-zoom-in ${
+                          pointsAssigned[marker.value] === 1 ? 'bg-red-600' : pointsAssigned[marker.value] === 2 ? 'bg-blue-600' : 'bg-green-600'
+                        }`}
+                      >
+                        {pointsAssigned[marker.value]}
+                      </div>
+                    )}
+                  </div>
+                </React.Fragment>
+              );
+            })}
+
+            {/* Pulsante per riaprire la soluzione se chiusa e tutti gli elementi sono svelati */}
+            {!showSolution && !revealAll && Object.values(revealed).filter(Boolean).length >= 7 && (
+              <div className="absolute left-[5.052%] top-[82%] z-40">
+                <button
+                  type="button"
+                  onClick={handleGiveSolution}
+                  className="px-5 py-2.5 rounded-2xl bg-[#792ba6]/90 hover:bg-[#792ba6] text-white border-2 border-white/30 text-xs font-black uppercase tracking-wider shadow-[0_0_25px_rgba(121,43,166,0.6)] flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+                >
+                  <span>🎵</span> Mostra Soluzione [S]
+                </button>
+              </div>
+            )}
+
+            {/* Solution Overlay */}
+            <Solution 
+              isVisible={showSolution || revealAll} 
+              revealAll={revealAll}
+              onClose={() => setShowSolution(false)}
+            />
+          </>
+        )}
       </div>
     </div>
   );

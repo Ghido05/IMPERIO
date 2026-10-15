@@ -4,7 +4,15 @@ import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
 
-const ClassificaBoard = ({ interactive = true, revealAll = false }: { interactive?: boolean; revealAll?: boolean }): React.JSX.Element => {
+const ClassificaBoard = ({ 
+  interactive = true, 
+  revealAll = false,
+  isPresenter = false
+}: { 
+  interactive?: boolean; 
+  revealAll?: boolean;
+  isPresenter?: boolean;
+}): React.JSX.Element => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -15,6 +23,9 @@ const ClassificaBoard = ({ interactive = true, revealAll = false }: { interactiv
     const match = slideId.match(/q(\d+)/);
     return match ? parseInt(match[1], 10) : 1;
   }, [slideId]);
+
+  const [step, setStep] = useSyncedState<number>(`playstate_${slideId}_step`, revealAll ? 2 : 0);
+  const effectiveStep = revealAll ? 2 : step;
 
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
   const [pointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
@@ -186,7 +197,17 @@ const ClassificaBoard = ({ interactive = true, revealAll = false }: { interactiv
       };
 
       const key = e.key;
+
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        setStep(prev => Math.min(prev + 1, 2));
+        return;
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        setStep(prev => Math.max(prev - 1, 0));
+        return;
+      }
+
       if (key >= '1' && key <= '9') {
+        if (effectiveStep < 2) return; // Non rivelare prima che sia visibile la classifica (step 2)
         const num = Number(key);
         if (!revealed[num]) {
           const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
@@ -197,6 +218,7 @@ const ClassificaBoard = ({ interactive = true, revealAll = false }: { interactiv
           setLatestClue(num);
         }
       } else if (key === '0') {
+        if (effectiveStep < 2) return; // Non rivelare prima che sia visibile la classifica (step 2)
         if (!revealed[10]) {
           const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
           const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
@@ -206,16 +228,20 @@ const ClassificaBoard = ({ interactive = true, revealAll = false }: { interactiv
           setLatestClue(10);
         }
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
-        if (!isAutoAdvancing && !isGameComplete) {
-          const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
-          const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
-          addScore(targetTeamIdx, 5000);
-          setIsAutoAdvancing(true);
-        } else if (isAutoAdvancing && !isGameComplete) {
-          setIsAutoAdvancing(false);
-          const allRevealed: Record<number, boolean> = {};
-          for (let i = 1; i <= 10; i++) allRevealed[i] = true;
-          setRevealed(allRevealed);
+        if (effectiveStep < 2) {
+          setStep(2);
+        } else {
+          if (!isAutoAdvancing && !isGameComplete) {
+            const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
+            const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
+            addScore(targetTeamIdx, 5000);
+            setIsAutoAdvancing(true);
+          } else if (isAutoAdvancing && !isGameComplete) {
+            setIsAutoAdvancing(false);
+            const allRevealed: Record<number, boolean> = {};
+            for (let i = 1; i <= 10; i++) allRevealed[i] = true;
+            setRevealed(allRevealed);
+          }
         }
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
         setShowError(true);
@@ -235,7 +261,7 @@ const ClassificaBoard = ({ interactive = true, revealAll = false }: { interactiv
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAutoAdvancing, interactive, scores, revealed, questionNum, addScore]);
+  }, [isAutoAdvancing, interactive, scores, revealed, questionNum, addScore, setStep, effectiveStep, isGameComplete]);
 
   const rankingMarkers = [
     { value: 10, top: "31.389%" },
@@ -287,148 +313,195 @@ const ClassificaBoard = ({ interactive = true, revealAll = false }: { interactiv
       {/* Frame 16:9 scalato automaticamente sul viewport */}
       <div className="relative w-full max-w-[1920px] aspect-[16/9]">
         
-        {/* Riquadro sinistro (Immagine coperta dalla griglia) */}
-        <div
-          className="absolute left-[5.026%] top-[7.87%] w-[35.794%] h-[63.611%] border-[#8e3600] bg-black overflow-hidden flex-shrink-0"
-          style={{ borderWidth: "clamp(6px, 1.0417vw, 20px)" }}
-        >
-          {/* L'Immagine Segreta */}
-          <img 
-            src={assetUrl(gameData.immagineSegreta)} 
-            alt="Immagine Segreta" 
-            className="w-full h-full object-cover"
-          />
-          
-          {/* Griglia di Copertura (Tasselli) */}
-          <div 
-            className="absolute inset-0 grid"
+        {/* Barra di controllo Step per il Relatore */}
+        {isPresenter && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 px-4 py-2 rounded-2xl shadow-2xl backdrop-blur-md">
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 mr-1">
+              Schermo Pubblico:
+            </span>
+            <button
+              type="button"
+              onClick={() => setStep(0)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                effectiveStep === 0
+                  ? 'bg-yellow-500 text-slate-950 shadow-md ring-2 ring-yellow-400/50'
+                  : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300'
+              }`}
+            >
+              Step 0: Sfondo
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(1)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                effectiveStep === 1
+                  ? 'bg-yellow-500 text-slate-950 shadow-md ring-2 ring-yellow-400/50'
+                  : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300'
+              }`}
+            >
+              Step 1: Immagine & Argomento
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep(2)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                effectiveStep === 2
+                  ? 'bg-yellow-500 text-slate-950 shadow-md ring-2 ring-yellow-400/50'
+                  : 'bg-slate-700/60 hover:bg-slate-700 text-slate-300'
+              }`}
+            >
+              Step 2: Domanda & Risposte
+            </button>
+          </div>
+        )}
+
+        {/* Step 1+: Riquadro sinistro con Immagine coperta da tasselli */}
+        {effectiveStep >= 1 && (
+          <div
+            className="absolute left-[5.026%] top-[7.87%] w-[35.794%] h-[63.611%] border-[#8e3600] bg-black overflow-hidden flex-shrink-0 transition-all duration-700 animate-in fade-in"
+            style={{ borderWidth: "clamp(6px, 1.0417vw, 20px)" }}
+          >
+            {/* L'Immagine Segreta */}
+            <img 
+              src={assetUrl(gameData.immagineSegreta)} 
+              alt="Immagine Segreta" 
+              className="w-full h-full object-cover"
+            />
+            
+            {/* Griglia di Copertura (Tasselli) */}
+            <div 
+              className="absolute inset-0 grid"
+              style={{
+                gridTemplateColumns: `repeat(${gameData.griglia?.colonne || 10}, minmax(0, 1fr))`,
+                gridTemplateRows: `repeat(${gameData.griglia?.righe || 10}, minmax(0, 1fr))`
+              }}
+            >
+              {Array.from({ length: totalTiles }).map((_, i) => (
+                <div 
+                  key={i}
+                  className={`w-full h-full border border-white/10 transition-all duration-700 ease-in-out ${
+                    isTileRevealed(i) ? 'opacity-0 scale-95' : `opacity-100 ${getTileColor(i)}`
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 1+: Pill inferiore sinistra (Argomento dell'immagine) */}
+        {effectiveStep >= 1 && (
+          <div
+            className={`absolute left-[5.052%] top-[80%] w-[35.781%] h-[15.222%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-700 animate-in fade-in ${
+              isGameComplete ? 'scale-105 shadow-[0_0_50px_rgba(121,43,166,0.6)]' : ''
+            }`}
             style={{
-              gridTemplateColumns: `repeat(${gameData.griglia?.colonne || 10}, minmax(0, 1fr))`,
-              gridTemplateRows: `repeat(${gameData.griglia?.righe || 10}, minmax(0, 1fr))`
+              borderWidth: "clamp(4px, 0.5208vw, 10px)",
+              borderRadius: "clamp(30px, 6.5vw, 124px)"
             }}
           >
-            {Array.from({ length: totalTiles }).map((_, i) => (
-              <div 
-                key={i}
-                className={`w-full h-full border border-white/10 transition-all duration-700 ease-in-out ${
-                  isTileRevealed(i) ? 'opacity-0 scale-95' : `opacity-100 ${getTileColor(i)}`
-                }`}
-              />
-            ))}
+            {!isGameComplete ? (
+               <p className="text-white font-black uppercase tracking-tight text-[clamp(14px,1.8vw,36px)] text-center leading-none">
+                 {gameData.categoria || (gameData as any).soluzione?.categoria || "Gioco Indizi"}
+               </p>
+            ) : (
+               <div className="animate-zoom-in text-center px-2">
+                 <p className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,40px)] text-center leading-none">
+                   {gameData.soluzioneTesto || (gameData as any).soluzione?.titolo || "SOLUZIONE"}
+                 </p>
+               </div>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Pill superiore destra (Titolo) */}
-        <div
-          className={`absolute left-[48.438%] top-[7.87%] w-[42.5%] h-[14.444%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-1000 ${showTitle || revealAll ? 'shadow-[0_0_40px_rgba(121,43,166,0.6)]' : ''}`}
-          style={{
-            borderWidth: "clamp(4px, 0.5208vw, 10px)",
-            borderRadius: "clamp(30px, 6.5vw, 124px)"
-          }}
-        >
-          <h1 className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,42px)] text-center leading-none">
-            {gameData.titolo}
-          </h1>
-        </div>
+        {/* Step 2+: Pill superiore destra (Domanda Categoria - centrata sopra la lista) */}
+        {effectiveStep >= 2 && (
+          <div
+            className={`absolute left-[48.438%] top-[7.87%] w-[42.5%] h-[14.444%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-1000 ${showTitle || revealAll ? 'shadow-[0_0_40px_rgba(121,43,166,0.6)]' : ''} animate-in fade-in`}
+            style={{
+              borderWidth: "clamp(4px, 0.5208vw, 10px)",
+              borderRadius: "clamp(30px, 6.5vw, 124px)"
+            }}
+          >
+            <h1 className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,42px)] text-center leading-none">
+              {gameData.titolo}
+            </h1>
+          </div>
+        )}
 
-        {/* ========================================================== */}
-        {/* BOX BACKGROUNDS DESTRA - FISSI                             */}
-        {/* ========================================================== */}
-        
-        {/* Box Yellow (9, 10) */}
-        <div
-          className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#f7f700] top-[29.907%] h-[12.685%] transition-all duration-700"
-          style={{
-            borderWidth: "clamp(2px, 0.2604vw, 5px)",
-            borderRadius: "clamp(6px, 0.5208vw, 10px)"
-          }}
-        />
-
-        {/* Box Green (6, 7, 8) */}
-        <div
-          className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#00ff00] top-[45.556%] h-[17.87%] transition-all duration-700"
-          style={{
-            borderWidth: "clamp(2px, 0.2604vw, 5px)",
-            borderRadius: "clamp(6px, 0.5208vw, 10px)"
-          }}
-        />
-
-        {/* Box Blue (1, 2, 3, 4, 5) */}
-        <div
-          className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#00b3f6] top-[66.111%] h-[29.111%] transition-all duration-700"
-          style={{
-            borderWidth: "clamp(2px, 0.2604vw, 5px)",
-            borderRadius: "clamp(6px, 0.5208vw, 10px)"
-          }}
-        />
-
-        {/* ========================================================== */}
-        {/* TESTI INDIZI E MARKER NUMERICI                             */}
-        {/* ========================================================== */}
-        {rankingMarkers.map((marker) => (
-          <React.Fragment key={marker.value}>
-            {/* Testo dell'indizio (Allineato esattamente al marker) */}
+        {/* Step 2+: BOX BACKGROUNDS DESTRA & RISPOSTE */}
+        {effectiveStep >= 2 && (
+          <>
+            {/* Box Yellow (9, 10) */}
             <div
-              className="absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[2%]"
+              className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#f7f700] top-[29.907%] h-[12.685%] transition-all duration-700 animate-in fade-in"
               style={{
-                top: marker.top,
-                height: "4.352%"
-              }}
-            >
-              <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${marker.value <= 5 ? 'text-white' : 'text-[#1b1b1b]'}`}>
-                {(revealed[marker.value] || revealAll) ? gameData.elementi[marker.value - 1]?.testo : ""}
-              </p>
-            </div>
-
-            {/* Marker numerico a destra */}
-            <div
-              className="absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group"
-              style={{
-                top: marker.top,
-                borderWidth: "clamp(2px, 0.2083vw, 4px)",
+                borderWidth: "clamp(2px, 0.2604vw, 5px)",
                 borderRadius: "clamp(6px, 0.5208vw, 10px)"
               }}
-            >
-              <span className="text-white font-black text-[clamp(12px,1.56vw,30px)] leading-none">
-                {marker.value}
-              </span>
+            />
 
-              {/* Mostra il pallino colorato della squadra che ha indovinato */}
-              {pointsAssigned[marker.value] !== undefined && pointsAssigned[marker.value] !== 0 && (
-                <div 
-                  className={`absolute left-full ml-2 w-[clamp(20px,2vw,40px)] h-[clamp(20px,2vw,40px)] rounded-full font-black text-white text-[clamp(12px,1.2vw,24px)] flex items-center justify-center border-2 border-white/30 shadow-md animate-zoom-in ${
-                    pointsAssigned[marker.value] === 1 ? 'bg-red-600' : pointsAssigned[marker.value] === 2 ? 'bg-blue-600' : 'bg-green-600'
-                  }`}
+            {/* Box Green (6, 7, 8) */}
+            <div
+              className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#00ff00] top-[45.556%] h-[17.87%] transition-all duration-700 animate-in fade-in"
+              style={{
+                borderWidth: "clamp(2px, 0.2604vw, 5px)",
+                borderRadius: "clamp(6px, 0.5208vw, 10px)"
+              }}
+            />
+
+            {/* Box Blue (1, 2, 3, 4, 5) */}
+            <div
+              className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#00b3f6] top-[66.111%] h-[29.111%] transition-all duration-700 animate-in fade-in"
+              style={{
+                borderWidth: "clamp(2px, 0.2604vw, 5px)",
+                borderRadius: "clamp(6px, 0.5208vw, 10px)"
+              }}
+            />
+
+            {/* TESTI INDIZI E MARKER NUMERICI */}
+            {rankingMarkers.map((marker) => (
+              <React.Fragment key={marker.value}>
+                {/* Testo dell'indizio (Allineato esattamente al marker) */}
+                <div
+                  className="absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[2%]"
+                  style={{
+                    top: marker.top,
+                    height: "4.352%"
+                  }}
                 >
-                  {pointsAssigned[marker.value]}
+                  <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${marker.value <= 5 ? 'text-white' : 'text-[#1b1b1b]'}`}>
+                    {(revealed[marker.value] || revealAll) ? gameData.elementi[marker.value - 1]?.testo : ""}
+                  </p>
                 </div>
-              )}
-            </div>
-          </React.Fragment>
-        ))}
 
-        {/* Pill inferiore sinistra (Box di completamento o categoria) */}
-        <div
-          className={`absolute left-[5.052%] top-[80%] w-[35.781%] h-[15.222%] bg-[#792ba6] border-[#0f2d54] flex items-center justify-center px-[2%] transition-all duration-700 ${
-            isGameComplete ? 'scale-105 shadow-[0_0_50px_rgba(121,43,166,0.6)]' : ''
-          }`}
-          style={{
-            borderWidth: "clamp(4px, 0.5208vw, 10px)",
-            borderRadius: "clamp(30px, 6.5vw, 124px)"
-          }}
-        >
-          {!isGameComplete ? (
-             <p className="text-white font-black uppercase tracking-tight text-[clamp(14px,1.8vw,36px)] text-center leading-none">
-               {gameData.categoria || (gameData as any).soluzione?.categoria || "Gioco Indizi"}
-             </p>
-          ) : (
-             <div className="animate-zoom-in text-center px-2">
-               <p className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,40px)] text-center leading-none">
-                 {gameData.soluzioneTesto || (gameData as any).soluzione?.titolo || "SOLUZIONE"}
-               </p>
-             </div>
-          )}
-        </div>
+                {/* Marker numerico a destra */}
+                <div
+                  className="absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group"
+                  style={{
+                    top: marker.top,
+                    borderWidth: "clamp(2px, 0.2083vw, 4px)",
+                    borderRadius: "clamp(6px, 0.5208vw, 10px)"
+                  }}
+                >
+                  <span className="text-white font-black text-[clamp(12px,1.56vw,30px)] leading-none">
+                    {marker.value}
+                  </span>
+
+                  {/* Mostra il pallino colorato della squadra che ha indovinato */}
+                  {pointsAssigned[marker.value] !== undefined && pointsAssigned[marker.value] !== 0 && (
+                    <div 
+                      className={`absolute left-full ml-2 w-[clamp(20px,2vw,40px)] h-[clamp(20px,2vw,40px)] rounded-full font-black text-white text-[clamp(12px,1.2vw,24px)] flex items-center justify-center border-2 border-white/30 shadow-md animate-zoom-in ${
+                        pointsAssigned[marker.value] === 1 ? 'bg-red-600' : pointsAssigned[marker.value] === 2 ? 'bg-blue-600' : 'bg-green-600'
+                      }`}
+                    >
+                      {pointsAssigned[marker.value]}
+                    </div>
+                  )}
+                </div>
+              </React.Fragment>
+            ))}
+          </>
+        )}
       </div>
     </div>
   );

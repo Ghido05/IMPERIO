@@ -736,7 +736,7 @@
   "gioco3": {
     "titolo": "Password",
     "sottotitolo": "Sfida a Squadre & Bussolotti",
-    "selectedQuestion": 0,
+    "selectedQuestion": 2,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box3_forzieri.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box3.mp3",
@@ -837,7 +837,7 @@
         "notePresentatore": "DALLA TORRE DI ASTRONOMIA CADE SILENTE (NON GANDALF)\nIL NECROMANTE è MEFISTO\nTRITONI NEL CALICE DI FUOCO VENGONO INCONTRATI DA HARRY DURANTE LA SECONDA PROVA"
       },
       "2": {
-        "sfondo": "/Icone/nessuno_img/3_2_dolci.png",
+        "sfondo": "/Icone/nessuno_img/3_2_dolci.jpg",
         "squadra1": [
           {
             "parola": "torta di mele",
@@ -931,24 +931,24 @@
         }
       },
       "3": {
-        "sfondo": "/Icone/exterior_00.webp",
+        "sfondo": "/Icone/nessuno_img/3_3_programmiTV.jpg",
         "squadra1": [
           {
-            "parola": "",
+            "parola": "GRANDE FRATELLO",
             "indizi": [
               "",
               ""
             ]
           },
           {
-            "parola": "",
+            "parola": "BALLANDO CON LE STELLE",
             "indizi": [
               "",
               ""
             ]
           },
           {
-            "parola": "",
+            "parola": "TU SI QUE VALES",
             "indizi": [
               "",
               ""
@@ -957,21 +957,21 @@
         ],
         "squadra2": [
           {
-            "parola": "",
+            "parola": "ZELIG",
             "indizi": [
               "",
               ""
             ]
           },
           {
-            "parola": "",
+            "parola": "CIAO DARWIN",
             "indizi": [
               "",
               ""
             ]
           },
           {
-            "parola": "",
+            "parola": "MONEY DROP",
             "indizi": [
               "",
               ""
@@ -980,31 +980,31 @@
         ],
         "squadra3": [
           {
-            "parola": "",
+            "parola": "CHI VUOL ESSER MILIONARIO?",
             "indizi": [
               "",
               ""
             ]
           },
           {
-            "parola": "",
+            "parola": "AFFARI TUOI",
             "indizi": [
               "",
               ""
             ]
           },
           {
-            "parola": "",
+            "parola": "TALE E QUALE SHOW",
             "indizi": [
               "",
               ""
             ]
           }
         ],
-        "parolaBomba": "",
+        "parolaBomba": "LA RUOTA DELLA FORTUNA",
         "paroleNulle": [
-          "",
-          ""
+          "STRISCIA LA NOTIZIA",
+          "REAZIONE A CATENA"
         ],
         "bussolotti": {
           "immagine_premio_squadra1": "dado",

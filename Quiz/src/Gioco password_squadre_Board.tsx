@@ -837,6 +837,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
         activeReveal={activeReveal}
         teamNames={boardTeamNames}
         canPlayAudio={shouldPlayAudio}
+        sfondoUrl={sfondoSpiegazione}
         onComplete={handleSuspenseComplete}
       />
 

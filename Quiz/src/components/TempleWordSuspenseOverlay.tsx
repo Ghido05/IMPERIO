@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import type { WordType } from '../lib/passwordUtils';
 import { templeSoundFX } from '../lib/templeSoundFX';
+import { assetUrlCss } from '../lib/assetUrl';
 
 export interface ActiveRevealData {
   index: number;
@@ -14,6 +15,7 @@ interface TempleWordSuspenseOverlayProps {
   activeReveal: ActiveRevealData | null;
   teamNames: string[];
   canPlayAudio: boolean;
+  sfondoUrl?: string;
   onComplete: () => void;
 }
 
@@ -21,10 +23,22 @@ export const TempleWordSuspenseOverlay: React.FC<TempleWordSuspenseOverlayProps>
   activeReveal,
   teamNames,
   canPlayAudio,
+  sfondoUrl,
   onComplete,
 }) => {
   const [phase, setPhase] = useState<'tension' | 'reveal' | 'settle'>('tension');
   const hasTriggeredAudioRef = useRef(false);
+
+  const bgImage = sfondoUrl || (() => {
+    try {
+      const raw = localStorage.getItem('imperio_quiz_setup_config_v1');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.gioco3?.sfondoSpiegazione) return parsed.gioco3.sfondoSpiegazione;
+      }
+    } catch {}
+    return '/Icone/sfondi/sfondo_box3_forzieri.jpg';
+  })();
 
   const teamIdx = activeReveal ? activeReveal.team - 1 : 0;
   const currentTeamName = teamNames[teamIdx] || `SQUADRA ${activeReveal?.team || 1}`;
@@ -110,11 +124,19 @@ export const TempleWordSuspenseOverlay: React.FC<TempleWordSuspenseOverlayProps>
     <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center select-none overflow-hidden transition-all duration-500 ${
       isSettle ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'
     }`}>
-      {/* Sfondo scuro atmosferico con particelle e fumo del tempio */}
+      {/* Immagine di sfondo delle regole del Gioco 3 */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center pointer-events-none transition-transform duration-1000 scale-105"
+        style={{
+          backgroundImage: assetUrlCss(bgImage),
+        }}
+      />
+
+      {/* Sfumatura atmosferica sopra lo sfondo per esaltare la mattonella e la parola in sovraimpressione */}
       <div className={`absolute inset-0 transition-colors duration-700 ${
         isReveal && isBomb
-          ? 'bg-gradient-to-b from-red-950/90 via-black/95 to-red-950/90'
-          : 'bg-black/85 backdrop-blur-md'
+          ? 'bg-gradient-to-b from-red-950/85 via-black/90 to-red-950/85'
+          : 'bg-black/65 backdrop-blur-[2px]'
       }`} />
 
       {/* Luce sismica / flash al momento della rivelazione */}

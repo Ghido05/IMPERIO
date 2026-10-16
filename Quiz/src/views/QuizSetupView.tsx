@@ -286,7 +286,7 @@ export function createDefaultBox0Setup(): Box0Setup {
       notePresentatore: DEFAULT_BOX0_RULES,
     },
     videoPreSigla: '',
-    videoSigla: '',
+    videoSigla: '/Video/sigla_imperio.mp4',
     sfondoSpiegazione: '',
     videoSpiegazione: '',
     audioSpiegazione: '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3',

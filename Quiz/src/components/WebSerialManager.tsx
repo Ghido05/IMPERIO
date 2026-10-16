@@ -448,13 +448,13 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
           </div>
         )}
 
-        {/* Pulsante Sblocca Hardware Rapido */}
+        {/* Pulsante Reset Hardware Rapido */}
         <button
           type="button"
           onClick={handleManualUnlock}
           disabled={isUnlocking}
           className="px-1.5 py-0.5 text-[9px] font-bold uppercase rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 transition-all cursor-pointer disabled:opacity-50 active:scale-95 flex items-center gap-1"
-          title="Invia comando /sblocca per riarmare la pulsantiera hardware"
+          title="Invia comando RESET per riarmare la pulsantiera hardware (Arduino/ESP32)"
         >
           {isUnlocking ? (
             <>
@@ -462,10 +462,10 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
               </svg>
-              <span>Sblocco...</span>
+              <span>RESET...</span>
             </>
           ) : (
-            <span>🔓 Sblocca</span>
+            <span>🔄 RESET</span>
           )}
         </button>
 
@@ -647,10 +647,10 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                         </svg>
-                        <span>Sblocco...</span>
+                        <span>RESET...</span>
                       </>
                     ) : (
-                      <span>🔓 Sblocca</span>
+                      <span>🔄 RESET</span>
                     )}
                   </button>
                 </div>

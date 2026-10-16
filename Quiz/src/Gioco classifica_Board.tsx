@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useGameData } from './context/GameDataContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
+import { ClassificaStaircaseSuspenseOverlay, type Box2SuspenseData } from './components/ClassificaStaircaseSuspenseOverlay';
 
 const ClassificaBoard = ({ 
   interactive = true, 
@@ -28,11 +29,12 @@ const ClassificaBoard = ({
   const effectiveStep = revealAll ? 2 : step;
 
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
-  const [pointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
+  const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
   const [, setLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
   const [showError, setShowError] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
   const [showTitle, setShowTitle] = useSyncedState(`playstate_${slideId}_showtitle`, false);
+  const [activeSuspense, setActiveSuspense] = useSyncedState<Box2SuspenseData | null>(`playstate_${slideId}_suspense`, null);
   
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
@@ -157,44 +159,83 @@ const ClassificaBoard = ({
     return () => clearTimeout(timer);
   }, [revealed, isAutoAdvancing]);
 
+  const getBox2StarterIdx = useCallback((): number => {
+    const saved = localStorage.getItem('playstate_box2_starter_idx');
+    if (saved !== null) {
+      return parseInt(saved, 10);
+    }
+    let lowestIdx = 0;
+    for (let i = 1; i < scores.length; i++) {
+      if (Number(scores[i]) < Number(scores[lowestIdx])) {
+        lowestIdx = i;
+      }
+    }
+    localStorage.setItem('playstate_box2_starter_idx', lowestIdx.toString());
+    return lowestIdx;
+  }, [scores]);
+
+  const questionStarterIdx = (getBox2StarterIdx() + (questionNum - 1)) % 3;
+
+  const getCluePoints = useCallback((clueNum: number) => {
+    if (clueNum >= 1 && clueNum <= 5) return 1000;
+    if (clueNum >= 6 && clueNum <= 8) return 2000;
+    if (clueNum >= 9 && clueNum <= 10) return 3000;
+    return 0;
+  }, []);
+
+  const getActiveTeamIdx = useCallback((currentRevealedCount: number): number => {
+    const savedActive = localStorage.getItem('playstate_box2_active_team_idx');
+    if (savedActive !== null) {
+      return parseInt(savedActive, 10);
+    }
+    return (questionStarterIdx + currentRevealedCount) % 3;
+  }, [questionStarterIdx]);
+
+  const triggerRevealClue = useCallback((num: number) => {
+    if (effectiveStep < 2) return;
+    if (revealed[num]) return;
+    if (activeSuspense) return;
+
+    const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
+    const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
+    const cluePoints = getCluePoints(num);
+    const clueElement = gameData.elementi?.[num - 1];
+    const clueText = clueElement?.testo || `Indizio ${num}`;
+
+    setActiveSuspense({
+      clueIndex: num,
+      teamIdx: targetTeamIdx,
+      timestamp: Date.now(),
+      totalClues: 10,
+      points: cluePoints,
+      clueText: clueText,
+    });
+  }, [effectiveStep, revealed, activeSuspense, getActiveTeamIdx, getCluePoints, gameData.elementi, setActiveSuspense]);
+
+  const handleSuspenseReveal = useCallback((clueNum: number, targetTeamIdx: number, points: number) => {
+    addScore(targetTeamIdx, points);
+    setRevealed(prev => ({ ...prev, [clueNum]: true }));
+    setPointsAssigned(prev => ({ ...prev, [clueNum]: targetTeamIdx + 1 }));
+    setLatestClue(clueNum);
+  }, [addScore, setRevealed, setPointsAssigned, setLatestClue]);
+
+  const handleSuspenseComplete = useCallback(() => {
+    setActiveSuspense(null);
+  }, [setActiveSuspense]);
+
   // Input da tastiera (1-9 e 0 per 10)
   useEffect(() => {
     if (!interactive) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA'
+      ) {
+        return;
+      }
+
       if (isAutoAdvancing) return;
-
-      const getBox2StarterIdx = (): number => {
-        const saved = localStorage.getItem('playstate_box2_starter_idx');
-        if (saved !== null) {
-          return parseInt(saved, 10);
-        }
-        let lowestIdx = 0;
-        for (let i = 1; i < scores.length; i++) {
-          if (Number(scores[i]) < Number(scores[lowestIdx])) {
-            lowestIdx = i;
-          }
-        }
-        localStorage.setItem('playstate_box2_starter_idx', lowestIdx.toString());
-        return lowestIdx;
-      };
-
-      const questionStarterIdx = (getBox2StarterIdx() + (questionNum - 1)) % 3;
-
-      const getCluePoints = (clueNum: number) => {
-        if (clueNum >= 1 && clueNum <= 5) return 1000;
-        if (clueNum >= 6 && clueNum <= 8) return 2000;
-        if (clueNum >= 9 && clueNum <= 10) return 3000;
-        return 0;
-      };
-
-      const getActiveTeamIdx = (currentRevealedCount: number): number => {
-        const savedActive = localStorage.getItem('playstate_box2_active_team_idx');
-        if (savedActive !== null) {
-          return parseInt(savedActive, 10);
-        }
-        return (questionStarterIdx + currentRevealedCount) % 3;
-      };
 
       const key = e.key;
 
@@ -207,26 +248,10 @@ const ClassificaBoard = ({
       }
 
       if (key >= '1' && key <= '9') {
-        if (effectiveStep < 2) return; // Non rivelare prima che sia visibile la classifica (step 2)
         const num = Number(key);
-        if (!revealed[num]) {
-          const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
-          const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
-          addScore(targetTeamIdx, getCluePoints(num));
-
-          setRevealed(prev => ({ ...prev, [num]: true }));
-          setLatestClue(num);
-        }
+        triggerRevealClue(num);
       } else if (key === '0') {
-        if (effectiveStep < 2) return; // Non rivelare prima che sia visibile la classifica (step 2)
-        if (!revealed[10]) {
-          const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
-          const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
-          addScore(targetTeamIdx, getCluePoints(10));
-
-          setRevealed(prev => ({ ...prev, 10: true }));
-          setLatestClue(10);
-        }
+        triggerRevealClue(10);
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
         if (effectiveStep < 2) {
           setStep(2);
@@ -261,7 +286,7 @@ const ClassificaBoard = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAutoAdvancing, interactive, scores, revealed, questionNum, addScore, setStep, effectiveStep, isGameComplete]);
+  }, [isAutoAdvancing, interactive, triggerRevealClue, effectiveStep, setStep, isGameComplete, revealed, getActiveTeamIdx, addScore, setRevealed, setIsAutoAdvancing, setShowError, setShowTitle]);
 
   const rankingMarkers = [
     { value: 10, top: "31.389%" },
@@ -463,7 +488,10 @@ const ClassificaBoard = ({
               <React.Fragment key={marker.value}>
                 {/* Testo dell'indizio (Allineato esattamente al marker) */}
                 <div
-                  className="absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[2%]"
+                  onClick={() => triggerRevealClue(marker.value)}
+                  className={`absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[2%] transition-all ${
+                    !revealed[marker.value] && !revealAll ? 'cursor-pointer hover:scale-[1.01]' : ''
+                  }`}
                   style={{
                     top: marker.top,
                     height: "4.352%"
@@ -476,7 +504,10 @@ const ClassificaBoard = ({
 
                 {/* Marker numerico a destra */}
                 <div
-                  className="absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group"
+                  onClick={() => triggerRevealClue(marker.value)}
+                  className={`absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group transition-all ${
+                    !revealed[marker.value] && !revealAll ? 'cursor-pointer hover:scale-110 hover:bg-[#4a4848]' : ''
+                  }`}
                   style={{
                     top: marker.top,
                     borderWidth: "clamp(2px, 0.2083vw, 4px)",
@@ -503,8 +534,21 @@ const ClassificaBoard = ({
           </>
         )}
       </div>
+
+      {/* OVERLAY EFFETTO SUSPENCE A SCALA 3D (GIOCO 2) */}
+      <ClassificaStaircaseSuspenseOverlay
+        activeSuspense={activeSuspense}
+        allElements={gameData.elementi || []}
+        revealedState={revealed}
+        categoryTitle={gameData.categoria || (gameData as any).soluzione?.categoria || gameData.titolo || 'CLASSIFICA TOP 10'}
+        sfondoUrl={currentSfondo}
+        canPlayAudio={interactive}
+        onRevealPoint={handleSuspenseReveal}
+        onComplete={handleSuspenseComplete}
+      />
     </div>
   );
 };
 
 export default ClassificaBoard;
+

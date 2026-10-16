@@ -5,6 +5,7 @@ import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 
 import { getInitialPasswordGrid, type WordItem, type WordType } from './lib/passwordUtils';
+import { TempleWordSuspenseOverlay, type ActiveRevealData } from './components/TempleWordSuspenseOverlay';
 
 type RankType = 1 | 2 | 3;
 type BussolottiStatus = 'pending' | 'active' | 'done';
@@ -17,14 +18,6 @@ export interface BussolottiConfig {
   schede_2_posto?: ('bonus' | 'vuoto' | '2000')[];
   schede_3_posto?: ('bonus' | 'vuoto' | '2000' | '1000')[];
 }
-
-const teamColors = {
-  team1: 'bg-red-600',
-  team2: 'bg-blue-600',
-  team3: 'bg-green-600',
-  bomb: 'bg-black',
-  neutral: 'bg-gray-400'
-};
 
 export const BussolottiOverlay: React.FC<{
   rank: RankType;
@@ -294,6 +287,14 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
   });
   const [grid, setGrid] = useState<WordItem[]>([]);
   const [gameOver] = useState<string | null>(null);
+  const [activeReveal, setActiveReveal] = useState<ActiveRevealData | null>(() => {
+    const stored = localStorage.getItem('password_active_reveal');
+    try {
+      return stored && stored !== "null" ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
 
   const manches = gameDataRaw.manches;
   const gameData = manches[currentManche] || manches[0];
@@ -461,6 +462,17 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
       } else {
         setActiveBussolottiRank(null);
       }
+
+      const activeRev = localStorage.getItem('password_active_reveal');
+      if (activeRev && activeRev !== "null") {
+        try {
+          setActiveReveal(JSON.parse(activeRev));
+        } catch {
+          setActiveReveal(null);
+        }
+      } else {
+        setActiveReveal(null);
+      }
     };
 
     window.addEventListener('storage', handleStorage);
@@ -514,22 +526,46 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
   }, [currentManche, gameData]);
 
   const handleWordClick = (index: number) => {
-    if (gameOver || grid[index]?.guessed || excludedTeams.includes(currentTeam)) return;
+    if (gameOver || grid[index]?.guessed || excludedTeams.includes(currentTeam) || activeReveal !== null) return;
 
+    const clickedWord = grid[index];
+    if (!clickedWord) return;
+
+    const revealData: ActiveRevealData = {
+      index,
+      word: clickedWord.word,
+      type: clickedWord.type,
+      team: currentTeam,
+      timestamp: Date.now()
+    };
+
+    setActiveReveal(revealData);
+    localStorage.setItem('password_active_reveal', JSON.stringify(revealData));
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new CustomEvent('local-storage-update', {
+      detail: { key: 'password_active_reveal', value: JSON.stringify(revealData) }
+    }));
+  };
+
+  const handleSuspenseComplete = () => {
+    if (!activeReveal) return;
+
+    const index = activeReveal.index;
     const newGrid = [...grid];
     const clickedWord = { ...newGrid[index] };
     clickedWord.guessed = true;
-    clickedWord.guessedBy = currentTeam;
+    clickedWord.guessedBy = activeReveal.team;
     newGrid[index] = clickedWord;
     setGrid(newGrid);
 
     let newExcluded = [...excludedTeams];
     if (clickedWord.type === 'bomb') {
-      newExcluded.push(currentTeam);
-      setExcludedTeams(newExcluded);
-      localStorage.setItem(`password_excluded_teams_m${currentManche}`, JSON.stringify(newExcluded));
-      localStorage.setItem('password_excluded_teams', JSON.stringify(newExcluded));
-      alert(`${boardTeamNames[currentTeam - 1] || `SQUADRA ${currentTeam}`} HA COLPITO LA BOMBA ED È ESCLUSA! (3° POSTO)`);
+      if (!newExcluded.includes(activeReveal.team)) {
+        newExcluded.push(activeReveal.team);
+        setExcludedTeams(newExcluded);
+        localStorage.setItem(`password_excluded_teams_m${currentManche}`, JSON.stringify(newExcluded));
+        localStorage.setItem('password_excluded_teams', JSON.stringify(newExcluded));
+      }
     }
 
     // Controlla vincitori
@@ -554,6 +590,10 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
 
     localStorage.setItem(`password_grid_state_m${currentManche}`, JSON.stringify(newGrid));
     localStorage.setItem('password_grid_state', JSON.stringify(newGrid));
+
+    localStorage.removeItem('password_active_reveal');
+    setActiveReveal(null);
+
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new CustomEvent('local-storage-update', {
       detail: { key: 'password_grid_state', value: JSON.stringify(newGrid) }
@@ -792,6 +832,14 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
         />
       )}
 
+      {/* OVERLAY SUSPENSE & MATTONELLA DEL TEMPIO */}
+      <TempleWordSuspenseOverlay
+        activeReveal={activeReveal}
+        teamNames={boardTeamNames}
+        canPlayAudio={shouldPlayAudio}
+        onComplete={handleSuspenseComplete}
+      />
+
       {/* STEP 0: Solo sfondo del gioco (quello della spiegazione) e titolo */}
       <div 
         className={`absolute inset-0 z-10 flex flex-col items-center justify-center text-center p-8 transition-all duration-700 ease-in-out ${
@@ -803,10 +851,10 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
         <div className="mb-4 inline-flex items-center gap-2 px-6 py-2 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-black text-sm uppercase tracking-widest shadow-lg">
           <span>⚔️</span> GIOCO 3 — BOX 3
         </div>
-        <h1 className="text-7xl md:text-9xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-gray-400 drop-shadow-2xl mb-4">
+        <h1 className="text-7xl md:text-9xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-100 to-gray-400 drop-shadow-2xl mb-4 font-serif">
           PASSWORD
         </h1>
-        <p className="text-2xl md:text-4xl font-black text-amber-400 uppercase tracking-widest drop-shadow-lg">
+        <p className="text-2xl md:text-4xl font-black text-amber-400 uppercase tracking-widest drop-shadow-lg font-serif">
           MANCHE {currentManche + 1}
         </p>
       </div>
@@ -822,10 +870,10 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
         }`}
       >
         <div className="flex flex-col items-center mb-6">
-          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-lg">
+          <h1 className="text-4xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-400 drop-shadow-lg font-serif">
             PASSWORD
           </h1>
-          <p className="text-lg md:text-xl font-bold text-yellow-400 uppercase tracking-widest mt-1">
+          <p className="text-lg md:text-xl font-bold text-yellow-400 uppercase tracking-widest mt-1 font-serif">
             MANCHE {currentManche + 1}
           </p>
         </div>
@@ -852,23 +900,28 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
         )}
       </div>
 
-      {/* STEP 2: Parole e cerchio suggerimenti */}
+      {/* STEP 2: Pavimento del Tempio (Mattonelle delle Parole) e Altare Suggerimento */}
       <div 
-        className={`absolute inset-0 z-10 flex flex-col items-center justify-center p-8 transition-all duration-700 ease-out ${
+        className={`absolute inset-0 z-10 flex flex-col items-center justify-center p-6 transition-all duration-700 ease-out ${
           effectiveStep === 2 
             ? 'opacity-100 scale-100 translate-y-0 pointer-events-auto' 
             : 'opacity-0 scale-95 translate-y-8 pointer-events-none'
         }`}
       >
-        <div className="relative z-10 w-full max-w-6xl flex flex-col items-center">
-          <div className="flex flex-col items-center mb-4">
-            <h1 className="text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500">
+        <div className="relative z-10 w-full max-w-7xl flex flex-col items-center">
+          
+          {/* HEADER DEL TEMPIO */}
+          <div className="flex flex-col items-center mb-5">
+            <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold uppercase tracking-widest mb-1 shadow-sm">
+              <span>🏛️</span> IL PAVIMENTO SACRO DEL TEMPIO <span>•</span> MANCHE {currentManche + 1}
+            </div>
+            <h1 className="text-4xl lg:text-5xl font-black font-serif tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-amber-100 via-amber-200 to-amber-500 drop-shadow-[0_4px_16px_rgba(245,158,11,0.5)] uppercase">
               PASSWORD
             </h1>
-            <p className="text-xl font-bold text-gray-400 uppercase tracking-widest">MANCHE {currentManche + 1}</p>
           </div>
 
-          <div className="flex w-full justify-between mb-12">
+          {/* LE 3 COLONNE SQUADRE (TOTEM IN PIETRA) */}
+          <div className="flex w-full justify-between gap-6 mb-7 max-w-6xl">
             {[1, 2, 3].map(t => {
               const rank = getTeamRank(t);
               const hasFinished = rank !== null;
@@ -877,68 +930,171 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
               const medal = getMedal(t);
               const currentTeamName = boardTeamNames[t - 1] || `SQUADRA ${t}`;
               
-              let borderColor = 'border-gray-700';
+              let borderColor = 'border-stone-700/80 bg-stone-900/60';
               if (rank === 1) {
-                borderColor = 'border-yellow-400 shadow-[0_0_30px_rgba(250,204,21,0.4)] bg-yellow-400/20';
+                borderColor = 'border-yellow-400 shadow-[0_0_35px_rgba(250,204,21,0.5)] bg-yellow-950/40';
               } else if (rank === 2) {
-                borderColor = 'border-gray-300 shadow-[0_0_20px_rgba(209,213,219,0.4)] bg-gray-300/20';
+                borderColor = 'border-stone-300 shadow-[0_0_25px_rgba(209,213,219,0.4)] bg-stone-800/50';
               } else if (rank === 3 && !isExcluded) {
-                borderColor = 'border-amber-600 shadow-[0_0_15px_rgba(217,119,6,0.4)] bg-amber-600/20';
+                borderColor = 'border-amber-600 shadow-[0_0_20px_rgba(217,119,6,0.4)] bg-amber-950/40';
               } else if (isActive && !isExcluded) {
-                borderColor = t === 1 ? 'border-red-600 bg-red-600/10' : t === 2 ? 'border-blue-600 bg-blue-600/10' : 'border-green-600 bg-green-600/10';
+                borderColor = t === 1 
+                  ? 'border-red-500 bg-red-950/30 shadow-[0_0_30px_rgba(239,68,68,0.4)]' 
+                  : t === 2 
+                    ? 'border-blue-500 bg-blue-950/30 shadow-[0_0_30px_rgba(59,130,246,0.4)]' 
+                    : 'border-emerald-500 bg-emerald-950/30 shadow-[0_0_30px_rgba(16,185,129,0.4)]';
               }
 
               return (
-                <div key={t} className={`flex flex-col items-center w-1/4 p-4 rounded-xl border-4 transition-all duration-500
-                  ${borderColor}
-                  ${isActive && !hasFinished ? 'scale-105 shadow-[0_0_15px_rgba(255,255,255,0.1)]' : 'bg-gray-800/50'}
-                  ${isExcluded ? 'opacity-50 grayscale border-gray-800' : ''}`}>
-                  <h2 className={`text-2xl font-bold mb-4 ${t === 1 ? 'text-red-500' : t === 2 ? 'text-blue-500' : 'text-green-500'}`}>
-                    {currentTeamName} {isExcluded && "(BOMBA)"} {medal}
+                <div 
+                  key={t} 
+                  className={`flex flex-col items-center flex-1 p-3.5 rounded-2xl border-2 transition-all duration-500 backdrop-blur-md relative overflow-hidden
+                    ${borderColor}
+                    ${isActive && !hasFinished ? 'scale-105 ring-2 ring-amber-400/50 shadow-2xl' : 'opacity-90'}
+                    ${isExcluded ? 'opacity-40 grayscale border-stone-800' : ''}`}
+                >
+                  {/* Bagliore attivo per la squadra di turno */}
+                  {isActive && !hasFinished && !isExcluded && (
+                    <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-amber-400 to-transparent animate-pulse" />
+                  )}
+
+                  <h2 className={`text-xl lg:text-2xl font-black font-serif tracking-wider mb-2.5 flex items-center gap-2 ${
+                    t === 1 ? 'text-red-400' : t === 2 ? 'text-sky-400' : 'text-emerald-400'
+                  }`}>
+                    <span className="truncate">{currentTeamName}</span>
+                    {medal && <span className="text-2xl">{medal}</span>}
+                    {isExcluded && <span className="text-xs text-red-500 font-sans font-bold">(ESCLUSA)</span>}
                   </h2>
-                  <div className="flex flex-col gap-2 w-full">
+
+                  <div className="flex flex-col gap-1.5 w-full">
                     {getTeamWords(`team${t}` as WordType).map((w, i) => (
-                      <div key={i} className={`${teamColors[w.type]} text-white px-3 py-1 rounded text-center font-bold animate-bounce`}>
+                      <div 
+                        key={i} 
+                        className={`text-white px-3 py-1.5 rounded-xl text-center font-serif font-black text-sm shadow-md animate-bounce border ${
+                          t === 1 
+                            ? 'bg-red-700/80 border-red-400/60 shadow-[0_0_15px_rgba(239,68,68,0.4)]' 
+                            : t === 2 
+                              ? 'bg-blue-700/80 border-sky-400/60 shadow-[0_0_15px_rgba(56,189,248,0.4)]' 
+                              : 'bg-emerald-700/80 border-emerald-400/60 shadow-[0_0_15px_rgba(52,211,153,0.4)]'
+                        }`}
+                      >
                         {w.word}
                       </div>
                     ))}
+                    {getTeamWords(`team${t}` as WordType).length === 0 && (
+                      <div className="py-2 text-center text-xs font-serif text-stone-500 italic">
+                        Ancora nessuna parola
+                      </div>
+                    )}
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <div className="flex gap-12 items-start">
-            <div className="grid grid-cols-3 gap-4 bg-gray-800 p-6 rounded-2xl shadow-2xl border border-gray-700">
-              {grid.map((item, i) => {
-                const isGuessedOrReveal = item.guessed || revealAll;
-                return (
-                  <div
-                    key={i}
-                    onClick={() => handleWordClick(i)}
-                    className={`
-                      w-40 h-24 flex items-center justify-center text-center p-2 rounded-lg cursor-pointer font-bold text-lg transition-all duration-500 transform
-                      ${isGuessedOrReveal 
-                        ? item.type === 'neutral' 
-                          ? 'bg-zinc-700/60 border border-zinc-650 text-white/50 scale-95' 
-                          : `${teamColors[item.type]} text-white scale-110 shadow-[0_0_20px_rgba(255,255,255,0.3)]` 
-                        : 'bg-gray-100 text-gray-900 hover:bg-white hover:scale-105'}
-                    `}
-                  >
-                    {!isGuessedOrReveal || item.type !== 'neutral' || revealAll ? item.word : ''}
-                  </div>
-                );
-              })}
+          {/* AREA PRINCIPALE: GRIGLIA MATTONELLE + ALTARE SUGGERIMENTO */}
+          <div className="flex gap-8 lg:gap-12 items-center justify-center">
+            
+            {/* GRIGLIA DEL PAVIMENTO DEL TEMPIO (3x4 MATTONELLE IN PIETRA) */}
+            <div className="bg-gradient-to-b from-[#241c14]/90 via-[#19130d]/95 to-[#0e0b07]/95 p-6 rounded-3xl border-4 border-amber-600/50 shadow-[0_20px_50px_rgba(0,0,0,0.8),inset_0_0_40px_rgba(245,158,11,0.15)] backdrop-blur-md relative">
+              
+              {/* Angolari in pietra scolpita per la griglia */}
+              <div className="absolute top-2 left-2 text-xs text-amber-500/40 select-none">𓃭</div>
+              <div className="absolute top-2 right-2 text-xs text-amber-500/40 select-none">𓃭</div>
+              <div className="absolute bottom-2 left-2 text-xs text-amber-500/40 select-none">𓆣</div>
+              <div className="absolute bottom-2 right-2 text-xs text-amber-500/40 select-none">𓆣</div>
+
+              <div className="grid grid-cols-3 gap-3.5 sm:gap-4">
+                {grid.map((item, i) => {
+                  const isGuessedOrReveal = item.guessed || revealAll;
+                  const isBeingRevealed = activeReveal?.index === i;
+                  
+                  let tileClasses = "";
+                  if (isGuessedOrReveal) {
+                    if (item.type === 'team1') {
+                      tileClasses = "bg-gradient-to-b from-red-600 via-red-700 to-red-950 border-2 border-red-400 text-white shadow-[0_0_25px_rgba(239,68,68,0.7)] scale-105";
+                    } else if (item.type === 'team2') {
+                      tileClasses = "bg-gradient-to-b from-blue-600 via-sky-700 to-blue-950 border-2 border-sky-400 text-white shadow-[0_0_25px_rgba(56,189,248,0.7)] scale-105";
+                    } else if (item.type === 'team3') {
+                      tileClasses = "bg-gradient-to-b from-emerald-600 via-emerald-700 to-emerald-950 border-2 border-emerald-400 text-white shadow-[0_0_25px_rgba(52,211,153,0.7)] scale-105";
+                    } else if (item.type === 'bomb') {
+                      tileClasses = "bg-gradient-to-b from-stone-950 via-red-950/80 to-black border-2 border-red-700/80 text-red-400/90 shadow-[0_0_20px_rgba(185,28,28,0.6)] line-through scale-95 opacity-85";
+                    } else {
+                      // Neutral
+                      tileClasses = "bg-stone-850/70 border-2 border-stone-700 text-stone-500 scale-95 shadow-inner opacity-75";
+                    }
+                  } else {
+                    // Mattonella di tempio antica non ancora svelata
+                    tileClasses = `bg-gradient-to-b from-[#423525] via-[#2c2217] to-[#19130c] border-2 border-t-amber-400/60 border-l-amber-400/40 border-r-stone-950/90 border-b-stone-950/90 text-amber-100 shadow-[0_6px_16px_rgba(0,0,0,0.6)] hover:border-amber-400 hover:shadow-[0_0_25px_rgba(245,158,11,0.4)] hover:scale-105 active:scale-95 cursor-pointer`;
+                  }
+
+                  return (
+                    <div
+                      key={i}
+                      onClick={() => handleWordClick(i)}
+                      className={`
+                        relative w-44 h-24 sm:w-48 sm:h-28 flex flex-col items-center justify-center text-center p-3 rounded-2xl font-serif font-black transition-all duration-500 select-none overflow-hidden
+                        ${tileClasses}
+                        ${isBeingRevealed ? 'ring-4 ring-amber-400 shadow-[0_0_40px_rgba(245,158,11,0.8)] animate-pulse scale-105' : ''}
+                      `}
+                    >
+                      {/* Texture decorativa interna per le mattonelle sigillate */}
+                      {!isGuessedOrReveal && (
+                        <>
+                          <div className="absolute top-1.5 left-2 text-[9px] text-amber-400/30 select-none font-serif">𓃭</div>
+                          <div className="absolute top-1.5 right-2 text-[9px] text-amber-400/30 select-none font-serif">𓃭</div>
+                          <div className="absolute bottom-1.5 left-2 text-[9px] text-amber-400/30 select-none font-serif">𓆣</div>
+                          <div className="absolute bottom-1.5 right-2 text-[9px] text-amber-400/30 select-none font-serif">𓆣</div>
+                          <div className="absolute inset-1 rounded-xl border border-amber-500/15 pointer-events-none" />
+                        </>
+                      )}
+
+                      {/* Icona bomba se rivelata */}
+                      {isGuessedOrReveal && item.type === 'bomb' && (
+                        <span className="text-xl mb-0.5">💣</span>
+                      )}
+
+                      {/* Testo della parola */}
+                      <span className={`text-base sm:text-lg tracking-wider uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)] ${
+                        isGuessedOrReveal && item.type === 'neutral' ? 'text-stone-500 line-through' : ''
+                      }`}>
+                        {!isGuessedOrReveal || item.type !== 'neutral' || revealAll ? item.word : ''}
+                      </span>
+
+                      {/* Badge squadra se conquistata */}
+                      {isGuessedOrReveal && (item.type === 'team1' || item.type === 'team2' || item.type === 'team3') && (
+                        <span className="text-[9px] font-mono font-bold tracking-widest uppercase mt-1 px-2 py-0.5 rounded-full bg-black/50 border border-white/20 text-white/90">
+                          {item.type === 'team1' ? boardTeamNames[0] || 'SQ 1' : item.type === 'team2' ? boardTeamNames[1] || 'SQ 2' : boardTeamNames[2] || 'SQ 3'}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
-            <div className="flex flex-col items-center gap-6">
-              <div className="w-64 h-64 bg-gray-800 border-4 border-dashed border-gray-600 rounded-full flex flex-col items-center justify-center p-8 text-center">
-                <span className="text-gray-500 text-sm uppercase tracking-widest mb-2">Suggerimento</span>
-                <span className="text-3xl font-black text-yellow-400 drop-shadow-md">
+            {/* ALTARE DEL MEDAGLIONE SOLARE (SUGGERIMENTO DEI PRESCELTI) */}
+            <div className="flex flex-col items-center">
+              <div className="relative w-64 h-64 rounded-full bg-gradient-to-br from-[#3b2d1c] via-[#241a10] to-[#100b07] border-4 border-amber-500/70 shadow-[0_0_50px_rgba(245,158,11,0.35),inset_0_0_30px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center p-6 text-center overflow-hidden">
+                
+                {/* Cerchi concentrici scolpiti tipo medaglione Indiana Jones */}
+                <div className="absolute inset-3 rounded-full border border-amber-500/30 pointer-events-none" />
+                <div className="absolute inset-6 rounded-full border border-dashed border-amber-500/20 pointer-events-none animate-[spin_60s_linear_infinite]" />
+                
+                <span className="relative z-10 text-amber-400/80 text-[11px] font-serif uppercase tracking-[0.25em] mb-2 font-black">
+                  ✦ Suggerimento ✦
+                </span>
+
+                <span className="relative z-10 text-2xl lg:text-3xl font-black font-serif text-transparent bg-clip-text bg-gradient-to-b from-amber-100 via-yellow-200 to-amber-500 drop-shadow-[0_4px_12px_rgba(245,158,11,0.6)] uppercase px-2 leading-tight">
                   {chosenSuggestion || "???"}
+                </span>
+
+                <span className="relative z-10 text-[10px] text-stone-400 uppercase tracking-widest font-mono mt-3">
+                  Dai Prescelti
                 </span>
               </div>
             </div>
+
           </div>
         </div>
       </div>

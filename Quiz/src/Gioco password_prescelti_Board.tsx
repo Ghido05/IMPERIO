@@ -340,6 +340,15 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     newGrid[index] = clickedWord;
     setGrid(newGrid);
 
+    const revealData = {
+      index,
+      word: clickedWord.word,
+      type: clickedWord.type,
+      team: currentTeam,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('password_active_reveal', JSON.stringify(revealData));
+
     let newExcluded = [...excludedTeams];
     if (clickedWord.type === 'bomb') {
       newExcluded.push(currentTeam);

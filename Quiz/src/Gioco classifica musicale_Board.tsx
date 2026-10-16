@@ -3,6 +3,7 @@ import { useGameData } from './context/GameDataContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
+import { ClassificaStaircaseSuspenseOverlay, type Box2SuspenseData } from './components/ClassificaStaircaseSuspenseOverlay';
 
 interface SolutionProps {
   isVisible: boolean;
@@ -136,7 +137,7 @@ const ClassificaMusicaleBoard = ({
   const effectiveStep = revealAll ? 2 : step;
 
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
-  const [pointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
+  const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
   const [, setLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
   const [showError, setShowError] = useState(false);
   const [showTitle, setShowTitle] = useSyncedState(`playstate_${slideId}_showtitle`, false);
@@ -144,6 +145,7 @@ const ClassificaMusicaleBoard = ({
   const [isPlaying, setIsPlaying] = useSyncedState<boolean>(`playstate_${slideId}_playing`, false);
   const [playTrigger, setPlayTrigger] = useSyncedState<number>(`playstate_${slideId}_play_trigger`, 0);
   const [solutionAwarded, setSolutionAwarded] = useSyncedState<boolean>(`playstate_${slideId}_solution_awarded`, false);
+  const [activeSuspense, setActiveSuspense] = useSyncedState<Box2SuspenseData | null>(`playstate_${slideId}_suspense`, null);
   
   const audiosRef = React.useRef<Record<number, HTMLAudioElement>>({});
   const finalAudioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -538,6 +540,44 @@ const ClassificaMusicaleBoard = ({
     return (questionStarterIdx + currentRevealedCount) % 3;
   }, [questionStarterIdx]);
 
+  const triggerRevealClue = React.useCallback((numKey: number) => {
+    if (effectiveStep < 1) return; // Non rivelare prima dello step 1
+    if (showSolution) return; // Non avviare né toccare se la soluzione è già attiva
+    if (revealed[numKey]) return;
+    if (activeSuspense) return;
+
+    const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
+    const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
+    const cluePoints = getCluePoints(numKey);
+    const el = gameData.elementi?.[numKey - 1];
+    const clueText = el?.testo || `Strumento ${numKey}`;
+    const clueIcon = getInstrumentIcon(el?.audio, el?.testo, el?.frase);
+
+    setActiveSuspense({
+      clueIndex: numKey,
+      teamIdx: targetTeamIdx,
+      timestamp: Date.now(),
+      totalClues: 7,
+      points: cluePoints,
+      clueText: clueText,
+      clueIcon: clueIcon,
+      clueFrase: el?.frase,
+    });
+  }, [effectiveStep, showSolution, revealed, activeSuspense, getActiveTeamIdx, getCluePoints, gameData.elementi, getInstrumentIcon, setActiveSuspense]);
+
+  const handleSuspenseReveal = React.useCallback((clueNum: number, targetTeamIdx: number, points: number) => {
+    addScore(targetTeamIdx, points);
+    setRevealed(prev => ({ ...prev, [clueNum]: true }));
+    setPointsAssigned(prev => ({ ...prev, [clueNum]: targetTeamIdx + 1 }));
+    setLatestClue(clueNum);
+    setPlayTrigger(Date.now());
+    setIsPlaying(true);
+  }, [addScore, setRevealed, setPointsAssigned, setLatestClue, setPlayTrigger, setIsPlaying]);
+
+  const handleSuspenseComplete = React.useCallback(() => {
+    setActiveSuspense(null);
+  }, [setActiveSuspense]);
+
   const handleGiveSolution = React.useCallback(() => {
     if (showSolution) {
       // Se la soluzione è già svelata, premere S o Invio torna alla lista!
@@ -589,20 +629,8 @@ const ClassificaMusicaleBoard = ({
       }
 
       if (key >= '1' && key <= '7') {
-        if (effectiveStep < 1) return; // Non rivelare prima dello step 1
-        if (showSolution) return; // Non avviare né toccare gli stems se la soluzione è già attiva
         const numKey = Number(key);
-        if (!revealed[numKey]) {
-          const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
-          const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
-          addScore(targetTeamIdx, getCluePoints(numKey));
-
-          // Aggiorna lo stato rivelato e scatena la riproduzione sincronizzata su tutti gli schermi
-          setRevealed(prev => ({ ...prev, [numKey]: true }));
-          setLatestClue(numKey);
-          setPlayTrigger(Date.now());
-          setIsPlaying(true);
-        }
+        triggerRevealClue(numKey);
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
         if (effectiveStep < 2) {
           setStep(2);
@@ -627,7 +655,7 @@ const ClassificaMusicaleBoard = ({
     if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, revealed, showSolution, handleGiveSolution, setShowSolution, getActiveTeamIdx, addScore, setRevealed, setLatestClue, setPlayTrigger, setIsPlaying, setStep, effectiveStep]);
+  }, [interactive, triggerRevealClue, showSolution, handleGiveSolution, setShowSolution, setIsPlaying, setStep, effectiveStep]);
 
   const rankingMarkers = [
     { value: 7, top: "34.070%" }, // Giallo (1 indizio)
@@ -821,7 +849,10 @@ const ClassificaMusicaleBoard = ({
                 <React.Fragment key={marker.value}>
                   {/* Testo dell'indizio (Allineato e centrato esattamente al marker) */}
                   <div
-                    className="absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[3%]"
+                    onClick={() => triggerRevealClue(marker.value)}
+                    className={`absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[3%] transition-all ${
+                      !isRevealed ? 'cursor-pointer hover:scale-[1.01]' : ''
+                    }`}
                     style={{
                       top: marker.top,
                       height: "4.352%"
@@ -834,7 +865,10 @@ const ClassificaMusicaleBoard = ({
 
                   {/* Marker numerico a destra */}
                   <div
-                    className="absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group"
+                    onClick={() => triggerRevealClue(marker.value)}
+                    className={`absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group transition-all ${
+                      !isRevealed ? 'cursor-pointer hover:scale-110 hover:bg-[#4a4848]' : ''
+                    }`}
                     style={{
                       top: marker.top,
                       borderWidth: "clamp(2px, 0.2083vw, 4px)",
@@ -882,8 +916,26 @@ const ClassificaMusicaleBoard = ({
           </>
         )}
       </div>
+
+      {/* OVERLAY EFFETTO SUSPENCE A SCALA 3D (GIOCO 2 MUSICALE) */}
+      <ClassificaStaircaseSuspenseOverlay
+        activeSuspense={activeSuspense}
+        allElements={(gameData.elementi || []).map((el: any) => ({
+          posizione: el.posizione,
+          testo: el.testo,
+          audio: el.audio,
+          icon: getInstrumentIcon(el.audio, el.testo, el.frase),
+        }))}
+        revealedState={revealed}
+        categoryTitle={gameData.titolo || (gameData as any).categoria || 'CLASSIFICA MUSICALE'}
+        sfondoUrl={currentSfondo}
+        canPlayAudio={interactive}
+        onRevealPoint={handleSuspenseReveal}
+        onComplete={handleSuspenseComplete}
+      />
     </div>
   );
 };
 
 export default ClassificaMusicaleBoard;
+

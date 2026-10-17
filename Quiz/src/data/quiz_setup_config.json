@@ -398,7 +398,7 @@
   "gioco2": {
     "titolo": "TOP TEN",
     "sottotitolo": "Classifica & Classifica Musicale",
-    "selectedQuestion": 2,
+    "selectedQuestion": 5,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box2_cristalli.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box2.mp3",
@@ -643,18 +643,18 @@
             "TWO PLAYERS ONE CONSOLE"
           ],
           "indizi": [
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            ""
+            "DANCE POP",
+            "2007",
+            "\"DJ\"",
+            "\"DANCE FLOOR\"",
+            "\"PLEASE\"",
+            "\"MAMA-SAY, MAMA-SA, MA-MA-KO-SSA\"",
+            "CANTANTE BARBADIANA"
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g02m05soluzione.mp3",
           "titolo": "DON'T STOP THE MUSIC",
-          "info": "?",
-          "artista": "RIHAN?",
+          "info": "2007",
+          "artista": "RIHANNA",
           "domanda": "QUALE SONO I CANALI YOUTUBE ITALIANI CHE DETENGONO IL RECORD PER MAGGIOR NUMERO DI VISUALIZZAZIONI TOTALI?"
         },
         "immagine": {
@@ -674,7 +674,7 @@
           "soluzioneAudio": "",
           "soluzioneTesto": ""
         },
-        "notePresentatore": "\"CONSIDERANDO I SOLI CREATOR E YOUTUBER DI CONTENUTI LUNGHI IN LINGUA ITALIANA, QUAL È IL CANALE CON IL MAGGIOR NUMERO DI VISUALIZZAZIONI TOTALI DELLA STORIA?\"\n\nAccettiamo come risposta il nome dello youtuber"
+        "notePresentatore": "\"CONSIDERANDO I SOLI CREATOR E YOUTUBER DI CONTENUTI LUNGHI IN LINGUA ITALIANA, QUAL È IL CANALE CON IL MAGGIOR NUMERO DI VISUALIZZAZIONI TOTALI DELLA STORIA?\"\n\nAccettiamo come risposta il nome dello youtuber\nBARBADIANA= DELLE BARBADOS"
       },
       "6": {
         "tipo": "immagine",
@@ -736,27 +736,46 @@
   "gioco3": {
     "titolo": "Password",
     "sottotitolo": "Sfida a Squadre & Bussolotti",
-    "selectedQuestion": 2,
+    "selectedQuestion": 1,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box3_forzieri.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box3.mp3",
     "questions": {
       "1": {
         "sfondo": "/Icone/nessuno_img/3_1_superereoi.png",
+        "musicaIntro": "/Audio/strumenti/3_1_supereroi.mp3",
         "squadra1": [
-          { "parola": "BATMAN" },
-          { "parola": "TOPOLINO" },
-          { "parola": "SPONGEBOB" }
+          {
+            "parola": "BATMAN"
+          },
+          {
+            "parola": "TOPOLINO"
+          },
+          {
+            "parola": "SPONGEBOB"
+          }
         ],
         "squadra2": [
-          { "parola": "SUPERMAN" },
-          { "parola": "LUPO ALBERTO" },
-          { "parola": "TEX WILLER" }
+          {
+            "parola": "SUPERMAN"
+          },
+          {
+            "parola": "LUPO ALBERTO"
+          },
+          {
+            "parola": "TEX WILLER"
+          }
         ],
         "squadra3": [
-          { "parola": "LARA CROFT" },
-          { "parola": "SPIDERMAN" },
-          { "parola": "GANDALF" }
+          {
+            "parola": "LARA CROFT"
+          },
+          {
+            "parola": "SPIDERMAN"
+          },
+          {
+            "parola": "GANDALF"
+          }
         ],
         "parolaBomba": "HARRY POTTER",
         "paroleNulle": [
@@ -780,9 +799,7 @@
           "BACCHETTA"
         ],
         "bussolotti": {
-          "immagine_premio_squadra1": "dado",
-          "immagine_premio_squadra2": "switch",
-          "immagine_premio_squadra3": "arco",
+          "immagine_premio": "/Icone/premio_bonus.png",
           "schede_2_posto": [
             "bonus",
             "vuoto",
@@ -794,26 +811,48 @@
             "vuoto",
             "vuoto",
             "bonus"
-          ]
+          ],
+          "immagine_premio_squadra1": "dado",
+          "immagine_premio_squadra2": "switch",
+          "immagine_premio_squadra3": "arco"
         },
         "notePresentatore": "DALLA TORRE DI ASTRONOMIA CADE SILENTE (NON GANDALF)\nIL NECROMANTE è MEFISTO\nTRITONI NEL CALICE DI FUOCO VENGONO INCONTRATI DA HARRY DURANTE LA SECONDA PROVA"
       },
       "2": {
         "sfondo": "/Icone/nessuno_img/3_2_dolci.jpg",
+        "musicaIntro": "",
         "squadra1": [
-          { "parola": "torta di mele" },
-          { "parola": "babà" },
-          { "parola": "cannolo" }
+          {
+            "parola": "torta di mele"
+          },
+          {
+            "parola": "babà"
+          },
+          {
+            "parola": "cannolo"
+          }
         ],
         "squadra2": [
-          { "parola": "cheesecake " },
-          { "parola": "tiramisù" },
-          { "parola": "cookies" }
+          {
+            "parola": "cheesecake "
+          },
+          {
+            "parola": "tiramisù"
+          },
+          {
+            "parola": "cookies"
+          }
         ],
         "squadra3": [
-          { "parola": "zuppa inglese" },
-          { "parola": "panettone" },
-          { "parola": "ciambella" }
+          {
+            "parola": "zuppa inglese"
+          },
+          {
+            "parola": "panettone"
+          },
+          {
+            "parola": "ciambella"
+          }
         ],
         "parolaBomba": "cassata",
         "paroleNulle": [
@@ -837,9 +876,7 @@
           "PASTA SFOGLIA"
         ],
         "bussolotti": {
-          "immagine_premio_squadra1": "dado",
-          "immagine_premio_squadra2": "switch",
-          "immagine_premio_squadra3": "arco",
+          "immagine_premio": "/Icone/premio_bonus.png",
           "schede_2_posto": [
             "bonus",
             "vuoto",
@@ -851,25 +888,48 @@
             "vuoto",
             "vuoto",
             "bonus"
-          ]
-        }
+          ],
+          "immagine_premio_squadra1": "dado",
+          "immagine_premio_squadra2": "switch",
+          "immagine_premio_squadra3": "arco"
+        },
+        "notePresentatore": ""
       },
       "3": {
         "sfondo": "/Icone/nessuno_img/3_3_programmiTV.jpg",
+        "musicaIntro": "",
         "squadra1": [
-          { "parola": "GRANDE FRATELLO" },
-          { "parola": "BALLANDO CON LE STELLE" },
-          { "parola": "TU SI QUE VALES" }
+          {
+            "parola": "GRANDE FRATELLO"
+          },
+          {
+            "parola": "BALLANDO CON LE STELLE"
+          },
+          {
+            "parola": "TU SI QUE VALES"
+          }
         ],
         "squadra2": [
-          { "parola": "ZELIG" },
-          { "parola": "CIAO DARWIN" },
-          { "parola": "MONEY DROP" }
+          {
+            "parola": "ZELIG"
+          },
+          {
+            "parola": "CIAO DARWIN"
+          },
+          {
+            "parola": "MONEY DROP"
+          }
         ],
         "squadra3": [
-          { "parola": "CHI VUOL ESSER MILIONARIO?" },
-          { "parola": "AFFARI TUOI" },
-          { "parola": "TALE E QUALE SHOW" }
+          {
+            "parola": "CHI VUOL ESSER MILIONARIO?"
+          },
+          {
+            "parola": "AFFARI TUOI"
+          },
+          {
+            "parola": "TALE E QUALE SHOW"
+          }
         ],
         "parolaBomba": "LA RUOTA DELLA FORTUNA",
         "paroleNulle": [
@@ -893,9 +953,7 @@
           "TALENT"
         ],
         "bussolotti": {
-          "immagine_premio_squadra1": "dado",
-          "immagine_premio_squadra2": "switch",
-          "immagine_premio_squadra3": "arco",
+          "immagine_premio": "/Icone/premio_bonus.png",
           "schede_2_posto": [
             "bonus",
             "vuoto",
@@ -907,8 +965,12 @@
             "vuoto",
             "vuoto",
             "bonus"
-          ]
-        }
+          ],
+          "immagine_premio_squadra1": "dado",
+          "immagine_premio_squadra2": "switch",
+          "immagine_premio_squadra3": "arco"
+        },
+        "notePresentatore": ""
       }
     },
     "sfondoGenerale": ""

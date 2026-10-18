@@ -23,12 +23,30 @@
       },
       {
         "id": "nadia_1790712588000_qjr1",
-        "domanda": "",
-        "rispostaCorretta": "",
-        "risposta2": "",
-        "risposta3": "",
+        "domanda": "Nel gioco avete indovinato i canali YouTube italiani con più visualizzazioni. Ma facendo un salto indietro nel tempo, sapreste dire quale soggetto era ripreso nel primissimo video in assoluto caricato sulla piattaforma nel 2005?",
+        "rispostaCorretta": "Un ragazzo allo zoo davanti agli elefanti",
+        "risposta2": "Un gatto che suona la tastiera",
+        "risposta3": "Un gruppo di amici che brinda con la birra",
+        "targetBox": 2,
+        "targetQuestion": 5
+      },
+      {
+        "id": "nadia_1792340284874_kb0u",
+        "domanda": "Nel film \"Ritorno al Futuro\", la mitica macchina del tempo è un'automobile, la DeLorean. Tuttavia, nelle prime stesure del copione, gli sceneggiatori avevano pensato a un oggetto completamente diverso. Quale?",
+        "rispostaCorretta": "Un frigorifero",
+        "risposta2": "Una cabina telefonica",
+        "risposta3": "Un ascensore",
         "targetBox": 1,
-        "targetQuestion": 3
+        "targetQuestion": 6
+      },
+      {
+        "id": "nadia_1792340521197_z0qd",
+        "domanda": "Nella manche dei dolci abbiamo incontrato classici siciliani come il Cannolo e la Cassata. A quale antica dominazione dell'isola si deve l'introduzione di ingredienti fondamentali per questi dessert, come la canna da zucchero e la canditura?",
+        "rispostaCorretta": "Agli Arabi",
+        "risposta2": "Ai Normanni",
+        "risposta3": "Ai Normanni",
+        "targetBox": 3,
+        "targetQuestion": 2
       }
     ]
   },
@@ -57,7 +75,7 @@
   "gioco1": {
     "titolo": "IL MIO NOME è NESSUNO",
     "sottotitolo": "Musica & Immagini",
-    "selectedQuestion": 0,
+    "selectedQuestion": 6,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Mappa/spiegazione_box1_ambientazione.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box1.mp3",
@@ -260,7 +278,8 @@
           "confermaAudio": "/Audio/strumenti/1_6_macchinadeltempo.mp3",
           "soluzione": "RITORNO AL FUTURO",
           "categoria": "FILM"
-        }
+        },
+        "notePresentatore": "L'idea del frigorifero fu scartata da Steven Spielberg (produttore del film) per il timore che i bambini potessero emulare il film chiudendosi dentro i frigoriferi di casa per \"viaggiare nel tempo\", rischiando di rimanere intrappolati!"
       },
       "7": {
         "tipo": "canzone",
@@ -674,7 +693,7 @@
           "soluzioneAudio": "",
           "soluzioneTesto": ""
         },
-        "notePresentatore": "\"CONSIDERANDO I SOLI CREATOR E YOUTUBER DI CONTENUTI LUNGHI IN LINGUA ITALIANA, QUAL È IL CANALE CON IL MAGGIOR NUMERO DI VISUALIZZAZIONI TOTALI DELLA STORIA?\"\n\nAccettiamo come risposta il nome dello youtuber\nBARBADIANA= DELLE BARBADOS"
+        "notePresentatore": "\"CONSIDERANDO I SOLI CREATOR E YOUTUBER DI CONTENUTI LUNGHI IN LINGUA ITALIANA, QUAL È IL CANALE CON IL MAGGIOR NUMERO DI VISUALIZZAZIONI TOTALI DELLA STORIA?\"\n\nAccettiamo come risposta il nome dello youtuber\nBARBADIANA= DELLE BARBADOS\n\nIl video si intitola \"Me at the zoo\" e dura solo 18 secondi. Fu caricato da Jawed Karim, uno dei co-fondatori di YouTube, il 23 aprile 2005 presso lo zoo di San Diego."
       },
       "6": {
         "tipo": "immagine",
@@ -736,7 +755,7 @@
   "gioco3": {
     "titolo": "Password",
     "sottotitolo": "Sfida a Squadre & Bussolotti",
-    "selectedQuestion": 1,
+    "selectedQuestion": 3,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box3_forzieri.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box3.mp3",
@@ -790,7 +809,7 @@
           "METROPOLIS",
           "NEW YORK",
           "SILVER",
-          "NOTTE",
+          "AQUILA",
           "ANGELINA JOLIE",
           "ARCHEOLOGIA",
           "QUEENS",
@@ -903,10 +922,10 @@
             "parola": "GRANDE FRATELLO"
           },
           {
-            "parola": "BALLANDO CON LE STELLE"
+            "parola": "CIAO DARWIN"
           },
           {
-            "parola": "TU SI QUE VALES"
+            "parola": "STRISCIA LA NOTIZIA"
           }
         ],
         "squadra2": [
@@ -914,7 +933,7 @@
             "parola": "ZELIG"
           },
           {
-            "parola": "CIAO DARWIN"
+            "parola": "BALLANDO CON LE STELLE"
           },
           {
             "parola": "MONEY DROP"
@@ -933,23 +952,23 @@
         ],
         "parolaBomba": "LA RUOTA DELLA FORTUNA",
         "paroleNulle": [
-          "STRISCIA LA NOTIZIA",
+          "TU SI QUE VALES",
           "REAZIONE A CATENA"
         ],
         "suggerimenti": [
           "TELEVOTO",
-          "CARLO CONTI",
+          "200 VOTI",
           "GERRY SCOTTI",
           "PAOLO BONOLIS",
           "COMICITÀ",
-          "PACCHI",
-          "DOTTORE",
-          "TRASFORMAZIONE",
-          "CABARET",
-          "BOTOLA",
-          "BALLERINI",
-          "CONFESSIONALE",
-          "CANALE 5",
+          "OFFERTA",
+          "50:50",
+          "IMITAZIONI",
+          "COMICI",
+          "8 DOMANDE",
+          "CHARLESTON",
+          "DARIA BIGNARDI",
+          "SATIRA",
           "TALENT"
         ],
         "bussolotti": {
@@ -1079,7 +1098,20 @@
         "testo": "L' ARSENAL DI RICCARDO CALAFIORI VINCE LA PREMIER LEAGUE",
         "sfondo": "/Icone/nessuno_img/4_5_Arsenal.jpg",
         "confermaAudio": "/Audio/strumenti/4_5_WELIKETOPARTY.mp3",
-        "lettereVisibili": [],
+        "lettereVisibili": [
+          5,
+          7,
+          11,
+          17,
+          20,
+          23,
+          30,
+          36,
+          39,
+          46,
+          51,
+          54
+        ],
         "indizio": "31 MAGGIO 2026, EMIRATES STADIUM, LONDRA",
         "bonus": "",
         "punti": 1000,

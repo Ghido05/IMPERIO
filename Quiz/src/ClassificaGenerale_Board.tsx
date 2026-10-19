@@ -208,6 +208,12 @@ const ClassificaGenerale_Board: React.FC = () => {
   const activeSlideId = activeBox === 1 ? `box1_q${activeQuestion}` : '';
   const [bookedTeamVal] = useSyncedState<number | null>(`playstate_${activeSlideId}_booked_team`, null);
 
+  // Sincronizzazione stato Mille e una Nadia per illuminazione ed esclusione squadre
+  const [nadiaActive] = useSyncedState<boolean>('playstate_nadia_active', false);
+  const [nadiaBookedTeam] = useSyncedState<number | null>('playstate_nadia_booked_team', null);
+  const [nadiaExcludedTeams] = useSyncedState<number[]>('playstate_nadia_excluded_teams', []);
+  const [nadiaAssignedTeam] = useSyncedState<number | null>('playstate_nadia_assigned_team', null);
+
 
   React.useEffect(() => {
     async function loadData() {
@@ -458,39 +464,77 @@ const ClassificaGenerale_Board: React.FC = () => {
         /* Vista Box 0: Senza sfondo, visibili solo i nomi delle squadre e i punteggi */
         <div className="flex-1 flex flex-col justify-center items-center px-4 z-20">
           <div className="w-full max-w-6xl grid grid-cols-3 gap-12">
-            {teamConfigs.map((team, i) => (
-              <div 
-                key={i} 
-                className="bg-[#18181b]/80 border-2 border-white/20 rounded-3xl p-8 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md"
-              >
-                <div className={`${team.color} w-full py-5 rounded-2xl shadow-xl flex items-center justify-center mb-6 border-2 border-white/30`}>
-                  <span className="text-4xl font-black tracking-widest uppercase">{team.name}</span>
-                </div>
+            {teamConfigs.map((team, i) => {
+              const isNadiaBooked = nadiaActive && nadiaBookedTeam !== null && (nadiaBookedTeam - 1) === i;
+              const isNadiaExcluded = nadiaActive && (nadiaExcludedTeams || []).includes(i + 1);
+              const isNadiaWinner = nadiaActive && nadiaAssignedTeam !== null && (nadiaAssignedTeam - 1) === i;
+              const isBlinking = isNadiaBooked;
 
-                <div className="py-4">
-                  <EditableScore 
-                    index={i} 
-                    score={scores[i]} 
-                    setScore={setScore} 
-                    isAnimated={isTransitioning}
-                  />
+              return (
+                <div 
+                  key={i} 
+                  className={`bg-[#18181b]/80 border-2 rounded-3xl p-8 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md transition-all duration-500 ${
+                    isNadiaExcluded 
+                      ? 'opacity-35 grayscale border-slate-600 scale-95' 
+                      : isNadiaWinner
+                      ? 'border-emerald-400 ring-4 ring-emerald-400/50 shadow-[0_0_40px_rgba(16,185,129,0.5)]'
+                      : isBlinking
+                      ? 'border-amber-300 ring-8 ring-amber-400/70 shadow-[0_0_45px_rgba(251,191,36,0.9)]'
+                      : 'border-white/20'
+                  }`}
+                >
+                  <div className={`${team.color} w-full py-5 rounded-2xl shadow-xl flex flex-col items-center justify-center mb-6 border-2 transition-all ${
+                    isBlinking ? 'border-white animate-custom-blink ring-4 ring-white/50' : 'border-white/30'
+                  }`}>
+                    <span className={`text-4xl font-black tracking-widest uppercase ${isNadiaExcluded ? 'line-through opacity-80' : ''}`}>
+                      {team.name}
+                    </span>
+                    {isNadiaExcluded && (
+                      <span className="text-xs font-bold text-red-200 tracking-wider uppercase mt-1">
+                        ✕ Esclusa
+                      </span>
+                    )}
+                    {isNadiaWinner && (
+                      <span className="text-xs font-bold text-emerald-100 tracking-wider uppercase mt-1">
+                        ✨ Risposta Esatta +1000 PT
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="py-4">
+                    <EditableScore 
+                      index={i} 
+                      score={scores[i]} 
+                      setScore={setScore} 
+                      isAnimated={isTransitioning}
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ) : (
         /* Vista Normale: Istogramma completo e bonus con rivelazione graduale all'ingresso nel Box 1 */
         <div className="flex-1 grid grid-cols-3 gap-10 min-h-0 px-4 z-20 transition-all duration-700">
           {teamConfigs.map((team, i) => {
+            const isNadiaBooked = nadiaActive && nadiaBookedTeam !== null && (nadiaBookedTeam - 1) === i;
+            const isNadiaExcluded = nadiaActive && (nadiaExcludedTeams || []).includes(i + 1);
+            const isNadiaWinner = nadiaActive && nadiaAssignedTeam !== null && (nadiaAssignedTeam - 1) === i;
             const isBlinking = 
-              (activeBox === 2 && blinkingTeamIdx === i) ||
-              (activeBox === 1 && bookedTeamVal !== null && (bookedTeamVal - 1) === i);
+              isNadiaBooked ||
+              (!nadiaActive && activeBox === 2 && blinkingTeamIdx === i) ||
+              (!nadiaActive && activeBox === 1 && bookedTeamVal !== null && (bookedTeamVal - 1) === i);
             const teamScore = scores[i] || 0;
             const barHeightPct = Math.max((teamScore / maxScore) * 100, 6); // Base minima visibile del 6%
 
             return (
-              <div key={i} className="grid grid-rows-[auto_auto_240px_auto] h-full min-h-0 content-between">
+              <div 
+                key={i} 
+                className={`grid grid-rows-[auto_auto_240px_auto] h-full min-h-0 content-between transition-all duration-500 ${
+                  isNadiaExcluded ? 'opacity-35 grayscale scale-[0.98]' : ''
+                }`}
+              >
                 <div 
                   onClick={() => {
                     if (activeBox === 2) {
@@ -498,14 +542,30 @@ const ClassificaGenerale_Board: React.FC = () => {
                     }
                   }}
                   className={`
-                    ${team.color} w-full py-4 rounded-2xl shadow-2xl flex items-center justify-center mb-3 border-4 transition-all duration-300
+                    ${team.color} w-full py-4 rounded-2xl shadow-2xl flex flex-col items-center justify-center mb-3 border-4 transition-all duration-300
                     ${activeBox === 2 ? 'cursor-pointer hover:scale-105 active:scale-95' : ''}
                     ${isBlinking 
-                      ? 'animate-custom-blink border-white ring-4 ring-white/50 shadow-[0_0_30px_rgba(255,255,255,0.6)]' 
+                      ? 'animate-custom-blink border-amber-300 ring-8 ring-amber-400/70 shadow-[0_0_40px_rgba(251,191,36,0.9)]' 
+                      : isNadiaWinner
+                      ? 'border-emerald-300 ring-4 ring-emerald-400/50 shadow-[0_0_35px_rgba(16,185,129,0.7)]'
+                      : isNadiaExcluded
+                      ? 'border-slate-500'
                       : 'border-white/20'}
                   `}
                 >
-                  <span className="text-3xl font-black tracking-widest">{team.name}</span>
+                  <span className={`text-3xl font-black tracking-widest ${isNadiaExcluded ? 'line-through opacity-80' : ''}`}>
+                    {team.name}
+                  </span>
+                  {isNadiaExcluded && (
+                    <span className="text-[11px] font-bold text-red-200 tracking-wider uppercase mt-0.5">
+                      ✕ Esclusa
+                    </span>
+                  )}
+                  {isNadiaWinner && (
+                    <span className="text-[11px] font-bold text-emerald-100 tracking-wider uppercase mt-0.5">
+                      🏆 +1000 PT
+                    </span>
+                  )}
                 </div>
 
                 <EditableScore 

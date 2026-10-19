@@ -1,7 +1,8 @@
 {
   "nadia": {
-    "sfondo": "/Icone/sfondi/1001Nadia.jpg",
+    "sfondo": "/Icone/sfondi/sfondo_nadia_lampada.jpg",
     "musicaStacchetto": "/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3",
+    "canzoneStacchetto": "",
     "domande": [
       {
         "id": "nadia_1",

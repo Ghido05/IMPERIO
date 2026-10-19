@@ -157,8 +157,9 @@ export interface NadiaQuestionItem {
 }
 
 export interface NadiaSetup {
-  sfondo: string; // Sfondo unico per tutte le domande
+  sfondo: string; // Sfondo unico per tutte le domande (o segue la mappa)
   musicaStacchetto: string; // Stacchetto di ingresso e uscita
+  canzoneStacchetto?: string; // Stacchetto/Canzone vittoria quando una squadra indovina
   domande: NadiaQuestionItem[]; // Domande configurate
 }
 
@@ -485,8 +486,9 @@ export function createDefaultNadiaQuestion(box: number = 1, q: number = 1): Nadi
 
 export function createDefaultNadiaSetup(): NadiaSetup {
   return {
-    sfondo: '/Icone/sfondi/1001Nadia.jpg',
+    sfondo: '/Icone/sfondi/sfondo_nadia_lampada.jpg',
     musicaStacchetto: '',
+    canzoneStacchetto: '',
     domande: [
       {
         id: 'nadia_1',
@@ -518,12 +520,13 @@ export function normalizeNadia(raw: any, def: NadiaSetup): NadiaSetup {
     domande = def.domande;
   }
   let sfondo = raw.sfondo || def.sfondo || '';
-  if (!sfondo || sfondo.includes('1001Nadia') || sfondo.includes('nessuno_img') || sfondo.startsWith('idb://')) {
-    sfondo = '/Icone/sfondi/1001Nadia.jpg';
+  if (!sfondo || sfondo.includes('1001Nadia') || sfondo.includes('nessuno_img') || sfondo.includes('imperio_island_map') || sfondo.startsWith('idb://')) {
+    sfondo = '/Icone/sfondi/sfondo_nadia_lampada.jpg';
   }
   return {
     sfondo,
     musicaStacchetto: raw.musicaStacchetto || '',
+    canzoneStacchetto: raw.canzoneStacchetto || '',
     domande,
   };
 }
@@ -1511,12 +1514,15 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     });
   };
 
+  const [currentNadiaAudioSrc, setCurrentNadiaAudioSrc] = useState<string | null>(null);
+
   const toggleNadiaAudio = (src: string) => {
     if (!src) return;
-    if (nadiaAudioPlaying && nadiaAudioRef.current) {
+    if (nadiaAudioPlaying && nadiaAudioRef.current && currentNadiaAudioSrc === src) {
       nadiaAudioRef.current.pause();
       nadiaAudioRef.current.currentTime = 0;
       setNadiaAudioPlaying(false);
+      setCurrentNadiaAudioSrc(null);
       return;
     }
     if (nadiaAudioRef.current) {
@@ -1524,10 +1530,14 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     }
     const audio = new Audio(assetUrl(src));
     nadiaAudioRef.current = audio;
+    setCurrentNadiaAudioSrc(src);
     audio.play()
       .then(() => setNadiaAudioPlaying(true))
       .catch((err) => console.warn('Errore riproduzione audio setup:', err));
-    audio.onended = () => setNadiaAudioPlaying(false);
+    audio.onended = () => {
+      setNadiaAudioPlaying(false);
+      setCurrentNadiaAudioSrc(null);
+    };
   };
 
   // Preview audio generico per spiegazioni e test audio nei box
@@ -1746,117 +1756,121 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </span>
           </div>
 
-          {/* Riga Superiore: Sfondo Unico & Musica Stacchetto */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* 1. Box Sfondo Unico */}
-            <div className="bg-[#120f1e] p-4 rounded-xl border border-amber-500/20 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>🖼️ Sfondo Unico per Tutte le Domande</span>
-                </label>
-                <span className="text-[10px] text-white/40">Condiviso per tutte le domande</span>
-              </div>
-              <div className="flex items-center gap-2 bg-[#1c182d] p-2 rounded-lg border border-white/10">
-                {nadiaData.sfondo?.startsWith('data:') || nadiaData.sfondo?.startsWith('idb://') ? (
-                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
-                    <span className="text-amber-300 font-medium truncate max-w-[200px]">
-                      {formatBase64Info(nadiaData.sfondo)?.name || 'Sfondo caricato'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => updateNadia((prev) => ({ ...prev, sfondo: '' }))}
-                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-xs bg-transparent border-0"
-                    >
-                      Rimuovi
-                    </button>
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="URL / percorso relativo sfondo unico (es. /sfondo_nadia.jpg)..."
-                    value={nadiaData.sfondo || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      updateNadia((prev) => ({ ...prev, sfondo: val }));
-                    }}
-                    className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
-                  />
-                )}
-                <label className="px-3 py-1.5 text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded cursor-pointer shrink-0 text-center transition-all">
-                  🖼️ Sfoglia
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) =>
-                      handleFileUpload(e, (base64) =>
-                        updateNadia((prev) => ({ ...prev, sfondo: base64 }))
-                      )
-                    }
-                  />
-                </label>
+          {/* Riga Superiore: Sfondo Mappa, Sigla Ingresso/Uscita & Canzone Stacchetto Vittoria */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {/* 1. Box Sfondo Lampada */}
+            <div className="bg-[#120f1e] p-4 rounded-xl border border-amber-500/20 space-y-3 flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🪔 Sfondo Lampada Magica (Mappa)</span>
+                  </label>
+                  <span className="text-[10px] text-white/40">Lampada al centro dell'isola</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#1c182d] p-2 rounded-lg border border-white/10">
+                  {nadiaData.sfondo?.startsWith('data:') || nadiaData.sfondo?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                      <span className="text-amber-300 font-medium truncate max-w-[150px]">
+                        {formatBase64Info(nadiaData.sfondo)?.name || 'Sfondo caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateNadia((prev) => ({ ...prev, sfondo: '/Icone/sfondi/sfondo_nadia_lampada.jpg' }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-xs bg-transparent border-0"
+                      >
+                        Reset Lampada
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso sfondo (default: /Icone/sfondi/sfondo_nadia_lampada.jpg)..."
+                      value={nadiaData.sfondo || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateNadia((prev) => ({ ...prev, sfondo: val }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
+                    />
+                  )}
+                  <label className="px-3 py-1.5 text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded cursor-pointer shrink-0 text-center transition-all">
+                    🖼️ Sfoglia
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          updateNadia((prev) => ({ ...prev, sfondo: base64 }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
               </div>
               {nadiaData.sfondo && (
-                <div className="mt-2 w-full h-24 rounded-lg overflow-hidden border border-white/10 relative">
+                <div className="mt-2 w-full h-20 rounded-lg overflow-hidden border border-white/10 relative">
                   <img
                     src={assetUrl(nadiaData.sfondo)}
                     alt="Anteprima sfondo Nadia"
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute bottom-1 right-2 text-[10px] text-white/70 bg-black/60 px-2 py-0.5 rounded">
-                    Anteprima Sfondo
+                    Sfondo Attivo
                   </div>
                 </div>
               )}
             </div>
 
-            {/* 2. Box Musica Stacchetto */}
-            <div className="bg-[#120f1e] p-4 rounded-xl border border-amber-500/20 space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <span>🎵 Musica Stacchetto (Ingresso & Uscita)</span>
-                </label>
-                <span className="text-[10px] text-white/40">Suona all'apertura e al passaggio domanda</span>
-              </div>
-              <div className="flex items-center gap-2 bg-[#1c182d] p-2 rounded-lg border border-white/10">
-                {nadiaData.musicaStacchetto?.startsWith('data:') || nadiaData.musicaStacchetto?.startsWith('idb://') ? (
-                  <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
-                    <span className="text-emerald-400 font-medium truncate max-w-[200px]">
-                      {formatBase64Info(nadiaData.musicaStacchetto)?.name || 'Audio stacchetto'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => updateNadia((prev) => ({ ...prev, musicaStacchetto: '' }))}
-                      className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-xs bg-transparent border-0"
-                    >
-                      Rimuovi
-                    </button>
-                  </div>
-                ) : (
-                  <input
-                    type="text"
-                    placeholder="URL / percorso relativo stacchetto (es. /Audio/stacchetto.mp3)..."
-                    value={nadiaData.musicaStacchetto || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      updateNadia((prev) => ({ ...prev, musicaStacchetto: val }));
-                    }}
-                    className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
-                  />
-                )}
-                <label className="px-3 py-1.5 text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded cursor-pointer shrink-0 text-center transition-all">
-                  📁 Sfoglia
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    className="hidden"
-                    onChange={(e) =>
-                      handleFileUpload(e, (base64) =>
-                        updateNadia((prev) => ({ ...prev, musicaStacchetto: base64 }))
-                      )
-                    }
-                  />
-                </label>
+            {/* 2. Box Musica Stacchetto Ingresso / Uscita */}
+            <div className="bg-[#120f1e] p-4 rounded-xl border border-amber-500/20 space-y-3 flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🎵 Sigla Stacchetto (Ingresso/Uscita)</span>
+                  </label>
+                  <span className="text-[10px] text-white/40">Apertura e svelamento</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#1c182d] p-2 rounded-lg border border-white/10">
+                  {nadiaData.musicaStacchetto?.startsWith('data:') || nadiaData.musicaStacchetto?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[150px]">
+                        {formatBase64Info(nadiaData.musicaStacchetto)?.name || 'Audio sigla'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateNadia((prev) => ({ ...prev, musicaStacchetto: '' }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-xs bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso stacchetto (es. /Audio/stacchetto.mp3)..."
+                      value={nadiaData.musicaStacchetto || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateNadia((prev) => ({ ...prev, musicaStacchetto: val }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
+                    />
+                  )}
+                  <label className="px-3 py-1.5 text-xs font-semibold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 rounded cursor-pointer shrink-0 text-center transition-all">
+                    📁 Sfoglia
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          updateNadia((prev) => ({ ...prev, musicaStacchetto: base64 }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
               </div>
               {nadiaData.musicaStacchetto && (
                 <div className="flex items-center gap-3 pt-1">
@@ -1864,15 +1878,85 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     type="button"
                     onClick={() => toggleNadiaAudio(nadiaData.musicaStacchetto)}
                     className={`px-3 py-1.5 text-xs font-bold rounded-lg border flex items-center gap-1.5 transition-all cursor-pointer ${
-                      nadiaAudioPlaying
+                      nadiaAudioPlaying && currentNadiaAudioSrc === nadiaData.musicaStacchetto
                         ? 'bg-red-500/20 border-red-500 text-red-300 animate-pulse'
                         : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30'
                     }`}
                   >
-                    {nadiaAudioPlaying ? '⏹ Interrompi Prova' : '▶ Ascolta Stacchetto'}
+                    {nadiaAudioPlaying && currentNadiaAudioSrc === nadiaData.musicaStacchetto ? '⏹ Interrompi' : '▶ Ascolta Sigla'}
                   </button>
                   <span className="text-[11px] text-white/50">
-                    {nadiaAudioPlaying ? 'In riproduzione...' : 'Pronto per la verifica audio'}
+                    {nadiaAudioPlaying && currentNadiaAudioSrc === nadiaData.musicaStacchetto ? 'In riproduzione...' : 'Pronto'}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* 3. Box Canzone Stacchetto Risposta Esatta (Vittoria) */}
+            <div className="bg-[#120f1e] p-4 rounded-xl border border-amber-500/20 space-y-3 flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🎉 Canzone Stacchetto Risposta Esatta</span>
+                  </label>
+                  <span className="text-[10px] text-emerald-400/60 font-semibold">Quando si indovina (+1.000 pt)</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#1c182d] p-2 rounded-lg border border-white/10">
+                  {nadiaData.canzoneStacchetto?.startsWith('data:') || nadiaData.canzoneStacchetto?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2.5 py-1.5 text-xs text-white">
+                      <span className="text-emerald-300 font-medium truncate max-w-[150px]">
+                        {formatBase64Info(nadiaData.canzoneStacchetto)?.name || 'Canzone vittoria'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateNadia((prev) => ({ ...prev, canzoneStacchetto: '' }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-xs bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Percorso audio vittoria (es. /Audio/vittoria.mp3)..."
+                      value={nadiaData.canzoneStacchetto || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateNadia((prev) => ({ ...prev, canzoneStacchetto: val }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-3 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400"
+                    />
+                  )}
+                  <label className="px-3 py-1.5 text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 rounded cursor-pointer shrink-0 text-center transition-all">
+                    📁 Sfoglia
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          updateNadia((prev) => ({ ...prev, canzoneStacchetto: base64 }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+              {nadiaData.canzoneStacchetto && (
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleNadiaAudio(nadiaData.canzoneStacchetto!)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border flex items-center gap-1.5 transition-all cursor-pointer ${
+                      nadiaAudioPlaying && currentNadiaAudioSrc === nadiaData.canzoneStacchetto
+                        ? 'bg-red-500/20 border-red-500 text-red-300 animate-pulse'
+                        : 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30'
+                    }`}
+                  >
+                    {nadiaAudioPlaying && currentNadiaAudioSrc === nadiaData.canzoneStacchetto ? '⏹ Interrompi' : '▶ Ascolta Vittoria'}
+                  </button>
+                  <span className="text-[11px] text-white/50">
+                    {nadiaAudioPlaying && currentNadiaAudioSrc === nadiaData.canzoneStacchetto ? 'In riproduzione...' : 'Pronto per la vittoria'}
                   </span>
                 </div>
               )}
@@ -1994,8 +2078,8 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label={`BOX 4 — ${state.gioco4?.titolo || 'Frase Tempo'} (Frasi)`}>
-                    {[1, 2, 3, 4].map((n) => (
+                  <optgroup label={`BOX 4 — ${state.gioco4?.titolo || 'Frase Tempo'} (10 Frasi)`}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                       <option key={`4_${n}`} value={`4_${n}`}>
                         BOX 4 — Frase #{n}
                       </option>

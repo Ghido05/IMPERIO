@@ -104,11 +104,19 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
       } catch (e) {}
 
       if (excludedTeams.includes(playerNum)) {
-        return; // Squadra esclusa per questa domanda (ha sbagliato)
+        console.log(`[WebSerialManager] Squadra ${playerNum} esclusa da Nadia per errore precedente: invio reset e ignoro`);
+        sendSerialReset();
+        return; // Squadra esclusa per questa manche
       }
 
       if (currentNadiaBooked === 'null' || currentNadiaBooked === '') currentNadiaBooked = null;
       if (currentNadiaAssigned === 'null' || currentNadiaAssigned === '') currentNadiaAssigned = null;
+
+      if (currentNadiaAssigned) {
+        console.log(`[WebSerialManager] Domanda Nadia già convalidata: invio reset hardware`);
+        sendSerialReset();
+        return;
+      }
 
       if (!currentNadiaBooked && !currentNadiaAssigned && nadiaStep >= 4 && !nadiaSolutionShown) {
         localStorage.setItem(nadiaBookedKey, playerNum.toString());

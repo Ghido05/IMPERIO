@@ -174,9 +174,29 @@ export default function SlideCanvas({
             assignedTeam={nadiaAssignedTeam}
             teamNames={localSetup?.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']}
             onCancelBooking={() => {
+              const teamToExcl = nadiaBookedTeam;
               setNadiaErrorTrigger(Date.now());
               setNadiaBookedTeam(null);
               sendSerialReset();
+              if (teamToExcl !== null) {
+                const savedExcl = localStorage.getItem('playstate_nadia_excluded_teams');
+                let currentExcl: number[] = [];
+                try {
+                  if (savedExcl) currentExcl = JSON.parse(savedExcl);
+                } catch (e) {}
+                if (!currentExcl.includes(teamToExcl)) {
+                  const nextExcl = [...currentExcl, teamToExcl];
+                  localStorage.setItem('playstate_nadia_excluded_teams', JSON.stringify(nextExcl));
+                  window.dispatchEvent(new CustomEvent('local-storage-update', {
+                    detail: { key: 'playstate_nadia_excluded_teams', value: JSON.stringify(nextExcl) }
+                  }));
+                  if ((window as any).electron?.broadcastState) {
+                    (window as any).electron.broadcastState({
+                      localStorageUpdate: { key: 'playstate_nadia_excluded_teams', value: JSON.stringify(nextExcl) }
+                    });
+                  }
+                }
+              }
             }}
             onOptionClick={onNadiaOptionClick}
           />

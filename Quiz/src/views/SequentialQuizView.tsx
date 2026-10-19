@@ -734,6 +734,33 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     }
   }, [setupState.nadia?.musicaStacchetto, playNadiaJingle]);
 
+  const playNadiaVictoryAudio = useCallback(() => {
+    const songUrl = setupState.nadia?.canzoneStacchetto;
+    if (!songUrl) return;
+    try {
+      stopNadiaAudio();
+      const audio = new Audio(assetUrl(songUrl));
+      audio.onplay = () => setNadiaAudioPlaying(true);
+      audio.onpause = () => setNadiaAudioPlaying(false);
+      audio.onended = () => setNadiaAudioPlaying(false);
+      nadiaAudioRef.current = audio;
+      audio.play().catch((err) => console.log('Autoplay canzone vittoria Nadia:', err));
+    } catch (e) {
+      console.warn('Errore canzone stacchetto vittoria:', e);
+    }
+  }, [setupState.nadia?.canzoneStacchetto, stopNadiaAudio]);
+
+  const toggleNadiaVictoryAudio = useCallback(() => {
+    const songUrl = setupState.nadia?.canzoneStacchetto;
+    if (!songUrl) return;
+    if (nadiaAudioRef.current && !nadiaAudioRef.current.paused) {
+      nadiaAudioRef.current.pause();
+      setNadiaAudioPlaying(false);
+    } else {
+      playNadiaVictoryAudio();
+    }
+  }, [setupState.nadia?.canzoneStacchetto, playNadiaVictoryAudio]);
+
   // Pulizia audio all'unmount della vista
   useEffect(() => {
     return () => {
@@ -749,6 +776,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     setNadiaBookedTeam(null);
     setNadiaSolutionShown(true);
     sendSerialReset();
+    playNadiaVictoryAudio();
   };
 
   const handleResetNadiaPoints = () => {
@@ -761,11 +789,33 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   };
 
   const handleCancelNadiaBooking = (withError = false) => {
+    const teamToExclude = nadiaBookedTeam;
     if (withError) {
       triggerNadiaError();
     }
     setNadiaBookedTeam(null);
     sendSerialReset();
+
+    if (teamToExclude !== null && withError) {
+      const savedExcl = localStorage.getItem('playstate_nadia_excluded_teams');
+      let currentExcl: number[] = [];
+      try {
+        if (savedExcl) currentExcl = JSON.parse(savedExcl);
+      } catch (e) {}
+      if (!currentExcl.includes(teamToExclude)) {
+        const nextExcl = [...currentExcl, teamToExclude];
+        setNadiaExcludedTeams(nextExcl);
+        localStorage.setItem('playstate_nadia_excluded_teams', JSON.stringify(nextExcl));
+        window.dispatchEvent(new CustomEvent('local-storage-update', {
+          detail: { key: 'playstate_nadia_excluded_teams', value: JSON.stringify(nextExcl) }
+        }));
+        if ((window as any).electron?.broadcastState) {
+          (window as any).electron.broadcastState({
+            localStorageUpdate: { key: 'playstate_nadia_excluded_teams', value: JSON.stringify(nextExcl) }
+          });
+        }
+      }
+    }
   };
 
   const handleBookTeamNadia = (teamNum: number) => {
@@ -1348,17 +1398,33 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                           <div className="flex items-center gap-2">
                             <span className="text-base">🏆</span>
                             <span className="text-xs font-black text-emerald-300 uppercase tracking-wider">
-                              Risposta Corretta Convalidata: {teamNames[nadiaAssignedTeam - 1] || `Squadra ${nadiaAssignedTeam}`}
+                              Risposta Corretta Convalidata (+1.000 pt): {teamNames[nadiaAssignedTeam - 1] || `Squadra ${nadiaAssignedTeam}`}
                             </span>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={handleResetNadiaPoints}
-                            className="px-2.5 py-1 text-white/50 hover:text-red-400 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold uppercase transition-all cursor-pointer"
-                          >
-                            ↩ Annulla
-                          </button>
+                          <div className="flex items-center gap-2">
+                            {setupState.nadia?.canzoneStacchetto && (
+                              <button
+                                type="button"
+                                onClick={toggleNadiaVictoryAudio}
+                                className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all flex items-center gap-1 cursor-pointer ${
+                                  nadiaAudioPlaying
+                                    ? 'bg-emerald-500/30 text-emerald-200 border-emerald-400 animate-pulse'
+                                    : 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/40'
+                                }`}
+                                title="Riascolta o metti in pausa lo stacchetto di vittoria"
+                              >
+                                <span>{nadiaAudioPlaying ? '⏸ Pausa Vittoria' : '🎵 Canzone Vittoria'}</span>
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={handleResetNadiaPoints}
+                              className="px-2.5 py-1 text-white/50 hover:text-red-400 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold uppercase transition-all cursor-pointer"
+                            >
+                              ↩ Annulla
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         /* Nessuno Prenotato: Tasti Rapidi per Testare la Prenotazione */
@@ -1367,23 +1433,33 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                             <span className="text-[11px] font-black uppercase text-amber-400/80 mr-1 flex items-center gap-1">
                               <span>⚡</span> Test Prenota:
                             </span>
-                            {[1, 2, 3].map((tNum) => (
-                              <button
-                                key={tNum}
-                                type="button"
-                                onClick={() => handleBookTeamNadia(tNum)}
-                                className={`px-2.5 py-1 rounded text-[11px] font-black border transition-all cursor-pointer flex items-center gap-1 ${
-                                  tNum === 1
-                                    ? 'bg-red-500/15 hover:bg-red-500/30 text-red-300 border-red-500/30'
-                                    : tNum === 2
-                                    ? 'bg-blue-500/15 hover:bg-blue-500/30 text-blue-300 border-blue-500/30'
-                                    : 'bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/30'
-                                }`}
-                              >
-                                <span>{teamNames[tNum - 1] || `S${tNum}`}</span>
-                                <kbd className="text-[9px] bg-black/40 px-1 rounded opacity-70">{tNum}</kbd>
-                              </button>
-                            ))}
+                            {[1, 2, 3].map((tNum) => {
+                              const isExcluded = nadiaExcludedTeams.includes(tNum);
+                              return (
+                                <button
+                                  key={tNum}
+                                  type="button"
+                                  disabled={isExcluded}
+                                  onClick={() => handleBookTeamNadia(tNum)}
+                                  className={`px-2.5 py-1 rounded text-[11px] font-black border transition-all flex items-center gap-1 ${
+                                    isExcluded
+                                      ? 'bg-black/40 border-slate-700 text-slate-500 opacity-30 grayscale cursor-not-allowed line-through'
+                                      : tNum === 1
+                                      ? 'bg-red-500/15 hover:bg-red-500/30 text-red-300 border-red-500/30 cursor-pointer'
+                                      : tNum === 2
+                                      ? 'bg-blue-500/15 hover:bg-blue-500/30 text-blue-300 border-blue-500/30 cursor-pointer'
+                                      : 'bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/30 cursor-pointer'
+                                  }`}
+                                >
+                                  <span>{teamNames[tNum - 1] || `S${tNum}`}</span>
+                                  {isExcluded ? (
+                                    <span className="text-[9px] text-red-400 font-bold no-underline">✕ ESCLUSA</span>
+                                  ) : (
+                                    <kbd className="text-[9px] bg-black/40 px-1 rounded opacity-70">{tNum}</kbd>
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
                           <span className="text-[11px] text-white/40 italic">
                             In attesa di prenotazione al buzzer...

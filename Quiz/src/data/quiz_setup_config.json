@@ -2,7 +2,7 @@
   "nadia": {
     "sfondo": "/Icone/sfondi/sfondo_nadia_lampada.jpg",
     "musicaStacchetto": "/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3",
-    "canzoneStacchetto": "",
+    "canzoneStacchetto": "/Audio/strumenti/DJ Antoine ft The Beat Shakers   Ma Chérie (_[cut_23sec].mp3",
     "domande": [
       {
         "id": "nadia_1",
@@ -93,9 +93,9 @@
           ],
           "indizi": [
             "PIUTTOSTO ESIGENTE COME RICHIESTA \\n L’UNICITÀ DELLA PASSIONE SPODESTA",
-            "COL PROPRIO COGNOME SI DÀ UN TONO LA CANTANTE IRROMPE COME UN TUONO",
-            "LEI SI GIUSTIFICA: “SONO DISONESTA” MA CHE CONSIDERAZIONE È MAI QUESTA?",
-            "DOPO 10 ANNI TORNATA DI MODA ORA LA RISPOSTA ARRIVA DA SOLA"
+            "COL PROPRIO COGNOME SI DÀ UN TONO \\n LA CANTANTE IRROMPE COME UN TUONO",
+            "LEI SI GIUSTIFICA: “SONO DISONESTA” \\n MA CHE CONSIDERAZIONE È MAI QUESTA?",
+            "DOPO 10 ANNI TORNATA DI MODA \\n ORA LA RISPOSTA ARRIVA DA SOLA"
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g01m01soluzione.mp3",
           "titolo": "L'AMORE NON MI BASTA",

@@ -148,6 +148,25 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
     if (currentBooked === 'null' || currentBooked === '') currentBooked = null;
     if (currentAssigned === 'null' || currentAssigned === '') currentAssigned = null;
 
+    // Controllo se la squadra è esclusa per questa manche
+    const isExcluded = !isNadiaActive && (() => {
+      try {
+        const exclKey = `playstate_${activeSlideId}_excluded_teams`;
+        const exclStr = localStorage.getItem(exclKey);
+        if (exclStr) {
+          const parsed = JSON.parse(exclStr);
+          return Array.isArray(parsed) && parsed.includes(playerNum);
+        }
+      } catch {}
+      return false;
+    })();
+
+    if (isExcluded) {
+      console.log(`[WebSerialManager] Squadra ${playerNum} è ESCLUSA da questa manche (${activeSlideId}), buzz rifiutato!`);
+      sendSerialReset();
+      return;
+    }
+
     // Solo il primo a prenotarsi vince il turno (se non già prenotato o con punti assegnati)
     if (!currentBooked && !currentAssigned) {
       const stepKey = `playstate_${activeSlideId}_step`;

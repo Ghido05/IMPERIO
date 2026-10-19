@@ -100,8 +100,8 @@ const DynamicHint: React.FC<{
             transform: `translateY(-${yOffset}px)`
           }}
         >
-          <p className="text-white font-bold text-center text-[clamp(0.7rem,1.4vw,1.1rem)] leading-tight text-balance drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-            {note.text}
+          <p className="text-white font-bold text-center text-[clamp(0.7rem,1.4vw,1.1rem)] leading-snug whitespace-pre-line drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+            {(note?.text || '').replace(/\\n/g, '\n')}
           </p>
           <div className="absolute top-[10%] left-[5%] w-[25%] h-[10%] rounded-full bg-white/30"></div>
         </div>
@@ -201,7 +201,7 @@ const Solution: React.FC<{ isVisible: boolean; revealAll?: boolean }> = ({ isVis
   );
 };
 
-const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ interactive = true, revealAll = false }) => {
+const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresenter?: boolean }> = ({ interactive = true, revealAll = false, isPresenter: _isPresenter = false }) => {
   const gameData = useGameData();
   const slideId = gameData.slideId ?? 'sandbox';
 
@@ -233,6 +233,7 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
   const [assignedTeam, setAssignedTeam] = useSyncedState<number | null>(`playstate_${slideId}_assigned_team`, null);
   const [bookedTeam, setBookedTeam] = useSyncedState<number | null>(`playstate_${slideId}_booked_team`, null);
   const [lockedStep, setLockedStep] = useSyncedState<number | null>(`playstate_${slideId}_locked_step`, null);
+  const [excludedTeams, setExcludedTeams] = useSyncedState<number[]>(`playstate_${slideId}_excluded_teams`, []);
 
   // Transizione d'ingresso cinematica dalla spiegazione alla prima domanda
   const [showIntroTransition, setShowIntroTransition] = useState(() => {
@@ -255,17 +256,53 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
     return Math.max(1000, 5000 - group * 1000);
   };
 
+  const displayedPoints = lockedStep !== null ? getPointsForStep(lockedStep) : getPointsForStep(step);
+
+  const handleCorrectAnswer = (teamNum: number) => {
+    const pts = displayedPoints;
+    addScore(teamNum - 1, pts);
+    setAssignedTeam(teamNum);
+    if (lockedStep === null) {
+      setLockedStep(step);
+    }
+    setBookedTeam(null);
+  };
+
+  const handleWrongAnswer = (teamNum: number) => {
+    setShowError(true);
+    setBookedTeam(null);
+    setLockedStep(null);
+    setExcludedTeams(prev => {
+      const current = prev || [];
+      return current.includes(teamNum) ? current : [...current, teamNum];
+    });
+    sendSerialReset();
+  };
+
+  const handleManualBook = (teamNum: number) => {
+    if (assignedTeam !== null || bookedTeam !== null) return;
+    if ((excludedTeams || []).includes(teamNum)) return;
+    setBookedTeam(teamNum);
+    if (lockedStep === null) {
+      setLockedStep(step);
+    }
+  };
+
   const handleAssignPoints = (teamNum: number) => {
     setAssignedTeam(teamNum);
     if (lockedStep === null) {
       setLockedStep(step);
     }
-    setBookedTeam(null); // Consolidate the booking into official point assignment
+    setBookedTeam(null);
   };
 
   const handleCancelBooking = () => {
-    setBookedTeam(null);
-    sendSerialReset();
+    if (bookedTeam !== null) {
+      handleWrongAnswer(bookedTeam);
+    } else {
+      setBookedTeam(null);
+      sendSerialReset();
+    }
   };
 
   const handleResetPoints = () => {
@@ -275,11 +312,10 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
       setAssignedTeam(null);
     }
     setLockedStep(null);
-    setBookedTeam(null); // Clear booking flag
+    setBookedTeam(null);
+    setExcludedTeams([]);
     sendSerialReset();
   };
-
-  const displayedPoints = lockedStep !== null ? getPointsForStep(lockedStep) : getPointsForStep(step);
 
   // Cleanup dell'audio all'unmount del componente
   useEffect(() => {
@@ -368,13 +404,20 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
     return () => clearTimeout(timer);
   }, [step, isAutoAdvancing]);
 
-  // Gestione dell'audio al cambio di step
+  // Gestione dell'audio al cambio di step: ferma IMMEDIATAMENTE l'audio precedente
   useEffect(() => {
-    // Controlliamo se lo step è effettivamente cambiato per evitare autoplay al mount
+    // Controlliamo se lo step è effettivamente cambiato
     const stepChanged = step !== lastPlayedStepRef.current;
     lastPlayedStepRef.current = step;
 
-    // Determiniamo il path dell'audio per lo step corrente
+    // Fermiamo SEMPRE qualsiasi audio in riproduzione quando lo step cambia
+    if (stepChanged && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
+    }
+
+    // Determiniamo il path dell'audio per il NUOVO step
     let audioPath = '';
     if (step === 10 && gameData.soluzione?.audio) {
       audioPath = gameData.soluzione.audio;
@@ -383,30 +426,13 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
     }
 
     const isBackingFromSolution = prevStep === 10 && step === 9;
-    const wentBackward = step < prevStep;
-
-    // Fermiamo l'audio precedente se lo step è effettivamente cambiato ed è presente un nuovo audio, o se stiamo tornando indietro
-    const shouldStopAudio = 
-      (stepChanged && audioPath) || 
-      wentBackward || 
-      step === 0 || 
-      (step === 10 && !audioPath);
-
-    if (shouldStopAudio && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-
-    // Riproduciamo l'audio solo se lo step è cambiato e non siamo in modalità automatica (tranne che per la soluzione), e non stiamo tornando indietro
     const isSolutionStep = step === 10;
     const shouldPlay = stepChanged && (!isAutoAdvancing || isSolutionStep) && !isBackingFromSolution && interactive;
 
-    if (shouldPlay) {
-      if (audioPath) {
-        const newAudio = new Audio(assetUrl(audioPath));
-        audioRef.current = newAudio;
-        newAudio.play().catch(error => console.log('Autoplay intercettato dal browser:', error));
-      }
+    if (shouldPlay && audioPath) {
+      const newAudio = new Audio(assetUrl(audioPath));
+      audioRef.current = newAudio;
+      newAudio.play().catch(error => console.log('Autoplay intercettato dal browser:', error));
     }
   }, [step, isAutoAdvancing, prevStep, interactive, gameData.soluzione, audioMap]);
 
@@ -423,13 +449,54 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
       if (isAutoAdvancing) return;
 
       const now = Date.now();
-      if (now - lastKeyTimeRef.current < 250) {
-        console.log(`[MusicBoard KeyDown] Throttled duplicate key: ${e.key}`);
+      if (now - lastKeyTimeRef.current < 200) {
         return;
       }
       lastKeyTimeRef.current = now;
 
-      console.log(`[MusicBoard KeyDown] Key: ${e.key}, current step: ${step}`);
+      // Se una squadra è prenotata:
+      if (bookedTeam !== null && assignedTeam === null) {
+        if (e.key === 'Enter' || e.key.toLowerCase() === 'c') {
+          e.preventDefault();
+          handleCorrectAnswer(bookedTeam);
+          return;
+        }
+        if (e.key.toLowerCase() === 'e' || e.key.toLowerCase() === 'x' || e.key === 'Escape' || e.key === 'Backspace') {
+          e.preventDefault();
+          handleWrongAnswer(bookedTeam);
+          return;
+        }
+      }
+
+      // Tasti 1, 2, 3: prenotazione manuale squadra (se non esclusa, non già assegnata né prenotata)
+      if (['1', '2', '3'].includes(e.key) && assignedTeam === null && bookedTeam === null) {
+        const teamNum = parseInt(e.key, 10);
+        if (!(excludedTeams || []).includes(teamNum)) {
+          e.preventDefault();
+          handleManualBook(teamNum);
+          return;
+        }
+      }
+
+      // Tasto M: Avvia / Pausa l'audio dello strumento corrente
+      if (e.key.toLowerCase() === 'm') {
+        if (audioRef.current) {
+          if (audioRef.current.paused) {
+            audioRef.current.play().catch(err => console.log('Errore play audio:', err));
+          } else {
+            audioRef.current.pause();
+          }
+        } else {
+          // Se l'audio si era fermato o non era partito, possiamo riavviarlo
+          const currentAudioPath = (step === 10 && gameData.soluzione?.audio) ? gameData.soluzione.audio : audioMap[step];
+          if (currentAudioPath) {
+            const newAudio = new Audio(assetUrl(currentAudioPath));
+            audioRef.current = newAudio;
+            newAudio.play().catch(err => console.log('Errore play audio:', err));
+          }
+        }
+        return;
+      }
 
       if (e.key === 'ArrowRight') {
         setStep((prev) => {
@@ -463,14 +530,12 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
       } else if (e.key.toLowerCase() === 'e' || e.key.toLowerCase() === 'x') {
         // Attiva l'effetto di errore
         setShowError(true);
-        setBookedTeam(null);
-        setLockedStep(null);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [step, isAutoAdvancing, lockedStep, setLockedStep, setAssignedTeam, setBookedTeam]);
+  }, [step, isAutoAdvancing, lockedStep, setLockedStep, setAssignedTeam, setBookedTeam, bookedTeam, assignedTeam, excludedTeams, displayedPoints]);
 
   const currentSfondo = gameData.sfondo || '/Icone/sfondi/sfondo_box1_foresta_musicale.jpg';
 
@@ -646,27 +711,57 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ i
 
             {/* Banner visivo squadra prenotata al buzzer */}
             {bookedTeam !== null && assignedTeam === null && (
-              <div className={`my-1.5 px-5 py-2 rounded-2xl border-2 shadow-2xl flex items-center gap-3 animate-pulse ${
+              <div className={`my-1.5 px-5 py-2.5 rounded-2xl border-2 shadow-2xl flex flex-wrap items-center justify-center gap-3 animate-pulse ${
                 bookedTeam === 1
-                  ? 'bg-red-950/90 border-red-500 text-red-200 shadow-[0_0_25px_rgba(239,68,68,0.6)]'
+                  ? 'bg-red-950/95 border-red-500 text-red-200 shadow-[0_0_25px_rgba(239,68,68,0.7)]'
                   : bookedTeam === 2
-                  ? 'bg-blue-950/90 border-blue-500 text-blue-200 shadow-[0_0_25px_rgba(59,130,246,0.6)]'
-                  : 'bg-emerald-950/90 border-emerald-500 text-emerald-200 shadow-[0_0_25px_rgba(16,185,129,0.6)]'
+                  ? 'bg-blue-950/95 border-blue-500 text-blue-200 shadow-[0_0_25px_rgba(59,130,246,0.7)]'
+                  : 'bg-emerald-950/95 border-emerald-500 text-emerald-200 shadow-[0_0_25px_rgba(16,185,129,0.7)]'
               }`}>
                 <span className="text-xl">⚡</span>
                 <span className="font-black text-sm md:text-base uppercase tracking-wider">
                   {teamNames[bookedTeam - 1] || `SQUADRA ${bookedTeam}`} SI È PRENOTATA!
                 </span>
                 {interactive && (
-                  <button
-                    type="button"
-                    onClick={handleCancelBooking}
-                    className="ml-2 px-2.5 py-1 text-[10px] font-black uppercase rounded-lg bg-white/20 hover:bg-red-500 hover:text-white text-white transition-all cursor-pointer border border-white/30"
-                    title="Annulla prenotazione e riarma pulsantiera hardware"
-                  >
-                    ✕ Sblocca / Errata
-                  </button>
+                  <div className="flex items-center gap-2 ml-2">
+                    <button
+                      type="button"
+                      onClick={() => handleCorrectAnswer(bookedTeam)}
+                      className="px-3 py-1.5 text-xs font-black uppercase rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95 border border-emerald-400"
+                      title="Risposta corretta: assegna punti alla squadra e disattiva il pulsante (Enter / C)"
+                    >
+                      <span>✓</span> Corretta (+{displayedPoints.toLocaleString('it-IT')} pt)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleWrongAnswer(bookedTeam)}
+                      className="px-3 py-1.5 text-xs font-black uppercase rounded-lg bg-red-600 hover:bg-red-500 text-white shadow-lg transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95 border border-red-400"
+                      title="Risposta errata: esclude la squadra per il resto della manche e resetta la pulsantiera (Esc / E / X)"
+                    >
+                      <span>✕</span> Errata / Escludi
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelBooking}
+                      className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-all cursor-pointer"
+                      title="Annulla prenotazione senza penalità"
+                    >
+                      Annulla
+                    </button>
+                  </div>
                 )}
+              </div>
+            )}
+
+            {/* Banner visivo squadre escluse da questa manche */}
+            {excludedTeams && excludedTeams.length > 0 && assignedTeam === null && (
+              <div className="flex items-center gap-2 text-xs font-bold text-red-300 bg-red-950/70 border border-red-500/30 px-3.5 py-1 rounded-full shadow-md">
+                <span>🚫 Escluse dalla manche:</span>
+                {excludedTeams.map((tNum) => (
+                  <span key={tNum} className="line-through bg-black/50 px-2 py-0.5 rounded text-white/70">
+                    {teamNames[tNum - 1] || `Squadra ${tNum}`}
+                  </span>
+                ))}
               </div>
             )}
 

@@ -29,7 +29,7 @@ const ClassificaBoard = ({
   const effectiveStep = revealAll ? 2 : step;
 
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
-  const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
+  const [, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
   const [, setLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
   const [showError, setShowError] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
@@ -212,12 +212,25 @@ const ClassificaBoard = ({
     });
   }, [effectiveStep, revealed, activeSuspense, getActiveTeamIdx, getCluePoints, gameData.elementi, setActiveSuspense]);
 
+  const isPublicScreen = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('mode') === 'games' || (isPresenter === false && params.get('mode') !== null);
+  }, [isPresenter]);
+
   const handleSuspenseReveal = useCallback((clueNum: number, targetTeamIdx: number, points: number) => {
-    addScore(targetTeamIdx, points);
+    // Solo la finestra di controllo assegna i punti ed evita doppi conteggi tra finestre
+    if (!isPublicScreen) {
+      const storageKey = `playstate_${slideId}_score_awarded_${clueNum}`;
+      if (!localStorage.getItem(storageKey)) {
+        localStorage.setItem(storageKey, 'true');
+        addScore(targetTeamIdx, points);
+      }
+    }
     setRevealed(prev => ({ ...prev, [clueNum]: true }));
     setPointsAssigned(prev => ({ ...prev, [clueNum]: targetTeamIdx + 1 }));
     setLatestClue(clueNum);
-  }, [addScore, setRevealed, setPointsAssigned, setLatestClue]);
+  }, [slideId, isPublicScreen, addScore, setRevealed, setPointsAssigned, setLatestClue]);
 
   const handleSuspenseComplete = useCallback(() => {
     setActiveSuspense(null);
@@ -259,7 +272,13 @@ const ClassificaBoard = ({
           if (!isAutoAdvancing && !isGameComplete) {
             const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
             const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
-            addScore(targetTeamIdx, 5000);
+            if (!isPublicScreen) {
+              const solKey = `playstate_${slideId}_score_awarded_solution`;
+              if (!localStorage.getItem(solKey)) {
+                localStorage.setItem(solKey, 'true');
+                addScore(targetTeamIdx, 5000);
+              }
+            }
             setIsAutoAdvancing(true);
           } else if (isAutoAdvancing && !isGameComplete) {
             setIsAutoAdvancing(false);
@@ -517,17 +536,6 @@ const ClassificaBoard = ({
                   <span className="text-white font-black text-[clamp(12px,1.56vw,30px)] leading-none">
                     {marker.value}
                   </span>
-
-                  {/* Mostra il pallino colorato della squadra che ha indovinato */}
-                  {pointsAssigned[marker.value] !== undefined && pointsAssigned[marker.value] !== 0 && (
-                    <div 
-                      className={`absolute left-full ml-2 w-[clamp(20px,2vw,40px)] h-[clamp(20px,2vw,40px)] rounded-full font-black text-white text-[clamp(12px,1.2vw,24px)] flex items-center justify-center border-2 border-white/30 shadow-md animate-zoom-in ${
-                        pointsAssigned[marker.value] === 1 ? 'bg-red-600' : pointsAssigned[marker.value] === 2 ? 'bg-blue-600' : 'bg-green-600'
-                      }`}
-                    >
-                      {pointsAssigned[marker.value]}
-                    </div>
-                  )}
                 </div>
               </React.Fragment>
             ))}

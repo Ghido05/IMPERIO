@@ -234,7 +234,7 @@ export function getSlideForBoxQuestion(
           categoria: q1.immagine.categoria || '',
           anno: '',
         },
-        griglia: { colonne: 10, righe: 10, puntoFocale: { colonna: 5, riga: 5 } },
+        griglia: { colonne: 10, righe: 10, puntoFocale: { colonna: 5, riga: 5 }, seme: q1.immagine.grigliaSeme ?? 1 },
         notePresentatore: q1.notePresentatore || '',
       };
       return { id: `box1_q${questionNum}`, type: 'img', data };
@@ -977,8 +977,12 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [nadiaActive, nadiaStep, setNadiaStep, nadiaBookedTeam, nadiaAssignedTeam, nadiaSolutionShown, setNadiaSolutionShown, handleCloseNadia, toggleNadiaJingle]);
 
+  const box1QuestionKeys = Object.keys(setupState.gioco1?.questions || {}).map(Number);
+  const numBox1Questions = Math.max(10, box1QuestionKeys.length > 0 ? Math.max(...box1QuestionKeys) : 10);
+  const box2QuestionKeys = Object.keys(setupState.gioco2?.questions || {}).map(Number);
+  const numBox2Questions = Math.max(6, box2QuestionKeys.length > 0 ? Math.max(...box2QuestionKeys) : 6);
   const numBox4Questions = Math.max(1, (setupState.gioco4?.frasi && setupState.gioco4.frasi.length > 0) ? setupState.gioco4.frasi.length : 2);
-  const maxQuestionsForBox = activeBox === 0 ? 4 : activeBox === 1 ? 10 : activeBox === 2 ? 6 : activeBox === 3 ? 3 : activeBox === 4 ? numBox4Questions : 1;
+  const maxQuestionsForBox = activeBox === 0 ? 4 : activeBox === 1 ? numBox1Questions : activeBox === 2 ? numBox2Questions : activeBox === 3 ? 3 : activeBox === 4 ? numBox4Questions : 1;
 
   const handleNext = () => {
     sendSerialReset();

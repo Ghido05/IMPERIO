@@ -367,7 +367,7 @@ export default function SpiegazioneBox5Board({
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(33.75);
-  const isMuted = isMultiWindowRelatore;
+  const [isMuted, setIsMuted] = useState(isMultiWindowRelatore);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playedSoundsRef = useRef<Set<string>>(new Set());
@@ -405,6 +405,28 @@ export default function SpiegazioneBox5Board({
       audio.pause();
     }
   }, [isPlaying, interactive]);
+
+  // Fallback timer per garantire che currentTime avanzi sempre a 60fps / 100ms come un video continuo
+  useEffect(() => {
+    if (!interactive || !isPlaying) return;
+
+    const interval = setInterval(() => {
+      if (audioRef.current && !audioRef.current.paused && !isNaN(audioRef.current.currentTime) && audioRef.current.currentTime > 0) {
+        return;
+      }
+      setCurrentTime((prev) => {
+        const next = Math.round((prev + 0.1) * 10) / 10;
+        if (next >= duration) {
+          setIsPlaying(false);
+          setIsAllRevealed(true);
+          return duration;
+        }
+        return next;
+      });
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [isPlaying, interactive, duration, setIsPlaying, setIsAllRevealed]);
 
   // Funzione di Seek temporale
   const seekTo = useCallback(
@@ -656,8 +678,17 @@ export default function SpiegazioneBox5Board({
   const togglePlay = useCallback(() => {
     if (!interactive) return;
     soundFX.resume();
+    if (currentTime >= 33.2 || isAllRevealed || manualStep >= 4) {
+      playedSoundsRef.current.clear();
+      seekTo(0);
+      setManualStep(0);
+      setIsAllRevealed(false);
+      setActiveSlide(0);
+      setIsPlaying(true);
+      return;
+    }
     setIsPlaying(!isPlaying);
-  }, [interactive, isPlaying, setIsPlaying]);
+  }, [interactive, currentTime, isAllRevealed, manualStep, isPlaying, seekTo, setManualStep, setIsAllRevealed, setActiveSlide, setIsPlaying]);
 
   // Gestione tastiera sul relatore
   useEffect(() => {
@@ -667,7 +698,15 @@ export default function SpiegazioneBox5Board({
       const target = e.target as HTMLElement;
       if (target?.tagName === 'INPUT' || target?.tagName === 'TEXTAREA') return;
 
-      if (e.key === 'ArrowRight' || e.key === 'PageDown') {
+      if (e.code === 'Space' || e.key === ' ' || e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        e.stopPropagation();
+        togglePlay();
+      } else if (e.key.toLowerCase() === 's' || e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        revealEverything();
+      } else if (e.key === 'ArrowRight' || e.key === 'PageDown') {
         e.preventDefault();
         e.stopPropagation();
         nextStep();
@@ -675,10 +714,6 @@ export default function SpiegazioneBox5Board({
         e.preventDefault();
         e.stopPropagation();
         prevStep();
-      } else if (e.key === ' ' || e.key.toLowerCase() === 's') {
-        e.preventDefault();
-        e.stopPropagation();
-        revealEverything();
       } else if (e.key.toLowerCase() === 'r') {
         e.preventDefault();
         e.stopPropagation();
@@ -692,7 +727,7 @@ export default function SpiegazioneBox5Board({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, nextStep, prevStep, revealEverything, resetAllState, returnToMap]);
+  }, [interactive, togglePlay, revealEverything, nextStep, prevStep, resetAllState, returnToMap]);
 
   // Asset e testi dinamici
   const customSfondo = assetUrl(
@@ -709,7 +744,7 @@ export default function SpiegazioneBox5Board({
       : 'I 4 EQUIPAGGIAMENTI • JOLLY E BONUS DEL TORNEO');
 
   return (
-    <div className="relative w-[1920px] h-[1080px] overflow-hidden select-none bg-[#090308] text-white flex flex-col items-center justify-between font-sans px-12 py-7">
+    <div className="relative w-[1920px] h-[1080px] overflow-hidden select-none bg-[#090308] text-white flex flex-col items-center justify-between font-sans px-12 py-7 pb-28">
       {/* Elemento Audio di supporto */}
       <audio
         ref={audioRef}
@@ -1059,6 +1094,42 @@ export default function SpiegazioneBox5Board({
                 </div>
               </div>
             </div>
+            {/* Callout di passaggio a Slide 2 (I 4 Bonus) o Avvio Scontro */}
+            {(showRegola4Card || isAllRevealed) && (
+              <div className="w-full flex items-center justify-between p-2.5 px-6 rounded-2xl bg-gradient-to-r from-red-950/80 via-slate-950/90 to-amber-950/80 border border-red-500/40 shadow-[0_0_25px_rgba(239,68,68,0.25)] animate-fade-in mt-1">
+                <div className="flex items-center gap-3">
+                  <span className="text-xl animate-bounce">🛡️</span>
+                  <div>
+                    <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-amber-400">
+                      PASSO SUCCESSIVO
+                    </span>
+                    <p className="text-sm font-black uppercase text-white tracking-wide">
+                      SCOPRI I 4 EQUIPAGGIAMENTI & JOLLY DELL'ARENA D'ACQUA
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => selectSlide(1)}
+                    className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>VEDI I 4 BONUS</span>
+                    <span className="text-xs">➔</span>
+                  </button>
+                  {interactive && isPresenterMode && (
+                    <button
+                      type="button"
+                      onClick={handleStartFinale}
+                      className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <span>AVVIA SCONTRO</span>
+                      <span className="text-xs">➔</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </main>
       ) : (
@@ -1267,7 +1338,7 @@ export default function SpiegazioneBox5Board({
       {/* DECK DI CONTROLLO REGIA RELATORE (Visibile ESCLUSIVAMENTE sul monitor PC)  */}
       {/* ========================================================================= */}
       {interactive && isPresenterMode && (
-        <footer className="relative z-20 w-full max-w-[1780px] shrink-0 mt-2 p-3 px-6 rounded-2xl bg-slate-950/90 border border-white/20 shadow-2xl backdrop-blur-md flex items-center justify-between gap-4">
+        <footer className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-[1780px] p-3 px-6 rounded-2xl bg-slate-950/95 border-2 border-red-500/40 shadow-[0_0_50px_rgba(0,0,0,0.9)] backdrop-blur-2xl flex items-center justify-between gap-4">
           <div className="flex items-center gap-2 shrink-0">
             {/* Play / Pausa Audio */}
             <button
@@ -1486,9 +1557,21 @@ export default function SpiegazioneBox5Board({
               type="button"
               onClick={revealEverything}
               className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition-all cursor-pointer"
-              title="Svela tutto (Tasto S o Spazio)"
+              title="Svela tutto subito (Tasto S o Invio)"
             >
               Svela Tutto
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsMuted(!isMuted)}
+              className={`px-3 py-1.5 rounded-lg border font-bold text-xs cursor-pointer transition-all ${
+                isMuted
+                  ? 'bg-amber-950/60 border-amber-500/40 text-amber-300'
+                  : 'bg-slate-800 border-white/15 text-slate-300'
+              }`}
+              title="Muta audio solo su questa finestra relatore"
+            >
+              {isMuted ? '🔇 Audio Muto' : '🔊 Audio Attivo'}
             </button>
             <button
               type="button"
@@ -1511,6 +1594,24 @@ export default function SpiegazioneBox5Board({
             </button>
           </div>
         </footer>
+      )}
+
+      {/* Icona Play centrale quando in pausa all'inizio (visibile SOLO nel monitor Relatore) */}
+      {isPresenterMode && !isPlaying && manualStep === 0 && !isAllRevealed && interactive && (
+        <div
+          onClick={togglePlay}
+          className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[2px] cursor-pointer transition-all duration-300 group"
+        >
+          <div className="w-28 h-28 rounded-full bg-gradient-to-br from-red-500 via-rose-600 to-amber-500 text-white flex items-center justify-center pl-2 text-5xl shadow-[0_0_50px_rgba(239,68,68,0.8)] group-hover:scale-110 active:scale-95 transition-transform mb-4">
+            ▶
+          </div>
+          <span className="text-base font-black tracking-widest uppercase text-red-300 bg-black/80 px-6 py-2 rounded-full border border-red-500/40 shadow-xl">
+            Avvia Spiegazione con Voce Narrante (Spazio)
+          </span>
+          <span className="text-xs text-white/70 mt-1 font-mono">
+            (oppure premi la Barra Spazio sulla tastiera)
+          </span>
+        </div>
       )}
     </div>
   );

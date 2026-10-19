@@ -206,7 +206,9 @@ const ClassificaGenerale_Board: React.FC = () => {
   const [box2ActiveTeamIdx, setBox2ActiveTeamIdx] = useSyncedState<number | null>('playstate_box2_active_team_idx', null);
 
   const activeSlideId = activeBox === 1 ? `box1_q${activeQuestion}` : '';
-  const [bookedTeamVal] = useSyncedState<number | null>(`playstate_${activeSlideId}_booked_team`, null);
+  const [box1BookedTeam] = useSyncedState<number | null>(`playstate_${activeSlideId}_booked_team`, null);
+  const [box1AssignedTeam] = useSyncedState<number | null>(`playstate_${activeSlideId}_assigned_team`, null);
+  const [box1ExcludedTeams] = useSyncedState<number[]>(`playstate_${activeSlideId}_excluded_teams`, []);
 
   // Sincronizzazione stato Mille e una Nadia per illuminazione ed esclusione squadre
   const [nadiaActive] = useSyncedState<boolean>('playstate_nadia_active', false);
@@ -465,18 +467,22 @@ const ClassificaGenerale_Board: React.FC = () => {
         <div className="flex-1 flex flex-col justify-center items-center px-4 z-20">
           <div className="w-full max-w-6xl grid grid-cols-3 gap-12">
             {teamConfigs.map((team, i) => {
+              const teamNum = i + 1;
               const isNadiaBooked = nadiaActive && nadiaBookedTeam !== null && (nadiaBookedTeam - 1) === i;
-              const isNadiaExcluded = nadiaActive && (nadiaExcludedTeams || []).includes(i + 1);
+              const isNadiaExcluded = nadiaActive && (nadiaExcludedTeams || []).includes(teamNum);
               const isNadiaWinner = nadiaActive && nadiaAssignedTeam !== null && (nadiaAssignedTeam - 1) === i;
+
+              const isExcluded = isNadiaExcluded;
+              const isWinner = isNadiaWinner;
               const isBlinking = isNadiaBooked;
 
               return (
                 <div 
                   key={i} 
                   className={`bg-[#18181b]/80 border-2 rounded-3xl p-8 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md transition-all duration-500 ${
-                    isNadiaExcluded 
+                    isExcluded 
                       ? 'opacity-35 grayscale border-slate-600 scale-95' 
-                      : isNadiaWinner
+                      : isWinner
                       ? 'border-emerald-400 ring-4 ring-emerald-400/50 shadow-[0_0_40px_rgba(16,185,129,0.5)]'
                       : isBlinking
                       ? 'border-amber-300 ring-8 ring-amber-400/70 shadow-[0_0_45px_rgba(251,191,36,0.9)]'
@@ -486,17 +492,17 @@ const ClassificaGenerale_Board: React.FC = () => {
                   <div className={`${team.color} w-full py-5 rounded-2xl shadow-xl flex flex-col items-center justify-center mb-6 border-2 transition-all ${
                     isBlinking ? 'border-white animate-custom-blink ring-4 ring-white/50' : 'border-white/30'
                   }`}>
-                    <span className={`text-4xl font-black tracking-widest uppercase ${isNadiaExcluded ? 'line-through opacity-80' : ''}`}>
+                    <span className={`text-4xl font-black tracking-widest uppercase ${isExcluded ? 'line-through opacity-80' : ''}`}>
                       {team.name}
                     </span>
-                    {isNadiaExcluded && (
+                    {isExcluded && (
                       <span className="text-xs font-bold text-red-200 tracking-wider uppercase mt-1">
                         ✕ Esclusa
                       </span>
                     )}
-                    {isNadiaWinner && (
+                    {isWinner && (
                       <span className="text-xs font-bold text-emerald-100 tracking-wider uppercase mt-1">
-                        ✨ Risposta Esatta +1000 PT
+                        {isNadiaWinner ? '✨ Risposta Esatta +1000 PT' : '✨ Risposta Esatta'}
                       </span>
                     )}
                   </div>
@@ -518,13 +524,22 @@ const ClassificaGenerale_Board: React.FC = () => {
         /* Vista Normale: Istogramma completo e bonus con rivelazione graduale all'ingresso nel Box 1 */
         <div className="flex-1 grid grid-cols-3 gap-10 min-h-0 px-4 z-20 transition-all duration-700">
           {teamConfigs.map((team, i) => {
+            const teamNum = i + 1;
             const isNadiaBooked = nadiaActive && nadiaBookedTeam !== null && (nadiaBookedTeam - 1) === i;
-            const isNadiaExcluded = nadiaActive && (nadiaExcludedTeams || []).includes(i + 1);
+            const isNadiaExcluded = nadiaActive && (nadiaExcludedTeams || []).includes(teamNum);
             const isNadiaWinner = nadiaActive && nadiaAssignedTeam !== null && (nadiaAssignedTeam - 1) === i;
+
+            const isBox1Booked = !nadiaActive && activeBox === 1 && box1BookedTeam !== null && (box1BookedTeam - 1) === i;
+            const isBox1Excluded = !nadiaActive && activeBox === 1 && (box1ExcludedTeams || []).includes(teamNum);
+            const isBox1Winner = !nadiaActive && activeBox === 1 && box1AssignedTeam !== null && (box1AssignedTeam - 1) === i;
+
+            const isExcluded = isNadiaExcluded || isBox1Excluded;
+            const isWinner = isNadiaWinner || isBox1Winner;
             const isBlinking = 
               isNadiaBooked ||
-              (!nadiaActive && activeBox === 2 && blinkingTeamIdx === i) ||
-              (!nadiaActive && activeBox === 1 && bookedTeamVal !== null && (bookedTeamVal - 1) === i);
+              isBox1Booked ||
+              (!nadiaActive && activeBox === 2 && blinkingTeamIdx === i);
+
             const teamScore = scores[i] || 0;
             const barHeightPct = Math.max((teamScore / maxScore) * 100, 6); // Base minima visibile del 6%
 
@@ -532,7 +547,7 @@ const ClassificaGenerale_Board: React.FC = () => {
               <div 
                 key={i} 
                 className={`grid grid-rows-[auto_auto_240px_auto] h-full min-h-0 content-between transition-all duration-500 ${
-                  isNadiaExcluded ? 'opacity-35 grayscale scale-[0.98]' : ''
+                  isExcluded ? 'opacity-35 grayscale scale-[0.98]' : ''
                 }`}
               >
                 <div 
@@ -546,24 +561,24 @@ const ClassificaGenerale_Board: React.FC = () => {
                     ${activeBox === 2 ? 'cursor-pointer hover:scale-105 active:scale-95' : ''}
                     ${isBlinking 
                       ? 'animate-custom-blink border-amber-300 ring-8 ring-amber-400/70 shadow-[0_0_40px_rgba(251,191,36,0.9)]' 
-                      : isNadiaWinner
+                      : isWinner
                       ? 'border-emerald-300 ring-4 ring-emerald-400/50 shadow-[0_0_35px_rgba(16,185,129,0.7)]'
-                      : isNadiaExcluded
+                      : isExcluded
                       ? 'border-slate-500'
                       : 'border-white/20'}
                   `}
                 >
-                  <span className={`text-3xl font-black tracking-widest ${isNadiaExcluded ? 'line-through opacity-80' : ''}`}>
+                  <span className={`text-3xl font-black tracking-widest ${isExcluded ? 'line-through opacity-80' : ''}`}>
                     {team.name}
                   </span>
-                  {isNadiaExcluded && (
+                  {isExcluded && (
                     <span className="text-[11px] font-bold text-red-200 tracking-wider uppercase mt-0.5">
                       ✕ Esclusa
                     </span>
                   )}
-                  {isNadiaWinner && (
+                  {isWinner && (
                     <span className="text-[11px] font-bold text-emerald-100 tracking-wider uppercase mt-0.5">
-                      🏆 +1000 PT
+                      {isNadiaWinner ? '🏆 +1000 PT' : '🏆 Risposta Esatta'}
                     </span>
                   )}
                 </div>

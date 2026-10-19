@@ -219,6 +219,7 @@ export function createDefaultGioco1Question(): Gioco1Question {
       confermaAudio: '',
       categoria: '',
       soluzione: '',
+      grigliaSeme: 1,
     },
     sfondo: '',
     notePresentatore: '',
@@ -1237,7 +1238,9 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     // ── GIOCO 2 ──────────────────────────────────────────────────────────────
     sectionsHtml += `<section class="game-section">
       <h2>🎼 GIOCO 2 — Classifica</h2>`;
-    for (let i = 1; i <= 6; i++) {
+    const g2ReportKeys = Object.keys(state.gioco2?.questions || {}).map(Number).sort((a, b) => a - b);
+    const activeG2ReportKeys = g2ReportKeys.length > 0 ? g2ReportKeys : [1, 2, 3, 4, 5, 6];
+    for (const i of activeG2ReportKeys) {
       const q = state.gioco2.questions[i];
       if (!q) continue;
       const tipo = q.tipo || 'canzone';
@@ -1568,8 +1571,43 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
   };
 
   // Box 1 Question & Data getters/setters
+  const q1Keys = Object.keys(state.gioco1?.questions || {}).map(Number).sort((a, b) => a - b);
+  const activeQ1Keys = q1Keys.length > 0 ? q1Keys : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   const currentQ1Num = state.gioco1.selectedQuestion;
   const currentQ1 = state.gioco1.questions[currentQ1Num] || createDefaultGioco1Question();
+
+  const handleAddQ1 = () => {
+    const nextNum = Math.max(...activeQ1Keys, 0) + 1;
+    setState((prev) => ({
+      ...prev,
+      gioco1: {
+        ...prev.gioco1,
+        selectedQuestion: nextNum,
+        questions: {
+          ...prev.gioco1.questions,
+          [nextNum]: createDefaultGioco1Question(),
+        },
+      },
+    }));
+  };
+
+  const handleRemoveQ1 = (qNum: number) => {
+    if (activeQ1Keys.length <= 1) return;
+    if (!window.confirm(`Sei sicuro di voler rimuovere la Domanda #${qNum} del Gioco 1?`)) return;
+    setState((prev) => {
+      const nextQ = { ...prev.gioco1.questions };
+      delete nextQ[qNum];
+      const remaining = Object.keys(nextQ).map(Number).sort((a, b) => a - b);
+      return {
+        ...prev,
+        gioco1: {
+          ...prev.gioco1,
+          selectedQuestion: remaining.includes(qNum) ? qNum : (remaining[0] || 0),
+          questions: nextQ,
+        },
+      };
+    });
+  };
 
   const updateQ1 = (updater: (prev: Gioco1Question) => Gioco1Question) => {
     setState((prev) => ({
@@ -1585,8 +1623,43 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
   };
 
   // Box 2 Question & Data getters/setters
+  const q2Keys = Object.keys(state.gioco2?.questions || {}).map(Number).sort((a, b) => a - b);
+  const activeQ2Keys = q2Keys.length > 0 ? q2Keys : [1, 2, 3, 4, 5, 6];
   const currentQ2Num = state.gioco2.selectedQuestion;
   const currentQ2 = state.gioco2.questions[currentQ2Num] || createDefaultGioco2Question();
+
+  const handleAddQ2 = () => {
+    const nextNum = Math.max(...activeQ2Keys, 0) + 1;
+    setState((prev) => ({
+      ...prev,
+      gioco2: {
+        ...prev.gioco2,
+        selectedQuestion: nextNum,
+        questions: {
+          ...prev.gioco2.questions,
+          [nextNum]: createDefaultGioco2Question(),
+        },
+      },
+    }));
+  };
+
+  const handleRemoveQ2 = (qNum: number) => {
+    if (activeQ2Keys.length <= 1) return;
+    if (!window.confirm(`Sei sicuro di voler rimuovere la Domanda #${qNum} del Gioco 2?`)) return;
+    setState((prev) => {
+      const nextQ = { ...prev.gioco2.questions };
+      delete nextQ[qNum];
+      const remaining = Object.keys(nextQ).map(Number).sort((a, b) => a - b);
+      return {
+        ...prev,
+        gioco2: {
+          ...prev.gioco2,
+          selectedQuestion: remaining.includes(qNum) ? qNum : (remaining[0] || 0),
+          questions: nextQ,
+        },
+      };
+    });
+  };
 
   const updateQ2 = (updater: (prev: Gioco2Question) => Gioco2Question) => {
     setState((prev) => ({
@@ -2057,15 +2130,15 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   }}
                   className="w-full bg-[#120f1e] border border-amber-500/40 rounded-lg px-3 py-2.5 text-xs font-bold text-white focus:outline-none focus:border-amber-400"
                 >
-                  <optgroup label={`BOX 1 — ${state.gioco1?.titolo || 'Il mio nome è nessuno'} (10 Domande)`}>
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  <optgroup label={`BOX 1 — ${state.gioco1?.titolo || 'Il mio nome è nessuno'} (${activeQ1Keys.length} Domande)`}>
+                    {activeQ1Keys.map((n) => (
                       <option key={`1_${n}`} value={`1_${n}`}>
                         BOX 1 — Domanda #{n}
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label={`BOX 2 — ${state.gioco2?.titolo || 'Classifiche'} (6 Domande)`}>
-                    {[1, 2, 3, 4, 5, 6].map((n) => (
+                  <optgroup label={`BOX 2 — ${state.gioco2?.titolo || 'Classifiche'} (${activeQ2Keys.length} Domande)`}>
+                    {activeQ2Keys.map((n) => (
                       <option key={`2_${n}`} value={`2_${n}`}>
                         BOX 2 — Domanda #{n}
                       </option>
@@ -2795,29 +2868,51 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
               {/* Question Selector (0 = Spiegazione, 1 to 10) */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Seleziona Contenuto Box 1:
-                </label>
-                <select
-                  value={currentQ1Num}
-                  onChange={(e) =>
-                    setState((prev) => ({
-                      ...prev,
-                      gioco1: {
-                        ...prev.gioco1,
-                        selectedQuestion: Number(e.target.value),
-                      },
-                    }))
-                  }
-                  className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-[#d24726]"
-                >
-                  <option value={0}>🗺️ Spiegazione Regole</option>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                    <option key={n} value={n}>
-                      Domanda #{n}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Seleziona Contenuto Box 1:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddQ1}
+                    className="text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30 transition-all cursor-pointer flex items-center gap-1"
+                    title="Aggiungi una nuova domanda al Gioco 1"
+                  >
+                    <span>+</span> Aggiungi Domanda
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={currentQ1Num}
+                    onChange={(e) =>
+                      setState((prev) => ({
+                        ...prev,
+                        gioco1: {
+                          ...prev.gioco1,
+                          selectedQuestion: Number(e.target.value),
+                        },
+                      }))
+                    }
+                    className="flex-1 bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-[#d24726]"
+                  >
+                    <option value={0}>🗺️ Spiegazione Regole</option>
+                    {activeQ1Keys.map((n) => (
+                      <option key={n} value={n}>
+                        Domanda #{n}
+                      </option>
+                    ))}
+                  </select>
+                  {currentQ1Num > 0 && activeQ1Keys.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveQ1(currentQ1Num)}
+                      className="px-2.5 py-1.5 text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-lg border border-red-500/30 transition-all cursor-pointer shrink-0"
+                      title={`Rimuovi Domanda #${currentQ1Num}`}
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Type Selector ("canzone" | "immagine") o Badge Spiegazione */}
@@ -3248,9 +3343,14 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
                 {/* 4 Text Clues */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-slate-300">
-                    4 Indizi di Testo:
-                  </label>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      4 Indizi di Testo:
+                    </label>
+                    <span className="text-[11px] text-amber-300/80">
+                      💡 Usa <code className="bg-white/10 px-1 py-0.5 rounded text-white font-mono font-bold">\n</code> per andare a capo in rima
+                    </span>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {[0, 1, 2, 3].map((idx) => (
                       <div key={idx} className="flex items-center gap-2 bg-[#141417] p-2 rounded-lg border border-white/5">
@@ -3259,7 +3359,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                         </span>
                         <input
                           type="text"
-                          placeholder={`Testo indizio ${idx + 1}...`}
+                          placeholder={`Testo indizio ${idx + 1} (usa \\n per rima)...`}
                           value={currentQ1.canzone.indizi[idx] || ''}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -3457,12 +3557,47 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                           ...prev,
                           immagine: {
                             ...prev.immagine,
-                            grigliaSeme: Math.floor(Math.random() * 2_000_000),
+                            grigliaSeme: Math.floor(Math.random() * 2_000_000) + 1,
                           },
                         }))
                       }
-                      onConfirm={() => {
-                        /* Il seed è già nel state. Il feedback visivo è gestito internamente dal componente. */
+                      onConfirm={async () => {
+                        const finalSeed = currentQ1.immagine.grigliaSeme ?? 1;
+                        const nextQuestions = {
+                          ...state.gioco1.questions,
+                          [currentQ1Num]: {
+                            ...currentQ1,
+                            immagine: {
+                              ...currentQ1.immagine,
+                              grigliaSeme: finalSeed,
+                            },
+                          },
+                        };
+                        const updatedState = {
+                          ...state,
+                          gioco1: {
+                            ...state.gioco1,
+                            questions: nextQuestions,
+                          },
+                        };
+                        setState(updatedState);
+                        await saveSetupStateDb(updatedState);
+                        try {
+                          localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedState));
+                        } catch (e) {
+                          console.warn(e);
+                        }
+                        if ((window as any).electron?.writeSetupFile) {
+                          try {
+                            await (window as any).electron.writeSetupFile(updatedState);
+                          } catch (e) {}
+                        }
+                        if ((window as any).electron?.broadcastState) {
+                          (window as any).electron.broadcastState({
+                            setupStateUpdate: updatedState,
+                          });
+                        }
+                        showToast(`✅ Griglia per Domanda ${currentQ1Num} confermata e salvata (seed: ${finalSeed})!`);
                       }}
                     />
                   )}
@@ -3470,9 +3605,14 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
                 {/* 4 Text Clues */}
                 <div className="space-y-2">
-                  <label className="block text-xs font-semibold text-slate-300">
-                    4 Indizi:
-                  </label>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <label className="block text-xs font-semibold text-slate-300">
+                      4 Indizi:
+                    </label>
+                    <span className="text-[11px] text-amber-300/80">
+                      💡 Usa <code className="bg-white/10 px-1 py-0.5 rounded text-white font-mono font-bold">\n</code> per andare a capo in rima
+                    </span>
+                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {[0, 1, 2, 3].map((idx) => (
                       <div key={idx} className="flex items-center gap-2 bg-[#141417] p-2 rounded-lg border border-white/5">
@@ -3481,7 +3621,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                         </span>
                         <input
                           type="text"
-                          placeholder={`Testo indizio ${idx + 1}...`}
+                          placeholder={`Testo indizio ${idx + 1} (usa \\n per rima)...`}
                           value={currentQ1.immagine.indizi[idx] || ''}
                           onChange={(e) => {
                             const val = e.target.value;
@@ -3685,31 +3825,53 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
             {/* Controls Bar: Question & Type Selectors */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
-              {/* Question Selector (0 = Spiegazione, 1 to 6) */}
+              {/* Question Selector (0 = Spiegazione, 1 to N) */}
               <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                  Seleziona Contenuto Box 2:
-                </label>
-                <select
-                  value={currentQ2Num}
-                  onChange={(e) =>
-                    setState((prev) => ({
-                      ...prev,
-                      gioco2: {
-                        ...prev.gioco2,
-                        selectedQuestion: Number(e.target.value),
-                      },
-                    }))
-                  }
-                  className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500"
-                >
-                  <option value={0}>🗺️ Spiegazione Regole</option>
-                  {[1, 2, 3, 4, 5, 6].map((n) => (
-                    <option key={n} value={n}>
-                      Domanda #{n}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-semibold text-slate-300">
+                    Seleziona Contenuto Box 2:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddQ2}
+                    className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 transition-all cursor-pointer flex items-center gap-1"
+                    title="Aggiungi una nuova domanda al Gioco 2"
+                  >
+                    <span>+</span> Aggiungi Domanda
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  <select
+                    value={currentQ2Num}
+                    onChange={(e) =>
+                      setState((prev) => ({
+                        ...prev,
+                        gioco2: {
+                          ...prev.gioco2,
+                          selectedQuestion: Number(e.target.value),
+                        },
+                      }))
+                    }
+                    className="flex-1 bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500"
+                  >
+                    <option value={0}>🗺️ Spiegazione Regole</option>
+                    {activeQ2Keys.map((n) => (
+                      <option key={n} value={n}>
+                        Domanda #{n}
+                      </option>
+                    ))}
+                  </select>
+                  {currentQ2Num > 0 && activeQ2Keys.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveQ2(currentQ2Num)}
+                      className="px-2.5 py-1.5 text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-lg border border-red-500/30 transition-all cursor-pointer shrink-0"
+                      title={`Rimuovi Domanda #${currentQ2Num}`}
+                    >
+                      🗑️
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Type Selector ("canzone" | "immagine") o Badge Spiegazione */}

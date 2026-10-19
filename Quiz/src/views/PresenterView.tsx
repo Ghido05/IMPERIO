@@ -27,8 +27,9 @@ type PresenterViewMode = 'setup' | 'quiz' | 'welcome' | 'editor';
 
 // Helper function to build slides dynamically from setup configuration
 function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
-  const gioco1Slides = Array.from({ length: 10 }, (_, idx) => {
-    const num = idx + 1;
+  const q1Keys = Object.keys(setup.gioco1?.questions || {}).map(Number).sort((a, b) => a - b);
+  const activeQ1Keys = q1Keys.length > 0 ? q1Keys : Array.from({ length: 10 }, (_, idx) => idx + 1);
+  const gioco1Slides = activeQ1Keys.map((num) => {
     const q = setup.gioco1.questions[num] || createDefaultGioco1Question();
     const sf = q.sfondo || setup.gioco1.sfondoGenerale || '';
     if (q.tipo === 'canzone') {
@@ -76,7 +77,7 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
         },
         griglia: {
           ...defaultData.griglia,
-          seme: q.immagine.grigliaSeme ?? defaultData.griglia?.seme,
+          seme: q.immagine.grigliaSeme ?? defaultData.griglia?.seme ?? 1,
         },
       };
       return {
@@ -87,8 +88,9 @@ function buildSlidesFromSetup(setup: QuizSetupState): Slide[] {
     }
   });
 
-  const gioco2Slides = Array.from({ length: 6 }, (_, idx) => {
-    const num = idx + 1;
+  const q2Keys = Object.keys(setup.gioco2?.questions || {}).map(Number).sort((a, b) => a - b);
+  const activeQ2Keys = q2Keys.length > 0 ? q2Keys : [1, 2, 3, 4, 5, 6];
+  const gioco2Slides = activeQ2Keys.map((num) => {
     const q = setup.gioco2.questions[num] || createDefaultGioco2Question();
     const sf = q.sfondo || setup.gioco2.sfondoGenerale || '';
     if (q.tipo === 'canzone') {

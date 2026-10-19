@@ -76,7 +76,7 @@
   "gioco1": {
     "titolo": "IL MIO NOME è NESSUNO",
     "sottotitolo": "Musica & Immagini",
-    "selectedQuestion": 6,
+    "selectedQuestion": 1,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Mappa/spiegazione_box1_ambientazione.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box1.mp3",
@@ -92,7 +92,7 @@
             "/Audio/strumenti/g01m01s05flauto_lamorenonmibasta.mp3"
           ],
           "indizi": [
-            "PIUTTOSTO ESIGENTE COME RICHIESTA L’UNICITÀ DELLA PASSIONE SPODESTA",
+            "PIUTTOSTO ESIGENTE COME RICHIESTA \\n L’UNICITÀ DELLA PASSIONE SPODESTA",
             "COL PROPRIO COGNOME SI DÀ UN TONO LA CANTANTE IRROMPE COME UN TUONO",
             "LEI SI GIUSTIFICA: “SONO DISONESTA” MA CHE CONSIDERAZIONE È MAI QUESTA?",
             "DOPO 10 ANNI TORNATA DI MODA ORA LA RISPOSTA ARRIVA DA SOLA"

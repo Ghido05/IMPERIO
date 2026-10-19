@@ -9,10 +9,11 @@ interface SolutionProps {
   isVisible: boolean;
   revealAll?: boolean;
   onClose?: () => void;
+  isPresenter?: boolean;
 }
 
 // Componente per la Soluzione Finale (senza assegnazione punti e intestazioni superflue, con spazio per artista/dettagli)
-const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false, onClose }) => {
+const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false, onClose, isPresenter = false }) => {
   const gameData = useGameData();
   if (!gameData) return null;
 
@@ -46,7 +47,7 @@ const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false, onClo
   return (
     <div 
       className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md animate-fade-in"
-      onClick={onClose}
+      onClick={isPresenter ? onClose : undefined}
     >
       <div 
         className="relative group flex flex-col items-center"
@@ -65,8 +66,8 @@ const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false, onClo
           {/* Effetto luce che scorre */}
           <div className="absolute top-0 -left-[100%] w-[200%] h-full bg-gradient-to-r from-transparent via-white/10 to-transparent skew-x-12 group-hover:left-[100%] transition-all duration-1000 ease-in-out" />
 
-          {/* Pulsante chiusura discreto in alto a destra */}
-          {onClose && (
+          {/* Pulsante chiusura discreto in alto a destra (solo relatore) */}
+          {isPresenter && onClose && (
             <button
               type="button"
               onClick={onClose}
@@ -95,8 +96,8 @@ const Solution: React.FC<SolutionProps> = ({ isVisible, revealAll = false, onClo
             </>
           )}
 
-          {/* Pulsante per tornare esplicitamente sulla lista */}
-          {onClose && (
+          {/* Pulsante per tornare esplicitamente sulla lista (solo relatore) */}
+          {isPresenter && onClose && (
             <div className="pt-2">
               <button
                 type="button"
@@ -137,7 +138,7 @@ const ClassificaMusicaleBoard = ({
   const effectiveStep = revealAll ? 2 : step;
 
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
-  const [pointsAssigned, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
+  const [, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
   const [, setLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
   const [showError, setShowError] = useState(false);
   const [showTitle, setShowTitle] = useSyncedState(`playstate_${slideId}_showtitle`, false);
@@ -237,12 +238,12 @@ const ClassificaMusicaleBoard = ({
     };
   }, [interactive, slideId, canzoneFinaleUrl, stemsAudioKey, stopAndMuteAllStems]);
 
-  // Smuta gli stems in base ai clue rivelati (SOLO se la soluzione NON è attiva)
+  // Smuta gli stems in base ai clue rivelati (SOLO se la soluzione NON è attiva e non è già stata assegnata)
   useEffect(() => {
     if (!interactive) return;
 
-    if (showSolution) {
-      // Se la soluzione è attiva, NESSUNO stem deve mai avere volume > 0 o suonare
+    if (showSolution || solutionAwarded) {
+      // Se la soluzione è attiva o è già stata svelata/assegnata, NESSUNO stem deve mai avere volume > 0 o suonare
       stopAndMuteAllStems();
       return;
     }
@@ -263,14 +264,14 @@ const ClassificaMusicaleBoard = ({
         }
       }
     });
-  }, [revealed, showSolution, interactive, stopAndMuteAllStems]);
+  }, [revealed, showSolution, solutionAwarded, interactive, stopAndMuteAllStems]);
 
   // Traccia l'ultimo trigger gestito per evitare di ri-eseguire trigger passati memorizzati al mount della slide
   const lastTriggerRef = React.useRef<number>(playTrigger);
 
   // Scatena la riproduzione sincronizzata da capo su tutti gli schermi collegati (Presenter, GamesView, ecc.)
   useEffect(() => {
-    if (!interactive || !playTrigger || showSolution) return;
+    if (!interactive || !playTrigger || showSolution || solutionAwarded) return;
     if (playTrigger === lastTriggerRef.current) return;
     lastTriggerRef.current = playTrigger;
 
@@ -282,7 +283,7 @@ const ClassificaMusicaleBoard = ({
         if (p !== undefined) p.catch(err => console.log("Errore riproduzione stem trigger:", err));
       } catch (err) {}
     });
-  }, [playTrigger, interactive, showSolution]);
+  }, [playTrigger, interactive, showSolution, solutionAwarded]);
 
   // Gestione Play / Pausa globale sincronizzata (es. comando tastiera M)
   const isInitialMountPlayingRef = React.useRef(true);
@@ -311,6 +312,15 @@ const ClassificaMusicaleBoard = ({
       return;
     }
 
+    // Se la soluzione è già stata svelata/assegnata, NON ripartire con gli stems in automatico
+    if (solutionAwarded) {
+      isPlayingStemsRef.current = false;
+      Object.values(audiosRef.current).forEach(a => {
+        try { a.pause(); } catch (err) {}
+      });
+      return;
+    }
+
     if (!isPlaying) {
       isPlayingStemsRef.current = false;
       Object.values(audiosRef.current).forEach(a => {
@@ -330,7 +340,7 @@ const ClassificaMusicaleBoard = ({
         } catch (err) {}
       });
     }
-  }, [isPlaying, interactive, showSolution, setIsPlaying]);
+  }, [isPlaying, interactive, showSolution, solutionAwarded, setIsPlaying]);
 
   // Quando viene mostrata la soluzione, ferma tutti gli stems e riproduce solo la canzone finale
   const isInitialMountSolutionRef = React.useRef(true);
@@ -370,8 +380,11 @@ const ClassificaMusicaleBoard = ({
           finalAudioRef.current.currentTime = 0;
         } catch (e) {}
       }
+      // Assicura che tornando alla lista gli strumenti NON ripartano
+      stopAndMuteAllStems();
+      setIsPlaying(false);
     }
-  }, [showSolution, interactive, stopAndMuteAllStems]);
+  }, [showSolution, interactive, stopAndMuteAllStems, setIsPlaying]);
 
   const getPhraseStyle = (clue: number, isRevealed: boolean) => {
     if (!isRevealed) return "bg-white/5 border border-white/10";
@@ -565,14 +578,33 @@ const ClassificaMusicaleBoard = ({
     });
   }, [effectiveStep, showSolution, revealed, activeSuspense, getActiveTeamIdx, getCluePoints, gameData.elementi, getInstrumentIcon, setActiveSuspense]);
 
+  const isPublicScreen = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    return params.get('mode') === 'games' || (isPresenter === false && params.get('mode') !== null);
+  }, [isPresenter]);
+
+  const handleCloseSolution = React.useCallback(() => {
+    setShowSolution(false);
+    setIsPlaying(false);
+    stopAndMuteAllStems();
+  }, [setShowSolution, setIsPlaying, stopAndMuteAllStems]);
+
   const handleSuspenseReveal = React.useCallback((clueNum: number, targetTeamIdx: number, points: number) => {
-    addScore(targetTeamIdx, points);
+    // Solo la finestra di controllo assegna i punti ed evita doppi conteggi tra finestre
+    if (!isPublicScreen) {
+      const storageKey = `playstate_${slideId}_score_awarded_${clueNum}`;
+      if (!localStorage.getItem(storageKey)) {
+        localStorage.setItem(storageKey, 'true');
+        addScore(targetTeamIdx, points);
+      }
+    }
     setRevealed(prev => ({ ...prev, [clueNum]: true }));
     setPointsAssigned(prev => ({ ...prev, [clueNum]: targetTeamIdx + 1 }));
     setLatestClue(clueNum);
     setPlayTrigger(Date.now());
     setIsPlaying(true);
-  }, [addScore, setRevealed, setPointsAssigned, setLatestClue, setPlayTrigger, setIsPlaying]);
+  }, [slideId, isPublicScreen, addScore, setRevealed, setPointsAssigned, setLatestClue, setPlayTrigger, setIsPlaying]);
 
   const handleSuspenseComplete = React.useCallback(() => {
     setActiveSuspense(null);
@@ -580,8 +612,8 @@ const ClassificaMusicaleBoard = ({
 
   const handleGiveSolution = React.useCallback(() => {
     if (showSolution) {
-      // Se la soluzione è già svelata, premere S o Invio torna alla lista!
-      setShowSolution(false);
+      // Se la soluzione è già svelata, premere S o Invio torna alla lista senza far ripartire la musica!
+      handleCloseSolution();
       return;
     }
 
@@ -589,7 +621,13 @@ const ClassificaMusicaleBoard = ({
     if (!solutionAwarded) {
       const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
       const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
-      addScore(targetTeamIdx, 5000);
+      if (!isPublicScreen) {
+        const solKey = `playstate_${slideId}_score_awarded_solution`;
+        if (!localStorage.getItem(solKey)) {
+          localStorage.setItem(solKey, 'true');
+          addScore(targetTeamIdx, 5000);
+        }
+      }
       setSolutionAwarded(true);
     }
 
@@ -606,7 +644,7 @@ const ClassificaMusicaleBoard = ({
 
     // Mostra la soluzione: l'effetto dedicato showSolution farà partire ESCLUSIVAMENTE la traccia finale
     setShowSolution(true);
-  }, [showSolution, solutionAwarded, revealed, getActiveTeamIdx, addScore, setSolutionAwarded, stopAndMuteAllStems, setRevealed, setIsPlaying, setShowSolution]);
+  }, [showSolution, handleCloseSolution, solutionAwarded, revealed, getActiveTeamIdx, isPublicScreen, slideId, addScore, setSolutionAwarded, stopAndMuteAllStems, setRevealed, setIsPlaying, setShowSolution]);
 
   // Input da tastiera (1-7, S / Invio, M, T, E, X)
   useEffect(() => {
@@ -639,7 +677,7 @@ const ClassificaMusicaleBoard = ({
         }
       } else if (key === 'Escape' || key === 'Backspace') {
         if (showSolution) {
-          setShowSolution(false);
+          handleCloseSolution();
           return;
         }
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
@@ -655,7 +693,7 @@ const ClassificaMusicaleBoard = ({
     if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, triggerRevealClue, showSolution, handleGiveSolution, setShowSolution, setIsPlaying, setStep, effectiveStep]);
+  }, [interactive, triggerRevealClue, showSolution, handleGiveSolution, handleCloseSolution, setIsPlaying, setStep, effectiveStep]);
 
   const rankingMarkers = [
     { value: 7, top: "34.070%" }, // Giallo (1 indizio)
@@ -878,17 +916,6 @@ const ClassificaMusicaleBoard = ({
                     <span className="text-white font-black text-[clamp(12px,1.56vw,30px)] leading-none">
                       {marker.value}
                     </span>
-
-                    {/* Mostra il pallino colorato della squadra che ha indovinato */}
-                    {pointsAssigned[marker.value] !== undefined && pointsAssigned[marker.value] !== 0 && (
-                      <div 
-                        className={`absolute left-full ml-2 w-[clamp(20px,2vw,40px)] h-[clamp(20px,2vw,40px)] rounded-full font-black text-white text-[clamp(12px,1.2vw,24px)] flex items-center justify-center border-2 border-white/30 shadow-md animate-zoom-in ${
-                          pointsAssigned[marker.value] === 1 ? 'bg-red-600' : pointsAssigned[marker.value] === 2 ? 'bg-blue-600' : 'bg-green-600'
-                        }`}
-                      >
-                        {pointsAssigned[marker.value]}
-                      </div>
-                    )}
                   </div>
                 </React.Fragment>
               );
@@ -911,7 +938,8 @@ const ClassificaMusicaleBoard = ({
             <Solution 
               isVisible={showSolution || revealAll} 
               revealAll={revealAll}
-              onClose={() => setShowSolution(false)}
+              isPresenter={isPresenter}
+              onClose={handleCloseSolution}
             />
           </>
         )}

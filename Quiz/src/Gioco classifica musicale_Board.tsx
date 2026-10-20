@@ -1,9 +1,53 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useGameData } from './context/GameDataContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
 import { ClassificaStaircaseSuspenseOverlay, type Box2SuspenseData } from './components/ClassificaStaircaseSuspenseOverlay';
+
+// ============================================================================
+// Cronometro circolare (stile Box 4) — Manche Canzoni (Classifica Musicale)
+// Parte dopo che la risposta della lista è stata rivelata (5 secondi)
+// ============================================================================
+const CountdownTimer: React.FC<{ seconds: number; totalSeconds: number }> = ({ seconds, totalSeconds }) => {
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const progress = Math.max(0, Math.min(1, seconds / totalSeconds));
+  const strokeOffset = circumference * (1 - progress);
+
+  const isUrgent = seconds <= 2;
+  const strokeColor = isUrgent ? 'rgb(239 68 68)' : 'rgb(251 191 36)';
+  const glowColor = isUrgent ? 'rgba(239,68,68,0.7)' : 'rgba(251,191,36,0.7)';
+  const textColor = isUrgent ? 'text-red-400' : 'text-amber-400';
+
+  return (
+    <div className="flex flex-col items-center">
+      <span className={`text-[9px] font-black uppercase tracking-widest mb-1.5 ${textColor}`}>TEMPO</span>
+      <div className="relative w-[80px] h-[80px]">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r={radius} fill="none" stroke="rgb(39 39 42)" strokeWidth="8" />
+          <circle
+            cx="60" cy="60" r={radius}
+            fill="none"
+            stroke={strokeColor}
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={strokeOffset}
+            className="transition-[stroke-dashoffset] duration-100 ease-linear"
+            style={{ filter: `drop-shadow(0 0 8px ${glowColor})` }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className={`text-3xl font-black tabular-nums leading-none ${textColor}`}>
+            {Math.ceil(seconds)}
+          </span>
+          <span className={`text-[8px] font-black uppercase tracking-wider mt-0.5 ${textColor}/60`}>sec</span>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface SolutionProps {
   isVisible: boolean;

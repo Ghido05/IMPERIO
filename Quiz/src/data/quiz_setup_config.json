@@ -76,7 +76,7 @@
   "gioco1": {
     "titolo": "IL MIO NOME è NESSUNO",
     "sottotitolo": "Musica & Immagini",
-    "selectedQuestion": 1,
+    "selectedQuestion": 8,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Mappa/spiegazione_box1_ambientazione.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box1.mp3",
@@ -278,7 +278,8 @@
           ],
           "confermaAudio": "/Audio/strumenti/1_6_macchinadeltempo.mp3",
           "soluzione": "RITORNO AL FUTURO",
-          "categoria": "FILM"
+          "categoria": "FILM",
+          "grigliaSeme": 1817117
         },
         "notePresentatore": "L'idea del frigorifero fu scartata da Steven Spielberg (produttore del film) per il timore che i bambini potessero emulare il film chiudendosi dentro i frigoriferi di casa per \"viaggiare nel tempo\", rischiando di rimanere intrappolati!"
       },
@@ -344,7 +345,8 @@
           ],
           "confermaAudio": "/Audio/strumenti/1_8_thinkabouttheway.mp3",
           "soluzione": "TAJ MAHAL",
-          "categoria": "MONUMENTO"
+          "categoria": "MONUMENTO",
+          "grigliaSeme": 1
         },
         "notePresentatore": "DOMANDA NADIA:\n\"Il nome Taj Mahal significa letteralmente 'Corona (Taj) dei palazzi (Mahal)'. In realtà, è un omaggio diretto alla donna a cui l'intero complesso è dedicato: Mumtaz Mahal, l'amatissima moglie dell'imperatore. Il suo nome significava 'L'eletta del palazzo'. Alla sua morte, avvenuta dando alla luce il loro quattordicesimo figlio, il sovrano decise di onorarne la memoria costruendo un mausoleo che fosse letteralmente il fiore all'occhiello, la 'corona', di tutta l'architettura del tempo.\"\nUna dichiarazione d'amore monumentale: Fu commissionato nel 1632 dall'imperatore indiano Shah Jahan per ospitare le spoglie dell'amatissima moglie Mumtaz Mahal, morta dando alla luce il loro quattordicesimo figlio.\nNumeri da record: Per completare questa meraviglia ci sono voluti più di 20 anni, il lavoro ininterrotto di 20.000 artigiani provenienti da tutta l'Asia e una flotta di oltre 1.000 elefanti per trasportare i blocchi di materiale.\nMagia cromatica: L'intero mausoleo è rivestito di marmo bianco tempestato di 28 tipi diversi di pietre preziose. Grazie a questa superficie, il Taj Mahal cambia colore a seconda della luce: appare rosato all'alba, bianco abbagliante a mezzogiorno e dorato o azzurrino sotto la luce della luna.\nUn'ossessione per la simmetria: Il complesso è progettato per essere perfettamente simmetrico e speculare in ogni suo dettaglio architettonico. L'unica cosa \"fuori asse\" in tutta la struttura? Le due tombe all'interno: quella della moglie riposa esattamente al centro, mentre quella dell'imperatore, aggiunta solo molti anni dopo alla sua morte, è più grande e decentrata."
       },

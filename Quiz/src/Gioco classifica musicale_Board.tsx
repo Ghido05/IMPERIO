@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useGameData } from './context/GameDataContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
@@ -191,6 +191,29 @@ const ClassificaMusicaleBoard = ({
   const [playTrigger, setPlayTrigger] = useSyncedState<number>(`playstate_${slideId}_play_trigger`, 0);
   const [solutionAwarded, setSolutionAwarded] = useSyncedState<boolean>(`playstate_${slideId}_solution_awarded`, false);
   const [activeSuspense, setActiveSuspense] = useSyncedState<Box2SuspenseData | null>(`playstate_${slideId}_suspense`, null);
+  const [turnOffset, setTurnOffset] = useSyncedState<number>(`playstate_${slideId}_turn_offset`, 0);
+  
+  // ── Cronometro sincronizzato (stile Box 4) — Manche Canzoni ────────────────
+  // Parte per la squadra di turno dopo che la risposta della lista è stata rivelata (5 secondi)
+  const [timerEndAt, setTimerEndAt] = useSyncedState<number>(`playstate_${slideId}_timer_end`, 0);
+  const [timerDisplay, setTimerDisplay] = useState(0);
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevTimerDisplayRef = useRef(0);
+  const gongPlayedForRef = useRef<number>(0);
+
+  // Nomi squadre sincronizzati da setup
+  const [teamNames] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('imperio_quiz_setup');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.punteggi?.nomiSquadre && Array.isArray(parsed.punteggi.nomiSquadre)) {
+          return parsed.punteggi.nomiSquadre;
+        }
+      }
+    } catch {}
+    return ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
+  });
   
   const audiosRef = React.useRef<Record<number, HTMLAudioElement>>({});
   const finalAudioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -565,6 +588,81 @@ const ClassificaMusicaleBoard = ({
     }
   }, [showError]);
 
+  // Suono gong / avviso scadenza del timer tramite Web Audio API
+  const playTimerGong = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      [220, 277, 330, 440].forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + i * 0.015);
+        gain.gain.setValueAtTime(0.12 / (i + 1), now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.015);
+        osc.stop(now + 1.7);
+      });
+    } catch (e) {}
+  }, []);
+
+  // Aggiorna il display del cronometro locale in tempo reale
+  useEffect(() => {
+    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    if (!timerEndAt) {
+      setTimerDisplay(0);
+      prevTimerDisplayRef.current = 0;
+      return;
+    }
+    const update = () => {
+      const remaining = (timerEndAt - Date.now()) / 1000;
+      if (remaining <= 0) {
+        setTimerDisplay(0);
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      } else {
+        setTimerDisplay(remaining);
+      }
+    };
+    update();
+    timerIntervalRef.current = setInterval(update, 50);
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, [timerEndAt]);
+
+  // Gong sonoro alla scadenza del timer (transizione da >0 a 0)
+  useEffect(() => {
+    if (
+      interactive &&
+      timerEndAt > 0 &&
+      prevTimerDisplayRef.current > 0 &&
+      timerDisplay <= 0 &&
+      gongPlayedForRef.current !== timerEndAt
+    ) {
+      gongPlayedForRef.current = timerEndAt;
+      playTimerGong();
+    }
+    prevTimerDisplayRef.current = timerDisplay;
+  }, [timerDisplay, timerEndAt, interactive, playTimerGong]);
+
+  // Se viene mostrata la soluzione o c'è un errore, ferma il timer
+  useEffect(() => {
+    if (showSolution || showError) {
+      setTimerEndAt(0);
+    }
+  }, [showSolution, showError, setTimerEndAt]);
+
+  // Cleanup intervallo timer all'unmount
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+    };
+  }, []);
+
   const getBox2StarterIdx = React.useCallback((): number => {
     const saved = localStorage.getItem('playstate_box2_starter_idx');
     if (saved !== null) {
@@ -594,8 +692,8 @@ const ClassificaMusicaleBoard = ({
     if (savedActive !== null) {
       return parseInt(savedActive, 10);
     }
-    return (questionStarterIdx + currentRevealedCount) % 3;
-  }, [questionStarterIdx]);
+    return (questionStarterIdx + currentRevealedCount + turnOffset) % 3;
+  }, [questionStarterIdx, turnOffset]);
 
   const triggerRevealClue = React.useCallback((numKey: number) => {
     if (effectiveStep < 1) return; // Non rivelare prima dello step 1
@@ -619,8 +717,36 @@ const ClassificaMusicaleBoard = ({
       clueText: clueText,
       clueIcon: clueIcon,
       clueFrase: el?.frase,
+      isError: false,
     });
   }, [effectiveStep, showSolution, revealed, activeSuspense, getActiveTeamIdx, getCluePoints, gameData.elementi, getInstrumentIcon, setActiveSuspense]);
+
+  const triggerErrorSuspense = React.useCallback((targetStep?: number) => {
+    if (effectiveStep < 1) return;
+    if (showSolution) return;
+    if (activeSuspense) return;
+
+    let chosenStep = targetStep;
+    const unrevealed = [1, 2, 3, 4, 5, 6, 7].filter(i => !revealed[i]);
+    if (unrevealed.length === 0) return;
+
+    if (!chosenStep || revealed[chosenStep] || chosenStep < 1 || chosenStep > 7) {
+      chosenStep = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+    }
+
+    const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
+    const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
+
+    setActiveSuspense({
+      clueIndex: chosenStep,
+      teamIdx: targetTeamIdx,
+      timestamp: Date.now(),
+      totalClues: 7,
+      points: 0,
+      clueText: 'RISPOSTA ERRATA',
+      isError: true,
+    });
+  }, [effectiveStep, showSolution, activeSuspense, revealed, getActiveTeamIdx, setActiveSuspense]);
 
   const isPublicScreen = React.useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -632,7 +758,8 @@ const ClassificaMusicaleBoard = ({
     setShowSolution(false);
     setIsPlaying(false);
     stopAndMuteAllStems();
-  }, [setShowSolution, setIsPlaying, stopAndMuteAllStems]);
+    setTimerEndAt(0);
+  }, [setShowSolution, setIsPlaying, stopAndMuteAllStems, setTimerEndAt]);
 
   const handleSuspenseReveal = React.useCallback((clueNum: number, targetTeamIdx: number, points: number) => {
     // Solo la finestra di controllo assegna i punti ed evita doppi conteggi tra finestre
@@ -651,10 +778,20 @@ const ClassificaMusicaleBoard = ({
   }, [slideId, isPublicScreen, addScore, setRevealed, setPointsAssigned, setLatestClue, setPlayTrigger, setIsPlaying]);
 
   const handleSuspenseComplete = React.useCallback(() => {
+    const wasError = activeSuspense?.isError;
     setActiveSuspense(null);
-  }, [setActiveSuspense]);
+    if (wasError) {
+      // In caso di risposta errata: la scalata ha comunicato l'errore, passa il turno alla squadra successiva
+      setTurnOffset(prev => prev + 1);
+    } else {
+      if (!showSolution && !solutionAwarded) {
+        setTimerEndAt(Date.now() + 5000);
+      }
+    }
+  }, [activeSuspense?.isError, setActiveSuspense, setTurnOffset, showSolution, solutionAwarded, setTimerEndAt]);
 
   const handleGiveSolution = React.useCallback(() => {
+    setTimerEndAt(0);
     if (showSolution) {
       // Se la soluzione è già svelata, premere S o Invio torna alla lista senza far ripartire la musica!
       handleCloseSolution();
@@ -688,9 +825,9 @@ const ClassificaMusicaleBoard = ({
 
     // Mostra la soluzione: l'effetto dedicato showSolution farà partire ESCLUSIVAMENTE la traccia finale
     setShowSolution(true);
-  }, [showSolution, handleCloseSolution, solutionAwarded, revealed, getActiveTeamIdx, isPublicScreen, slideId, addScore, setSolutionAwarded, stopAndMuteAllStems, setRevealed, setIsPlaying, setShowSolution]);
+  }, [showSolution, handleCloseSolution, solutionAwarded, revealed, getActiveTeamIdx, isPublicScreen, slideId, addScore, setSolutionAwarded, stopAndMuteAllStems, setRevealed, setIsPlaying, setShowSolution, setTimerEndAt]);
 
-  // Input da tastiera (1-7, S / Invio, M, T, E, X)
+  // Input da tastiera (1-7, S / Invio, M, T, E, X, C)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -712,7 +849,11 @@ const ClassificaMusicaleBoard = ({
 
       if (key >= '1' && key <= '7') {
         const numKey = Number(key);
-        triggerRevealClue(numKey);
+        if (e.shiftKey) {
+          triggerErrorSuspense(numKey);
+        } else {
+          triggerRevealClue(numKey);
+        }
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
         if (effectiveStep < 2) {
           setStep(2);
@@ -726,6 +867,15 @@ const ClassificaMusicaleBoard = ({
         }
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
         setShowError(true);
+        setTimerEndAt(0);
+        triggerErrorSuspense();
+      } else if (key.toLowerCase() === 'c') {
+        // Tasto rapido C: avvia o arresta il timer 5s
+        if (timerDisplay > 0) {
+          setTimerEndAt(0);
+        } else {
+          setTimerEndAt(Date.now() + 5000);
+        }
       } else if (key.toLowerCase() === 't') {
         setShowTitle(true);
       } else if (key.toLowerCase() === 'm') {
@@ -737,7 +887,7 @@ const ClassificaMusicaleBoard = ({
     if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, triggerRevealClue, showSolution, handleGiveSolution, handleCloseSolution, setIsPlaying, setStep, effectiveStep]);
+  }, [interactive, triggerRevealClue, triggerErrorSuspense, showSolution, handleGiveSolution, handleCloseSolution, setIsPlaying, setStep, effectiveStep, timerDisplay, setTimerEndAt]);
 
   const rankingMarkers = [
     { value: 7, top: "34.070%" }, // Giallo (1 indizio)
@@ -750,6 +900,16 @@ const ClassificaMusicaleBoard = ({
   ];
 
   const currentSfondo = (gameData as any).sfondo || '/Icone/sfondi/sfondo_box2_cristalli.jpg';
+
+  const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
+  const activeTeamIdx = getActiveTeamIdx(currentRevealedCount);
+  const activeTeamName = teamNames[activeTeamIdx] || `SQUADRA ${activeTeamIdx + 1}`;
+  const teamColorConfigs = [
+    { text: 'text-red-400', border: 'border-red-500/80', bg: 'bg-red-950/90' },
+    { text: 'text-blue-400', border: 'border-blue-500/80', bg: 'bg-blue-950/90' },
+    { text: 'text-emerald-400', border: 'border-emerald-500/80', bg: 'bg-emerald-950/90' }
+  ];
+  const activeTeamColor = teamColorConfigs[activeTeamIdx] || teamColorConfigs[0];
 
   return (
     <div 
@@ -825,6 +985,35 @@ const ClassificaMusicaleBoard = ({
             >
               Step 2: Domanda & Risposte
             </button>
+            <div className="h-4 w-[1px] bg-slate-700 mx-1" />
+            <button
+              type="button"
+              onClick={() => {
+                if (timerDisplay > 0) {
+                  setTimerEndAt(0);
+                } else {
+                  setTimerEndAt(Date.now() + 5000);
+                }
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
+                timerDisplay > 0
+                  ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400/50 animate-pulse'
+                  : 'bg-slate-700/60 hover:bg-slate-700 text-amber-300'
+              }`}
+              title="Tasto rapido [C]: Avvia o ferma il timer da 5s per indovinare la canzone"
+            >
+              <span>⏱</span>
+              <span>{timerDisplay > 0 ? `Timer: ${Math.ceil(timerDisplay)}s (Stop)` : 'Timer 5s [C]'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => triggerErrorSuspense()}
+              className="px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 bg-red-950/80 hover:bg-red-900 border border-red-500/60 text-red-300 shadow-md active:scale-95"
+              title="Tasto rapido [E] o [X]: Avvia la scalata per risposta errata e passa il turno"
+            >
+              <span>❌</span>
+              <span>Scalata Errata [E]</span>
+            </button>
           </div>
         )}
 
@@ -840,6 +1029,31 @@ const ClassificaMusicaleBoard = ({
             <h2 className="text-white font-black uppercase tracking-tight text-[clamp(16px,2vw,42px)] text-center leading-none">
               CANZONE
             </h2>
+          </div>
+        )}
+
+        {/* Step 1+: Cronometro 5s — Centrato perfettamente nel varco tra i due banner superiori */}
+        {timerDisplay > 0 && !showSolution && effectiveStep >= 1 && (
+          <div 
+            onClick={() => setTimerEndAt(0)}
+            className="absolute left-[44.63%] top-[15.092%] -translate-x-1/2 -translate-y-1/2 z-40 animate-zoom-in cursor-pointer select-none group"
+            title="Clicca per fermare il cronometro (oppure premi C)"
+          >
+            <div className={`px-4 py-2.5 rounded-2xl backdrop-blur-xl flex flex-col items-center border-2 transition-all duration-300 group-hover:scale-105 active:scale-95 ${
+              timerDisplay <= 2
+                ? 'bg-red-950/95 border-red-500 shadow-[0_0_35px_rgba(239,68,68,0.8)] animate-pulse'
+                : 'bg-slate-950/95 border-amber-400/80 shadow-[0_0_35px_rgba(251,191,36,0.6)]'
+            }`}>
+              <CountdownTimer seconds={timerDisplay} totalSeconds={5} />
+              <div className="mt-1 flex flex-col items-center">
+                <span className="text-[8px] font-black uppercase tracking-wider text-white/60">
+                  TENTATIVO
+                </span>
+                <span className={`text-[10px] font-black uppercase tracking-wider ${activeTeamColor.text}`}>
+                  {activeTeamName}
+                </span>
+              </div>
+            </div>
           </div>
         )}
 
@@ -931,7 +1145,17 @@ const ClassificaMusicaleBoard = ({
                 <React.Fragment key={marker.value}>
                   {/* Testo dell'indizio (Allineato e centrato esattamente al marker) */}
                   <div
-                    onClick={() => triggerRevealClue(marker.value)}
+                    onClick={(e) => {
+                      if (e.shiftKey) {
+                        triggerErrorSuspense(marker.value);
+                      } else {
+                        triggerRevealClue(marker.value);
+                      }
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      triggerErrorSuspense(marker.value);
+                    }}
                     className={`absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[3%] transition-all ${
                       !isRevealed ? 'cursor-pointer hover:scale-[1.01]' : ''
                     }`}
@@ -939,6 +1163,7 @@ const ClassificaMusicaleBoard = ({
                       top: marker.top,
                       height: "4.352%"
                     }}
+                    title={!isRevealed ? "Click: Rivelazione esatta | Shift+Click o Tasto destro: Scalata errata" : undefined}
                   >
                     <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${marker.value <= 4 ? 'text-white' : 'text-[#1b1b1b]'}`}>
                       {isRevealed ? el?.testo : ""}
@@ -947,7 +1172,17 @@ const ClassificaMusicaleBoard = ({
 
                   {/* Marker numerico a destra */}
                   <div
-                    onClick={() => triggerRevealClue(marker.value)}
+                    onClick={(e) => {
+                      if (e.shiftKey) {
+                        triggerErrorSuspense(marker.value);
+                      } else {
+                        triggerRevealClue(marker.value);
+                      }
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      triggerErrorSuspense(marker.value);
+                    }}
                     className={`absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group transition-all ${
                       !isRevealed ? 'cursor-pointer hover:scale-110 hover:bg-[#4a4848]' : ''
                     }`}
@@ -956,6 +1191,7 @@ const ClassificaMusicaleBoard = ({
                       borderWidth: "clamp(2px, 0.2083vw, 4px)",
                       borderRadius: "clamp(6px, 0.5208vw, 10px)"
                     }}
+                    title={!isRevealed ? "Click: Rivelazione esatta | Shift+Click o Tasto destro: Scalata errata" : undefined}
                   >
                     <span className="text-white font-black text-[clamp(12px,1.56vw,30px)] leading-none">
                       {marker.value}

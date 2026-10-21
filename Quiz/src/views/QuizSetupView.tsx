@@ -83,11 +83,21 @@ export interface Box0Setup {
   gioco5Titolo?: string;
 }
 
+export type TempoDomandaGioco5 = 'presente' | 'passato' | 'futuro';
+
+export interface Gioco5DomandaItem {
+  numero: number;
+  tempo: TempoDomandaGioco5;
+  testo: string;
+  risposta: string;
+}
+
 export interface Gioco5Setup {
   titolo: string;
   sottotitolo?: string;
   sfondoGenerale?: string;
   numeroDomande?: number;
+  domande?: Gioco5DomandaItem[];
   notePresentatore?: string;
   videoSpiegazione?: string;
   sfondoSpiegazione?: string;
@@ -441,11 +451,29 @@ function normalizeGioco4(raw: any, def: Gioco4Setup): Gioco4Setup {
 
 function normalizeGioco5(raw: any, def: Gioco5Setup): Gioco5Setup {
   if (!raw) return def;
+  const rawDomande = Array.isArray(raw.domande) ? raw.domande : [];
+  let normalizedDomande: Gioco5DomandaItem[] = rawDomande.map((d: any, idx: number) => ({
+    numero: typeof d?.numero === 'number' ? d.numero : idx + 1,
+    tempo: (d?.tempo === 'passato' || d?.tempo === 'futuro') ? d.tempo : 'presente',
+    testo: d?.testo || '',
+    risposta: d?.risposta || '',
+  }));
+  if (normalizedDomande.length === 0) {
+    const num = Number(raw.numeroDomande) || def.numeroDomande || 15;
+    normalizedDomande = Array.from({ length: num }, (_, i) => ({
+      numero: i + 1,
+      tempo: (i % 3 === 0 ? 'presente' : i % 3 === 1 ? 'passato' : 'futuro') as TempoDomandaGioco5,
+      testo: '',
+      risposta: '',
+    }));
+  }
+
   return {
     titolo: raw.titolo !== undefined ? raw.titolo : (def.titolo || 'Finale a Squadre'),
     sottotitolo: raw.sottotitolo !== undefined ? raw.sottotitolo : (def.sottotitolo || 'Sfida con dado, omini sui cubi 3D e 4 bonus per squadra'),
     sfondoGenerale: raw.sfondoGenerale !== undefined ? raw.sfondoGenerale : def.sfondoGenerale,
     numeroDomande: Number(raw.numeroDomande) || def.numeroDomande || 15,
+    domande: normalizedDomande,
     notePresentatore: raw.notePresentatore || '',
     videoSpiegazione: raw.videoSpiegazione || '',
     sfondoSpiegazione: raw.sfondoSpiegazione || '',
@@ -599,6 +627,12 @@ export function getDefaultSetupState(): QuizSetupState {
       audioSpiegazione: '',
       sfondoGenerale: '/sfondo_finale_acqua.jpg',
       numeroDomande: 15,
+      domande: Array.from({ length: 15 }, (_, i) => ({
+        numero: i + 1,
+        tempo: (i % 3 === 0 ? 'presente' : i % 3 === 1 ? 'passato' : 'futuro') as TempoDomandaGioco5,
+        testo: '',
+        risposta: '',
+      })),
       notePresentatore: '',
     },
     punteggi: {
@@ -1334,6 +1368,47 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           }).join('')}
         </tbody>
       </table>`;
+    }
+    sectionsHtml += `</section>`;
+
+    // ── GIOCO 5 — FINALE A SQUADRE ────────────────────────────────────────────
+    const domandeG5 = state.gioco5?.domande || [];
+    sectionsHtml += `<section class="game-section">
+      <h2>🎲 GIOCO 5 — ${state.gioco5?.titolo || 'Finale a Squadre'}</h2>`;
+    if (domandeG5.length === 0) {
+      sectionsHtml += `<p class="empty">Nessuna domanda configurata per la finale.</p>`;
+    } else {
+      sectionsHtml += `<table>
+        <thead>
+          <tr>
+            <th style="width:36px;text-align:center">#</th>
+            <th style="width:90px;text-align:center">Tempo</th>
+            <th>Testo Domanda</th>
+            <th style="width:200px">Risposta</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${domandeG5.map((d) => {
+            const badgeBg = d.tempo === 'passato' ? '#e0f2fe' : d.tempo === 'futuro' ? '#fef3c7' : '#dcfce7';
+            const badgeColor = d.tempo === 'passato' ? '#0369a1' : d.tempo === 'futuro' ? '#b45309' : '#15803d';
+            return `<tr>
+              <td style="text-align:center;font-weight:bold">${d.numero}</td>
+              <td style="text-align:center">
+                <span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:8pt;font-weight:bold;text-transform:uppercase;background:${badgeBg};color:${badgeColor}">
+                  ${d.tempo}
+                </span>
+              </td>
+              <td style="font-weight:500">${d.testo || '—'}</td>
+              <td style="font-weight:bold;color:#1e293b">${d.risposta || '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>`;
+    }
+    if (state.gioco5?.notePresentatore) {
+      sectionsHtml += `<div class="sub-group">Note Presentatore
+        <p style="font-size:10pt;color:#333;margin-top:4px">${state.gioco5.notePresentatore}</p>
+      </div>`;
     }
     sectionsHtml += `</section>`;
 
@@ -6232,6 +6307,152 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   placeholder="Note, suggerimenti o promemoria..."
                   className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500"
                 />
+              </div>
+            </div>
+
+            {/* Tabella Domande Finale (Presente, Passato, Futuro) */}
+            <div className="bg-white/5 p-4 rounded-xl border border-white/5 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>📋</span> Domande Finale a Squadre
+                  </h4>
+                  <p className="text-[11px] text-slate-400">
+                    Tabella delle domande per il relatore (stampata nel PDF di riepilogo, nascosta nello schermo pubblico delle squadre).
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setState((prev) => {
+                        const currentDomande = prev.gioco5?.domande || [];
+                        const nextNum = currentDomande.length + 1;
+                        const defaultTempo: TempoDomandaGioco5 =
+                          nextNum % 3 === 1 ? 'presente' : nextNum % 3 === 2 ? 'passato' : 'futuro';
+                        const newDomande: Gioco5DomandaItem[] = [
+                          ...currentDomande,
+                          { numero: nextNum, tempo: defaultTempo, testo: '', risposta: '' },
+                        ];
+                        return {
+                          ...prev,
+                          gioco5: {
+                            ...prev.gioco5,
+                            numeroDomande: Math.max(prev.gioco5?.numeroDomande || 15, newDomande.length),
+                            domande: newDomande,
+                          },
+                        };
+                      });
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
+                  >
+                    <span>+</span> Aggiungi Domanda
+                  </button>
+                </div>
+              </div>
+
+              {/* Table */}
+              <div className="overflow-x-auto rounded-xl border border-white/10">
+                <table className="w-full text-left text-xs text-slate-200">
+                  <thead className="bg-[#141417] text-slate-400 uppercase text-[10px] tracking-wider border-b border-white/10">
+                    <tr>
+                      <th className="py-2.5 px-3 text-center w-12 font-black">#</th>
+                      <th className="py-2.5 px-3 text-center w-36 font-black">Tempo</th>
+                      <th className="py-2.5 px-3 font-black">Testo Domanda</th>
+                      <th className="py-2.5 px-3 font-black w-64">Risposta</th>
+                      <th className="py-2.5 px-2 text-center w-14 font-black">Azioni</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5 bg-[#1a1a20]/60">
+                    {(state.gioco5?.domande || []).map((dom, dIdx) => (
+                      <tr key={dIdx} className="hover:bg-white/5 transition-colors">
+                        <td className="py-2 px-3 text-center font-bold text-slate-400">
+                          {dom.numero || dIdx + 1}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <select
+                            value={dom.tempo}
+                            onChange={(e) => {
+                              const val = e.target.value as TempoDomandaGioco5;
+                              setState((prev) => {
+                                const newDomande = [...(prev.gioco5?.domande || [])];
+                                newDomande[dIdx] = { ...newDomande[dIdx], tempo: val };
+                                return { ...prev, gioco5: { ...prev.gioco5, domande: newDomande } };
+                              });
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold border cursor-pointer focus:outline-none ${
+                              dom.tempo === 'passato'
+                                ? 'bg-sky-950/80 border-sky-500/50 text-sky-300'
+                                : dom.tempo === 'futuro'
+                                ? 'bg-amber-950/80 border-amber-500/50 text-amber-300'
+                                : 'bg-emerald-950/80 border-emerald-500/50 text-emerald-300'
+                            }`}
+                          >
+                            <option value="presente" className="bg-slate-900 text-emerald-300">Presente</option>
+                            <option value="passato" className="bg-slate-900 text-sky-300">Passato</option>
+                            <option value="futuro" className="bg-slate-900 text-amber-300">Futuro</option>
+                          </select>
+                        </td>
+                        <td className="py-2 px-3">
+                          <input
+                            type="text"
+                            value={dom.testo}
+                            placeholder={`Testo domanda #${dom.numero || dIdx + 1}...`}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setState((prev) => {
+                                const newDomande = [...(prev.gioco5?.domande || [])];
+                                newDomande[dIdx] = { ...newDomande[dIdx], testo: val };
+                                return { ...prev, gioco5: { ...prev.gioco5, domande: newDomande } };
+                              });
+                            }}
+                            className="w-full bg-[#141417] border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-red-500"
+                          />
+                        </td>
+                        <td className="py-2 px-3">
+                          <input
+                            type="text"
+                            value={dom.risposta}
+                            placeholder="Risposta esatta..."
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setState((prev) => {
+                                const newDomande = [...(prev.gioco5?.domande || [])];
+                                newDomande[dIdx] = { ...newDomande[dIdx], risposta: val };
+                                return { ...prev, gioco5: { ...prev.gioco5, domande: newDomande } };
+                              });
+                            }}
+                            className="w-full bg-[#141417] border border-white/15 rounded-lg px-2.5 py-1.5 text-xs text-white font-bold text-amber-200 focus:outline-none focus:border-amber-500"
+                          />
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setState((prev) => {
+                                const newDomande = (prev.gioco5?.domande || [])
+                                  .filter((_, idx) => idx !== dIdx)
+                                  .map((d, idx) => ({ ...d, numero: idx + 1 }));
+                                return { ...prev, gioco5: { ...prev.gioco5, domande: newDomande } };
+                              });
+                            }}
+                            className="w-6 h-6 rounded-md bg-red-600/20 hover:bg-red-600/40 text-red-300 border border-red-500/30 text-xs font-bold inline-flex items-center justify-center transition-all cursor-pointer"
+                            title="Elimina domanda"
+                          >
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {(!state.gioco5?.domande || state.gioco5.domande.length === 0) && (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-xs text-slate-500 italic">
+                          Nessuna domanda inserita. Clicca su "+ Aggiungi Domanda" per iniziare.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>

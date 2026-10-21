@@ -228,7 +228,9 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
       activeSlideType === 'img' || 
       activeSlideType === 'music' || 
       activeSlideId.startsWith('box1_') || 
-      activeSlideType === 'gioco_frase_tempo';
+      activeSlideType === 'gioco_frase_tempo' ||
+      activeSlideType === 'finale_squadre' ||
+      activeSlideId === 'finale_squadre';
 
     const hasActiveBooking = isNadiaActive 
       ? hasNadiaBooking 

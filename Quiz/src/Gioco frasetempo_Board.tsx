@@ -364,6 +364,25 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     setTokens([...targetTokens]);
     setStep(7);
 
+    // Riproduzione Canzone di Conferma / Stacchetto anche in caso di errore (dopo la croce rossa di 800ms)
+    if (phrase.confermaAudio) {
+      const resolved = assetUrl(phrase.confermaAudio);
+      if (resolved) {
+        setTimeout(() => {
+          try {
+            if (!audioRef.current || audioRef.current.src !== resolved) {
+              if (audioRef.current) audioRef.current.pause();
+              audioRef.current = new Audio(resolved);
+            }
+            audioRef.current.currentTime = 0;
+            audioRef.current.play().catch(e => console.log('Autoplay stacchetto (dopo errore):', e));
+          } catch (err) {
+            console.error('Errore riproduzione stacchetto (dopo errore):', err);
+          }
+        }, 800);
+      }
+    }
+
     // Award scores to other two teams
     if (winningTeamIndex !== null && !scoreAwarded) {
       const otherTeams = [0, 1, 2].filter(idx => idx !== winningTeamIndex);
@@ -372,7 +391,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       });
       setScoreAwarded(true);
     }
-  }, [revealed, targetTokens, winningTeamIndex, scoreAwarded, awardPointsAndBonus, setStep, setTokens, setRevealed, setShowError, playErrorSound]);
+  }, [revealed, targetTokens, phrase.confermaAudio, winningTeamIndex, scoreAwarded, awardPointsAndBonus, setStep, setTokens, setRevealed, setShowError, playErrorSound]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (

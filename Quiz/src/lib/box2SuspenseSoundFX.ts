@@ -172,6 +172,41 @@ class Box2SuspenseSoundFXEngine {
 
     noise.start(now);
   }
+
+  /**
+   * Effetto drammatico di errore game-show (dissonanza e buzzer sintetico)
+   */
+  playErrorReveal() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = Math.max(ctx.currentTime, 0.05);
+
+    // 1. Dissonanza cupa a 2 frequenze (intervallo di tritono / discesa)
+    [155, 110].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const filter = ctx.createBiquadFilter();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.72, now + idx * 0.08 + 0.55);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(900, now);
+      filter.frequency.exponentialRampToValueAtTime(140, now + 0.65);
+
+      gain.gain.setValueAtTime(0.001, now + idx * 0.08);
+      gain.gain.linearRampToValueAtTime(0.32, now + idx * 0.08 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + idx * 0.08 + 0.75);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + idx * 0.08);
+      osc.stop(now + idx * 0.08 + 0.8);
+    });
+  }
 }
 
 export const box2SuspenseSoundFX = new Box2SuspenseSoundFXEngine();

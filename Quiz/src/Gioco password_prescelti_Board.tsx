@@ -54,6 +54,24 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     `playstate_password_step_m${currentManche}`,
     0
   );
+  const [suggestionTimerEndAt, setSuggestionTimerEndAt] = useSyncedState<number>(
+    'password_suggestion_timer_end',
+    0
+  );
+  const [timerDisplay, setTimerDisplay] = useState<number>(0);
+
+  useEffect(() => {
+    if (!suggestionTimerEndAt) {
+      setTimerDisplay(0);
+      return;
+    }
+    const tick = () => {
+      setTimerDisplay(Math.max(0, (suggestionTimerEndAt - Date.now()) / 1000));
+    };
+    tick();
+    const id = setInterval(tick, 100);
+    return () => clearInterval(id);
+  }, [suggestionTimerEndAt]);
   const [bussolottiStatus, setBussolottiStatus] = useState<Record<RankType, BussolottiStatus>>(() => {
     const stored = localStorage.getItem('password_bussolotti_status');
     try {
@@ -317,6 +335,11 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     setChosenSuggestion(newSugg);
     localStorage.setItem(`password_chosen_suggestion_m${currentManche}`, newSugg);
     localStorage.setItem('password_chosen_suggestion', newSugg);
+
+    const timerEnd = newSugg ? Date.now() + 10000 : 0;
+    setSuggestionTimerEndAt(timerEnd);
+    localStorage.setItem('password_suggestion_timer_end', timerEnd.toString());
+
     window.dispatchEvent(new Event('storage'));
     window.dispatchEvent(new CustomEvent('local-storage-update', {
       detail: { key: 'password_chosen_suggestion', value: newSugg }
@@ -348,6 +371,10 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       timestamp: Date.now()
     };
     localStorage.setItem('password_active_reveal', JSON.stringify(revealData));
+
+    // Reset suggestion countdown timer on word click
+    setSuggestionTimerEndAt(0);
+    localStorage.setItem('password_suggestion_timer_end', '0');
 
     let newExcluded = [...excludedTeams];
     if (clickedWord.type === 'bomb') {
@@ -447,6 +474,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       setCurrentTeam(nextTeam);
       setCurrentRound(nextRound);
       setChosenSuggestion("");
+      setSuggestionTimerEndAt(0);
       
       localStorage.setItem(`password_current_team_m${currentManche}`, nextTeam.toString());
       localStorage.setItem('password_current_team', nextTeam.toString());
@@ -454,6 +482,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       localStorage.setItem('password_current_round', nextRound.toString());
       localStorage.removeItem('password_chosen_suggestion');
       localStorage.removeItem(`password_chosen_suggestion_m${currentManche}`);
+      localStorage.removeItem('password_suggestion_timer_end');
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('local-storage-update', {
         detail: { key: 'password_current_team', value: nextTeam.toString() }
@@ -497,6 +526,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
             setCurrentRound(3);
             setCurrentTeam(lastTeam);
             setChosenSuggestion("");
+            setSuggestionTimerEndAt(0);
             
             localStorage.setItem('password_current_manche', prevM.toString());
             localStorage.setItem(`password_current_round_m${prevM}`, "3");
@@ -505,6 +535,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
             localStorage.setItem('password_current_team', lastTeam.toString());
             localStorage.removeItem('password_chosen_suggestion');
             localStorage.removeItem(`password_chosen_suggestion_m${prevM}`);
+            localStorage.removeItem('password_suggestion_timer_end');
             window.dispatchEvent(new Event('storage'));
             window.dispatchEvent(new CustomEvent('local-storage-update', {
               detail: { key: 'password_current_manche', value: prevM.toString() }
@@ -531,6 +562,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       setCurrentTeam(prevTeam);
       setCurrentRound(prevRound);
       setChosenSuggestion("");
+      setSuggestionTimerEndAt(0);
       
       localStorage.setItem(`password_current_team_m${currentManche}`, prevTeam.toString());
       localStorage.setItem('password_current_team', prevTeam.toString());
@@ -538,6 +570,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       localStorage.setItem('password_current_round', prevRound.toString());
       localStorage.removeItem('password_chosen_suggestion');
       localStorage.removeItem(`password_chosen_suggestion_m${currentManche}`);
+      localStorage.removeItem('password_suggestion_timer_end');
       window.dispatchEvent(new Event('storage'));
       window.dispatchEvent(new CustomEvent('local-storage-update', {
         detail: { key: 'password_current_team', value: prevTeam.toString() }
@@ -555,6 +588,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       'password_excluded_teams',
       'password_grid_state',
       'password_chosen_suggestion',
+      'password_suggestion_timer_end',
       'password_winners_order',
       'password_bussolotti_status',
       'password_active_bussolotti',
@@ -580,6 +614,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     keysToRemove.forEach(k => localStorage.removeItem(k));
     setPresentationStep(0);
     setAudioPlaying(false);
+    setSuggestionTimerEndAt(0);
     
     setCurrentManche(0);
     setCurrentRound(1);
@@ -881,13 +916,20 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
                   </span>
                   <span className="text-sm font-black truncate">{chosenSuggestion}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => selectSuggestion("")}
-                  className="text-[10px] bg-black/20 hover:bg-black/30 px-2 py-1 rounded text-black font-bold uppercase shrink-0 cursor-pointer ml-2"
-                >
-                  ✕ Rimuovi
-                </button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {suggestionTimerEndAt > 0 && timerDisplay > 0 && (
+                    <span className="px-2 py-0.5 bg-red-600 text-white font-mono text-xs font-black rounded-full shadow animate-bounce">
+                      ⏱ {Math.ceil(timerDisplay)}s
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => selectSuggestion("")}
+                    className="text-[10px] bg-black/20 hover:bg-black/30 px-2 py-1 rounded text-black font-bold uppercase shrink-0 cursor-pointer ml-1"
+                  >
+                    ✕ Rimuovi
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="mt-3 p-2 bg-slate-900/50 border border-slate-700/60 rounded-xl text-center text-[11px] text-slate-400">

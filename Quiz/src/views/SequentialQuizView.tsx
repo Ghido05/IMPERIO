@@ -558,8 +558,10 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
         'password_excluded_teams',
         'password_winners_order',
         'password_chosen_suggestion',
+        'password_suggestion_timer_end',
         'password_bussolotti_status',
         'password_active_bussolotti',
+        'password_bussolotto_score_revealed',
         'password_grid_state',
         `password_grid_state_m${mancheIndex}`,
         `password_current_team_m${mancheIndex}`,
@@ -567,8 +569,10 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
         `password_excluded_teams_m${mancheIndex}`,
         `password_winners_order_m${mancheIndex}`,
         `password_chosen_suggestion_m${mancheIndex}`,
+        `password_suggestion_timer_end_m${mancheIndex}`,
         `password_bussolotti_status_m${mancheIndex}`,
-        `password_active_bussolotti_m${mancheIndex}`
+        `password_active_bussolotti_m${mancheIndex}`,
+        `password_bussolotto_score_revealed_m${mancheIndex}`
       ];
       keysToBroadcast.forEach(k => {
         const val = localStorage.getItem(k);
@@ -909,15 +913,19 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     }
   };
 
-  const handleCloseNadia = useCallback(() => {
-    stopNadiaAudio();
+  const handleCloseNadia = useCallback((playSigla = true) => {
+    if (playSigla) {
+      playNadiaJingle();
+    } else {
+      stopNadiaAudio();
+    }
     setNadiaActive(false);
     setNadiaStep(0);
     setNadiaSolutionShown(false);
     setNadiaBookedTeam(null);
     setNadiaAssignedTeam(null);
     sendSerialReset();
-  }, [stopNadiaAudio, setNadiaActive, setNadiaStep, setNadiaSolutionShown, setNadiaBookedTeam, setNadiaAssignedTeam, sendSerialReset]);
+  }, [playNadiaJingle, stopNadiaAudio, setNadiaActive, setNadiaStep, setNadiaSolutionShown, setNadiaBookedTeam, setNadiaAssignedTeam, sendSerialReset]);
 
   // Scorciatoie da tastiera per Nadia
   useEffect(() => {
@@ -962,7 +970,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
           if (nadiaBookedTeam !== null) {
             handleCancelNadiaBooking(true);
           } else {
-            handleCloseNadia();
+            handleCloseNadia(true);
           }
         } else if (e.key === 'm' || e.key === 'M') {
           toggleNadiaJingle();
@@ -988,7 +996,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     sendSerialReset();
     stopNadiaAudio();
     if (nadiaActive) {
-      handleCloseNadia();
+      handleCloseNadia(false);
     }
     if (activeBox === 0) {
       if (activeQuestion < 4) {
@@ -1034,7 +1042,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     sendSerialReset();
     stopNadiaAudio();
     if (nadiaActive) {
-      handleCloseNadia();
+      handleCloseNadia(false);
     }
     if (activeBox === 0) {
       if (activeQuestion > 1) {
@@ -1354,6 +1362,16 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                         <span className="text-sm">✨</span>
                         <span>Richiama Mille e una Nadia</span>
                       </button>
+                      {nadiaAudioPlaying && (
+                        <button
+                          type="button"
+                          onClick={stopNadiaAudio}
+                          className="px-3 py-2 text-xs font-bold rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 transition-all flex items-center gap-1.5 cursor-pointer"
+                          title="Ferma musica sigla Nadia"
+                        >
+                          <span>⏹ Ferma Sigla</span>
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div className="bg-[#18181b]/95 border border-white/20 rounded-2xl p-2.5 shadow-2xl backdrop-blur-md flex flex-col gap-2 max-w-2xl w-full">
@@ -1537,7 +1555,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                           {/* Tasto Chiudi Nadia */}
                           <button
                             type="button"
-                            onClick={handleCloseNadia}
+                            onClick={() => handleCloseNadia(true)}
                             className="px-2.5 py-1 text-xs font-bold rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 transition-all flex items-center gap-1 cursor-pointer"
                             title="Chiudi Mille e una Nadia e torna al gioco (Esc)"
                           >

@@ -11,6 +11,7 @@ export interface Box2SuspenseData {
   clueText: string;
   clueIcon?: string;
   clueFrase?: string;
+  isError?: boolean; // True se la risposta è errata
 }
 
 interface ClueItem {
@@ -46,8 +47,9 @@ export const ClassificaStaircaseSuspenseOverlay: React.FC<ClassificaStaircaseSus
   // 'bouncing': scansione a scalini con campanelli (400ms -> ~3800ms)
   // 'locked': sosta di batticuore sul gradino bersaglio (~3800ms -> 4200ms)
   // 'revealed': apertura del gradino con la risposta e festa punti (4200ms -> 6200ms)
+  // 'error': risposta errata con allerta rossa e suono buzzer
   // 'closing': fade-out finale
-  const [phase, setPhase] = useState<'intro' | 'bouncing' | 'locked' | 'revealed' | 'closing'>('intro');
+  const [phase, setPhase] = useState<'intro' | 'bouncing' | 'locked' | 'revealed' | 'error' | 'closing'>('intro');
   const [currentStep, setCurrentStep] = useState<number>(1);
 
   const hasTriggeredRevealPointRef = useRef(false);
@@ -212,28 +214,44 @@ export const ClassificaStaircaseSuspenseOverlay: React.FC<ClassificaStaircaseSus
               box2SuspenseSoundFX.playLockTick();
             }
 
-            // Dopo 450ms di batticuore sul gradino bersaglio -> Rivelazione Trionfale!
+            // Dopo 450ms di batticuore sul gradino bersaglio -> Rivelazione Trionfale o Errore!
             const lockTimer = window.setTimeout(() => {
-              setPhase('revealed');
-              if (canPlayAudio) {
-                box2SuspenseSoundFX.playVictoryReveal();
-              }
+              if (activeSuspense.isError) {
+                setPhase('error');
+                if (canPlayAudio) {
+                  box2SuspenseSoundFX.playErrorReveal();
+                }
+                // Non chiamiamo onRevealPoint
+                const settleTimer = window.setTimeout(() => {
+                  setPhase('closing');
+                  const closeTimer = window.setTimeout(() => {
+                    onComplete?.();
+                  }, 400);
+                  timerIdsRef.current.push(closeTimer);
+                }, 2200);
+                timerIdsRef.current.push(settleTimer);
+              } else {
+                setPhase('revealed');
+                if (canPlayAudio) {
+                  box2SuspenseSoundFX.playVictoryReveal();
+                }
 
-              // Assegnazione punti e reveal sul tabellone
-              if (!hasTriggeredRevealPointRef.current) {
-                hasTriggeredRevealPointRef.current = true;
-                onRevealPoint?.(activeSuspense.clueIndex, activeSuspense.teamIdx, activeSuspense.points);
-              }
+                // Assegnazione punti e reveal sul tabellone
+                if (!hasTriggeredRevealPointRef.current) {
+                  hasTriggeredRevealPointRef.current = true;
+                  onRevealPoint?.(activeSuspense.clueIndex, activeSuspense.teamIdx, activeSuspense.points);
+                }
 
-              // Dopo 2.4 secondi di celebrazione della parola -> chiusura sfumata
-              const settleTimer = window.setTimeout(() => {
-                setPhase('closing');
-                const closeTimer = window.setTimeout(() => {
-                  onComplete?.();
-                }, 400);
-                timerIdsRef.current.push(closeTimer);
-              }, 2400);
-              timerIdsRef.current.push(settleTimer);
+                // Dopo 2.4 secondi di celebrazione della parola -> chiusura sfumata
+                const settleTimer = window.setTimeout(() => {
+                  setPhase('closing');
+                  const closeTimer = window.setTimeout(() => {
+                    onComplete?.();
+                  }, 400);
+                  timerIdsRef.current.push(closeTimer);
+                }, 2400);
+                timerIdsRef.current.push(settleTimer);
+              }
             }, 450);
             timerIdsRef.current.push(lockTimer);
           }
@@ -249,7 +267,7 @@ export const ClassificaStaircaseSuspenseOverlay: React.FC<ClassificaStaircaseSus
       timerIdsRef.current.forEach(id => clearTimeout(id));
       timerIdsRef.current = [];
     };
-  }, [activeSuspense?.timestamp, activeSuspense?.clueIndex, canPlayAudio]);
+  }, [activeSuspense?.timestamp, activeSuspense?.clueIndex, activeSuspense?.isError, canPlayAudio]);
 
   // Se l'utente preme Esc o Invio durante la suspence per forzare il reveal immediato
   useEffect(() => {
@@ -257,22 +275,33 @@ export const ClassificaStaircaseSuspenseOverlay: React.FC<ClassificaStaircaseSus
       if (!activeSuspense) return;
       if (e.key === 'Escape' || e.key === ' ' || e.key === 'Enter') {
         if (phase === 'intro' || phase === 'bouncing' || phase === 'locked') {
-          // Salta istantaneamente a rivelato
+          // Salta istantaneamente a rivelato o errore
           timerIdsRef.current.forEach(id => clearTimeout(id));
           timerIdsRef.current = [];
           setCurrentStep(targetClue);
-          setPhase('revealed');
-          if (canPlayAudio) {
-            box2SuspenseSoundFX.playVictoryReveal();
+          if (activeSuspense.isError) {
+            setPhase('error');
+            if (canPlayAudio) {
+              box2SuspenseSoundFX.playErrorReveal();
+            }
+            const closeTimer = window.setTimeout(() => {
+              onComplete?.();
+            }, 1800);
+            timerIdsRef.current.push(closeTimer);
+          } else {
+            setPhase('revealed');
+            if (canPlayAudio) {
+              box2SuspenseSoundFX.playVictoryReveal();
+            }
+            if (!hasTriggeredRevealPointRef.current) {
+              hasTriggeredRevealPointRef.current = true;
+              onRevealPoint?.(activeSuspense.clueIndex, activeSuspense.teamIdx, activeSuspense.points);
+            }
+            const closeTimer = window.setTimeout(() => {
+              onComplete?.();
+            }, 2000);
+            timerIdsRef.current.push(closeTimer);
           }
-          if (!hasTriggeredRevealPointRef.current) {
-            hasTriggeredRevealPointRef.current = true;
-            onRevealPoint?.(activeSuspense.clueIndex, activeSuspense.teamIdx, activeSuspense.points);
-          }
-          const closeTimer = window.setTimeout(() => {
-            onComplete?.();
-          }, 2000);
-          timerIdsRef.current.push(closeTimer);
         }
       }
     };
@@ -325,9 +354,15 @@ export const ClassificaStaircaseSuspenseOverlay: React.FC<ClassificaStaircaseSus
             <span>{teamName}</span>
           </div>
 
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-300 font-bold text-xs uppercase tracking-wider">
-            <span>+{activeSuspense.points.toLocaleString('it-IT')} PT</span>
-          </div>
+          {activeSuspense.isError ? (
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-red-500/20 border border-red-500/50 text-red-300 font-black text-xs uppercase tracking-wider animate-pulse">
+              <span>0 PT • RISPOSTA ERRATA</span>
+            </div>
+          ) : (
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-400/10 border border-amber-400/30 text-amber-300 font-bold text-xs uppercase tracking-wider">
+              <span>+{activeSuspense.points.toLocaleString('it-IT')} PT</span>
+            </div>
+          )}
         </div>
       </header>
 
@@ -346,7 +381,7 @@ export const ClassificaStaircaseSuspenseOverlay: React.FC<ClassificaStaircaseSus
           {stepsList.map((stepNum) => {
             const config = getStepColorConfig(stepNum);
             const isCurrentBouncing = phase === 'bouncing' && currentStep === stepNum;
-            const isLockedTarget = (phase === 'locked' || phase === 'revealed') && targetClue === stepNum;
+            const isLockedTarget = (phase === 'locked' || phase === 'revealed' || phase === 'error') && targetClue === stepNum;
             const isAlreadyRevealed = !isLockedTarget && !!revealedState[stepNum];
 
             // Troviamo il testo dell'elemento corrispondente
@@ -383,9 +418,11 @@ export const ClassificaStaircaseSuspenseOverlay: React.FC<ClassificaStaircaseSus
                 {/* PEDANA SUPERIORE 3D DEL GRADINO */}
                 <div
                   className={`relative flex items-center justify-between px-3 md:px-5 py-2 md:py-2.5 rounded-xl border-2 transition-all duration-200 overflow-hidden ${
-                    config.border
+                    isLockedTarget && phase === 'error'
+                      ? 'border-red-500 shadow-[0_0_35px_rgba(239,68,68,0.8)] bg-gradient-to-r from-red-950/90 via-red-900/80 to-red-950/90 animate-shake'
+                      : config.border
                   } ${
-                    isLockedTarget
+                    isLockedTarget && phase !== 'error'
                       ? `${config.activeGlow} ring-offset-2 ring-offset-black bg-gradient-to-r ${config.baseBg}`
                       : isCurrentBouncing
                       ? `${config.glow} brightness-125 bg-gradient-to-r ${config.baseBg}`
@@ -394,7 +431,9 @@ export const ClassificaStaircaseSuspenseOverlay: React.FC<ClassificaStaircaseSus
                       : 'bg-black/70 backdrop-blur-md hover:bg-black/60'
                   }`}
                   style={{
-                    boxShadow: isLockedTarget
+                    boxShadow: isLockedTarget && phase === 'error'
+                      ? '0 12px 30px rgba(0,0,0,0.9), 0 0 50px rgba(239,68,68,0.8)'
+                      : isLockedTarget
                       ? '0 12px 30px rgba(0,0,0,0.8), 0 0 45px rgba(255,255,255,0.6)'
                       : isCurrentBouncing
                       ? '0 8px 24px rgba(0,0,0,0.7), 0 0 30px rgba(255,255,255,0.4)'
@@ -413,7 +452,7 @@ export const ClassificaStaircaseSuspenseOverlay: React.FC<ClassificaStaircaseSus
                         isLockedTarget || isCurrentBouncing
                           ? 'scale-110 shadow-[0_0_15px_rgba(255,255,255,0.8)]'
                           : ''
-                      } ${config.badgeBg}`}
+                      } ${isLockedTarget && phase === 'error' ? 'bg-red-600 text-white border-red-400' : config.badgeBg}`}
                     >
                       {stepNum}
                     </div>
@@ -428,7 +467,14 @@ export const ClassificaStaircaseSuspenseOverlay: React.FC<ClassificaStaircaseSus
 
                   {/* PARTE CENTRALE: TESTO RISPOSTA / PLACEHOLDER MISTERIOSO */}
                   <div className="flex-1 mx-4 text-center">
-                    {isLockedTarget && phase === 'revealed' ? (
+                    {isLockedTarget && phase === 'error' ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="text-xl md:text-2xl animate-bounce">❌</span>
+                        <span className="font-black text-sm md:text-xl lg:text-2xl uppercase tracking-wider text-red-400 drop-shadow-[0_2px_12px_rgba(239,68,68,0.8)]">
+                          RISPOSTA ERRATA
+                        </span>
+                      </div>
+                    ) : isLockedTarget && phase === 'revealed' ? (
                       <div className="flex items-center justify-center gap-3 animate-zoom-in">
                         {/* Se classifica musicale, mostra eventuale icona dello strumento */}
                         {activeSuspense.clueIcon && (
@@ -467,7 +513,11 @@ export const ClassificaStaircaseSuspenseOverlay: React.FC<ClassificaStaircaseSus
 
                   {/* PARTE DESTRA: PUNTEGGIO DEL GRADINO */}
                   <div className="flex items-center gap-2">
-                    {isLockedTarget && phase === 'revealed' ? (
+                    {isLockedTarget && phase === 'error' ? (
+                      <div className="px-3 py-1 rounded-full bg-red-600/90 text-white font-black text-xs md:text-sm uppercase tracking-wider shadow-xl border border-red-400">
+                        0 PT
+                      </div>
+                    ) : isLockedTarget && phase === 'revealed' ? (
                       <div className="px-3 py-1 rounded-full bg-white text-slate-950 font-black text-xs md:text-sm uppercase tracking-wider shadow-xl animate-bounce">
                         +{activeSuspense.points} PT
                       </div>
@@ -495,9 +545,11 @@ export const ClassificaStaircaseSuspenseOverlay: React.FC<ClassificaStaircaseSus
       {/* FOOTER: STATO E ISTRUZIONI DI SUPPORTO PER IL RELATORE */}
       <footer className="relative z-10 w-full max-w-4xl flex items-center justify-between px-6 py-2 rounded-xl bg-black/40 backdrop-blur-md border border-white/10 text-white/60 text-[11px] font-semibold">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+          <span className={`w-2 h-2 rounded-full animate-pulse ${phase === 'error' ? 'bg-red-500' : 'bg-amber-400'}`} />
           <span>
-            {phase === 'revealed'
+            {phase === 'error'
+              ? '❌ RISPOSTA ERRATA! NESSUN PUNTO ASSEGNATO'
+              : phase === 'revealed'
               ? 'RISPOSTA ESATTA! ASSEGNAZIONE PUNTEGGIO...'
               : 'SCANSIONE SUSPENCE IN CORSO SUI CRISTALLI...'}
           </span>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { useScores } from './context/ScoreContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
@@ -23,8 +23,9 @@ export const BussolottiOverlay: React.FC<{
   rank: RankType;
   teamNum: number;
   bussolottiConfig: BussolottiConfig;
+  currentManche?: number;
   onComplete: () => void;
-}> = ({ rank, teamNum, bussolottiConfig, onComplete }) => {
+}> = ({ rank, teamNum, bussolottiConfig, currentManche = 0, onComplete }) => {
   const count = rank === 1 ? 1 : rank === 2 ? 3 : 5;
   const [selectedIndex, setSelectedIndex] = useSyncedState<number | null>(`password_bussolotti_${rank}_selected_idx`, null);
   const [showAll, setShowAll] = useSyncedState<boolean>(`password_bussolotti_${rank}_show_all`, false);
@@ -97,6 +98,25 @@ export const BussolottiOverlay: React.FC<{
     setSelectedIndex(i);
     setAwarded(true);
     localStorage.setItem(awardKey, 'true');
+
+    // Svela lo sfondo collegato alla manche non appena appare il punteggio del bussolotto
+    localStorage.setItem(`password_bussolotto_score_revealed_m${currentManche}`, 'true');
+    localStorage.setItem('password_bussolotto_score_revealed', 'true');
+    window.dispatchEvent(new CustomEvent('local-storage-update', {
+      detail: { key: 'password_bussolotto_score_revealed', value: 'true' }
+    }));
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'password_bussolotto_score_revealed',
+      newValue: 'true'
+    }));
+    if ((window as any).electron?.broadcastState) {
+      (window as any).electron.broadcastState({
+        localStorageUpdate: { key: 'password_bussolotto_score_revealed', value: 'true' }
+      });
+      (window as any).electron.broadcastState({
+        localStorageUpdate: { key: `password_bussolotto_score_revealed_m${currentManche}`, value: 'true' }
+      });
+    }
     
     const teamIdx = teamNum - 1;
     const card = getCardInfo(i);
@@ -148,7 +168,7 @@ export const BussolottiOverlay: React.FC<{
   const teamColor = teamNum === 1 ? 'text-red-500' : teamNum === 2 ? 'text-blue-500' : 'text-green-500';
 
   return (
-    <div className="fixed inset-0 bg-black/90 flex flex-col items-center justify-center z-50 animate-in fade-in duration-500 select-none">
+    <div className="fixed inset-0 bg-black/75 backdrop-blur-sm flex flex-col items-center justify-center z-50 animate-in fade-in duration-500 select-none">
       <h2 className="text-4xl font-black text-white mb-2 uppercase tracking-widest text-center">
         {rank === 1 ? "PREMIO GARANTITO" : rank === 2 ? "SCEGLI TRA 3 BUSSOLOTTI" : "SCEGLI TRA 5 BUSSOLOTTI"}
       </h2>
@@ -305,6 +325,72 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
     revealAll ? 2 : 0
   );
   const effectiveStep = revealAll ? 2 : presentationStep;
+
+  // Stato per rivelazione dello sfondo collegato alla manche (appare solo dopo che si svela il punteggio del bussolotto)
+  const [bussolottoScoreRevealed] = useSyncedState<boolean>(
+    `password_bussolotto_score_revealed_m${currentManche}`,
+    false
+  );
+  const [b1Awarded] = useSyncedState<boolean>('password_bussolotti_1_awarded', false);
+  const [b2Awarded] = useSyncedState<boolean>('password_bussolotti_2_awarded', false);
+  const [b3Awarded] = useSyncedState<boolean>('password_bussolotti_3_awarded', false);
+  const isBussolottoScoreRevealed = bussolottoScoreRevealed || b1Awarded || b2Awarded || b3Awarded;
+
+  // Cronometro da 10 secondi (uguale a quello di Box 4) dopo che è apparsa la parola suggerimento
+  const [suggestionTimerEndAt, setSuggestionTimerEndAt] = useSyncedState<number>('password_suggestion_timer_end', 0);
+  const [timerDisplay, setTimerDisplay] = useState(0);
+  const prevTimerDisplayRef = useRef(0);
+  const gongPlayedForRef = useRef<number>(0);
+
+  const playTone = useCallback((frequency: number, duration: number, type: OscillatorType, volume: number, endFrequency?: number) => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioContextClass();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(frequency, ctx.currentTime);
+      if (endFrequency) osc.frequency.exponentialRampToValueAtTime(endFrequency, ctx.currentTime + duration);
+      gain.gain.setValueAtTime(volume, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(); osc.stop(ctx.currentTime + duration);
+      setTimeout(() => ctx.close(), duration * 1000 + 100);
+    } catch { /* Audio non disponibile */ }
+  }, []);
+
+  const playGongSound = useCallback(() => {
+    [220, 277, 330, 440].forEach((frequency, i) => {
+      setTimeout(() => playTone(frequency, 2.2, 'sine', 0.16 / (i + 1)), i * 12);
+    });
+  }, [playTone]);
+
+  useEffect(() => {
+    if (!suggestionTimerEndAt) {
+      setTimerDisplay(0);
+      return;
+    }
+    const tick = () => {
+      setTimerDisplay(Math.max(0, (suggestionTimerEndAt - Date.now()) / 1000));
+    };
+    tick();
+    const id = setInterval(tick, 50);
+    return () => clearInterval(id);
+  }, [suggestionTimerEndAt]);
+
+  useEffect(() => {
+    if (suggestionTimerEndAt > 0 && prevTimerDisplayRef.current > 0 && timerDisplay <= 0 && gongPlayedForRef.current !== suggestionTimerEndAt) {
+      gongPlayedForRef.current = suggestionTimerEndAt;
+      playGongSound();
+    }
+    prevTimerDisplayRef.current = timerDisplay;
+  }, [timerDisplay, suggestionTimerEndAt, playGongSound]);
+
+  const timerRadius = 54;
+  const timerCircumference = 2 * Math.PI * timerRadius;
+  const timerProgress = suggestionTimerEndAt > 0 ? timerDisplay / 10 : 0;
+  const timerStrokeOffset = timerCircumference * (1 - timerProgress);
+  const showSuggestionTimer = effectiveStep === 2 && suggestionTimerEndAt > 0 && timerDisplay > 0;
 
   const sfondoSpiegazione = (gameDataRaw as any)?.sfondoSpiegazione ||
     (() => {
@@ -538,6 +624,10 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
       team: currentTeam,
       timestamp: Date.now()
     };
+
+    setSuggestionTimerEndAt(0);
+    localStorage.setItem('password_suggestion_timer_end', '0');
+    localStorage.setItem(`password_suggestion_timer_end_m${currentManche}`, '0');
 
     setActiveReveal(revealData);
     localStorage.setItem('password_active_reveal', JSON.stringify(revealData));
@@ -796,10 +886,10 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
       {/* Sfondo base scuro */}
       <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(50,50,50,1)_0%,rgba(10,10,10,1)_100%)] z-0" />
       
-      {/* Step 0 e Step 1: Sfondo del gioco (quello della spiegazione / forzieri) */}
+      {/* Sfondo iniziale: immagine della presentazione (fino all'apparire del punteggio del bussolotto) */}
       <div 
         className={`absolute top-0 left-0 w-full h-full z-0 transition-opacity duration-1000 ease-in-out pointer-events-none ${
-          effectiveStep <= 1 ? 'opacity-60' : 'opacity-0'
+          !isBussolottoScoreRevealed ? 'opacity-65' : 'opacity-0'
         }`}
         style={{
           backgroundImage: assetUrlCss(sfondoSpiegazione),
@@ -808,11 +898,11 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
         }}
       />
 
-      {/* Step 2: Sfondo della manche attiva con trasparenza */}
+      {/* Sfondo della manche attiva: appare solo DOPO l'apparire del punteggio del bussolotto */}
       {gameData.sfondo && (
         <div 
           className={`absolute top-0 left-0 w-full h-full z-0 transition-opacity duration-1000 ease-in-out pointer-events-none ${
-            effectiveStep === 2 ? 'opacity-30' : 'opacity-0'
+            isBussolottoScoreRevealed ? 'opacity-40' : 'opacity-0'
           }`}
           style={{
             backgroundImage: assetUrlCss(gameData.sfondo),
@@ -828,6 +918,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
           rank={activeBussolottiRank} 
           teamNum={getTeamForRank(activeBussolottiRank)!} 
           bussolottiConfig={gameData.bussolotti}
+          currentManche={currentManche}
           onComplete={handleBussolottiComplete} 
         />
       )}
@@ -879,7 +970,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
           </p>
         </div>
 
-        {gameData.sfondo ? (
+        {isBussolottoScoreRevealed && gameData.sfondo ? (
           <div className="relative rounded-2xl overflow-hidden border-4 border-yellow-500/60 shadow-[0_0_60px_rgba(234,179,8,0.35)] max-w-4xl max-h-[60vh] flex items-center justify-center bg-black/60 p-2">
             <img
               src={assetUrl(gameData.sfondo)}
@@ -888,8 +979,14 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
             />
           </div>
         ) : (
-          <div className="w-[500px] h-[320px] rounded-2xl border-2 border-dashed border-slate-600 flex items-center justify-center text-slate-400 text-base">
-            Nessuna immagine per questa manche
+          <div className="relative rounded-2xl overflow-hidden border-4 border-yellow-500/40 shadow-[0_0_50px_rgba(234,179,8,0.25)] w-[640px] h-[360px] flex flex-col items-center justify-center bg-black/60 p-6 text-center backdrop-blur-md">
+            <div className="text-6xl mb-4 animate-pulse">🔑</div>
+            <h2 className="text-3xl font-black font-serif text-amber-300 uppercase tracking-widest mb-2">
+              MANCHE {currentManche + 1}
+            </h2>
+            <p className="text-base text-stone-300 font-serif max-w-md">
+              Ascolta il brano musicale e preparati a scoprire le parole segrete nel pavimento del tempio!
+            </p>
           </div>
         )}
 
@@ -1098,6 +1195,46 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
 
           </div>
         </div>
+
+        {/* Large Round Timer in alto a destra (uguale a Box 4) per 10 secondi dopo il suggerimento */}
+        {showSuggestionTimer && (
+          <div className="absolute top-6 right-10 flex flex-col items-center justify-center bg-zinc-950/90 border-2 border-red-500/50 p-4 rounded-3xl shadow-2xl backdrop-blur-md z-30 animate-fade-in w-[150px] h-[150px]">
+            <span className="text-[9px] font-black uppercase tracking-widest text-red-400 mb-1.5">
+              TEMPO
+            </span>
+            <div className="relative w-[90px] h-[90px]">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
+                <circle
+                  cx="60"
+                  cy="60"
+                  r={timerRadius}
+                  fill="none"
+                  stroke="rgb(39 39 42)"
+                  strokeWidth="8"
+                />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r={timerRadius}
+                  fill="none"
+                  stroke="rgb(239 68 68)"
+                  strokeWidth="8"
+                  strokeLinecap="round"
+                  strokeDasharray={timerCircumference}
+                  strokeDashoffset={timerStrokeOffset}
+                  className="transition-[stroke-dashoffset] duration-100 ease-linear"
+                  style={{ filter: 'drop-shadow(0 0 8px rgba(239,68,68,0.7))' }}
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-3xl font-black text-red-400 tabular-nums leading-none">
+                  {Math.ceil(timerDisplay)}
+                </span>
+                <span className="text-[8px] font-black uppercase tracking-wider text-red-400/60 mt-0.5">sec</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {gameOver && (

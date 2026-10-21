@@ -10,49 +10,6 @@ import { sendSerialReset } from './lib/webSerial';
 // Gioco 2 - IMMAGINE: Logica a Step con Rivelazione Griglia e Indizi
 // ============================================================================
 
-// ============================================================================
-// Cronometro circolare (stile Box 4) per Gioco 2 Immagine
-// ============================================================================
-const CountdownTimer: React.FC<{ seconds: number; totalSeconds: number }> = ({ seconds, totalSeconds }) => {
-  const radius = 54;
-  const circumference = 2 * Math.PI * radius;
-  const progress = Math.max(0, Math.min(1, seconds / totalSeconds));
-  const strokeOffset = circumference * (1 - progress);
-
-  const isUrgent = seconds <= 3;
-  const strokeColor = isUrgent ? 'rgb(239 68 68)' : 'rgb(251 191 36)';
-  const glowColor = isUrgent ? 'rgba(239,68,68,0.7)' : 'rgba(251,191,36,0.7)';
-  const textColor = isUrgent ? 'text-red-400' : 'text-amber-400';
-
-  return (
-    <div className="flex flex-col items-center">
-      <span className={`text-[9px] font-black uppercase tracking-widest mb-1.5 ${textColor}`}>TEMPO</span>
-      <div className="relative w-[80px] h-[80px]">
-        <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-          <circle cx="60" cy="60" r={radius} fill="none" stroke="rgb(39 39 42)" strokeWidth="8" />
-          <circle
-            cx="60" cy="60" r={radius}
-            fill="none"
-            stroke={strokeColor}
-            strokeWidth="8"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeOffset}
-            className="transition-[stroke-dashoffset] duration-100 ease-linear"
-            style={{ filter: `drop-shadow(0 0 8px ${glowColor})` }}
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className={`text-3xl font-black tabular-nums leading-none ${textColor}`}>
-            {Math.ceil(seconds)}
-          </span>
-          <span className={`text-[8px] font-black uppercase tracking-wider mt-0.5 ${textColor}/60`}>sec</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const GameBoard = ({ interactive = true, revealAll = false, isPresenter: _isPresenter = false }: { interactive?: boolean; revealAll?: boolean; isPresenter?: boolean }): React.JSX.Element => {
   const gameData = useGameData();
   if (!gameData) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
@@ -86,14 +43,6 @@ const GameBoard = ({ interactive = true, revealAll = false, isPresenter: _isPres
   const [bookedTeam, setBookedTeam] = useSyncedState<number | null>(`playstate_${slideId}_booked_team`, null);
   const [lockedStep, setLockedStep] = useSyncedState<number | null>(`playstate_${slideId}_locked_step`, null);
   const [excludedTeams, setExcludedTeams] = useSyncedState<number[]>(`playstate_${slideId}_excluded_teams`, []);
-
-  // ── Cronometro sincronizzato (stile Box 4) ─────────────────────────────────
-  // Nella manche immagine: step dispari (1,3,5,7) = indizio → 7 secondi
-  // Step pari = rivelazione griglia → nessun timer
-  const INDIZIO_TIMER = 7;
-  const [timerEndAt, setTimerEndAt] = useSyncedState<number>(`playstate_${slideId}_timer_end`, 0);
-  const [timerDisplay, setTimerDisplay] = useState(0);
-  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Transizione d'ingresso cinematica dalla spiegazione alla prima domanda
   const [showIntroTransition, setShowIntroTransition] = useState(() => {
@@ -241,57 +190,6 @@ const GameBoard = ({ interactive = true, revealAll = false, isPresenter: _isPres
       return () => clearTimeout(timer);
     }
   }, [showError]);
-
-  // ── Avvia il timer quando appare un indizio (step dispari 1,3,5,7) ─────────
-  useEffect(() => {
-    if (!interactive) return;
-    // Solo negli step dispari (indizi), non su step 0 o step finale (9)
-    const isIndiziStep = step > 0 && step < MAX_STEP && step % 2 !== 0;
-    if (!isIndiziStep) {
-      setTimerEndAt(0);
-      return;
-    }
-    // Non avviare se una squadra è già prenotata/assegnata
-    if (assignedTeam !== null || bookedTeam !== null) return;
-    setTimerEndAt(Date.now() + INDIZIO_TIMER * 1000);
-  }, [step, interactive]);
-
-  // ── Ferma il timer quando una squadra si prenota o risponde ──
-  useEffect(() => {
-    if (bookedTeam !== null || assignedTeam !== null) {
-      setTimerEndAt(0);
-    }
-  }, [bookedTeam, assignedTeam]);
-
-  // ── Aggiorna il display del cronometro locale ──────────────────────────────
-  useEffect(() => {
-    if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    if (!timerEndAt) {
-      setTimerDisplay(0);
-      return;
-    }
-    const update = () => {
-      const remaining = (timerEndAt - Date.now()) / 1000;
-      if (remaining <= 0) {
-        setTimerDisplay(0);
-        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-      } else {
-        setTimerDisplay(remaining);
-      }
-    };
-    update();
-    timerIntervalRef.current = setInterval(update, 100);
-    return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    };
-  }, [timerEndAt]);
-
-  // Cleanup dell'intervallo timer all'unmount
-  useEffect(() => {
-    return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
-    };
-  }, []);
 
   // Avanzamento automatico verso la soluzione
   useEffect(() => {
@@ -622,14 +520,7 @@ const GameBoard = ({ interactive = true, revealAll = false, isPresenter: _isPres
 
         {/* Box dei Punteggi (Sotto gli indizi) */}
         {(step < MAX_STEP || lockedStep !== null) && (
-          <div className="absolute left-[45%] top-[75%] w-[51%] h-[18%] flex flex-row items-center justify-center gap-4">
-            {/* Cronometro — visibile solo sugli step indizio (dispari 1,3,5,7) e se nessuna squadra prenotata */}
-            {timerDisplay > 0 && step > 0 && step < MAX_STEP && step % 2 !== 0 && bookedTeam === null && assignedTeam === null && (
-              <div className="shrink-0">
-                <CountdownTimer seconds={timerDisplay} totalSeconds={INDIZIO_TIMER} />
-              </div>
-            )}
-            <div className="flex flex-col items-center gap-2">
+          <div className="absolute left-[45%] top-[75%] w-[51%] h-[18%] flex flex-col items-center justify-center gap-2">
             <div className={`px-6 py-2 rounded-2xl backdrop-blur-md flex flex-col items-center min-w-[280px] transition-all duration-500 border ${
               lockedStep !== null 
                 ? 'bg-amber-950/80 border-amber-400 shadow-[0_0_40px_rgba(251,191,36,0.6)] animate-pulse'
@@ -729,7 +620,6 @@ const GameBoard = ({ interactive = true, revealAll = false, isPresenter: _isPres
                 ✓ RISPOSTA ESATTA: {teamNames[assignedTeam - 1] || `SQUADRA ${assignedTeam}`} (+{displayedPoints.toLocaleString('it-IT')} pt)
               </div>
             )}
-            </div>
           </div>
         )}
       </div>

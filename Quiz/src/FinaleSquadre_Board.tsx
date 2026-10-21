@@ -3,6 +3,7 @@ import { useGameData } from './context/GameDataContext';
 import { useScores } from './context/ScoreContext';
 import { useSyncedState } from './hooks/useSyncedState';
 import { assetUrl } from './lib/assetUrl';
+import { sendSerialReset } from './lib/webSerial';
 
 export type TeamId = 1 | 2 | 3;
 
@@ -1091,6 +1092,47 @@ export default function FinaleSquadre_Board() {
     'playstate_finale_eliminated_members',
     { 1: [], 2: [], 3: [] }
   );
+  const [bookedTeam, setBookedTeam] = useSyncedState<number | null>(
+    'playstate_finale_squadre_booked_team',
+    null
+  );
+  const prevBookedRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (bookedTeam !== null && prevBookedRef.current !== bookedTeam) {
+      playSound('correct');
+    }
+    prevBookedRef.current = bookedTeam;
+  }, [bookedTeam]);
+
+  // Keyboard shortcut: 1, 2, 3 per prenotare un jolly, Esc/Backspace per sbloccare
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+        return;
+      }
+      if (e.key === '1' || e.key === '2' || e.key === '3') {
+        const teamNum = parseInt(e.key, 10);
+        setBookedTeam(teamNum);
+        localStorage.setItem('playstate_finale_squadre_booked_team', teamNum.toString());
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('local-storage-update', {
+          detail: { key: 'playstate_finale_squadre_booked_team', value: teamNum.toString() }
+        }));
+      } else if (e.key === 'Escape' || e.key === 'Backspace') {
+        setBookedTeam(null);
+        localStorage.removeItem('playstate_finale_squadre_booked_team');
+        sendSerialReset();
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('local-storage-update', {
+          detail: { key: 'playstate_finale_squadre_booked_team', value: null }
+        }));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [setBookedTeam]);
 
   const [rolling, setRolling] = useState(false);
   const [teamNames, setTeamNames] = useState<string[]>(['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']);
@@ -1695,6 +1737,13 @@ export default function FinaleSquadre_Board() {
                 setDieTargetFace(null);
                 setTargetTeam(null);
                 setActiveTeam(rankingOrder[0]);
+                setBookedTeam(null);
+                localStorage.removeItem('playstate_finale_squadre_booked_team');
+                sendSerialReset();
+                window.dispatchEvent(new Event('storage'));
+                window.dispatchEvent(new CustomEvent('local-storage-update', {
+                  detail: { key: 'playstate_finale_squadre_booked_team', value: null }
+                }));
               }}
               className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-white/60 hover:text-white bg-white/10 hover:bg-white/20 border border-white/15 transition-all cursor-pointer ml-1.5 shadow-sm"
               title="Azzera lo stato degli omini, domande e dado per iniziare una nuova manche (inizia la 3ª classificata)"
@@ -1704,6 +1753,49 @@ export default function FinaleSquadre_Board() {
           </div>
         </header>
 
+        {/* Floating Banner for Team Jolly Reservation */}
+        {bookedTeam !== null && (
+          <div className="w-full max-w-3xl mx-auto my-2 px-4 animate-in fade-in slide-in-from-top-3 duration-300 z-50">
+            <div
+              className={`px-6 py-3.5 rounded-2xl border-2 shadow-[0_12px_45px_rgba(0,0,0,0.85)] flex items-center justify-between gap-4 backdrop-blur-xl ${
+                bookedTeam === 1
+                  ? 'bg-red-950/95 border-red-500 text-red-100 shadow-[0_0_35px_rgba(239,68,68,0.7)]'
+                  : bookedTeam === 2
+                  ? 'bg-blue-950/95 border-blue-500 text-blue-100 shadow-[0_0_35px_rgba(59,130,246,0.7)]'
+                  : 'bg-emerald-950/95 border-emerald-500 text-emerald-100 shadow-[0_0_35px_rgba(16,185,129,0.7)]'
+              }`}
+            >
+              <div className="flex items-center gap-3.5">
+                <span className="text-3xl animate-bounce">⚡</span>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 font-mono">
+                    PRENOTAZIONE JOLLY
+                  </span>
+                  <span className="font-black text-lg sm:text-xl uppercase tracking-wider text-white drop-shadow">
+                    {teamNames[bookedTeam - 1] || `SQUADRA ${bookedTeam}`} SI È PRENOTATA!
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setBookedTeam(null);
+                  localStorage.removeItem('playstate_finale_squadre_booked_team');
+                  sendSerialReset();
+                  window.dispatchEvent(new Event('storage'));
+                  window.dispatchEvent(new CustomEvent('local-storage-update', {
+                    detail: { key: 'playstate_finale_squadre_booked_team', value: null }
+                  }));
+                }}
+                className="px-4 py-2 text-xs font-black uppercase rounded-xl bg-white/20 hover:bg-white/30 text-white border border-white/30 shadow transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0"
+                title="Sblocca prenotazione (Esc)"
+              >
+                <span>✕</span> Sblocca
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ============================================================ */}
         {/* THE 3 TEAMS: VERTICALLY CENTERED in the screen, floating freely! */}
         {/* ============================================================ */}
@@ -1711,6 +1803,7 @@ export default function FinaleSquadre_Board() {
           {([1, 2, 3] as TeamId[]).map((teamId) => {
             const meta = TEAMS_CONFIG[teamId];
             const isActive = activeTeam === teamId;
+            const isBooked = bookedTeam === teamId;
             const isTarget =
               targetTeam === 'both'
                 ? activeTeam !== teamId
@@ -1736,6 +1829,8 @@ export default function FinaleSquadre_Board() {
                     ? 'grayscale-[0.85] opacity-60 hover:opacity-90 ring-1 ring-red-500/40 bg-red-950/20 shadow-[0_0_30px_rgba(239,68,68,0.2)]'
                     : isWinner
                     ? 'ring-2 ring-yellow-400/80 bg-yellow-500/5 shadow-[0_0_35px_rgba(234,179,8,0.25)]'
+                    : isBooked
+                    ? 'ring-4 ring-amber-400 shadow-[0_0_45px_rgba(245,158,11,0.85)] scale-[1.02] z-30'
                     : ''
                 }`}
                 style={{
@@ -1764,6 +1859,8 @@ export default function FinaleSquadre_Board() {
                         ? 'bg-red-950/70 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.4)]'
                         : isWinner
                         ? 'bg-yellow-950/60 border-yellow-400/70 shadow-[0_0_25px_rgba(234,179,8,0.4)]'
+                        : isBooked
+                        ? 'bg-amber-950/80 border-amber-400/80 shadow-[0_0_25px_rgba(245,158,11,0.6)]'
                         : 'bg-black/45 border-white/15'
                     }`}
                   >
@@ -1805,6 +1902,11 @@ export default function FinaleSquadre_Board() {
                         </span>
                       ) : (
                         <>
+                          {isBooked && (
+                            <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-full bg-amber-400 text-black animate-bounce shadow-[0_0_12px_rgba(251,191,36,0.95)]">
+                              ⚡ JOLLY
+                            </span>
+                          )}
                           {teamId === rankingOrder[0] ? (
                             <span
                               className="px-1.5 py-0.5 text-[9px] font-black rounded bg-amber-600/40 text-amber-200 border border-amber-500/50 shadow-sm"
@@ -1838,6 +1940,34 @@ export default function FinaleSquadre_Board() {
                             </span>
                           )}
                         </>
+                      )}
+
+                      {!isEliminated && !isWinner && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newBooked = isBooked ? null : teamId;
+                            setBookedTeam(newBooked);
+                            if (newBooked) {
+                              localStorage.setItem('playstate_finale_squadre_booked_team', newBooked.toString());
+                            } else {
+                              localStorage.removeItem('playstate_finale_squadre_booked_team');
+                              sendSerialReset();
+                            }
+                            window.dispatchEvent(new Event('storage'));
+                            window.dispatchEvent(new CustomEvent('local-storage-update', {
+                              detail: { key: 'playstate_finale_squadre_booked_team', value: newBooked ? newBooked.toString() : null }
+                            }));
+                          }}
+                          className={`px-1.5 py-0.5 text-[9px] font-black rounded border uppercase tracking-wider transition-all cursor-pointer ${
+                            isBooked
+                              ? 'bg-amber-400 text-black border-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.9)] animate-bounce'
+                              : 'bg-white/10 hover:bg-amber-400/20 text-white/80 hover:text-amber-200 border-white/20'
+                          }`}
+                          title={`Prenota Jolly per ${teamNames[teamId - 1] || `Squadra ${teamId}`} (Tasto ${teamId})`}
+                        >
+                          ⚡ Jolly
+                        </button>
                       )}
 
                       <span

@@ -425,7 +425,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
       if (musicaIntro) {
         setAudioPlaying(true);
       }
-    } else if (presentationStep === 0) {
+    } else {
       setAudioPlaying(false);
     }
   }, [presentationStep, musicaIntro, setAudioPlaying]);
@@ -439,10 +439,14 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
     }
 
     if (musicaIntro) {
-      audioRef.current = new Audio(assetUrl(musicaIntro));
-      audioRef.current.loop = true;
+      const audio = new Audio(assetUrl(musicaIntro));
+      audio.loop = false;
+      audio.onended = () => {
+        setAudioPlaying(false);
+      };
+      audioRef.current = audio;
       if (audioPlaying) {
-        audioRef.current.play().catch(err => console.error("Error playing intro music:", err));
+        audio.play().catch(err => console.error("Error playing intro music:", err));
       }
     }
 
@@ -464,6 +468,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
       });
     } else {
       audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
   }, [audioPlaying, shouldPlayAudio]);
 
@@ -970,7 +975,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
           </p>
         </div>
 
-        {isBussolottoScoreRevealed && gameData.sfondo ? (
+        {gameData.sfondo ? (
           <div className="relative rounded-2xl overflow-hidden border-4 border-yellow-500/60 shadow-[0_0_60px_rgba(234,179,8,0.35)] max-w-4xl max-h-[60vh] flex items-center justify-center bg-black/60 p-2">
             <img
               src={assetUrl(gameData.sfondo)}
@@ -987,13 +992,6 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
             <p className="text-base text-stone-300 font-serif max-w-md">
               Ascolta il brano musicale e preparati a scoprire le parole segrete nel pavimento del tempio!
             </p>
-          </div>
-        )}
-
-        {musicaIntro && (
-          <div className="mt-6 flex items-center gap-2.5 px-6 py-2.5 rounded-full bg-slate-800/90 border border-yellow-500/50 text-yellow-300 text-sm font-extrabold shadow-xl animate-pulse">
-            <span>🎵</span>
-            <span className="tracking-wide uppercase">Brano Intro in Riproduzione</span>
           </div>
         )}
       </div>

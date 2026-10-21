@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import SlideCanvas from '../components/SlideCanvas';
 import ClassificaGenerale_Board from '../ClassificaGenerale_Board';
 import PresenterPreviewPanel from '../components/PresenterPreviewPanel';
+import DjLaunchpadPanel from '../components/DjLaunchpadPanel';
 import QRCode from 'qrcode';
 import { ScoreProvider, useScores } from '../context/ScoreContext';
 import type { Slide } from '../App';
@@ -310,9 +311,29 @@ export function getSlideForBoxQuestion(
         : (legacySuggerimenti.length > 0 ? legacySuggerimenti : (defManche.suggerimenti || []));
       const suggerimenti = chosenList.map((s: string) => (s || '').toUpperCase().trim()).filter(Boolean);
 
+      const defaultSfondi = [
+        '/Icone/sfondi/3_1_superereoi.png',
+        '/Icone/sfondi/3_2_dolci.jpg',
+        '/Icone/sfondi/3_3_programmiTV.jpg',
+      ];
+      const defaultMusica = [
+        '/Audio/strumenti/3_1_supereroi.mp3',
+        '',
+        '',
+      ];
+      const defaultSfondo = defaultSfondi[num - 1] || '/Icone/sfondi/3_1_superereoi.png';
+      const defaultMusicaIntro = defaultMusica[num - 1] || '';
+
+      const effectiveSfondo = (!q.sfondo || q.sfondo.toLowerCase().includes('password'))
+        ? defaultSfondo
+        : q.sfondo;
+      const effectiveMusicaIntro = (q.musicaIntro !== undefined && q.musicaIntro !== null && q.musicaIntro !== '')
+        ? q.musicaIntro
+        : defaultMusicaIntro;
+
       return {
-        sfondo: q.sfondo || `/Password/password${num}.png`,
-        musicaIntro: q.musicaIntro || '',
+        sfondo: effectiveSfondo,
+        musicaIntro: effectiveMusicaIntro,
         squadra1: [q.squadra1[0].parola, q.squadra1[1].parola, q.squadra1[2].parola].map(w => w.toUpperCase()),
         squadra2: [q.squadra2[0].parola, q.squadra2[1].parola, q.squadra2[2].parola].map(w => w.toUpperCase()),
         squadra3: [q.squadra3[0].parola, q.squadra3[1].parola, q.squadra3[2].parola].map(w => w.toUpperCase()),
@@ -431,6 +452,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   });
   const [showLegend, setShowLegend] = useState(false);
   const [showIpadModal, setShowIpadModal] = useState(false);
+  const [scoresPanelTab, setScoresPanelTab] = useState<'scores' | 'launchpad'>('scores');
   const [serverUrl, setServerUrl] = useState('');
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [ipadStatus, setIpadStatus] = useState({ ipadConnected: false, ipadCount: 0 });
@@ -1585,11 +1607,31 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
 
           {(maximizedPanel === 'none' || maximizedPanel === 'right') && (
             <PresenterPreviewPanel
-              title="Punteggi & Classifica Squadre"
+              title={scoresPanelTab === 'scores' ? 'Punteggi & Classifica Squadre' : 'Console DJ Launchpad'}
+              headerLeft={
+                <button
+                  type="button"
+                  onClick={() => setScoresPanelTab(scoresPanelTab === 'scores' ? 'launchpad' : 'scores')}
+                  className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded border transition-all cursor-pointer active:scale-95 flex items-center gap-1.5 shadow-sm ${
+                    scoresPanelTab === 'scores'
+                      ? 'text-cyan-300 hover:text-white bg-cyan-500/15 hover:bg-cyan-500/30 border-cyan-500/30'
+                      : 'text-amber-300 hover:text-white bg-amber-500/15 hover:bg-amber-500/30 border-amber-500/30'
+                  }`}
+                  title={scoresPanelTab === 'scores' ? 'Passa alla console Launchpad DJ' : 'Torna ai Punteggi Squadre'}
+                >
+                  <span>{scoresPanelTab === 'scores' ? '🎛️' : '🏆'}</span>
+                  <span>{scoresPanelTab === 'scores' ? 'LAUNCHPAD' : 'PUNTEGGI'}</span>
+                </button>
+              }
+              contentMode={scoresPanelTab === 'launchpad' ? 'fill' : 'fit'}
               onToggleMaximize={() => setMaximizedPanel(maximizedPanel === 'right' ? 'none' : 'right')}
               isMaximized={maximizedPanel === 'right'}
             >
-              <ClassificaGenerale_Board />
+              {scoresPanelTab === 'scores' ? (
+                <ClassificaGenerale_Board />
+              ) : (
+                <DjLaunchpadPanel onBackToScores={() => setScoresPanelTab('scores')} />
+              )}
             </PresenterPreviewPanel>
           )}
         </div>

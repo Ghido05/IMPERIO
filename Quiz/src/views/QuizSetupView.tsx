@@ -571,10 +571,21 @@ export function getDefaultSetupState(): QuizSetupState {
     q2[i] = createDefaultGioco2Question();
   }
 
-  const q3: Record<number, Gioco3Question> = {};
-  for (let i = 1; i <= 3; i++) {
-    q3[i] = createDefaultGioco3Question();
-  }
+  const q3: Record<number, Gioco3Question> = {
+    1: {
+      ...createDefaultGioco3Question(),
+      sfondo: '/Icone/sfondi/3_1_superereoi.png',
+      musicaIntro: '/Audio/strumenti/3_1_supereroi.mp3',
+    },
+    2: {
+      ...createDefaultGioco3Question(),
+      sfondo: '/Icone/sfondi/3_2_dolci.jpg',
+    },
+    3: {
+      ...createDefaultGioco3Question(),
+      sfondo: '/Icone/sfondi/3_3_programmiTV.jpg',
+    },
+  };
 
   return {
     nadia: createDefaultNadiaSetup(),

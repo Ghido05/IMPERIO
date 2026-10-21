@@ -184,7 +184,6 @@ const ClassificaMusicaleBoard = ({
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
   const [, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
   const [, setLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
-  const [showError, setShowError] = useState(false);
   const [showTitle, setShowTitle] = useSyncedState(`playstate_${slideId}_showtitle`, false);
   const [showSolution, setShowSolution] = useSyncedState(`playstate_${slideId}_showsolution`, false);
   const [isPlaying, setIsPlaying] = useSyncedState<boolean>(`playstate_${slideId}_playing`, false);
@@ -215,6 +214,14 @@ const ClassificaMusicaleBoard = ({
     return ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
   });
   
+  const shouldPlayAudio = React.useMemo(() => {
+    if (!interactive) return false;
+    if (isPresenter) return false;
+    const mode = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('mode') : null;
+    const isSandbox = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('sandbox') === 'true' : false;
+    return mode === 'games' || isSandbox || !mode;
+  }, [interactive, isPresenter]);
+
   const audiosRef = React.useRef<Record<number, HTMLAudioElement>>({});
   const finalAudioRef = React.useRef<HTMLAudioElement | null>(null);
   const isPlayingStemsRef = React.useRef(false);
@@ -245,7 +252,19 @@ const ClassificaMusicaleBoard = ({
 
   // Inizializza gli audio stems e l'audio finale (stabile, si attiva solo al cambio slide o traccia)
   useEffect(() => {
-    if (!interactive) return;
+    if (!shouldPlayAudio) {
+      stopAndMuteAllStems();
+      if (finalAudioRef.current) {
+        try {
+          finalAudioRef.current.pause();
+          finalAudioRef.current.currentTime = 0;
+          finalAudioRef.current.removeAttribute('src');
+          finalAudioRef.current.load();
+        } catch (e) {}
+        finalAudioRef.current = null;
+      }
+      return;
+    }
 
     // Ferma eventuali tracce precedenti
     stopAndMuteAllStems();
@@ -303,11 +322,11 @@ const ClassificaMusicaleBoard = ({
         finalAudioRef.current = null;
       }
     };
-  }, [interactive, slideId, canzoneFinaleUrl, stemsAudioKey, stopAndMuteAllStems]);
+  }, [shouldPlayAudio, slideId, canzoneFinaleUrl, stemsAudioKey, stopAndMuteAllStems]);
 
   // Smuta gli stems in base ai clue rivelati (SOLO se la soluzione NON è attiva e non è già stata assegnata)
   useEffect(() => {
-    if (!interactive) return;
+    if (!shouldPlayAudio) return;
 
     if (showSolution || solutionAwarded) {
       // Se la soluzione è attiva o è già stata svelata/assegnata, NESSUNO stem deve mai avere volume > 0 o suonare
@@ -331,14 +350,14 @@ const ClassificaMusicaleBoard = ({
         }
       }
     });
-  }, [revealed, showSolution, solutionAwarded, interactive, stopAndMuteAllStems]);
+  }, [revealed, showSolution, solutionAwarded, shouldPlayAudio, stopAndMuteAllStems]);
 
   // Traccia l'ultimo trigger gestito per evitare di ri-eseguire trigger passati memorizzati al mount della slide
   const lastTriggerRef = React.useRef<number>(playTrigger);
 
   // Scatena la riproduzione sincronizzata da capo su tutti gli schermi collegati (Presenter, GamesView, ecc.)
   useEffect(() => {
-    if (!interactive || !playTrigger || showSolution || solutionAwarded) return;
+    if (!shouldPlayAudio || !playTrigger || showSolution || solutionAwarded) return;
     if (playTrigger === lastTriggerRef.current) return;
     lastTriggerRef.current = playTrigger;
 
@@ -350,12 +369,12 @@ const ClassificaMusicaleBoard = ({
         if (p !== undefined) p.catch(err => console.log("Errore riproduzione stem trigger:", err));
       } catch (err) {}
     });
-  }, [playTrigger, interactive, showSolution, solutionAwarded]);
+  }, [playTrigger, shouldPlayAudio, showSolution, solutionAwarded]);
 
   // Gestione Play / Pausa globale sincronizzata (es. comando tastiera M)
   const isInitialMountPlayingRef = React.useRef(true);
   useEffect(() => {
-    if (!interactive) return;
+    if (!shouldPlayAudio) return;
 
     if (isInitialMountPlayingRef.current) {
       isInitialMountPlayingRef.current = false;
@@ -367,6 +386,8 @@ const ClassificaMusicaleBoard = ({
     }
 
     if (showSolution) {
+      // Quando la soluzione è attiva, gli stems sono categoricamente fermati e mutati
+      stopAndMuteAllStems();
       if (finalAudioRef.current) {
         if (isPlaying) {
           if (finalAudioRef.current.paused) {
@@ -381,18 +402,13 @@ const ClassificaMusicaleBoard = ({
 
     // Se la soluzione è già stata svelata/assegnata, NON ripartire con gli stems in automatico
     if (solutionAwarded) {
-      isPlayingStemsRef.current = false;
-      Object.values(audiosRef.current).forEach(a => {
-        try { a.pause(); } catch (err) {}
-      });
+      stopAndMuteAllStems();
       return;
     }
 
     if (!isPlaying) {
       isPlayingStemsRef.current = false;
-      Object.values(audiosRef.current).forEach(a => {
-        try { a.pause(); } catch (err) {}
-      });
+      stopAndMuteAllStems();
     } else {
       isPlayingStemsRef.current = true;
       Object.values(audiosRef.current).forEach(a => {
@@ -407,12 +423,12 @@ const ClassificaMusicaleBoard = ({
         } catch (err) {}
       });
     }
-  }, [isPlaying, interactive, showSolution, solutionAwarded, setIsPlaying]);
+  }, [isPlaying, shouldPlayAudio, showSolution, solutionAwarded, setIsPlaying, stopAndMuteAllStems]);
 
   // Quando viene mostrata la soluzione, ferma tutti gli stems e riproduce solo la canzone finale
   const isInitialMountSolutionRef = React.useRef(true);
   useEffect(() => {
-    if (!interactive) return;
+    if (!shouldPlayAudio) return;
 
     if (showSolution) {
       // 1. ZITTISCI E FERMA ALL'ISTANTE TUTTI GLI STEMS
@@ -451,7 +467,7 @@ const ClassificaMusicaleBoard = ({
       stopAndMuteAllStems();
       setIsPlaying(false);
     }
-  }, [showSolution, interactive, stopAndMuteAllStems, setIsPlaying]);
+  }, [showSolution, shouldPlayAudio, stopAndMuteAllStems, setIsPlaying]);
 
   const getPhraseStyle = (clue: number, isRevealed: boolean) => {
     if (!isRevealed) return "bg-white/5 border border-white/10";
@@ -580,16 +596,9 @@ const ClassificaMusicaleBoard = ({
     return 'Icone/classifica_musicale/musica_default.svg';
   };
 
-  // Gestione dell'animazione di errore
-  useEffect(() => {
-    if (showError) {
-      const timer = setTimeout(() => setShowError(false), 800);
-      return () => clearTimeout(timer);
-    }
-  }, [showError]);
-
   // Suono gong / avviso scadenza del timer tramite Web Audio API
   const playTimerGong = useCallback(() => {
+    if (!shouldPlayAudio) return;
     try {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
@@ -649,12 +658,12 @@ const ClassificaMusicaleBoard = ({
     prevTimerDisplayRef.current = timerDisplay;
   }, [timerDisplay, timerEndAt, interactive, playTimerGong]);
 
-  // Se viene mostrata la soluzione o c'è un errore, ferma il timer
+  // Se viene mostrata la soluzione, ferma il timer
   useEffect(() => {
-    if (showSolution || showError) {
+    if (showSolution) {
       setTimerEndAt(0);
     }
-  }, [showSolution, showError, setTimerEndAt]);
+  }, [showSolution, setTimerEndAt]);
 
   // Cleanup intervallo timer all'unmount
   useEffect(() => {
@@ -866,7 +875,6 @@ const ClassificaMusicaleBoard = ({
           return;
         }
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
-        setShowError(true);
         setTimerEndAt(0);
         triggerErrorSuspense();
       } else if (key.toLowerCase() === 'c') {
@@ -913,7 +921,7 @@ const ClassificaMusicaleBoard = ({
 
   return (
     <div 
-      className={`relative w-full min-h-screen ${currentSfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
+      className={`relative w-full min-h-screen ${currentSfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center`}
       style={currentSfondo ? { backgroundImage: assetUrlCss(currentSfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
       {/* EFFETTI DI LUCE SULLO SFONDO (Decorativi) */}
@@ -922,25 +930,6 @@ const ClassificaMusicaleBoard = ({
           <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
           <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />
         </>
-      )}
-
-      {/* Overlay Errore */}
-      {showError && (
-        <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center">
-          <div className="absolute inset-0 animate-flash-red" />
-          <svg 
-            className="w-[45%] h-auto text-red-600 drop-shadow-[0_0_50px_rgba(220,38,38,0.9)] animate-error-x" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="4" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </div>
       )}
 
       {/* Frame 16:9 scalato automaticamente sul viewport */}
@@ -1237,7 +1226,7 @@ const ClassificaMusicaleBoard = ({
         revealedState={revealed}
         categoryTitle={gameData.titolo || (gameData as any).categoria || 'CLASSIFICA MUSICALE'}
         sfondoUrl={currentSfondo}
-        canPlayAudio={interactive}
+        canPlayAudio={shouldPlayAudio}
         onRevealPoint={handleSuspenseReveal}
         onComplete={handleSuspenseComplete}
       />

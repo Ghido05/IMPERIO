@@ -150,6 +150,16 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
   }, [currentManche]);
 
   useEffect(() => {
+    if (presentationStep === 1) {
+      if (musicaIntro) {
+        setAudioPlaying(true);
+      }
+    } else {
+      setAudioPlaying(false);
+    }
+  }, [presentationStep, musicaIntro, setAudioPlaying]);
+
+  useEffect(() => {
     if (!shouldPlayAudio) return;
 
     if (audioRef.current) {
@@ -158,10 +168,14 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     }
 
     if (musicaIntro) {
-      audioRef.current = new Audio(assetUrl(musicaIntro));
-      audioRef.current.loop = true;
+      const audio = new Audio(assetUrl(musicaIntro));
+      audio.loop = false;
+      audio.onended = () => {
+        setAudioPlaying(false);
+      };
+      audioRef.current = audio;
       if (audioPlaying) {
-        audioRef.current.play().catch(err => console.error("Error playing intro music:", err));
+        audio.play().catch(err => console.error("Error playing intro music:", err));
       }
     }
 
@@ -183,6 +197,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       });
     } else {
       audioRef.current.pause();
+      audioRef.current.currentTime = 0;
     }
   }, [audioPlaying, shouldPlayAudio]);
 

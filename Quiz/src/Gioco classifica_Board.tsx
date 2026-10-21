@@ -32,7 +32,6 @@ const ClassificaBoard = ({
   const [revealed, setRevealed] = useSyncedState<Record<number, boolean>>(`playstate_${slideId}_revealed`, {});
   const [, setPointsAssigned] = useSyncedState<Record<number, number>>(`playstate_${slideId}_points`, {});
   const [, setLatestClue] = useSyncedState<number>(`playstate_${slideId}_latest`, 0);
-  const [showError, setShowError] = useState(false);
   const [isAutoAdvancing, setIsAutoAdvancing] = useSyncedState(`playstate_${slideId}_auto`, false);
   const [showTitle, setShowTitle] = useSyncedState(`playstate_${slideId}_showtitle`, false);
   const [activeSuspense, setActiveSuspense] = useSyncedState<Box2SuspenseData | null>(`playstate_${slideId}_suspense`, null);
@@ -157,14 +156,6 @@ const ClassificaBoard = ({
     return "bg-[#d4d400]"; // clue 10
   };
 
-  // Gestione dell'animazione di errore
-  useEffect(() => {
-    if (showError) {
-      const timer = setTimeout(() => setShowError(false), 800);
-      return () => clearTimeout(timer);
-    }
-  }, [showError]);
-
   // Suono gong / avviso scadenza del timer tramite Web Audio API
   const playTimerGong = useCallback(() => {
     try {
@@ -226,12 +217,12 @@ const ClassificaBoard = ({
     prevTimerDisplayRef.current = timerDisplay;
   }, [timerDisplay, timerEndAt, interactive, playTimerGong]);
 
-  // Se viene completato il gioco o c'è un errore, ferma il timer
+  // Se viene completato il gioco, ferma il timer
   useEffect(() => {
-    if (isGameComplete || showError) {
+    if (isGameComplete) {
       setTimerEndAt(0);
     }
-  }, [isGameComplete, showError, setTimerEndAt]);
+  }, [isGameComplete, setTimerEndAt]);
 
   // Cleanup intervallo timer all'unmount
   useEffect(() => {
@@ -432,7 +423,6 @@ const ClassificaBoard = ({
           }
         }
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
-        setShowError(true);
         setTimerEndAt(0);
         triggerErrorSuspense();
       } else if (key.toLowerCase() === 'c') {
@@ -458,7 +448,7 @@ const ClassificaBoard = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAutoAdvancing, interactive, triggerRevealClue, triggerErrorSuspense, effectiveStep, setStep, isGameComplete, revealed, getActiveTeamIdx, addScore, setRevealed, setIsAutoAdvancing, setShowError, setShowTitle, timerDisplay, setTimerEndAt]);
+  }, [isAutoAdvancing, interactive, triggerRevealClue, triggerErrorSuspense, effectiveStep, setStep, isGameComplete, revealed, getActiveTeamIdx, addScore, setRevealed, setIsAutoAdvancing, setShowTitle, timerDisplay, setTimerEndAt]);
 
   const rankingMarkers = [
     { value: 10, top: "31.389%" },
@@ -487,7 +477,7 @@ const ClassificaBoard = ({
 
   return (
     <div 
-      className={`relative w-full min-h-screen ${currentSfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
+      className={`relative w-full min-h-screen ${currentSfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center`}
       style={currentSfondo ? { backgroundImage: assetUrlCss(currentSfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
       {/* EFFETTI DI LUCE SULLO SFONDO (Decorativi) */}
@@ -496,25 +486,6 @@ const ClassificaBoard = ({
           <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
           <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-purple-500/10 blur-[120px] rounded-full pointer-events-none" />
         </>
-      )}
-
-      {/* Overlay Errore */}
-      {showError && (
-        <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center">
-          <div className="absolute inset-0 animate-flash-red" />
-          <svg 
-            className="w-[45%] h-auto text-red-600 drop-shadow-[0_0_50px_rgba(220,38,38,0.9)] animate-error-x" 
-            viewBox="0 0 24 24" 
-            fill="none" 
-            stroke="currentColor" 
-            strokeWidth="4" 
-            strokeLinecap="round" 
-            strokeLinejoin="round"
-          >
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </div>
       )}
 
       {/* Frame 16:9 scalato automaticamente sul viewport */}

@@ -69,7 +69,13 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   '2_2_faraonamitrata.jpeg': '/Icone/sfondi/2_2_faraonamitrata.jpeg',
   'faraona.jpeg': '/Icone/sfondi/2_2_faraonamitrata.jpeg',
   '3_1_superereoi.png': '/Icone/sfondi/3_1_superereoi.png',
-  '3_2_dolci.png': '/Icone/sfondi/3_2_dolci.png',
+  '3_1_supereroi.png': '/Icone/sfondi/3_1_superereoi.png',
+  '3_1_supereroi.mp3': '/Audio/strumenti/3_1_supereroi.mp3',
+  '3_2_dolci.png': '/Icone/sfondi/3_2_dolci.jpg',
+  '3_2_dolci.jpg': '/Icone/sfondi/3_2_dolci.jpg',
+  '3_3_programmiTV.jpg': '/Icone/sfondi/3_3_programmiTV.jpg',
+  '3_3_programmitv.jpg': '/Icone/sfondi/3_3_programmiTV.jpg',
+  '3_3_programmiTV.png': '/Icone/sfondi/3_3_programmiTV.jpg',
   'images.jpeg': '/Icone/sfondi/1_2_telemaco.jpeg',
   '4_1_route66.jpg': '/Icone/sfondi/4_1_route66.jpg',
   '4_2_digaAssuan.jpg': '/Icone/sfondi/4_2_digaAssuan.jpg',
@@ -172,6 +178,15 @@ export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): 
     if (clean.toLowerCase().includes('spiegazione_box5') && (clean.endsWith('.m4a') || clean.endsWith('.mp3') || clean.endsWith('.wav'))) return '/Audio/Spiegazioni/Spiegazione_box5.mp3';
     if (clean.includes('sfondo_box5_arena_acqua')) return '/Icone/sfondi/sfondo_box5_arena_acqua.jpg';
     if (clean.includes('spiegazione_fasi_audio')) return '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3';
+    if (clean.includes('3_1_superereoi') || clean.includes('3_1_supereroi')) {
+      if (clean.endsWith('.mp3')) return '/Audio/strumenti/3_1_supereroi.mp3';
+      return '/Icone/sfondi/3_1_superereoi.png';
+    }
+    if (clean.includes('3_2_dolci')) return '/Icone/sfondi/3_2_dolci.jpg';
+    if (clean.includes('3_3_programmiTV') || clean.includes('3_3_programmitv')) return '/Icone/sfondi/3_3_programmiTV.jpg';
+    if (clean.includes('password1.png')) return '/Icone/sfondi/3_1_superereoi.png';
+    if (clean.includes('password2.png')) return '/Icone/sfondi/3_2_dolci.jpg';
+    if (clean.includes('password3.png')) return '/Icone/sfondi/3_3_programmiTV.jpg';
     if (clean.includes('/') || clean.includes('\\')) {
       return null;
     }
@@ -228,6 +243,15 @@ export function sanitizeSetupStateWithKnownAssets<T>(obj: T): T {
     if (obj.includes('g01m05s04base')) return '/Audio/strumenti/g01m05s04base_nordsudovestest.mp3' as unknown as T;
     if (obj.includes('g01m05s05trombe')) return '/Audio/strumenti/g01m05s05trombe_nordsudovestest.mp3' as unknown as T;
     if (obj.includes('g01m05soluzione')) return '/Audio/soluzioni a conferma/g01m05soluzione.mp3' as unknown as T;
+    if (obj.includes('3_1_superereoi') || obj.includes('3_1_supereroi')) {
+      if (obj.endsWith('.mp3')) return '/Audio/strumenti/3_1_supereroi.mp3' as unknown as T;
+      return '/Icone/sfondi/3_1_superereoi.png' as unknown as T;
+    }
+    if (obj.includes('3_2_dolci')) return '/Icone/sfondi/3_2_dolci.jpg' as unknown as T;
+    if (obj.includes('3_3_programmiTV') || obj.includes('3_3_programmitv')) return '/Icone/sfondi/3_3_programmiTV.jpg' as unknown as T;
+    if (obj.includes('password1.png')) return '/Icone/sfondi/3_1_superereoi.png' as unknown as T;
+    if (obj.includes('password2.png')) return '/Icone/sfondi/3_2_dolci.jpg' as unknown as T;
+    if (obj.includes('password3.png')) return '/Icone/sfondi/3_3_programmiTV.jpg' as unknown as T;
     if (obj.startsWith('idb://')) {
       const known = findKnownPublicAsset(obj);
       if (known) return known as unknown as T;

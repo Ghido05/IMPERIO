@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useGameData } from './context/GameDataContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
@@ -9,7 +9,7 @@ import { ClassificaStaircaseSuspenseOverlay, type Box2SuspenseData } from './com
 // Cronometro circolare (stile Box 4) — Manche Canzoni (Classifica Musicale)
 // Parte dopo che la risposta della lista è stata rivelata (5 secondi)
 // ============================================================================
-const CountdownTimer: React.FC<{ seconds: number; totalSeconds: number }> = ({ seconds, totalSeconds }) => {
+export const CountdownTimer: React.FC<{ seconds: number; totalSeconds: number }> = ({ seconds, totalSeconds }) => {
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
   const progress = Math.max(0, Math.min(1, seconds / totalSeconds));

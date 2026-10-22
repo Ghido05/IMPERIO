@@ -935,19 +935,15 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     }
   };
 
-  const handleCloseNadia = useCallback((playSigla = true) => {
-    if (playSigla) {
-      playNadiaJingle();
-    } else {
-      stopNadiaAudio();
-    }
+  const handleCloseNadia = useCallback(() => {
+    stopNadiaAudio();
     setNadiaActive(false);
     setNadiaStep(0);
     setNadiaSolutionShown(false);
     setNadiaBookedTeam(null);
     setNadiaAssignedTeam(null);
     sendSerialReset();
-  }, [playNadiaJingle, stopNadiaAudio, setNadiaActive, setNadiaStep, setNadiaSolutionShown, setNadiaBookedTeam, setNadiaAssignedTeam, sendSerialReset]);
+  }, [stopNadiaAudio, setNadiaActive, setNadiaStep, setNadiaSolutionShown, setNadiaBookedTeam, setNadiaAssignedTeam, sendSerialReset]);
 
   // Scorciatoie da tastiera per Nadia
   useEffect(() => {
@@ -992,7 +988,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
           if (nadiaBookedTeam !== null) {
             handleCancelNadiaBooking(true);
           } else {
-            handleCloseNadia(true);
+            handleCloseNadia();
           }
         } else if (e.key === 'm' || e.key === 'M') {
           toggleNadiaJingle();
@@ -1007,6 +1003,18 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [nadiaActive, nadiaStep, setNadiaStep, nadiaBookedTeam, nadiaAssignedTeam, nadiaSolutionShown, setNadiaSolutionShown, handleCloseNadia, toggleNadiaJingle]);
 
+  // Quando si cambia domanda o box, ferma SEMPRE qualsiasi audio di Nadia e chiudi Nadia se ancora aperta
+  const prevSlotRef = useRef({ box: activeBox, q: activeQuestion });
+  useEffect(() => {
+    if (prevSlotRef.current.box !== activeBox || prevSlotRef.current.q !== activeQuestion) {
+      prevSlotRef.current = { box: activeBox, q: activeQuestion };
+      stopNadiaAudio();
+      if (nadiaActive) {
+        handleCloseNadia();
+      }
+    }
+  }, [activeBox, activeQuestion, stopNadiaAudio, handleCloseNadia, nadiaActive]);
+
   const box1QuestionKeys = Object.keys(setupState.gioco1?.questions || {}).map(Number);
   const numBox1Questions = Math.max(10, box1QuestionKeys.length > 0 ? Math.max(...box1QuestionKeys) : 10);
   const box2QuestionKeys = Object.keys(setupState.gioco2?.questions || {}).map(Number);
@@ -1018,7 +1026,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     sendSerialReset();
     stopNadiaAudio();
     if (nadiaActive) {
-      handleCloseNadia(false);
+      handleCloseNadia();
     }
     if (activeBox === 0) {
       if (activeQuestion < 4) {
@@ -1064,7 +1072,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     sendSerialReset();
     stopNadiaAudio();
     if (nadiaActive) {
-      handleCloseNadia(false);
+      handleCloseNadia();
     }
     if (activeBox === 0) {
       if (activeQuestion > 1) {
@@ -1577,7 +1585,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                           {/* Tasto Chiudi Nadia */}
                           <button
                             type="button"
-                            onClick={() => handleCloseNadia(true)}
+                            onClick={handleCloseNadia}
                             className="px-2.5 py-1 text-xs font-bold rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 transition-all flex items-center gap-1 cursor-pointer"
                             title="Chiudi Mille e una Nadia e torna al gioco (Esc)"
                           >

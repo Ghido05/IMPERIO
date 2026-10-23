@@ -326,15 +326,6 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
   );
   const effectiveStep = revealAll ? 2 : presentationStep;
 
-  // Stato per rivelazione dello sfondo collegato alla manche (appare solo dopo che si svela il punteggio del bussolotto)
-  const [bussolottoScoreRevealed] = useSyncedState<boolean>(
-    `password_bussolotto_score_revealed_m${currentManche}`,
-    false
-  );
-  const [b1Awarded] = useSyncedState<boolean>('password_bussolotti_1_awarded', false);
-  const [b2Awarded] = useSyncedState<boolean>('password_bussolotti_2_awarded', false);
-  const [b3Awarded] = useSyncedState<boolean>('password_bussolotti_3_awarded', false);
-  const isBussolottoScoreRevealed = bussolottoScoreRevealed || b1Awarded || b2Awarded || b3Awarded;
 
   // Cronometro da 10 secondi (uguale a quello di Box 4) dopo che è apparsa la parola suggerimento
   const [suggestionTimerEndAt, setSuggestionTimerEndAt] = useSyncedState<number>('password_suggestion_timer_end', 0);
@@ -891,11 +882,9 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
       {/* Sfondo base scuro */}
       <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,rgba(50,50,50,1)_0%,rgba(10,10,10,1)_100%)] z-0" />
       
-      {/* Sfondo iniziale: immagine della presentazione (fino all'apparire del punteggio del bussolotto) */}
+      {/* LIVELLO 1: Immagine di sfondo generale dei forzieri ("sfondo_box3_forzieri.jpg") */}
       <div 
-        className={`absolute top-0 left-0 w-full h-full z-0 transition-opacity duration-1000 ease-in-out pointer-events-none ${
-          !isBussolottoScoreRevealed ? 'opacity-65' : 'opacity-0'
-        }`}
+        className="absolute top-0 left-0 w-full h-full z-0 pointer-events-none opacity-80"
         style={{
           backgroundImage: assetUrlCss(sfondoSpiegazione),
           backgroundSize: 'cover',
@@ -903,18 +892,22 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
         }}
       />
 
-      {/* Sfondo della manche attiva: appare solo DOPO l'apparire del punteggio del bussolotto */}
+      {/* LIVELLO 2: Immagine di sfondo propria della manche al 90% dello schermo con i bordi sfumati (appare dopo che è apparsa l'immagine allo step 1) */}
       {gameData.sfondo && (
         <div 
-          className={`absolute top-0 left-0 w-full h-full z-0 transition-opacity duration-1000 ease-in-out pointer-events-none ${
-            isBussolottoScoreRevealed ? 'opacity-40' : 'opacity-0'
+          className={`absolute inset-[5%] z-[1] flex items-center justify-center transition-all duration-1000 ease-in-out pointer-events-none ${
+            effectiveStep >= 2 ? 'opacity-90 scale-100' : 'opacity-0 scale-95'
           }`}
-          style={{
-            backgroundImage: assetUrlCss(gameData.sfondo),
-            backgroundSize: 'cover',
-            backgroundPosition: 'center'
-          }}
-        />
+        >
+          <div 
+            className="w-full h-full bg-center bg-cover bg-no-repeat rounded-3xl shadow-2xl"
+            style={{
+              backgroundImage: assetUrlCss(gameData.sfondo),
+              WebkitMaskImage: 'radial-gradient(ellipse 92% 88% at 50% 50%, rgba(0,0,0,1) 45%, rgba(0,0,0,0.85) 65%, rgba(0,0,0,0) 98%)',
+              maskImage: 'radial-gradient(ellipse 92% 88% at 50% 50%, rgba(0,0,0,1) 45%, rgba(0,0,0,0.85) 65%, rgba(0,0,0,0) 98%)',
+            }}
+          />
+        </div>
       )}
       
       {activeBussolottiRank !== null && getTeamForRank(activeBussolottiRank) && (

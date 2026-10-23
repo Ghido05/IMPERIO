@@ -48,6 +48,15 @@
         "risposta3": "Ai Normanni",
         "targetBox": 3,
         "targetQuestion": 2
+      },
+      {
+        "id": "nadia_1792744528334_88x8",
+        "domanda": "TRANSATLANTICO ACHILLE LAURO",
+        "rispostaCorretta": "",
+        "risposta2": "",
+        "risposta3": "",
+        "targetBox": 1,
+        "targetQuestion": 9
       }
     ]
   },
@@ -66,9 +75,9 @@
     "audioSpiegazione": "/Audio/Spiegazioni/spiegazione_fasi_audio.mp3",
     "fase1Titolo": "PRODROMI DELLO SCONTRO",
     "fase2Titolo": "CORSA AGLI EQUIPAGGIAMENTI",
-    "fase3Titolo": "TERMOPILI APOCALITTICHE",
+    "fase3Titolo": "TERMOPILI",
     "gioco1Titolo": "",
-    "gioco2Titolo": "",
+    "gioco2Titolo": "LA SCALATA DEI CRISTALLI",
     "gioco3Titolo": "",
     "gioco4Titolo": "",
     "gioco5Titolo": ""
@@ -76,7 +85,7 @@
   "gioco1": {
     "titolo": "IL MIO NOME è NESSUNO",
     "sottotitolo": "Musica & Immagini",
-    "selectedQuestion": 8,
+    "selectedQuestion": 9,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Mappa/spiegazione_box1_ambientazione.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box1.mp3",
@@ -137,10 +146,10 @@
         "immagine": {
           "immagineJpg": "/Icone/nessuno_img/1_2_telemaco.jpeg",
           "indizi": [
-            "COME NOME HA \"COLUI CHE COMBATTE LONTANO\", SIGNIFICATO NON STRANO",
-            "CONSIGLIATO DA ATENA SI METTE ALLA RICERCA DI BUONA LENA",
-            "TUTTO D’UN PEZZO SENZA TATUAGGIO DELL’ODISSEA È UN PERSONAGGIO",
-            "AGILE E SVELTO COME UN ANTILOPE FIGLIO DI ULISSE E PENELOPE"
+            "COME NOME HA \"COLUI CHE COMBATTE LONTANO\" \\n SIGNIFICATO NON STRANO",
+            "CONSIGLIATO DA ATENA \\n SI METTE ALLA RICERCA DI BUONA LENA",
+            "TUTTO D’UN PEZZO SENZA TATUAGGIO \\n DELL’ODISSEA È UN PERSONAGGIO",
+            "AGILE E SVELTO COME UN ANTILOPE \\n FIGLIO DI ULISSE E PENELOPE"
           ],
           "confermaAudio": "/Audio/strumenti/1_2_Tuttoperunaragione_Benji.mp3",
           "soluzione": "TELEMACO",
@@ -160,10 +169,10 @@
             "/Audio/strumenti/g01m03s05 flauto - wreckingball.mp3"
           ],
           "indizi": [
-            "IN UN VIDEO VIRALE CHE HA FATTO RUMORE, CANTANDO ESPRIME IL SUO GRANDE DOLORE",
-            "UN TEMPO IN UNA SERIE CON DOPPIA IDENTITÀ, OGGI È UNA RIBELLE DI GRAN CELEBRITÀ",
-            "SE TRADUCO IL RITORNELLO, LEI LO URLA DI SICURO: \"IO VOLEVO SOLTANTO ABBATTERE IL TUO MURO!\"",
-            "CI DONDOLA SOPRA CON GRANDE EMOZIONE, IL TITOLO IN INGLESE È \"PALLA DA DEMOLIZIONE\"!"
+            "IN UN VIDEO VIRALE CHE HA FATTO RUMORE, \\n CANTANDO ESPRIME IL SUO GRANDE DOLORE",
+            "UN TEMPO IN UNA SERIE CON DOPPIA IDENTITÀ, \\n OGGI È UNA RIBELLE DI GRAN CELEBRITÀ",
+            "SE TRADUCO IL RITORNELLO, LEI LO URLA DI SICURO: \\n \"IO VOLEVO SOLTANTO ABBATTERE IL TUO MURO!\"",
+            "CI DONDOLA SOPRA CON GRANDE EMOZIONE, \\n IL TITOLO IN INGLESE È \"PALLA DA DEMOLIZIONE\"!"
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g01m03soluzione.mp3",
           "titolo": "WRECKING BALL",
@@ -205,10 +214,10 @@
         "immagine": {
           "immagineJpg": "/Icone/nessuno_img/1_4_cricchetto.jpg",
           "indizi": [
-            "IN UN FILM D'ANIMAZIONE DI GRANDE SUCCESSO, A NESSUN ESSERE UMANO L'INGRESSO È CONCESSO",
-            "A RADIATOR SPRINGS LUI HA LA SUA CASETTA, ED È IL MIGLIORE AMICO DEL GRANDE SAETTA",
-            "È UN VECCHIO CARRO ATTREZZI SENZA PIÙ VERNICE, MA CON I SUOI DENTONI È SEMPRE FELICE",
-            "PER OGNI SOCCORSO LUI CI METTE IL PETTO, IL SUO NOME ESATTO È PROPRIO..."
+            "IN UN FILM D'ANIMAZIONE DI GRANDE SUCCESSO, \\n A NESSUN ESSERE UMANO L'INGRESSO È CONCESSO",
+            "A RADIATOR SPRINGS LUI HA LA SUA CASETTA, \\n ED È IL MIGLIORE AMICO DEL GRANDE SAETTA",
+            "È UN VECCHIO CARRO ATTREZZI SENZA PIÙ VERNICE, \\n MA CON I SUOI DENTONI È SEMPRE FELICE",
+            "PER OGNI SOCCORSO LUI CI METTE IL PETTO, \\n IL SUO NOME ESATTO È PROPRIO..."
           ],
           "confermaAudio": "/Audio/strumenti/1_4_anotherway.mp3",
           "soluzione": "CRICCHETTO",
@@ -227,10 +236,10 @@
             "/Audio/strumenti/g01m05s05trombe_nordsudovestest.mp3"
           ],
           "indizi": [
-            "IN OGNI DIREZIONE VUOLE ANDARE, ESISTE CIÒ CHE VUOL CERCARE?",
-            "DUO SENZA DIFETTO, SOLO UNO PORTA IL BERRETTO?",
-            "QUELLO CHE SENTI NON È UN LAMENTO, LE RISPOSTE LE PORTA IL VENTO",
-            "CON UN GRINGO E UNO STRANIERO, MAX PEZZALI È FIERO"
+            "IN OGNI DIREZIONE VUOLE ANDARE, \\n ESISTE CIÒ CHE VUOL CERCARE?",
+            "DUO SENZA DIFETTO, \\n SOLO UNO PORTA IL BERRETTO?",
+            "QUELLO CHE SENTI NON È UN LAMENTO, \\n LE RISPOSTE LE PORTA IL VENTO",
+            "CON UN GRINGO E UNO STRANIERO, \\n MAX PEZZALI È FIERO"
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g01m05soluzione.mp3",
           "titolo": "NORD SUD OVEST EST",
@@ -271,10 +280,10 @@
         "immagine": {
           "immagineJpg": "/Icone/nessuno_img/1_6_ritornoalfuturo.jpg",
           "indizi": [
-            "TRA INVENZIONI GENIALI E PURA FANTASCIENZA, SI VIAGGIA NEL TEMPO SFIDANDO LA SCIENZA",
-            "UN GIOVANE IN SKATE E UNO SCIENZIATO GENIALE, SFRECCIANO A BORDO DI UN'AUTO SPECIALE",
-            "FINITO NEGLI ANNI IN CUI STUDIAVA SUA MADRE, DEVE FAR Sì CHE S'INNAMORI SUO PADRE",
-            "CON UN FULMINE ESATTO IL MOTORE SI ACCENDE, E UN TORNARE A CIò CHE VERRà è IL TITOLO CHE T'ATTENDE!"
+            "TRA INVENZIONI GENIALI E PURA FANTASCIENZA, \\n SI VIAGGIA NEL TEMPO SFIDANDO LA SCIENZA",
+            "UN GIOVANE IN SKATE E UNO SCIENZIATO GENIALE, \\n SFRECCIANO A BORDO DI UN'AUTO SPECIALE",
+            "FINITO NEGLI ANNI IN CUI STUDIAVA SUA MADRE, \\n DEVE FAR Sì CHE S'INNAMORI SUO PADRE",
+            "CON UN FULMINE ESATTO IL MOTORE SI ACCENDE, \\n E UN TORNARE A CIò CHE VERRà è IL TITOLO CHE T'ATTENDE!"
           ],
           "confermaAudio": "/Audio/strumenti/1_6_macchinadeltempo.mp3",
           "soluzione": "RITORNO AL FUTURO",
@@ -294,10 +303,10 @@
             "/Audio/strumenti/g01m07s05 flauto - payphone.mp3"
           ],
           "indizi": [
-            "PARLA DI UN AMORE ORMAI GIUNTO AL FINALE, E DI UNA LUNGA CHIAMATA CHE FINISCE MALE",
-            "SUL PALCO SONO IN CINQUE A SUONARE CON GRANDE ARDORE, E IL LORO NOME INGLESE RICHIAMA UN CALDO COLORE",
-            "SE TRADUCO IL RITORNELLO, LUI LO CANTA CON DOLORE: \"HO SPESO TUTTI I MIEI SPICCIOLI PER QUESTO AMORE!\"",
-            "PER USARLO IN STRADA INSERIVI IL GETTONE, IN INGLESE È QUESTO TELEFONO PUBBLICO, FATE ATTENZIONE!"
+            "PARLA DI UN AMORE ORMAI GIUNTO AL FINALE, \\n E DI UNA LUNGA CHIAMATA CHE FINISCE MALE",
+            "SUL PALCO SONO IN CINQUE A SUONARE CON GRANDE ARDORE, \\n E IL LORO NOME INGLESE RICHIAMA UN CALDO COLORE",
+            "SE TRADUCO IL RITORNELLO, LUI LO CANTA CON DOLORE: \\n \"HO SPESO TUTTI I MIEI SPICCIOLI PER QUESTO AMORE!\"",
+            "PER USARLA IN STRADA INSERIVI IL GETTONE, \\n IN INGLESE È QUESTO TELEFONO PUBBLICO, FATE ATTENZIONE!"
           ],
           "soluzioneAudio": "/Audio/soluzioni a conferma/g01m07soluzione.mp3",
           "titolo": "PAYPHONE",
@@ -338,10 +347,10 @@
         "immagine": {
           "immagineJpg": "/Icone/nessuno_img/1_8_tajmahal.jpg",
           "indizi": [
-            "DEL MARMO BIANCO AMMIRI IL CANDORE, E RIMANI ACCECATO DAL SUO SPLENDORE",
-            "L'IMPERATORE MANTENNE LA PROMESSA, ONORANDO PER SEMPRE LA SUA PRINCIPESSA",
-            "UN'INESTIMABILE OPERA ORIENTALE, DALLA SIMMETRIA MONUMENTALE",
-            "CONSIDERATO DELL'INDIA IL PIù GRANDE TESORO, COSTò ANNI DI DURO LAVORO"
+            "DEL MARMO BIANCO AMMIRI IL CANDORE, \\n E RIMANI ACCECATO DAL SUO SPLENDORE",
+            "L'IMPERATORE MANTENNE LA PROMESSA, \\n ONORANDO PER SEMPRE LA SUA PRINCIPESSA",
+            "UN'INESTIMABILE OPERA ORIENTALE, \\n DALLA SIMMETRIA MONUMENTALE",
+            "CONSIDERATO DELL'INDIA IL PIù GRANDE TESORO, \\n COSTò ANNI DI DURO LAVORO"
           ],
           "confermaAudio": "/Audio/strumenti/1_8_thinkabouttheway.mp3",
           "soluzione": "TAJ MAHAL",
@@ -361,10 +370,10 @@
             "/Audio/strumenti/g01m09s05flauto-perdutamente.mp3"
           ],
           "indizi": [
-            "",
-            "",
-            "",
-            ""
+            "L'AVVERBIO CARICO DI SCONFORTO, \\n RENDE LA CANZONE PIENA DI TRASPORTO",
+            "CANTANTE TEATRALE E ROMANTICO, \\n MA NON ERA ANCHE UN TRANSATLANTICO?",
+            "SE PRECIPITA SI GODE L'IMPATTO, \\n SE SI INCENDIO LO SPAZIO RIMANE INTATTO",
+            "INCURANTE DEL SUO DESTINO, \\n LUI SAI CHE FA? ABBASSA IL TETTINO"
           ],
           "soluzioneAudio": "",
           "titolo": "PERDUTAMENTE",
@@ -380,7 +389,8 @@
           ],
           "confermaAudio": "",
           "soluzione": ""
-        }
+        },
+        "notePresentatore": "L'Achille Lauro è stata una celebre nave passeggeri italiana, nota principalmente per essere stata vittima di un clamoroso dirottamento terroristico nel 1985 e per essere affondata nel 1994.\n\nStoria e caratteristiche\n\n• Origini: Fu costruita nei Paesi Bassi tra il 1939 e il 1947 con il nome di Willem Ruys.\n• Acquisto: Negli anni '60 fu acquistata dall'armatore e sindaco di Napoli Achille Lauro, ristrutturata e trasformata in nave da crociera sotto la Flotta Lauro.\n\nIl dirottamento del 1985\n\n• L'evento: Il 7 ottobre 1985, mentre navigava al largo delle coste egiziane, la nave fu dirottata da un commando di quattro palestinesi del Fronte per la Liberazione della Palestina (FLP).\n• La vittima: Durante il sequestro venne ucciso un cittadino statunitense di religione ebraica e in sedia a rotelle, Leon Klinghoffer.\n• La crisi: La vicenda innescò una complessa trattativa diplomatica e un duro scontro politico e militare tra Italia e Stati Uniti (nota come la crisi di Sigonella).\n\nL'affondamento\n\n• L'incendio: Il 30 novembre 1994 scoppió un devastante incendio nella sala macchine al largo delle coste della Somalia.\n• La fine: L'equipaggio e i passeggeri furono evacuati, ma la nave si capovolse e affondò il 2 dicembre 1994 durante le operazioni di traino."
       },
       "10": {
         "tipo": "immagine",
@@ -418,7 +428,7 @@
     "sfondoGenerale": "/Icone/sfondi/sfondo_box1_foresta_musicale.jpg"
   },
   "gioco2": {
-    "titolo": "TOP TEN",
+    "titolo": "LA SCALATA DEI CRISTALLI",
     "sottotitolo": "Classifica & Classifica Musicale",
     "selectedQuestion": 5,
     "videoSpiegazione": "",
@@ -764,7 +774,7 @@
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box3.mp3",
     "questions": {
       "1": {
-        "sfondo": "/Icone/nessuno_img/3_1_superereoi.png",
+        "sfondo": "/Icone/sfondi/3_1_superereoi.png",
         "musicaIntro": "/Audio/strumenti/3_1_supereroi.mp3",
         "squadra1": [
           {
@@ -841,7 +851,7 @@
         "notePresentatore": "DALLA TORRE DI ASTRONOMIA CADE SILENTE (NON GANDALF)\nIL NECROMANTE è MEFISTO\nTRITONI NEL CALICE DI FUOCO VENGONO INCONTRATI DA HARRY DURANTE LA SECONDA PROVA"
       },
       "2": {
-        "sfondo": "/Icone/nessuno_img/3_2_dolci.jpg",
+        "sfondo": "/Icone/sfondi/3_2_dolci.jpg",
         "musicaIntro": "",
         "squadra1": [
           {
@@ -918,7 +928,7 @@
         "notePresentatore": ""
       },
       "3": {
-        "sfondo": "/Icone/nessuno_img/3_3_programmiTV.jpg",
+        "sfondo": "/Icone/sfondi/3_3_programmiTV.jpg",
         "musicaIntro": "",
         "squadra1": [
           {
@@ -1244,6 +1254,16 @@
         "bonus": "",
         "punti": 1000,
         "notePresentatore": ""
+      },
+      {
+        "testo": "FRASE PALAZZO TE",
+        "sfondo": "",
+        "confermaAudio": "",
+        "lettereVisibili": [],
+        "indizio": "",
+        "bonus": "",
+        "punti": 1000,
+        "notePresentatore": ""
       }
     ],
     "sfondoGenerale": "/Icone/nessuno_img/sfondo_box4_orologi_tempo.jpg",
@@ -1256,6 +1276,98 @@
     "sottotitolo": "Arena d'Acqua • Sfida Diretta a Eliminazione",
     "sfondoGenerale": "/sfondo_finale_acqua.jpg",
     "numeroDomande": 15,
+    "domande": [
+      {
+        "numero": 1,
+        "tempo": "passato",
+        "testo": "",
+        "risposta": ""
+      },
+      {
+        "numero": 2,
+        "tempo": "presente",
+        "testo": "In linea d'aria, quale capitale europea è più vicina a Milano?",
+        "risposta": "VADUZ (195, Berna 215, Monaco 240, S. Marino 320) "
+      },
+      {
+        "numero": 3,
+        "tempo": "futuro",
+        "testo": "",
+        "risposta": ""
+      },
+      {
+        "numero": 4,
+        "tempo": "presente",
+        "testo": "",
+        "risposta": ""
+      },
+      {
+        "numero": 5,
+        "tempo": "passato",
+        "testo": "Dopo essere apparso per due volte in casa, in mezzo ai discepoli, dove appare gesu per la terza volta secondo il vangelo di Giovanni?",
+        "risposta": "MARE DI TIBERIADE(CONTROLLA DISCEPOLI DI EMMAUS)"
+      },
+      {
+        "numero": 6,
+        "tempo": "futuro",
+        "testo": "",
+        "risposta": ""
+      },
+      {
+        "numero": 7,
+        "tempo": "presente",
+        "testo": "",
+        "risposta": ""
+      },
+      {
+        "numero": 8,
+        "tempo": "passato",
+        "testo": "Città con la squadra NBA con più titoli capitale di ...",
+        "risposta": "BOSTON"
+      },
+      {
+        "numero": 9,
+        "tempo": "futuro",
+        "testo": "",
+        "risposta": ""
+      },
+      {
+        "numero": 10,
+        "tempo": "presente",
+        "testo": "",
+        "risposta": ""
+      },
+      {
+        "numero": 11,
+        "tempo": "passato",
+        "testo": "",
+        "risposta": ""
+      },
+      {
+        "numero": 12,
+        "tempo": "futuro",
+        "testo": "",
+        "risposta": ""
+      },
+      {
+        "numero": 13,
+        "tempo": "presente",
+        "testo": "",
+        "risposta": ""
+      },
+      {
+        "numero": 14,
+        "tempo": "passato",
+        "testo": "",
+        "risposta": ""
+      },
+      {
+        "numero": 15,
+        "tempo": "futuro",
+        "testo": "",
+        "risposta": ""
+      }
+    ],
     "notePresentatore": "",
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box5_arena_acqua.jpg",

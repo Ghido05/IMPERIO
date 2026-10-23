@@ -4,6 +4,7 @@ import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
 import { ClassificaStaircaseSuspenseOverlay, type Box2SuspenseData } from './components/ClassificaStaircaseSuspenseOverlay';
+import { CrystalRankingBox, CrystalNumberMarker } from './components/CrystalRankingBlocks';
 
 // ============================================================================
 // Cronometro circolare (stile Box 4) — Manche Canzoni (Classifica Musicale)
@@ -1096,40 +1097,38 @@ const ClassificaMusicaleBoard = ({
           </div>
         )}
 
-        {/* Step 2+: BOX BACKGROUNDS DESTRA & RISPOSTE */}
+        {/* Step 2+: BOX BACKGROUNDS DESTRA & RISPOSTE A FORMA DI CRISTALLO */}
         {effectiveStep >= 2 && (
           <>
-            {/* Box Yellow (7) */}
-            <div
-              className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#f7f700] top-[29.907%] h-[12.685%] transition-all duration-700 animate-in fade-in"
-              style={{
-                borderWidth: "clamp(2px, 0.2604vw, 5px)",
-                borderRadius: "clamp(6px, 0.5208vw, 10px)"
-              }}
+            {/* Box Yellow (7) - Cristallo Topazio */}
+            <CrystalRankingBox
+              tier="yellow"
+              top="29.907%"
+              height="12.685%"
+              className="animate-in fade-in"
             />
 
-            {/* Box Green (5, 6) */}
-            <div
-              className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#00ff00] top-[45.556%] h-[17.87%] transition-all duration-700 animate-in fade-in"
-              style={{
-                borderWidth: "clamp(2px, 0.2604vw, 5px)",
-                borderRadius: "clamp(6px, 0.5208vw, 10px)"
-              }}
+            {/* Box Green (5, 6) - Cristallo Smeraldo */}
+            <CrystalRankingBox
+              tier="green"
+              top="45.556%"
+              height="17.87%"
+              className="animate-in fade-in"
             />
 
-            {/* Box Blue (1, 2, 3, 4) */}
-            <div
-              className="absolute left-[53.073%] w-[33.229%] border-[#002164] bg-[#00b3f6] top-[66.111%] h-[29.111%] transition-all duration-700 animate-in fade-in"
-              style={{
-                borderWidth: "clamp(2px, 0.2604vw, 5px)",
-                borderRadius: "clamp(6px, 0.5208vw, 10px)"
-              }}
+            {/* Box Blue (1, 2, 3, 4) - Cristallo Zaffiro */}
+            <CrystalRankingBox
+              tier="blue"
+              top="66.111%"
+              height="29.111%"
+              className="animate-in fade-in"
             />
 
-            {/* TESTI INDIZI E MARKER NUMERICI */}
+            {/* TESTI INDIZI E CRISTALLI NUMERICI */}
             {rankingMarkers.map((marker) => {
               const el = gameData.elementi[marker.value - 1];
-              const isRevealed = (revealed[marker.value] || revealAll);
+              const isRevealed = !!(revealed[marker.value] || revealAll);
+              const markerTier = marker.value === 7 ? 'yellow' : marker.value >= 5 ? 'green' : 'blue';
               return (
                 <React.Fragment key={marker.value}>
                   {/* Testo dell'indizio (Allineato e centrato esattamente al marker) */}
@@ -1154,13 +1153,22 @@ const ClassificaMusicaleBoard = ({
                     }}
                     title={!isRevealed ? "Click: Rivelazione esatta | Shift+Click o Tasto destro: Scalata errata" : undefined}
                   >
-                    <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${marker.value <= 4 ? 'text-white' : 'text-[#1b1b1b]'}`}>
+                    <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${
+                      marker.value <= 4 
+                        ? 'text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]' 
+                        : 'text-[#141414] drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)]'
+                    }`}>
                       {isRevealed ? el?.testo : ""}
                     </p>
                   </div>
 
-                  {/* Marker numerico a destra */}
-                  <div
+                  {/* Marker numerico a forma di cristallo a destra (1-7) */}
+                  <CrystalNumberMarker
+                    value={marker.value}
+                    top={marker.top}
+                    tier={markerTier}
+                    isRevealed={isRevealed}
+                    canClick={!isRevealed}
                     onClick={(e) => {
                       if (e.shiftKey) {
                         triggerErrorSuspense(marker.value);
@@ -1172,20 +1180,8 @@ const ClassificaMusicaleBoard = ({
                       e.preventDefault();
                       triggerErrorSuspense(marker.value);
                     }}
-                    className={`absolute left-[87.708%] w-[3.177%] h-[4.352%] bg-[#3a3838] border-[#002164] flex items-center justify-center group transition-all ${
-                      !isRevealed ? 'cursor-pointer hover:scale-110 hover:bg-[#4a4848]' : ''
-                    }`}
-                    style={{
-                      top: marker.top,
-                      borderWidth: "clamp(2px, 0.2083vw, 4px)",
-                      borderRadius: "clamp(6px, 0.5208vw, 10px)"
-                    }}
                     title={!isRevealed ? "Click: Rivelazione esatta | Shift+Click o Tasto destro: Scalata errata" : undefined}
-                  >
-                    <span className="text-white font-black text-[clamp(12px,1.56vw,30px)] leading-none">
-                      {marker.value}
-                    </span>
-                  </div>
+                  />
                 </React.Fragment>
               );
             })}

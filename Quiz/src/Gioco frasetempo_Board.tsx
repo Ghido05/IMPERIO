@@ -330,7 +330,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     setTimeout(() => playTone(783.99, 0.55, 'sine', 0.25), 220);
     setRevealed(true);
     setTokens([...targetTokens]);
-    setStep(7);
+    setStep(8);
 
     // Riproduzione Canzone di Conferma / Stacchetto se presente
     if (phrase.confermaAudio) {
@@ -362,7 +362,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     playErrorSound();
     setRevealed(true);
     setTokens([...targetTokens]);
-    setStep(7);
+    setStep(8);
 
     // Riproduzione Canzone di Conferma / Stacchetto anche in caso di errore (dopo la croce rossa di 800ms)
     if (phrase.confermaAudio) {
@@ -428,12 +428,12 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     }
 
     // Arrow navigation for reveal steps:
-    // Step 1: Punti / Bonus (o entrambi in base alla frase)
-    // Step 2: Solo lo sfondo
-    // Step 3: Indizio
-    // Step 4: Tutto il resto (Frase, 15 offerte, martelletto)
-    // Step 0-3: Avanzamento/regresso degli step di rivelazione
-    if (step < 4) {
+    // Step 1: appare l’immagine di sfondo “sfondo_box4_orologi_tempo.jpg”
+    // Step 2: appare il riquadro con punti e/o bonus (grande e centrale, poi si sposterà nella posizione attuale)
+    // Step 3: appare l’immagine di sfondo propria della frase
+    // Step 4: appare la frase indizio
+    // Step 5: appare tutto il resto (lettere e numeri asta)
+    if (step < 5) {
       if (e.key === 'ArrowRight') {
         setStep(prev => prev + 1);
         return;
@@ -446,15 +446,15 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       }
     }
 
-    // Step 4+: Movimento dell'asta con le sole freccette (senza numeri), avanti e indietro da 15 a 1
-    if (step >= 4 && !auctionLocked) {
+    // Step 5+: Movimento dell'asta con le sole freccette (senza numeri), avanti e indietro da 15 a 1
+    if (step >= 5 && !auctionLocked) {
       // Freccia Giù o Freccia Destra: scende da 15 verso 1 (avanti lungo l'asta a ribasso)
       if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
         setAuctionValue(prev => Math.max(1, prev - 1));
         return;
       }
 
-      // Freccia Su o Freccia Sinistra: sale da 1 verso 15 (indietro lungo l'asta)
+      // Freccia Su: sale da 1 verso 15 (indietro lungo l'asta)
       if (e.key === 'ArrowUp') {
         setAuctionValue(prev => Math.min(15, prev + 1));
         return;
@@ -463,8 +463,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         if (auctionValue < 15) {
           setAuctionValue(prev => Math.min(15, prev + 1));
         } else {
-          // Se siamo già a 15, Freccia Sinistra permette di tornare indietro allo Step 3
-          setStep(3);
+          // Se siamo già a 15, Freccia Sinistra permette di tornare indietro allo Step 4
+          setStep(4);
         }
         return;
       }
@@ -473,7 +473,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       if (e.key === 'Enter') {
         setAuctionLocked(true);
         setLetterCounter(auctionValue);
-        setStep(5);
+        setStep(6);
         return;
       }
     }
@@ -491,8 +491,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       }
     }
 
-    // Guessed letter (only in Step 6)
-    if (step === 6 && !revealed) {
+    // Guessed letter (only in Step 7)
+    if (step === 7 && !revealed) {
       const key = e.key.toUpperCase();
       if (key.length === 1 && /[A-Z]/.test(key)) {
         processLetter(key);
@@ -528,10 +528,12 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   const timerStrokeOffset = timerCircumference * (1 - timerProgress);
   const showGuessTimer = auctionLocked && letterCounter === 0 && guessTimerEndAt > 0 && timerDisplay > 0;
 
-  const showBonusAndPoints = step >= 1 || revealAll;
-  const showSfondo = (step >= 2 || revealAll) && Boolean(phrase.sfondo);
-  const showIndizio = step >= 3 || revealAll;
-  const showFraseAndAsta = step >= 4 || revealAll;
+  const showClockSfondo = step >= 1 || revealAll;
+  const showBonusAndPoints = step >= 2 || revealAll;
+  const isBonusBigCenter = step === 2 && !revealAll;
+  const showPhraseSfondo = (step >= 3 || revealAll) && Boolean(phrase.sfondo);
+  const showIndizio = step >= 4 || revealAll;
+  const showFraseAndAsta = step >= 5 || revealAll;
 
   const rawP = (phrase as any).punti;
   const pts = (rawP !== undefined && rawP !== null && rawP !== '') ? (Number(rawP) || 0) : 0;
@@ -544,8 +546,18 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       data-asset-refresh={assetRefresh} 
       className={`relative w-full min-h-screen bg-black text-white flex items-center justify-center overflow-hidden select-none transition-transform duration-100 ${showError ? 'animate-shake' : ''}`} 
     >
-      {/* Sfondo dinamico (Step >= 2, renderizzato SOLO se showSfondo è true) */}
-      {showSfondo && phrase.sfondo && (() => {
+      {/* Sfondo Base Orologi (Step >= 1) */}
+      {showClockSfondo && (
+        <div 
+          className="absolute inset-0 bg-cover bg-center animate-fade-in pointer-events-none z-0"
+          style={{
+            backgroundImage: `linear-gradient(rgba(0,0,0,0.30), rgba(0,0,0,0.45)), url("${assetUrl('/Icone/sfondi/sfondo_box4_orologi_tempo.jpg')}")`,
+          }}
+        />
+      )}
+
+      {/* Sfondo proprio della frase (Step >= 3, renderizzato sopra lo sfondo orologi con fade-in) */}
+      {showPhraseSfondo && phrase.sfondo && (() => {
         const isDante = phraseIndex === 6 || 
           (typeof phrase.testo === 'string' && phrase.testo.toUpperCase().includes('DANTE')) ||
           (typeof phrase.sfondo === 'string' && phrase.sfondo.toLowerCase().includes('dante'));
@@ -646,8 +658,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         </div>
       )}
 
-      {/* Team selection modal overlay for Step 5 (Presenter/Relatore only) */}
-      {isPresenter && step === 5 && winningTeamIndex === null && (
+      {/* Team selection modal overlay for Step 6 (Presenter/Relatore only) */}
+      {isPresenter && step === 6 && winningTeamIndex === null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md">
           <div className="bg-zinc-900 border-2 border-amber-500 rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl animate-zoom-in">
             <h2 className="text-2xl font-black text-yellow-400 uppercase tracking-wide mb-6">
@@ -663,7 +675,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
                   type="button"
                   onClick={() => {
                     setWinningTeamIndex(idx);
-                    setStep(6);
+                    setStep(7);
                   }}
                   className={`py-4 rounded-xl text-lg font-black text-white uppercase tracking-wider border shadow-lg transition-all transform hover:scale-105 active:scale-95 cursor-pointer
                     ${idx === 0 ? 'bg-red-700 hover:bg-red-650 border-red-500 hover:shadow-red-600/30' : ''}
@@ -680,7 +692,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       )}
 
       {/* Frame 16:9 viewport wrapper */}
-      <div className="relative w-full max-w-[1920px] aspect-[16/9] flex flex-col items-center justify-center px-10 py-6">
+      <div className="relative z-10 w-full max-w-[1920px] aspect-[16/9] flex flex-col items-center justify-center px-10 py-6">
         
         {/* Header Title Banner */}
         {showFraseAndAsta && (
@@ -798,7 +810,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
                       setAuctionValue(stepNum);
                       setLetterCounter(stepNum);
                       setAuctionLocked(true);
-                      setStep(5);
+                      setStep(6);
                     }}
                     className={`relative py-3 rounded-xl border flex flex-col items-center justify-center transition-all duration-300 select-none cursor-pointer
                       ${isWinningBid
@@ -926,7 +938,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
           </div>
         )}
 
-        {/* Clue Box (visible if step >= 3 or revealAll) */}
+        {/* Clue Box (visible if step >= 4 or revealAll) */}
         {showIndizio && (
           <div className="flex flex-col items-center gap-4 mt-2">
             {/* Clue Box */}
@@ -943,19 +955,27 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
 
         <div className="flex-grow" />
 
-        {/* Bonus e Punti in basso a destra (Step 1: Punti/Bonus o entrambi in base alla frase) */}
-        {showBonusAndPoints && (hasBonus || hasPoints) && (
-          <div className="absolute bottom-6 right-10 flex items-center gap-4 z-20 animate-fade-in">
+        {/* Bonus e Punti (Step 2: grande e centrale, Step 3+: nella posizione attuale in basso a destra) */}
+        {(hasBonus || hasPoints) && (
+          <div 
+            className={`absolute z-30 flex items-center gap-5 transition-all duration-700 ease-in-out select-none
+              ${!showBonusAndPoints
+                ? 'opacity-0 pointer-events-none scale-50 bottom-1/2 right-1/2 translate-x-1/2 translate-y-1/2'
+                : isBonusBigCenter
+                  ? 'opacity-100 bottom-1/2 right-1/2 translate-x-1/2 translate-y-1/2 scale-[1.75] sm:scale-[2.1] drop-shadow-[0_0_50px_rgba(234,179,8,0.5)]'
+                  : 'opacity-100 bottom-6 right-10 translate-x-0 translate-y-0 scale-100 drop-shadow-none'
+              }`}
+          >
             {hasBonus && (
-              <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md w-24 h-24">
-                <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-widest mb-1.5">BONUS</span>
+              <div className="bg-zinc-950/90 border-2 border-amber-500/40 rounded-2xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md w-24 h-24 transition-all duration-500">
+                <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-1.5">BONUS</span>
                 <span className="text-3xl animate-pulse">{getBonusDisplayEmoji(phrase.bonus || '')}</span>
               </div>
             )}
             {hasPoints && (
-              <div className="bg-zinc-950/80 border border-white/10 rounded-xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md min-w-[100px] h-24 animate-fade-in">
-                <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mb-1.5">PUNTI</span>
-                <span className="text-3xl font-black text-white tabular-nums">
+              <div className="bg-zinc-950/90 border-2 border-amber-500/40 rounded-2xl p-3 flex flex-col items-center justify-center shadow-2xl backdrop-blur-md min-w-[100px] h-24 px-4 transition-all duration-500">
+                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1.5">PUNTI</span>
+                <span className="text-3xl font-black text-white tabular-nums drop-shadow-md">
                   {pts.toLocaleString('it-IT')}
                 </span>
               </div>

@@ -34,7 +34,7 @@ export type StatusListener = (
 ) => void;
 
 export type BookingTeam = 'rossa' | 'blu' | 'verde';
-export type BookingCallback = (teamColor: BookingTeam, teamNum: number) => void;
+export type BookingCallback = (teamColor: BookingTeam, teamNum: number) => boolean;
 
 const statusListeners = new Set<StatusListener>();
 const dataListeners = new Set<(line: string) => void>();
@@ -302,24 +302,38 @@ export function startBuzzerFastPolling(
       try {
         const result = await readBuzzerReservation(350);
         if (result === 'rossa' || result === 'blu' || result === 'verde') {
-          console.log(`[ESP32 Fast Polling] Ricevuta prenotazione valida: ${result.toUpperCase()}`);
-          
-          // 1. Blocca subito il polling
-          stopBuzzerFastPolling();
-
           const teamNum = result === 'rossa' ? 1 : result === 'blu' ? 2 : 3;
 
-          // 2. Emette il suono corretto
-          playBuzzerSound(result);
-
-          // 3. Notifica data listener per compatibilità
-          notifyData(`PRENOTATO GIOCATORE ${teamNum}`);
-
-          // 4. Inoltra al callback dell'interfaccia
+          let accepted = false;
           if (activeBookingCallback) {
-            activeBookingCallback(result as BookingTeam, teamNum);
+            try {
+              accepted = activeBookingCallback(result as BookingTeam, teamNum) === true;
+            } catch (err) {
+              console.error('[ESP32 Fast Polling] Errore esecuzione activeBookingCallback:', err);
+            }
           }
-          return;
+
+          if (accepted) {
+            console.log(`[ESP32 Fast Polling] Prenotazione ACCETTATA per squadra ${result.toUpperCase()} (${teamNum})`);
+            // 1. Blocca subito il polling
+            stopBuzzerFastPolling();
+
+            // 2. Emette il suono corretto
+            playBuzzerSound(result);
+
+            // 3. Notifica data listener per compatibilità
+            notifyData(`PRENOTATO GIOCATORE ${teamNum}`);
+            return;
+          } else {
+            console.log(`[ESP32 Fast Polling] Ricevuta pressione per squadra ${result.toUpperCase()} (${teamNum}) ma RIFIUTATA (esclusa o gioco non pronto). Invio sblocco e continuo polling...`);
+            // Invia sblocco hardware in background per non lasciare l'ESP32 bloccato sulla squadra rifiutata
+            sendSerialReset();
+            // Pausa breve per permettere all'ESP32 di registrare lo sblocco prima del prossimo poll
+            if (isFastPollingActive) {
+              fastPollTimer = setTimeout(pollStep, 250);
+            }
+            return;
+          }
         }
       } catch (_err) {
         // Ignora glitch di rete

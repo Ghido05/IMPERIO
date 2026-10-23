@@ -3,7 +3,6 @@ import { useGameData } from './context/GameDataContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
-import ScoreAssigner from './components/ScoreAssigner';
 import { sendSerialReset } from './lib/webSerial';
 
 // ============================================================================
@@ -201,7 +200,7 @@ const Solution: React.FC<{ isVisible: boolean; revealAll?: boolean }> = ({ isVis
   );
 };
 
-const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresenter?: boolean }> = ({ interactive = true, revealAll = false, isPresenter: _isPresenter = false }) => {
+const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresenter?: boolean }> = ({ interactive = true, revealAll = false, isPresenter = false }) => {
   const gameData = useGameData();
   const slideId = gameData.slideId ?? 'sandbox';
 
@@ -266,6 +265,10 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
       setLockedStep(step);
     }
     setBookedTeam(null);
+    // Svela la soluzione in automatico come se fosse stato premuto 'S'
+    if (step < 10) {
+      setIsAutoAdvancing(true);
+    }
   };
 
   const handleWrongAnswer = (teamNum: number) => {
@@ -285,23 +288,6 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
     setBookedTeam(teamNum);
     if (lockedStep === null) {
       setLockedStep(step);
-    }
-  };
-
-  const handleAssignPoints = (teamNum: number) => {
-    setAssignedTeam(teamNum);
-    if (lockedStep === null) {
-      setLockedStep(step);
-    }
-    setBookedTeam(null);
-  };
-
-  const handleCancelBooking = () => {
-    if (bookedTeam !== null) {
-      handleWrongAnswer(bookedTeam);
-    } else {
-      setBookedTeam(null);
-      sendSerialReset();
     }
   };
 
@@ -438,6 +424,9 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
 
   useEffect(() => {
     console.log(`[MusicBoard Step Effect] Step changed to: ${step}, interactive: ${interactive}`);
+    if (!interactive && audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+    }
   }, [step, interactive]);
 
   // Ascolta la pressione dei tasti freccia e comandi speciali
@@ -709,8 +698,8 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
               </span>
             </div>
 
-            {/* Banner visivo squadra prenotata al buzzer */}
-            {bookedTeam !== null && assignedTeam === null && (
+            {/* Banner visivo squadra prenotata al buzzer (visibile solo per il Relatore) */}
+            {isPresenter && bookedTeam !== null && assignedTeam === null && (
               <div className={`my-1.5 px-5 py-2.5 rounded-2xl border-2 shadow-2xl flex flex-wrap items-center justify-center gap-3 animate-pulse ${
                 bookedTeam === 1
                   ? 'bg-red-950/95 border-red-500 text-red-200 shadow-[0_0_25px_rgba(239,68,68,0.7)]'
@@ -728,7 +717,7 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
                       type="button"
                       onClick={() => handleCorrectAnswer(bookedTeam)}
                       className="px-3 py-1.5 text-xs font-black uppercase rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95 border border-emerald-400"
-                      title="Risposta corretta: assegna punti alla squadra e disattiva il pulsante (Enter / C)"
+                      title="Risposta corretta: assegna punti alla squadra e svela la soluzione (Invio / C)"
                     >
                       <span>✓</span> Corretta (+{displayedPoints.toLocaleString('it-IT')} pt)
                     </button>
@@ -740,14 +729,6 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
                     >
                       <span>✕</span> Errata / Escludi
                     </button>
-                    <button
-                      type="button"
-                      onClick={handleCancelBooking}
-                      className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-all cursor-pointer"
-                      title="Annulla prenotazione senza penalità"
-                    >
-                      Annulla
-                    </button>
                   </div>
                 )}
               </div>
@@ -758,32 +739,38 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
               <div className="flex items-center gap-2 text-xs font-bold text-red-300 bg-red-950/70 border border-red-500/30 px-3.5 py-1 rounded-full shadow-md">
                 <span>🚫 Escluse dalla manche:</span>
                 {excludedTeams.map((tNum) => (
-                  <span key={tNum} className="line-through bg-black/50 px-2 py-0.5 rounded text-white/70">
-                    {teamNames[tNum - 1] || `Squadra ${tNum}`}
+                  <span key={tNum} className="flex items-center gap-1.5 bg-black/50 px-2 py-0.5 rounded text-white/70">
+                    <span className="line-through">{teamNames[tNum - 1] || `Squadra ${tNum}`}</span>
+                    {interactive && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExcludedTeams(prev => (prev || []).filter(n => n !== tNum));
+                          sendSerialReset();
+                        }}
+                        className="text-[10px] text-amber-400 hover:text-amber-200 underline cursor-pointer font-normal"
+                        title="Riammetti questa squadra alla manche"
+                      >
+                        (riammetti)
+                      </button>
+                    )}
                   </span>
                 ))}
               </div>
             )}
 
-            {/* Assegnatore di Punteggio per il Relatore */}
-            {interactive && (
+            {/* Conferma Punteggio Assegnato */}
+            {interactive && assignedTeam !== null && (
               <div className="mt-1 flex flex-col items-center gap-1.5">
-                {assignedTeam === null ? (
-                  <ScoreAssigner
-                    points={displayedPoints}
-                    onAssigned={handleAssignPoints}
-                  />
-                ) : (
-                  <div className="flex items-center gap-3 bg-white/10 border border-white/10 px-4 py-1.5 rounded-full text-xs font-bold">
-                    <span className="text-emerald-400">✓ Assegnati a {teamNames[assignedTeam - 1] || `Squadra ${assignedTeam}`}</span>
-                    <button 
-                      onClick={handleResetPoints}
-                      className="text-white/40 hover:text-red-400 transition-colors uppercase tracking-wider text-[10px] cursor-pointer"
-                    >
-                      Annulla
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-center gap-3 bg-white/10 border border-white/10 px-4 py-1.5 rounded-full text-xs font-bold">
+                  <span className="text-emerald-400">✓ Assegnati a {teamNames[assignedTeam - 1] || `Squadra ${assignedTeam}`}</span>
+                  <button 
+                    onClick={handleResetPoints}
+                    className="text-white/40 hover:text-red-400 transition-colors uppercase tracking-wider text-[10px] cursor-pointer"
+                  >
+                    Annulla
+                  </button>
+                </div>
               </div>
             )}
 

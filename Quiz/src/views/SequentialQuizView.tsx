@@ -955,6 +955,8 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
         return;
       }
       if (nadiaActive) {
+        e.stopPropagation();
+        e.stopImmediatePropagation();
         if (e.key === '1') {
           if (nadiaBookedTeam === null && nadiaAssignedTeam === null) {
             handleBookTeamNadia(1);

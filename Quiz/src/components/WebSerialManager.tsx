@@ -85,8 +85,8 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
   }, [activeSlideId]);
 
   // 3. Callback when a buzzer is pressed
-  const handleBookingEvent = useCallback((teamColor: BookingTeam, playerNum: number) => {
-    if (!activeSlideId) return;
+  const handleBookingEvent = useCallback((teamColor: BookingTeam, playerNum: number): boolean => {
+    if (!activeSlideId) return false;
 
     const isNadiaActive = localStorage.getItem('playstate_nadia_active') === 'true';
     if (isNadiaActive) {
@@ -104,18 +104,16 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
       } catch (e) {}
 
       if (excludedTeams.includes(playerNum)) {
-        console.log(`[WebSerialManager] Squadra ${playerNum} esclusa da Nadia per errore precedente: invio reset e ignoro`);
-        sendSerialReset();
-        return; // Squadra esclusa per questa manche
+        console.log(`[WebSerialManager] Squadra ${playerNum} esclusa da Nadia per errore precedente: buzz rifiutato`);
+        return false; // Squadra esclusa per questa manche
       }
 
       if (currentNadiaBooked === 'null' || currentNadiaBooked === '') currentNadiaBooked = null;
       if (currentNadiaAssigned === 'null' || currentNadiaAssigned === '') currentNadiaAssigned = null;
 
       if (currentNadiaAssigned) {
-        console.log(`[WebSerialManager] Domanda Nadia già convalidata: invio reset hardware`);
-        sendSerialReset();
-        return;
+        console.log(`[WebSerialManager] Domanda Nadia già convalidata: buzz ignorato`);
+        return false;
       }
 
       if (!currentNadiaBooked && !currentNadiaAssigned && nadiaStep >= 4 && !nadiaSolutionShown) {
@@ -134,9 +132,9 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
         }
         setBookedTeam(playerNum.toString());
         console.log(`[WebSerialManager] Registrata prenotazione NADIA squadra ${teamColor.toUpperCase()} (${playerNum})`);
-        return;
+        return true;
       }
-      return;
+      return false;
     }
 
     const bookedKey = `playstate_${activeSlideId}_booked_team`;
@@ -149,7 +147,7 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
     if (currentAssigned === 'null' || currentAssigned === '') currentAssigned = null;
 
     // Controllo se la squadra è esclusa per questa manche
-    const isExcluded = !isNadiaActive && (() => {
+    const isExcluded = (() => {
       try {
         const exclKey = `playstate_${activeSlideId}_excluded_teams`;
         const exclStr = localStorage.getItem(exclKey);
@@ -163,14 +161,13 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
 
     if (isExcluded) {
       console.log(`[WebSerialManager] Squadra ${playerNum} è ESCLUSA da questa manche (${activeSlideId}), buzz rifiutato!`);
-      sendSerialReset();
-      return;
+      return false;
     }
 
     // Solo il primo a prenotarsi vince il turno (se non già prenotato o con punti assegnati)
     if (!currentBooked && !currentAssigned) {
       const stepKey = `playstate_${activeSlideId}_step`;
-      const currentStep = parseInt(localStorage.getItem(stepKey) || '0');
+      const currentStep = parseInt(localStorage.getItem(stepKey) || '0', 10);
 
       const lockKey = `playstate_${activeSlideId}_locked_step`;
       localStorage.setItem(bookedKey, playerNum.toString());
@@ -206,7 +203,10 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
 
       setBookedTeam(playerNum.toString());
       console.log(`[WebSerialManager] Registrata prenotazione squadra ${teamColor.toUpperCase()} (${playerNum}) per ${activeSlideId} a step ${currentStep}`);
+      return true;
     }
+
+    return false;
   }, [activeSlideId]);
 
   // 4. Gestione Polling Rapido (/leggi) quando il quiz è pronto per ricevere prenotazioni
@@ -270,8 +270,20 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
       
       // Se avevamo una prenotazione e ora viene rimossa (diventa null), sblocchiamo la pulsantiera fisica
       if (hadBooking && !hasBooking) {
-        console.log('[WebSerialManager] Prenotazione azzerata: invio sblocco hardware');
+        console.log('[WebSerialManager] Prenotazione azzerata: invio sblocco hardware e riarmo polling');
         sendSerialReset();
+        const isPrenotazioneGame = 
+          isNadiaActive ||
+          activeSlideType === 'img' || 
+          activeSlideType === 'music' || 
+          activeSlideId.startsWith('box1_') || 
+          activeSlideType === 'gioco_frase_tempo' ||
+          activeSlideType === 'finale_squadre' ||
+          activeSlideId === 'finale_squadre';
+
+        if (isPrenotazioneGame && !isPaused) {
+          startBuzzerFastPolling(handleBookingEvent, 120);
+        }
       }
       
       setBookedTeam(currentBooked);
@@ -350,6 +362,20 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
     }
     setBookedTeam(null);
     setIsUnlocking(false);
+
+    const isNadiaActive = localStorage.getItem('playstate_nadia_active') === 'true';
+    const isPrenotazioneGame = 
+      isNadiaActive ||
+      activeSlideType === 'img' || 
+      activeSlideType === 'music' || 
+      activeSlideId.startsWith('box1_') || 
+      activeSlideType === 'gioco_frase_tempo' ||
+      activeSlideType === 'finale_squadre' ||
+      activeSlideId === 'finale_squadre';
+
+    if (isPrenotazioneGame && !isPaused) {
+      startBuzzerFastPolling(handleBookingEvent, 120);
+    }
   };
 
   // Cerca / Connetti / Scollega con feedback immediato a 0ms

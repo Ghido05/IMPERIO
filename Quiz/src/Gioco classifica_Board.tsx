@@ -6,6 +6,7 @@ import { useScores } from './context/ScoreContext';
 import { ClassificaStaircaseSuspenseOverlay, type Box2SuspenseData } from './components/ClassificaStaircaseSuspenseOverlay';
 import { CountdownTimer } from './Gioco classifica musicale_Board';
 import { CrystalRankingBox, CrystalNumberMarker } from './components/CrystalRankingBlocks';
+import { box2SuspenseSoundFX } from './lib/box2SuspenseSoundFX';
 
 const ClassificaBoard = ({ 
   interactive = true, 
@@ -38,8 +39,11 @@ const ClassificaBoard = ({
   const [activeSuspense, setActiveSuspense] = useSyncedState<Box2SuspenseData | null>(`playstate_${slideId}_suspense`, null);
   const [turnOffset, setTurnOffset] = useSyncedState<number>(`playstate_${slideId}_turn_offset`, 0);
   
+  // ── Segnalazione Errore Risposta con X centrale a schermo ───────────────────
+  const [showError, setShowError] = useSyncedState<boolean>(`playstate_${slideId}_show_error`, false);
+
   // ── Cronometro sincronizzato (stile Box 4) — Manche Immagine ────────────────
-  // Parte per la squadra di turno dopo che la risposta della lista è stata rivelata (5 secondi)
+  // Parte per la squadra di turno dopo che la risposta della lista è stata rivelata (7 secondi)
   const [timerEndAt, setTimerEndAt] = useSyncedState<number>(`playstate_${slideId}_timer_end`, 0);
   const [timerDisplay, setTimerDisplay] = useState(0);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -284,6 +288,7 @@ const ClassificaBoard = ({
 
   const triggerRevealClue = useCallback((num: number) => {
     if (effectiveStep < 2) return;
+    if (showError) return; // Non avviare se c'è l'errore X a schermo
     if (revealed[num]) return;
     if (activeSuspense) return;
 
@@ -302,33 +307,44 @@ const ClassificaBoard = ({
       clueText: clueText,
       isError: false,
     });
-  }, [effectiveStep, revealed, activeSuspense, getActiveTeamIdx, getCluePoints, gameData.elementi, setActiveSuspense]);
+  }, [effectiveStep, showError, revealed, activeSuspense, getActiveTeamIdx, getCluePoints, gameData.elementi, setActiveSuspense]);
 
-  const triggerErrorSuspense = useCallback((targetStep?: number) => {
+  const triggerErrorSuspense = useCallback(() => {
     if (effectiveStep < 2) return;
+    if (showError) return; // Non avviare se c'è l'errore X a schermo
     if (activeSuspense) return;
-
-    let chosenStep = targetStep;
-    const unrevealed = Array.from({ length: 10 }, (_, i) => i + 1).filter(i => !revealed[i]);
-    if (unrevealed.length === 0) return;
-
-    if (!chosenStep || revealed[chosenStep] || chosenStep < 1 || chosenStep > 10) {
-      chosenStep = unrevealed[Math.floor(Math.random() * unrevealed.length)];
-    }
 
     const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
     const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
 
     setActiveSuspense({
-      clueIndex: chosenStep,
+      clueIndex: 0,
       teamIdx: targetTeamIdx,
       timestamp: Date.now(),
       totalClues: 10,
       points: 0,
-      clueText: 'RISPOSTA ERRATA',
+      clueText: 'RISPOSTA NON IN CLASSIFICA',
       isError: true,
     });
-  }, [effectiveStep, activeSuspense, revealed, getActiveTeamIdx, setActiveSuspense]);
+  }, [effectiveStep, showError, activeSuspense, revealed, getActiveTeamIdx, setActiveSuspense]);
+
+  // Errore quando viene tentata la risposta (Grande X Rossa a schermo, senza scalinata)
+  const triggerAnswerError = useCallback(() => {
+    if (activeSuspense) return; // Non sovrapporre se la scalinata è già in corso
+    setTimerEndAt(0);
+    setShowError(true);
+    setTurnOffset(prev => prev + 1);
+    box2SuspenseSoundFX.playErrorReveal();
+  }, [activeSuspense, setTimerEndAt, setShowError, setTurnOffset]);
+
+  // Gestione spegnimento automatico errore X dopo 900ms
+  useEffect(() => {
+    if (showError) {
+      box2SuspenseSoundFX.playErrorReveal();
+      const timer = setTimeout(() => setShowError(false), 900);
+      return () => clearTimeout(timer);
+    }
+  }, [showError, setShowError]);
 
   const isPublicScreen = React.useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -358,12 +374,12 @@ const ClassificaBoard = ({
       setTurnOffset(prev => prev + 1);
     } else {
       if (!isGameComplete) {
-        setTimerEndAt(Date.now() + 5000);
+        setTimerEndAt(Date.now() + 7000);
       }
     }
   }, [activeSuspense?.isError, setActiveSuspense, setTurnOffset, isGameComplete, setTimerEndAt]);
 
-  // Input da tastiera (1-9 e 0 per 10, C per timer)
+  // Input da tastiera (1-9 e 0 per 10, S / Invio, E / X per Errore Risposta, C per Timer)
   useEffect(() => {
     if (!interactive) return;
 
@@ -379,27 +395,28 @@ const ClassificaBoard = ({
 
       const key = e.key;
 
+      // Tasto \ (Backslash): avvia subito la scalata errata per la lista
+      if (key === '\\' || e.code === 'Backquote' || e.code === 'IntlBackslash') {
+        e.preventDefault();
+        if (showError || activeSuspense) return;
+        triggerErrorSuspense();
+        return;
+      }
+
+      if (key >= '1' && key <= '9') {
+        triggerRevealClue(Number(key));
+        return;
+      } else if (key === '0') {
+        triggerRevealClue(10);
+        return;
+      }
+
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         setStep(prev => Math.min(prev + 1, 2));
         return;
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         setStep(prev => Math.max(prev - 1, 0));
         return;
-      }
-
-      if (key >= '1' && key <= '9') {
-        const num = Number(key);
-        if (e.shiftKey) {
-          triggerErrorSuspense(num);
-        } else {
-          triggerRevealClue(num);
-        }
-      } else if (key === '0') {
-        if (e.shiftKey) {
-          triggerErrorSuspense(10);
-        } else {
-          triggerRevealClue(10);
-        }
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
         setTimerEndAt(0);
         if (effectiveStep < 2) {
@@ -424,14 +441,14 @@ const ClassificaBoard = ({
           }
         }
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
-        setTimerEndAt(0);
-        triggerErrorSuspense();
+        // Tasti E e X: mostrano la grande X rossa centrale a schermo (errore risposta tentata)
+        triggerAnswerError();
       } else if (key.toLowerCase() === 'c') {
-        // Tasto rapido C: avvia o arresta il timer 5s
+        // Tasto rapido C: avvia o arresta il timer 7s
         if (timerDisplay > 0) {
           setTimerEndAt(0);
         } else {
-          setTimerEndAt(Date.now() + 5000);
+          setTimerEndAt(Date.now() + 7000);
         }
       } else if (key.toLowerCase() === 't') {
         setShowTitle(true);
@@ -448,8 +465,10 @@ const ClassificaBoard = ({
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isAutoAdvancing, interactive, triggerRevealClue, triggerErrorSuspense, effectiveStep, setStep, isGameComplete, revealed, getActiveTeamIdx, addScore, setRevealed, setIsAutoAdvancing, setShowTitle, timerDisplay, setTimerEndAt]);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isAutoAdvancing, interactive, triggerRevealClue, triggerErrorSuspense, triggerAnswerError, effectiveStep, setStep, isGameComplete, revealed, getActiveTeamIdx, addScore, setRevealed, setIsAutoAdvancing, setShowTitle, timerDisplay, setTimerEndAt]);
 
   const rankingMarkers = [
     { value: 10, top: "31.389%" },
@@ -478,9 +497,28 @@ const ClassificaBoard = ({
 
   return (
     <div 
-      className={`relative w-full min-h-screen ${currentSfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center`}
+      className={`relative w-full min-h-screen ${currentSfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
       style={currentSfondo ? { backgroundImage: assetUrlCss(currentSfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
+      {/* Overlay di Errore Risposta Tentata (Flash Rosso + X Centrale) */}
+      {showError && (
+        <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center">
+          <div className="absolute inset-0 animate-flash-red" />
+          <svg 
+            className="w-[45%] h-auto text-red-600 drop-shadow-[0_0_50px_rgba(220,38,38,0.9)] animate-error-x" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="4" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </div>
+      )}
+
       {/* EFFETTI DI LUCE SULLO SFONDO (Decorativi) */}
       {!currentSfondo && (
         <>
@@ -538,7 +576,7 @@ const ClassificaBoard = ({
                 if (timerDisplay > 0) {
                   setTimerEndAt(0);
                 } else {
-                  setTimerEndAt(Date.now() + 5000);
+                  setTimerEndAt(Date.now() + 7000);
                 }
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 ${
@@ -546,24 +584,37 @@ const ClassificaBoard = ({
                   ? 'bg-amber-500 text-slate-950 shadow-md ring-2 ring-amber-400/50 animate-pulse'
                   : 'bg-slate-700/60 hover:bg-slate-700 text-amber-300'
               }`}
-              title="Tasto rapido [C]: Avvia o ferma il timer da 5s per indovinare l'immagine"
+              title="Tasto rapido [C]: Avvia o ferma il timer da 7s per indovinare l'immagine"
             >
               <span>⏱</span>
-              <span>{timerDisplay > 0 ? `Timer: ${Math.ceil(timerDisplay)}s (Stop)` : 'Timer 5s [C]'}</span>
+              <span>{timerDisplay > 0 ? `Timer: ${Math.ceil(timerDisplay)}s (Stop)` : 'Timer 7s [C]'}</span>
             </button>
+
+            {/* Pulsante Errore Risposta Tentata (Grande X Rossa a schermo) */}
+            <button
+              type="button"
+              onClick={triggerAnswerError}
+              className="px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 bg-red-600 hover:bg-red-500 border border-red-400 text-white shadow-lg active:scale-95"
+              title="Tasto rapido [E] o [X]: Mostra la grande X rossa centrale a schermo e passa il turno alla squadra successiva"
+            >
+              <span>❌</span>
+              <span>Risposta Errata [E / X]</span>
+            </button>
+
+            {/* Pulsante Scalata Errata per la lista */}
             <button
               type="button"
               onClick={() => triggerErrorSuspense()}
-              className="px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 bg-red-950/80 hover:bg-red-900 border border-red-500/60 text-red-300 shadow-md active:scale-95"
-              title="Tasto rapido [E] o [X]: Avvia la scalata per risposta errata e passa il turno"
+              className="px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 border shadow-md active:scale-95 bg-red-950/80 hover:bg-red-900 border-red-500/60 text-red-300"
+              title="Tasto rapido [ \ ]: Mostra l'animazione della scalinata tutta rossa con errore sulla lista"
             >
-              <span>❌</span>
-              <span>Scalata Errata [E]</span>
+              <span>🪜</span>
+              <span>Scalata Errata [\]</span>
             </button>
           </div>
         )}
 
-        {/* Step 1+: Cronometro 5s — Centrato nel varco tra l'immagine e il banner domanda */}
+        {/* Step 1+: Cronometro 7s — Centrato nel varco tra l'immagine e il banner domanda */}
         {timerDisplay > 0 && !isGameComplete && effectiveStep >= 1 && (
           <div 
             onClick={() => setTimerEndAt(0)}
@@ -575,7 +626,7 @@ const ClassificaBoard = ({
                 ? 'bg-red-950/95 border-red-500 shadow-[0_0_35px_rgba(239,68,68,0.8)] animate-pulse'
                 : 'bg-slate-950/95 border-amber-400/80 shadow-[0_0_35px_rgba(251,191,36,0.6)]'
             }`}>
-              <CountdownTimer seconds={timerDisplay} totalSeconds={5} />
+              <CountdownTimer seconds={timerDisplay} totalSeconds={7} />
               <div className="mt-1 flex flex-col items-center">
                 <span className="text-[8px] font-black uppercase tracking-wider text-white/60">
                   TENTATIVO
@@ -698,14 +749,14 @@ const ClassificaBoard = ({
                   <div
                     onClick={(e) => {
                       if (e.shiftKey) {
-                        triggerErrorSuspense(marker.value);
+                        triggerErrorSuspense();
                       } else {
                         triggerRevealClue(marker.value);
                       }
                     }}
                     onContextMenu={(e) => {
                       e.preventDefault();
-                      triggerErrorSuspense(marker.value);
+                      triggerErrorSuspense();
                     }}
                     className={`absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[2%] transition-all ${
                       !isRevealed ? 'cursor-pointer hover:scale-[1.01]' : ''
@@ -734,14 +785,14 @@ const ClassificaBoard = ({
                     canClick={!isRevealed}
                     onClick={(e) => {
                       if (e.shiftKey) {
-                        triggerErrorSuspense(marker.value);
+                        triggerErrorSuspense();
                       } else {
                         triggerRevealClue(marker.value);
                       }
                     }}
                     onContextMenu={(e) => {
                       e.preventDefault();
-                      triggerErrorSuspense(marker.value);
+                      triggerErrorSuspense();
                     }}
                     title={!isRevealed ? "Click: Rivelazione esatta | Shift+Click o Tasto destro: Scalata errata" : undefined}
                   />

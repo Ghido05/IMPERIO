@@ -5,6 +5,7 @@ import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
 import { ClassificaStaircaseSuspenseOverlay, type Box2SuspenseData } from './components/ClassificaStaircaseSuspenseOverlay';
 import { CrystalRankingBox, CrystalNumberMarker } from './components/CrystalRankingBlocks';
+import { box2SuspenseSoundFX } from './lib/box2SuspenseSoundFX';
 
 // ============================================================================
 // Cronometro circolare (stile Box 4) — Manche Canzoni (Classifica Musicale)
@@ -193,13 +194,57 @@ const ClassificaMusicaleBoard = ({
   const [activeSuspense, setActiveSuspense] = useSyncedState<Box2SuspenseData | null>(`playstate_${slideId}_suspense`, null);
   const [turnOffset, setTurnOffset] = useSyncedState<number>(`playstate_${slideId}_turn_offset`, 0);
   
+  // ── Segnalazione Errore Risposta con X centrale a schermo ───────────────────
+  const [showError, setShowError] = useSyncedState<boolean>(`playstate_${slideId}_show_error`, false);
+
   // ── Cronometro sincronizzato (stile Box 4) — Manche Canzoni ────────────────
-  // Parte per la squadra di turno dopo che la risposta della lista è stata rivelata (5 secondi)
+  // Parte per la squadra di turno dopo che la traccia audio dello strumento è terminata (5 secondi)
   const [timerEndAt, setTimerEndAt] = useSyncedState<number>(`playstate_${slideId}_timer_end`, 0);
   const [timerDisplay, setTimerDisplay] = useState(0);
   const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const prevTimerDisplayRef = useRef(0);
   const gongPlayedForRef = useRef<number>(0);
+
+  // Callback richiamata al termine della riproduzione di uno stem
+  const handleAudioStemEnded = React.useCallback((pos: number) => {
+    console.log(`[ClassificaMusicale] Stem ${pos} terminato`);
+    isPlayingStemsRef.current = false;
+    setIsPlaying(false);
+  }, [setIsPlaying]);
+
+  const handleAudioStemEndedRef = useRef(handleAudioStemEnded);
+  handleAudioStemEndedRef.current = handleAudioStemEnded;
+
+  // Sincronizzazione automatica del timer 5s:
+  // 1. Quando la traccia audio termina di suonare (transizione isPlaying: true -> false) e la scalinata è già chiusa
+  const prevIsPlayingRef = useRef<boolean>(isPlaying);
+  useEffect(() => {
+    const wasPlaying = prevIsPlayingRef.current;
+    prevIsPlayingRef.current = isPlaying;
+
+    if (wasPlaying && !isPlaying) {
+      if (!activeSuspense && !showSolution && !solutionAwarded) {
+        console.log('[ClassificaMusicale] Traccia audio terminata: avvio cronometro 5s');
+        setTimerEndAt(Date.now() + 5000);
+      }
+    }
+  }, [isPlaying, activeSuspense, showSolution, solutionAwarded, setTimerEndAt]);
+
+  // 2. Quando la scalinata termina e si chiude (transizione activeSuspense: aperto -> null)
+  const prevActiveSuspenseRef = useRef<Box2SuspenseData | null>(activeSuspense);
+  useEffect(() => {
+    const wasSuspense = prevActiveSuspenseRef.current;
+    prevActiveSuspenseRef.current = activeSuspense;
+
+    if (wasSuspense && !activeSuspense) {
+      if (wasSuspense.isError) return;
+      // Se l'audio NON sta suonando (perché già terminato durante la scalinata o perché l'indizio non ha audio)
+      if (!isPlaying && !showSolution && !solutionAwarded) {
+        console.log('[ClassificaMusicale] Scalinata chiusa e nessun audio attivo: avvio cronometro 5s');
+        setTimerEndAt(Date.now() + 5000);
+      }
+    }
+  }, [activeSuspense, isPlaying, showSolution, solutionAwarded, setTimerEndAt]);
 
   // Nomi squadre sincronizzati da setup
   const [teamNames] = useState<string[]>(() => {
@@ -214,7 +259,7 @@ const ClassificaMusicaleBoard = ({
     } catch {}
     return ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
   });
-  
+
   const shouldPlayAudio = React.useMemo(() => {
     if (!interactive) return false;
     if (isPresenter) return false;
@@ -253,7 +298,7 @@ const ClassificaMusicaleBoard = ({
 
   // Inizializza gli audio stems e l'audio finale (stabile, si attiva solo al cambio slide o traccia)
   useEffect(() => {
-    if (!shouldPlayAudio) {
+    if (!interactive) {
       stopAndMuteAllStems();
       if (finalAudioRef.current) {
         try {
@@ -279,7 +324,7 @@ const ClassificaMusicaleBoard = ({
       finalAudioRef.current = null;
     }
 
-    // Stems (iniziano rigorosamente mutati e con volume 0)
+    // Stems (nel relatore partono e restano rigorosamente mutati con volume 0)
     const newAudios: Record<number, HTMLAudioElement> = {};
     (gameData.elementi || []).forEach((el: any) => {
       if (el?.audio) {
@@ -287,6 +332,15 @@ const ClassificaMusicaleBoard = ({
         audio.loop = false; // NON ripartono automaticamente alla fine
         audio.volume = 0;   // Partono tutti mutati
         audio.muted = true;
+
+        audio.addEventListener('ended', () => {
+          handleAudioStemEndedRef.current(el.posizione);
+        });
+        audio.addEventListener('error', (err) => {
+          console.warn(`[ClassificaMusicale] Errore caricamento traccia ${el.posizione}:`, err);
+          handleAudioStemEndedRef.current(el.posizione);
+        });
+
         newAudios[el.posizione] = audio;
       }
     });
@@ -296,8 +350,8 @@ const ClassificaMusicaleBoard = ({
     if (canzoneFinaleUrl) {
       const finAudio = new Audio(assetUrl(canzoneFinaleUrl));
       finAudio.loop = false;
-      finAudio.volume = 1;
-      finAudio.muted = false;
+      finAudio.volume = isPresenter ? 0 : 1;
+      finAudio.muted = isPresenter;
       finalAudioRef.current = finAudio;
     }
 
@@ -323,11 +377,11 @@ const ClassificaMusicaleBoard = ({
         finalAudioRef.current = null;
       }
     };
-  }, [shouldPlayAudio, slideId, canzoneFinaleUrl, stemsAudioKey, stopAndMuteAllStems]);
+  }, [interactive, isPresenter, slideId, canzoneFinaleUrl, stemsAudioKey, stopAndMuteAllStems]);
 
   // Smuta gli stems in base ai clue rivelati (SOLO se la soluzione NON è attiva e non è già stata assegnata)
   useEffect(() => {
-    if (!shouldPlayAudio) return;
+    if (!interactive) return;
 
     if (showSolution || solutionAwarded) {
       // Se la soluzione è attiva o è già stata svelata/assegnata, NESSUNO stem deve mai avere volume > 0 o suonare
@@ -342,8 +396,8 @@ const ClassificaMusicaleBoard = ({
       if (stemAudio) {
         if (revealed[clue]) {
           if (!isFadingOutRef.current) {
-            stemAudio.muted = false;
-            stemAudio.volume = 1;
+            stemAudio.muted = isPresenter;
+            stemAudio.volume = isPresenter ? 0 : 1;
           }
         } else {
           stemAudio.volume = 0;
@@ -351,14 +405,14 @@ const ClassificaMusicaleBoard = ({
         }
       }
     });
-  }, [revealed, showSolution, solutionAwarded, shouldPlayAudio, stopAndMuteAllStems]);
+  }, [revealed, showSolution, solutionAwarded, interactive, isPresenter, stopAndMuteAllStems]);
 
   // Traccia l'ultimo trigger gestito per evitare di ri-eseguire trigger passati memorizzati al mount della slide
   const lastTriggerRef = React.useRef<number>(playTrigger);
 
   // Scatena la riproduzione sincronizzata da capo su tutti gli schermi collegati (Presenter, GamesView, ecc.)
   useEffect(() => {
-    if (!shouldPlayAudio || !playTrigger || showSolution || solutionAwarded) return;
+    if (!interactive || !playTrigger || showSolution || solutionAwarded) return;
     if (playTrigger === lastTriggerRef.current) return;
     lastTriggerRef.current = playTrigger;
 
@@ -370,12 +424,12 @@ const ClassificaMusicaleBoard = ({
         if (p !== undefined) p.catch(err => console.log("Errore riproduzione stem trigger:", err));
       } catch (err) {}
     });
-  }, [playTrigger, shouldPlayAudio, showSolution, solutionAwarded]);
+  }, [playTrigger, interactive, showSolution, solutionAwarded]);
 
   // Gestione Play / Pausa globale sincronizzata (es. comando tastiera M)
   const isInitialMountPlayingRef = React.useRef(true);
   useEffect(() => {
-    if (!shouldPlayAudio) return;
+    if (!interactive) return;
 
     if (isInitialMountPlayingRef.current) {
       isInitialMountPlayingRef.current = false;
@@ -424,12 +478,12 @@ const ClassificaMusicaleBoard = ({
         } catch (err) {}
       });
     }
-  }, [isPlaying, shouldPlayAudio, showSolution, solutionAwarded, setIsPlaying, stopAndMuteAllStems]);
+  }, [isPlaying, interactive, showSolution, solutionAwarded, setIsPlaying, stopAndMuteAllStems]);
 
   // Quando viene mostrata la soluzione, ferma tutti gli stems e riproduce solo la canzone finale
   const isInitialMountSolutionRef = React.useRef(true);
   useEffect(() => {
-    if (!shouldPlayAudio) return;
+    if (!interactive) return;
 
     if (showSolution) {
       // 1. ZITTISCI E FERMA ALL'ISTANTE TUTTI GLI STEMS
@@ -445,8 +499,8 @@ const ClassificaMusicaleBoard = ({
       if (finalAudioRef.current) {
         try {
           finalAudioRef.current.currentTime = 0;
-          finalAudioRef.current.muted = false;
-          finalAudioRef.current.volume = 1;
+          finalAudioRef.current.muted = isPresenter;
+          finalAudioRef.current.volume = isPresenter ? 0 : 1;
           const p = finalAudioRef.current.play();
           if (p !== undefined) {
             p.catch(err => console.log("Errore riproduzione canzone finale:", err));
@@ -468,7 +522,7 @@ const ClassificaMusicaleBoard = ({
       stopAndMuteAllStems();
       setIsPlaying(false);
     }
-  }, [showSolution, shouldPlayAudio, stopAndMuteAllStems, setIsPlaying]);
+  }, [showSolution, interactive, isPresenter, stopAndMuteAllStems, setIsPlaying]);
 
   const getPhraseStyle = (clue: number, isRevealed: boolean) => {
     if (!isRevealed) return "bg-white/5 border border-white/10";
@@ -708,6 +762,7 @@ const ClassificaMusicaleBoard = ({
   const triggerRevealClue = React.useCallback((numKey: number) => {
     if (effectiveStep < 1) return; // Non rivelare prima dello step 1
     if (showSolution) return; // Non avviare né toccare se la soluzione è già attiva
+    if (showError) return; // Non avviare se c'è l'errore X a schermo
     if (revealed[numKey]) return;
     if (activeSuspense) return;
 
@@ -729,34 +784,45 @@ const ClassificaMusicaleBoard = ({
       clueFrase: el?.frase,
       isError: false,
     });
-  }, [effectiveStep, showSolution, revealed, activeSuspense, getActiveTeamIdx, getCluePoints, gameData.elementi, getInstrumentIcon, setActiveSuspense]);
+  }, [effectiveStep, showSolution, showError, revealed, activeSuspense, getActiveTeamIdx, getCluePoints, gameData.elementi, getInstrumentIcon, setActiveSuspense]);
 
-  const triggerErrorSuspense = React.useCallback((targetStep?: number) => {
+  const triggerErrorSuspense = React.useCallback(() => {
     if (effectiveStep < 1) return;
     if (showSolution) return;
+    if (showError) return; // Non avviare se c'è l'errore X a schermo
     if (activeSuspense) return;
-
-    let chosenStep = targetStep;
-    const unrevealed = [1, 2, 3, 4, 5, 6, 7].filter(i => !revealed[i]);
-    if (unrevealed.length === 0) return;
-
-    if (!chosenStep || revealed[chosenStep] || chosenStep < 1 || chosenStep > 7) {
-      chosenStep = unrevealed[Math.floor(Math.random() * unrevealed.length)];
-    }
 
     const currentRevealedCount = Object.values(revealed).filter(v => v === true).length;
     const targetTeamIdx = getActiveTeamIdx(currentRevealedCount);
 
     setActiveSuspense({
-      clueIndex: chosenStep,
+      clueIndex: 0,
       teamIdx: targetTeamIdx,
       timestamp: Date.now(),
       totalClues: 7,
       points: 0,
-      clueText: 'RISPOSTA ERRATA',
+      clueText: 'RISPOSTA NON IN CLASSIFICA',
       isError: true,
     });
-  }, [effectiveStep, showSolution, activeSuspense, revealed, getActiveTeamIdx, setActiveSuspense]);
+  }, [effectiveStep, showSolution, showError, activeSuspense, revealed, getActiveTeamIdx, setActiveSuspense]);
+
+  // Errore quando viene tentata la risposta (Grande X Rossa a schermo, senza scalinata)
+  const triggerAnswerError = React.useCallback(() => {
+    if (activeSuspense) return; // Non sovrapporre se la scalinata è già in corso
+    setTimerEndAt(0);
+    setShowError(true);
+    setTurnOffset(prev => prev + 1);
+    box2SuspenseSoundFX.playErrorReveal();
+  }, [activeSuspense, setTimerEndAt, setShowError, setTurnOffset]);
+
+  // Gestione spegnimento automatico errore X dopo 900ms
+  useEffect(() => {
+    if (showError) {
+      box2SuspenseSoundFX.playErrorReveal();
+      const timer = setTimeout(() => setShowError(false), 900);
+      return () => clearTimeout(timer);
+    }
+  }, [showError, setShowError]);
 
   const isPublicScreen = React.useMemo(() => {
     if (typeof window === 'undefined') return false;
@@ -783,22 +849,26 @@ const ClassificaMusicaleBoard = ({
     setRevealed(prev => ({ ...prev, [clueNum]: true }));
     setPointsAssigned(prev => ({ ...prev, [clueNum]: targetTeamIdx + 1 }));
     setLatestClue(clueNum);
-    setPlayTrigger(Date.now());
-    setIsPlaying(true);
-  }, [slideId, isPublicScreen, addScore, setRevealed, setPointsAssigned, setLatestClue, setPlayTrigger, setIsPlaying]);
+
+    // Controlliamo se questo indizio ha una traccia audio configurata
+    const clueAudio = gameData.elementi?.[clueNum - 1]?.audio;
+    if (clueAudio) {
+      setPlayTrigger(Date.now());
+      setIsPlaying(true);
+    } else {
+      setIsPlaying(false);
+    }
+  }, [slideId, isPublicScreen, addScore, setRevealed, setPointsAssigned, setLatestClue, setPlayTrigger, setIsPlaying, gameData.elementi]);
 
   const handleSuspenseComplete = React.useCallback(() => {
     const wasError = activeSuspense?.isError;
     setActiveSuspense(null);
+
     if (wasError) {
       // In caso di risposta errata: la scalata ha comunicato l'errore, passa il turno alla squadra successiva
       setTurnOffset(prev => prev + 1);
-    } else {
-      if (!showSolution && !solutionAwarded) {
-        setTimerEndAt(Date.now() + 5000);
-      }
     }
-  }, [activeSuspense?.isError, setActiveSuspense, setTurnOffset, showSolution, solutionAwarded, setTimerEndAt]);
+  }, [activeSuspense?.isError, setActiveSuspense, setTurnOffset]);
 
   const handleGiveSolution = React.useCallback(() => {
     setTimerEndAt(0);
@@ -837,7 +907,7 @@ const ClassificaMusicaleBoard = ({
     setShowSolution(true);
   }, [showSolution, handleCloseSolution, solutionAwarded, revealed, getActiveTeamIdx, isPublicScreen, slideId, addScore, setSolutionAwarded, stopAndMuteAllStems, setRevealed, setIsPlaying, setShowSolution, setTimerEndAt]);
 
-  // Input da tastiera (1-7, S / Invio, M, T, E, X, C)
+  // Input da tastiera (1-7, S / Invio, M, T, E / X per Errore Risposta, C per Timer)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -849,21 +919,26 @@ const ClassificaMusicaleBoard = ({
 
       const key = e.key;
 
+      // Tasto \ (Backslash): avvia subito la scalata errata per la lista
+      if (key === '\\' || e.code === 'Backquote' || e.code === 'IntlBackslash') {
+        e.preventDefault();
+        if (showError || activeSuspense) return;
+        triggerErrorSuspense();
+        return;
+      }
+
+      if (key >= '1' && key <= '7') {
+        const numKey = Number(key);
+        triggerRevealClue(numKey);
+        return;
+      }
+
       if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         setStep(prev => Math.min(prev + 1, 2));
         return;
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         setStep(prev => Math.max(prev - 1, 0));
         return;
-      }
-
-      if (key >= '1' && key <= '7') {
-        const numKey = Number(key);
-        if (e.shiftKey) {
-          triggerErrorSuspense(numKey);
-        } else {
-          triggerRevealClue(numKey);
-        }
       } else if (key.toLowerCase() === 's' || key === 'Enter') {
         if (effectiveStep < 2) {
           setStep(2);
@@ -876,8 +951,8 @@ const ClassificaMusicaleBoard = ({
           return;
         }
       } else if (key.toLowerCase() === 'e' || key.toLowerCase() === 'x') {
-        setTimerEndAt(0);
-        triggerErrorSuspense();
+        // Tasti E e X: mostrano la grande X rossa centrale a schermo (errore risposta tentata)
+        triggerAnswerError();
       } else if (key.toLowerCase() === 'c') {
         // Tasto rapido C: avvia o arresta il timer 5s
         if (timerDisplay > 0) {
@@ -895,8 +970,10 @@ const ClassificaMusicaleBoard = ({
 
     if (!interactive) return;
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, triggerRevealClue, triggerErrorSuspense, showSolution, handleGiveSolution, handleCloseSolution, setIsPlaying, setStep, effectiveStep, timerDisplay, setTimerEndAt]);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [interactive, triggerRevealClue, triggerErrorSuspense, triggerAnswerError, showSolution, handleGiveSolution, handleCloseSolution, setIsPlaying, setStep, effectiveStep, timerDisplay, setTimerEndAt]);
 
   const rankingMarkers = [
     { value: 7, top: "34.070%" }, // Giallo (1 indizio)
@@ -922,9 +999,28 @@ const ClassificaMusicaleBoard = ({
 
   return (
     <div 
-      className={`relative w-full min-h-screen ${currentSfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center`}
+      className={`relative w-full min-h-screen ${currentSfondo ? 'bg-black' : 'bg-gradient-to-br from-neutral-950 to-neutral-900'} overflow-hidden flex items-center justify-center transition-transform duration-100 ${showError ? 'animate-shake' : ''}`}
       style={currentSfondo ? { backgroundImage: assetUrlCss(currentSfondo), backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' } : {}}
     >
+      {/* Overlay di Errore Risposta Tentata (Flash Rosso + X Centrale) */}
+      {showError && (
+        <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center">
+          <div className="absolute inset-0 animate-flash-red" />
+          <svg 
+            className="w-[45%] h-auto text-red-600 drop-shadow-[0_0_50px_rgba(220,38,38,0.9)] animate-error-x" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            stroke="currentColor" 
+            strokeWidth="4" 
+            strokeLinecap="round" 
+            strokeLinejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </div>
+      )}
+
       {/* EFFETTI DI LUCE SULLO SFONDO (Decorativi) */}
       {!currentSfondo && (
         <>
@@ -995,14 +1091,27 @@ const ClassificaMusicaleBoard = ({
               <span>⏱</span>
               <span>{timerDisplay > 0 ? `Timer: ${Math.ceil(timerDisplay)}s (Stop)` : 'Timer 5s [C]'}</span>
             </button>
+
+            {/* Pulsante Errore Risposta Tentata (Grande X Rossa a schermo) */}
+            <button
+              type="button"
+              onClick={triggerAnswerError}
+              className="px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 bg-red-600 hover:bg-red-500 border border-red-400 text-white shadow-lg active:scale-95"
+              title="Tasto rapido [E] o [X]: Mostra la grande X rossa centrale a schermo e passa il turno alla squadra successiva"
+            >
+              <span>❌</span>
+              <span>Risposta Errata [E / X]</span>
+            </button>
+
+            {/* Pulsante Scalata Errata per la lista */}
             <button
               type="button"
               onClick={() => triggerErrorSuspense()}
-              className="px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 bg-red-950/80 hover:bg-red-900 border border-red-500/60 text-red-300 shadow-md active:scale-95"
-              title="Tasto rapido [E] o [X]: Avvia la scalata per risposta errata e passa il turno"
+              className="px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 border shadow-md active:scale-95 bg-red-950/80 hover:bg-red-900 border-red-500/60 text-red-300"
+              title="Tasto rapido [ \ ]: Mostra l'animazione della scalinata tutta rossa con errore sulla lista"
             >
-              <span>❌</span>
-              <span>Scalata Errata [E]</span>
+              <span>🪜</span>
+              <span>Scalata Errata [\]</span>
             </button>
           </div>
         )}
@@ -1135,14 +1244,14 @@ const ClassificaMusicaleBoard = ({
                   <div
                     onClick={(e) => {
                       if (e.shiftKey) {
-                        triggerErrorSuspense(marker.value);
+                        triggerErrorSuspense();
                       } else {
                         triggerRevealClue(marker.value);
                       }
                     }}
                     onContextMenu={(e) => {
                       e.preventDefault();
-                      triggerErrorSuspense(marker.value);
+                      triggerErrorSuspense();
                     }}
                     className={`absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[3%] transition-all ${
                       !isRevealed ? 'cursor-pointer hover:scale-[1.01]' : ''
@@ -1171,14 +1280,14 @@ const ClassificaMusicaleBoard = ({
                     canClick={!isRevealed}
                     onClick={(e) => {
                       if (e.shiftKey) {
-                        triggerErrorSuspense(marker.value);
+                        triggerErrorSuspense();
                       } else {
                         triggerRevealClue(marker.value);
                       }
                     }}
                     onContextMenu={(e) => {
                       e.preventDefault();
-                      triggerErrorSuspense(marker.value);
+                      triggerErrorSuspense();
                     }}
                     title={!isRevealed ? "Click: Rivelazione esatta | Shift+Click o Tasto destro: Scalata errata" : undefined}
                   />

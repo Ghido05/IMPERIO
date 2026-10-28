@@ -447,32 +447,8 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       nextRound += 1;
       
       if (nextRound > 3) {
-        if (currentManche < manches.length - 1) {
-          if (confirm("Manche finita! Passare alla prossima manche?")) {
-            const nextM = currentManche + 1;
-            const nextSeq = getTurnSequence(nextM);
-            setCurrentManche(nextM);
-            setCurrentRound(1);
-            setCurrentTeam(nextSeq[0]);
-            setChosenSuggestion("");
-            
-            localStorage.setItem('password_current_manche', nextM.toString());
-            localStorage.setItem(`password_current_round_m${nextM}`, "1");
-            localStorage.setItem('password_current_round', "1");
-            localStorage.setItem(`password_current_team_m${nextM}`, nextSeq[0].toString());
-            localStorage.setItem('password_current_team', nextSeq[0].toString());
-            localStorage.removeItem('password_chosen_suggestion');
-            localStorage.removeItem(`password_chosen_suggestion_m${nextM}`);
-            window.dispatchEvent(new Event('storage'));
-            window.dispatchEvent(new CustomEvent('local-storage-update', {
-              detail: { key: 'password_current_manche', value: nextM.toString() }
-            }));
-            return;
-          }
-        } else {
-          alert("TUTTE LE MANCHES SONO FINITE!");
-          return;
-        }
+        // Fine della manche (Round 3 completato): non si passa alla manche successiva tramite il tasto Prossimo
+        return;
       } else {
         const nextSeq = getTurnSequence(currentManche);
         for (let i = 0; i < nextSeq.length; i++) {
@@ -592,6 +568,18 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       }));
     }
   };
+
+  const isLastTurn = React.useMemo(() => {
+    if (currentRound < 3) return false;
+    const currentSeq = getTurnSequence(currentManche);
+    const currentIndex = currentSeq.indexOf(currentTeam);
+    for (let i = currentIndex + 1; i < currentSeq.length; i++) {
+      if (!excludedTeams.includes(currentSeq[i])) {
+        return false;
+      }
+    }
+    return true;
+  }, [currentRound, currentManche, currentTeam, excludedTeams]);
 
   const resetGame = () => {
     if (!confirm("Sei sicuro di voler resettare l'intero gioco (tutte le manche)?")) return;
@@ -917,7 +905,13 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
               <button
                 type="button"
                 onClick={nextTurn}
-                className="flex-1 py-2.5 sm:py-3 bg-white hover:bg-yellow-400 text-black font-black text-xs sm:text-sm rounded-xl transition-all shadow-lg uppercase tracking-tighter cursor-pointer"
+                disabled={isLastTurn}
+                className={`flex-1 py-2.5 sm:py-3 font-black text-xs sm:text-sm rounded-xl transition-all shadow-lg uppercase tracking-tighter ${
+                  isLastTurn
+                    ? 'bg-slate-700/50 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+                    : 'bg-white hover:bg-yellow-400 text-black cursor-pointer'
+                }`}
+                title={isLastTurn ? "Ultimo turno del Round 3 raggiunto (manche completata)" : "Passa al prossimo turno"}
               >
                 Prossimo →
               </button>

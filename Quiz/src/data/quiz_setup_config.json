@@ -845,8 +845,8 @@
             "bonus"
           ],
           "immagine_premio_squadra1": "dado",
-          "immagine_premio_squadra2": "switch",
-          "immagine_premio_squadra3": "arco"
+          "immagine_premio_squadra2": "dado",
+          "immagine_premio_squadra3": "dado"
         },
         "notePresentatore": "DALLA TORRE DI ASTRONOMIA CADE SILENTE (NON GANDALF)\nIL NECROMANTE è MEFISTO\nTRITONI NEL CALICE DI FUOCO VENGONO INCONTRATI DA HARRY DURANTE LA SECONDA PROVA"
       },
@@ -921,9 +921,9 @@
             "vuoto",
             "bonus"
           ],
-          "immagine_premio_squadra1": "dado",
+          "immagine_premio_squadra1": "switch",
           "immagine_premio_squadra2": "switch",
-          "immagine_premio_squadra3": "arco"
+          "immagine_premio_squadra3": "switch"
         },
         "notePresentatore": ""
       },
@@ -998,8 +998,8 @@
             "vuoto",
             "bonus"
           ],
-          "immagine_premio_squadra1": "dado",
-          "immagine_premio_squadra2": "switch",
+          "immagine_premio_squadra1": "arco",
+          "immagine_premio_squadra2": "arco",
           "immagine_premio_squadra3": "arco"
         },
         "notePresentatore": ""

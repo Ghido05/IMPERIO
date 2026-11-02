@@ -278,23 +278,38 @@ class SoundFXEngine {
 
 const soundFX = new SoundFXEngine();
 
-// Cue temporali sincronizzati con la voce narrante ufficiale (33.75s totali):
-// 0.0s - 2.0s: "Ecco a voi il gioco finale."
-// 2.4s - 10.7s: "Chi detiene la mano di gioco lancia il dado per capire quale squadra sfidare, e sceglie una fra le domande numerate fino a 15." (Regola 01)
-// 11.0s - 19.8s: "In caso di risposta esatta si elimina il primo componente della squadra sfidata, in caso di risposta errata si elimina se stessi." (Regola 02)
+// Cue temporali sincronizzati con la voce narrante ufficiale aggiornata (75.73s totali):
+// --- SLIDE 1: REGOLE DELLO SCONTRO ---
+// 0.0s - 2.4s: "Ecco a voi il gioco finale."
+// 2.4s - 11.2s: "Chi detiene la mano di gioco lancia il dado per capire quale squadra sfidare, e sceglie una fra le domande numerate fino a 15." (Regola 01)
+// 11.2s - 19.9s: "In caso di risposta esatta si elimina il primo componente della squadra sfidata, in caso di risposta errata si elimina se stessi." (Regola 02)
 // 20.0s - 27.3s: "Si potranno consultare solo i prescelti in posizione due e il tre, e solo in quattro, cinque e sei." (Regola 03)
-// 27.8s - 33.5s: "Il capitano può intervenire per decidere di giocare un jolly, tramite la pulsantiera." (Regola 04)
+// 27.5s - 33.0s: "Il capitano può intervenire per decidere di giocare un jolly, tramite la pulsantiera." (Regola 04)
+// --- TRANSIZIONE A SLIDE 2: I 4 BONUS & JOLLY ---
+// 33.0s - 41.2s: "Attraverso quest'ultima le squadre possono attivare strategicamente uno dei seguenti quattro Jolly a disposizione:"
+// 41.2s - 47.0s: "Dado: permette di rilanciare il dado per cambiare la squadra da sfidare." (Bonus 1)
+// 47.0s - 60.0s: "Switch: permette di sostituire la domanda appena scelta con una nuova..." (Bonus 2)
+// 60.0s - 67.5s: "Arco: obbliga la squadra sfidata a rispondere alla domanda..." (Bonus 3)
+// 67.5s - 75.4s: "Scudo: può essere attivato in qualsiasi fase del gioco per proteggere e salvare un prescelto..." (Bonus 4)
+// 75.4s - 75.7s: Fanfara finale & Tutto Pronto!
 const SFX_CUES = [
+  // Slide 1: Regole dello Scontro
   { id: 'b5_intro', time: 0.1, play: () => soundFX.playBoxActivation() },
   { id: 'b5_pill_regola1', time: 2.4, play: () => soundFX.playBoxActivation() },
   { id: 'b5_card_regola1', time: 3.0, play: () => soundFX.playDiceRoll() },
-  { id: 'b5_pill_regola2', time: 11.0, play: () => soundFX.playBoxActivation() },
-  { id: 'b5_card_regola2', time: 11.6, play: () => soundFX.playShieldClang() },
+  { id: 'b5_pill_regola2', time: 11.2, play: () => soundFX.playBoxActivation() },
+  { id: 'b5_card_regola2', time: 11.8, play: () => soundFX.playShieldClang() },
   { id: 'b5_pill_regola3', time: 20.0, play: () => soundFX.playBoxActivation() },
   { id: 'b5_card_regola3', time: 20.6, play: () => soundFX.playArrowTin() },
-  { id: 'b5_pill_regola4', time: 27.8, play: () => soundFX.playBoxActivation() },
-  { id: 'b5_card_regola4', time: 28.3, play: () => soundFX.playFanfare() },
-  { id: 'b5_finish', time: 33.5, play: () => soundFX.playFanfare() },
+  { id: 'b5_pill_regola4', time: 27.5, play: () => soundFX.playBoxActivation() },
+  { id: 'b5_card_regola4', time: 28.0, play: () => soundFX.playFanfare() },
+  // Slide 2: I 4 Bonus & Jolly
+  { id: 'b5_slide2_transition', time: 33.0, play: () => soundFX.playBoxActivation() },
+  { id: 'b5_bonus_dado', time: 41.2, play: () => soundFX.playDiceRoll() },
+  { id: 'b5_bonus_switch', time: 47.0, play: () => soundFX.playSwitchSound() },
+  { id: 'b5_bonus_arco', time: 60.0, play: () => soundFX.playArrowWhoosh() },
+  { id: 'b5_bonus_scudo', time: 67.5, play: () => soundFX.playShieldClang() },
+  { id: 'b5_finish', time: 75.4, play: () => soundFX.playFanfare() },
 ];
 
 export default function SpiegazioneBox5Board({
@@ -340,11 +355,6 @@ export default function SpiegazioneBox5Board({
   // =========================================================================
   // STATO SINCRONIZZATO TRA FINESTRE (useSyncedState su localStorage + IPC)
   // =========================================================================
-  // activeSlide: 0 = Slide 1 (Regole Scontro), 1 = Slide 2 (I 4 Bonus & Jolly)
-  const [activeSlide, setActiveSlide] = useSyncedState<number>(
-    `playstate_${slideId}_slide`,
-    0
-  );
   // manualStep: da 0 a 10
   // Step 0..4: Slide 1 (Regola 1..4)
   // Step 5..10: Slide 2 (Intro, Dado, Switch, Arco, Scudo, Banner Finale)
@@ -366,12 +376,17 @@ export default function SpiegazioneBox5Board({
   );
 
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(33.75);
+  const [duration, setDuration] = useState(75.73);
   const [isMuted, setIsMuted] = useState(isMultiWindowRelatore);
+
+  // Calcolo derivato deterministico di activeSlide per evitare conflitti o rimbalzi IPC multi-finestra
+  // Slide 0 = Slide 1 (Regole dello Scontro), Slide 1 = Slide 2 (I 4 Bonus & Jolly)
+  const activeSlide = manualStep >= 5 || currentTime >= 33.0 ? 1 : 0;
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playedSoundsRef = useRef<Set<string>>(new Set());
   const isSeekingRef = useRef<boolean>(false);
+  const lastSeekTimestampRef = useRef<number>(0);
 
   const formatTime = (secs: number) => {
     const s = Math.floor(secs);
@@ -406,12 +421,12 @@ export default function SpiegazioneBox5Board({
     }
   }, [isPlaying, interactive]);
 
-  // Fallback timer per garantire che currentTime avanzi sempre a 60fps / 100ms come un video continuo
+  // Fallback timer per garantire che currentTime avanzi sempre a 60fps / 100ms se l'audio non è avviabile
   useEffect(() => {
     if (!interactive || !isPlaying) return;
 
     const interval = setInterval(() => {
-      if (audioRef.current && !audioRef.current.paused && !isNaN(audioRef.current.currentTime) && audioRef.current.currentTime > 0) {
+      if (audioRef.current && !audioRef.current.paused && !isNaN(audioRef.current.currentTime)) {
         return;
       }
       setCurrentTime((prev) => {
@@ -428,27 +443,68 @@ export default function SpiegazioneBox5Board({
     return () => clearInterval(interval);
   }, [isPlaying, interactive, duration, setIsPlaying, setIsAllRevealed]);
 
+  // Step corrispondente al timestamp esatto della narrazione
+  const getStepFromTime = (t: number) => {
+    if (t >= 75.4) return 10;
+    if (t >= 67.5) return 9;
+    if (t >= 60.0) return 8;
+    if (t >= 47.0) return 7;
+    if (t >= 41.2) return 6;
+    if (t >= 33.0) return 5;
+    if (t >= 27.5) return 4;
+    if (t >= 20.0) return 3;
+    if (t >= 11.2) return 2;
+    if (t >= 2.4) return 1;
+    return 0;
+  };
+
   // Funzione di Seek temporale
   const seekTo = useCallback(
     (targetTime: number) => {
       const clamped = Math.max(0, Math.min(duration, targetTime));
+      const now = Date.now();
+      lastSeekTimestampRef.current = now;
+      isSeekingRef.current = true;
       setCurrentTime(clamped);
+      const step = getStepFromTime(clamped);
+      setManualStep((prev) => (prev !== step ? step : prev));
       if (audioRef.current) {
         try {
           audioRef.current.currentTime = clamped;
         } catch {}
       }
-      setSeekTrigger({ time: clamped, timestamp: Date.now() });
+      if (clamped <= 0.5) {
+        playedSoundsRef.current.clear();
+      } else {
+        const newPlayed = new Set<string>();
+        SFX_CUES.forEach((cue) => {
+          if (clamped >= cue.time) {
+            newPlayed.add(cue.id);
+          }
+        });
+        playedSoundsRef.current = newPlayed;
+      }
+      setTimeout(() => {
+        isSeekingRef.current = false;
+      }, 150);
+      setSeekTrigger({ time: clamped, timestamp: now });
     },
-    [duration, setSeekTrigger]
+    [duration, setManualStep, setSeekTrigger]
   );
 
   // Ricezione del comando di seek sincronizzato da qualsiasi finestra
   useEffect(() => {
     if (!seekTrigger || isNaN(seekTrigger.time)) return;
-    const target = Math.max(0, seekTrigger.time);
+    if (seekTrigger.timestamp && seekTrigger.timestamp === lastSeekTimestampRef.current) {
+      return;
+    }
+    lastSeekTimestampRef.current = seekTrigger.timestamp || 0;
+
+    const target = Math.max(0, Math.min(duration, seekTrigger.time));
     isSeekingRef.current = true;
     setCurrentTime(target);
+    const step = getStepFromTime(target);
+    setManualStep((prev) => (prev !== step ? step : prev));
     if (audioRef.current && !isNaN(target)) {
       try {
         audioRef.current.currentTime = target;
@@ -460,7 +516,7 @@ export default function SpiegazioneBox5Board({
     } else {
       const newPlayed = new Set<string>();
       SFX_CUES.forEach((cue) => {
-        if (target >= cue.time && playedSoundsRef.current.has(cue.id)) {
+        if (target >= cue.time) {
           newPlayed.add(cue.id);
         }
       });
@@ -471,7 +527,7 @@ export default function SpiegazioneBox5Board({
       isSeekingRef.current = false;
     }, 150);
     return () => clearTimeout(timer);
-  }, [seekTrigger]);
+  }, [seekTrigger, duration, setManualStep]);
 
   // Esecuzione effetti sonori sincronizzati ai cue della narrazione
   useEffect(() => {
@@ -491,13 +547,20 @@ export default function SpiegazioneBox5Board({
     if (isSeekingRef.current) return;
     if (audioRef.current) {
       const t = audioRef.current.currentTime;
-      if (!isNaN(t)) setCurrentTime(t);
+      if (!isNaN(t)) {
+        setCurrentTime(t);
+        // Avanzamento automatico e incrementale dello step sincronizzato via IPC
+        if (isPlaying) {
+          const step = getStepFromTime(t);
+          setManualStep((prev) => (prev !== step ? step : prev));
+          if (t >= 75.4) {
+            setIsPlaying(false);
+            setIsAllRevealed(true);
+          }
+        }
+      }
       if (audioRef.current.duration && !isNaN(audioRef.current.duration) && audioRef.current.duration > 0) {
         setDuration(audioRef.current.duration);
-      }
-      if (t >= 33.2) {
-        setIsPlaying(false);
-        setIsAllRevealed(true);
       }
     }
   };
@@ -507,25 +570,33 @@ export default function SpiegazioneBox5Board({
     setIsAllRevealed(true);
   };
 
-  // Visibilità dinamica sincronizzata per le 4 regole di Slide 1 (tramite voce narrante o step)
-  const showRegola1Pill = isAllRevealed || (isPlaying && currentTime >= 2.4) || manualStep >= 1;
-  const showRegola1Card = isAllRevealed || (isPlaying && currentTime >= 3.0) || manualStep >= 1;
+  // Visibilità dinamica sincronizzata per le 4 regole di Slide 1
+  const showRegola1Pill = isAllRevealed || currentTime >= 2.4;
+  const showRegola1Card = isAllRevealed || currentTime >= 3.0;
 
-  const showRegola2Pill = isAllRevealed || (isPlaying && currentTime >= 11.0) || manualStep >= 2;
-  const showRegola2Card = isAllRevealed || (isPlaying && currentTime >= 11.6) || manualStep >= 2;
+  const showRegola2Pill = isAllRevealed || currentTime >= 11.2;
+  const showRegola2Card = isAllRevealed || currentTime >= 11.8;
 
-  const showRegola3Pill = isAllRevealed || (isPlaying && currentTime >= 20.0) || manualStep >= 3;
-  const showRegola3Card = isAllRevealed || (isPlaying && currentTime >= 20.6) || manualStep >= 3;
+  const showRegola3Pill = isAllRevealed || currentTime >= 20.0;
+  const showRegola3Card = isAllRevealed || currentTime >= 20.6;
 
-  const showRegola4Pill = isAllRevealed || (isPlaying && currentTime >= 27.8) || manualStep >= 4;
-  const showRegola4Card = isAllRevealed || (isPlaying && currentTime >= 28.3) || manualStep >= 4;
+  const showRegola4Pill = isAllRevealed || currentTime >= 27.5;
+  const showRegola4Card = isAllRevealed || currentTime >= 28.0;
 
   // Visibilità dinamica sincronizzata per i 4 bonus di Slide 2
-  const showBonusDado = isAllRevealed || manualStep >= 6;
-  const showBonusSwitch = isAllRevealed || manualStep >= 7;
-  const showBonusArco = isAllRevealed || manualStep >= 8;
-  const showBonusScudo = isAllRevealed || manualStep >= 9;
-  const showFinaleBanner = isAllRevealed || manualStep >= 10;
+  // Ciascun bonus compare SOLO al suo esatto secondo durante la narrazione
+  // Questo impedisce categoricamente che Dado o Switch appaiano all'inizio della sezione Jolly (33.0s - 41.2s)
+  const showBonusDado = isAllRevealed || currentTime >= 41.2;
+  const showBonusSwitch = isAllRevealed || currentTime >= 47.0;
+  const showBonusArco = isAllRevealed || currentTime >= 60.0;
+  const showBonusScudo = isAllRevealed || currentTime >= 67.5;
+  const showFinaleBanner = isAllRevealed || currentTime >= 75.4;
+
+  // Evidenziazione attiva della scheda di cui la narratrice sta parlando
+  const isSpeakingDado = isPlaying && currentTime >= 41.2 && currentTime < 47.0;
+  const isSpeakingSwitch = isPlaying && currentTime >= 47.0 && currentTime < 60.0;
+  const isSpeakingArco = isPlaying && currentTime >= 60.0 && currentTime < 67.5;
+  const isSpeakingScudo = isPlaying && currentTime >= 67.5 && currentTime < 75.4;
 
   // Ritorno alla mappa dell'isola
   const returnToMap = useCallback(() => {
@@ -556,39 +627,42 @@ export default function SpiegazioneBox5Board({
         const next = manualStep + 1;
         setManualStep(next);
         if (next === 1) seekTo(2.4);
-        else if (next === 2) seekTo(11.0);
+        else if (next === 2) seekTo(11.2);
         else if (next === 3) seekTo(20.0);
-        else if (next === 4) seekTo(27.8);
+        else if (next === 4) seekTo(27.5);
       } else {
         // Passaggio a Slide 2 (I 4 Bonus)
         soundFX.playFanfare();
-        if (audioRef.current) audioRef.current.pause();
-        setIsPlaying(false);
-        setActiveSlide(1);
         setManualStep(5);
+        seekTo(33.0);
       }
     } else {
       if (manualStep < 6) {
         soundFX.playDiceRoll();
         setManualStep(6);
+        seekTo(41.2);
       } else if (manualStep === 6) {
         soundFX.playSwitchSound();
         setManualStep(7);
+        seekTo(47.0);
       } else if (manualStep === 7) {
         soundFX.playArrowWhoosh();
         setManualStep(8);
+        seekTo(60.0);
       } else if (manualStep === 8) {
         soundFX.playShieldClang();
         setManualStep(9);
+        seekTo(67.5);
       } else if (manualStep === 9) {
         soundFX.playFanfare();
         setManualStep(10);
+        seekTo(75.4);
         setIsAllRevealed(true);
       } else {
         handleStartFinale();
       }
     }
-  }, [interactive, activeSlide, manualStep, setManualStep, setActiveSlide, setIsAllRevealed, handleStartFinale, seekTo, setIsPlaying]);
+  }, [interactive, activeSlide, manualStep, setManualStep, setIsAllRevealed, handleStartFinale, seekTo]);
 
   // Step indietro manuale (protetto: a step 0 non esce dalla mappa)
   const prevStep = useCallback(() => {
@@ -596,15 +670,25 @@ export default function SpiegazioneBox5Board({
     soundFX.resume();
 
     if (activeSlide === 1) {
-      if (manualStep > 6) {
-        setManualStep(manualStep - 1);
-      } else if (manualStep <= 6 && manualStep > 5) {
+      if (manualStep > 9) {
+        setManualStep(9);
+        seekTo(67.5);
+      } else if (manualStep === 9) {
+        setManualStep(8);
+        seekTo(60.0);
+      } else if (manualStep === 8) {
+        setManualStep(7);
+        seekTo(47.0);
+      } else if (manualStep === 7) {
+        setManualStep(6);
+        seekTo(41.2);
+      } else if (manualStep === 6) {
         setManualStep(5);
+        seekTo(33.0);
       } else {
         // Ritorna a Slide 1 all'ultimo step
-        setActiveSlide(0);
         setManualStep(4);
-        seekTo(27.8);
+        seekTo(27.5);
       }
     } else {
       if (manualStep > 0) {
@@ -612,11 +696,11 @@ export default function SpiegazioneBox5Board({
         setManualStep(prev);
         if (prev === 0) seekTo(0);
         else if (prev === 1) seekTo(2.4);
-        else if (prev === 2) seekTo(11.0);
+        else if (prev === 2) seekTo(11.2);
         else if (prev === 3) seekTo(20.0);
       }
     }
-  }, [interactive, activeSlide, manualStep, setManualStep, setActiveSlide, seekTo]);
+  }, [interactive, activeSlide, manualStep, setManualStep, seekTo]);
 
   // Svela tutto
   const revealEverything = useCallback(() => {
@@ -646,7 +730,6 @@ export default function SpiegazioneBox5Board({
   const resetAllState = useCallback(() => {
     if (!interactive) return;
     soundFX.resume();
-    setActiveSlide(0);
     setManualStep(0);
     setIsAllRevealed(false);
     setIsPlaying(false);
@@ -655,40 +738,23 @@ export default function SpiegazioneBox5Board({
       audioRef.current.currentTime = 0;
     }
     playedSoundsRef.current.clear();
-    setCurrentTime(0);
-  }, [interactive, setActiveSlide, setManualStep, setIsAllRevealed, setIsPlaying]);
-
-  // Selettore slide manuale
-  const selectSlide = useCallback(
-    (slideIdx: number) => {
-      if (!interactive) return;
-      soundFX.resume();
-      soundFX.playBoxActivation();
-      setActiveSlide(slideIdx);
-      if (slideIdx === 0 && manualStep > 4) {
-        setManualStep(4);
-      } else if (slideIdx === 1 && manualStep < 5) {
-        setManualStep(5);
-      }
-    },
-    [interactive, setActiveSlide, manualStep, setManualStep]
-  );
+    seekTo(0);
+  }, [interactive, setManualStep, setIsAllRevealed, setIsPlaying, seekTo]);
 
   // Toggle play/pause
   const togglePlay = useCallback(() => {
     if (!interactive) return;
     soundFX.resume();
-    if (currentTime >= 33.2 || isAllRevealed || manualStep >= 4) {
+    if (currentTime >= 75.0 || isAllRevealed || manualStep >= 10) {
       playedSoundsRef.current.clear();
       seekTo(0);
       setManualStep(0);
       setIsAllRevealed(false);
-      setActiveSlide(0);
       setIsPlaying(true);
       return;
     }
     setIsPlaying(!isPlaying);
-  }, [interactive, currentTime, isAllRevealed, manualStep, isPlaying, seekTo, setManualStep, setIsAllRevealed, setActiveSlide, setIsPlaying]);
+  }, [interactive, currentTime, isAllRevealed, manualStep, isPlaying, seekTo, setManualStep, setIsAllRevealed, setIsPlaying]);
 
   // Gestione tastiera sul relatore
   useEffect(() => {
@@ -783,49 +849,8 @@ export default function SpiegazioneBox5Board({
 
       {/* ========================================================================= */}
       {/* HEADER CINEMATICO AD ALTO IMPATTO                                         */}
-      {/* Con selettore delle 2 Slide sincronizzato                                 */}
       {/* ========================================================================= */}
-      <header className="relative z-10 w-full flex flex-col items-center justify-center shrink-0 mb-2 text-center">
-        <div className="flex items-center gap-4 mb-2">
-          {/* Badge di ambientazione */}
-          <div className="flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-slate-950/85 border border-red-500/40 shadow-lg backdrop-blur-md">
-            <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse" />
-            <span className="text-[11px] font-mono font-bold tracking-widest text-red-300 uppercase">
-              FASE FINALE: TERMOPILI
-            </span>
-            <span className="text-white/30 text-xs">|</span>
-            <span className="text-xs font-mono font-bold tracking-wider text-amber-300">
-              BOX 5 • ARENA D'ACQUA
-            </span>
-          </div>
-
-          {/* Selettore Fasi / Slide (Clickable anche dal Relatore) */}
-          <div className="flex items-center gap-1.5 p-1 rounded-full bg-slate-950/90 border border-white/20 shadow-md backdrop-blur-md">
-            <button
-              type="button"
-              onClick={() => selectSlide(0)}
-              className={`px-4 py-1 rounded-full text-xs font-bold uppercase transition-all tracking-wide ${
-                activeSlide === 0
-                  ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-[0_0_15px_rgba(239,68,68,0.5)] scale-105'
-                  : 'text-slate-400 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              ⚔️ 1. REGOLE DELLO SCONTRO
-            </button>
-            <button
-              type="button"
-              onClick={() => selectSlide(1)}
-              className={`px-4 py-1 rounded-full text-xs font-bold uppercase transition-all tracking-wide ${
-                activeSlide === 1
-                  ? 'bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.5)] scale-105'
-                  : 'text-slate-400 hover:text-white hover:bg-white/10'
-              }`}
-            >
-              🛡️ 2. I 4 BONUS & JOLLY
-            </button>
-          </div>
-        </div>
-
+      <header className="relative z-10 w-full flex flex-col items-center justify-center shrink-0 mb-3 text-center">
         <h1 className="text-4xl lg:text-5xl font-black tracking-tight uppercase text-transparent bg-clip-text bg-gradient-to-r from-red-200 via-rose-300 to-amber-300 drop-shadow-[0_4px_24px_rgba(239,68,68,0.5)] text-center font-serif">
           {titoloGioco}
         </h1>
@@ -1094,63 +1119,33 @@ export default function SpiegazioneBox5Board({
                 </div>
               </div>
             </div>
-            {/* Callout di passaggio a Slide 2 (I 4 Bonus) o Avvio Scontro */}
-            {(showRegola4Card || isAllRevealed) && (
-              <div className="w-full flex items-center justify-between p-2.5 px-6 rounded-2xl bg-gradient-to-r from-red-950/80 via-slate-950/90 to-amber-950/80 border border-red-500/40 shadow-[0_0_25px_rgba(239,68,68,0.25)] animate-fade-in mt-1">
-                <div className="flex items-center gap-3">
-                  <span className="text-xl animate-bounce">🛡️</span>
-                  <div>
-                    <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-amber-400">
-                      PASSO SUCCESSIVO
-                    </span>
-                    <p className="text-sm font-black uppercase text-white tracking-wide">
-                      SCOPRI I 4 EQUIPAGGIAMENTI & JOLLY DELL'ARENA D'ACQUA
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => selectSlide(1)}
-                    className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <span>VEDI I 4 BONUS</span>
-                    <span className="text-xs">➔</span>
-                  </button>
-                  {interactive && isPresenterMode && (
-                    <button
-                      type="button"
-                      onClick={handleStartFinale}
-                      className="px-4 py-1.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-xs uppercase tracking-wider shadow-md hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <span>AVVIA SCONTRO</span>
-                      <span className="text-xs">➔</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </main>
       ) : (
         /* ========================================================================= */
         /* CONTENUTO CENTRALE: SLIDE 2 (I 4 BONUS & JOLLY DELL'ARENA)               */
-        /* Griglia 2x2 spettacolare con icone iconiche e descrizioni nitide          */
+        /* Griglia 2x2 perfettamente allineata con box di dimensione identica       */
         /* ========================================================================= */
-        <main className="relative z-10 w-full flex-1 flex flex-col justify-center gap-6 max-w-[1720px] my-auto py-2">
-          <div className="grid grid-cols-2 gap-7 w-full">
+        <main className="relative z-10 w-full flex-1 flex flex-col justify-center items-center gap-6 max-w-[1720px] mx-auto my-auto py-2">
+          <div className="grid grid-cols-2 gap-6 w-full">
             {/* 1. BONUS DADO */}
             <div
-              className={`transition-all duration-700 transform ${
+              className={`h-[200px] transition-all duration-700 transform ${
                 showBonusDado
                   ? 'opacity-100 translate-y-0 scale-100'
-                  : 'opacity-0 translate-y-10 scale-95'
+                  : 'opacity-0 translate-y-10 scale-95 pointer-events-none'
               }`}
             >
-              <div className="relative group p-0.5 rounded-3xl bg-gradient-to-br from-amber-500/50 via-yellow-500/20 to-transparent shadow-[0_0_30px_rgba(245,158,11,0.2)]">
-                <div className="p-6 rounded-[22px] bg-slate-950/85 border border-amber-400/40 backdrop-blur-md flex items-center gap-6 min-h-[175px]">
-                  <div className="shrink-0 relative">
-                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-600 p-1 shadow-[0_0_30px_rgba(245,158,11,0.5)] flex items-center justify-center">
+              <div
+                className={`h-full w-full relative group p-0.5 rounded-3xl transition-all duration-500 flex flex-col ${
+                  isSpeakingDado
+                    ? 'bg-gradient-to-br from-amber-400 via-yellow-300 to-amber-500 shadow-[0_0_45px_rgba(245,158,11,0.6)] scale-[1.02]'
+                    : 'bg-gradient-to-br from-amber-500/50 via-yellow-500/20 to-transparent shadow-[0_0_30px_rgba(245,158,11,0.2)]'
+                }`}
+              >
+                <div className="h-full w-full p-6 rounded-[22px] bg-slate-950/85 border border-amber-400/40 backdrop-blur-md flex items-center gap-6">
+                  <div className="shrink-0 relative w-24 h-24 flex items-center justify-center">
+                    <div className="w-full h-full rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-yellow-600 p-1 shadow-[0_0_30px_rgba(245,158,11,0.5)] flex items-center justify-center">
                       <div className="w-full h-full rounded-[14px] bg-slate-950/85 flex items-center justify-center text-5xl">
                         🎲
                       </div>
@@ -1160,17 +1155,17 @@ export default function SpiegazioneBox5Board({
                     </span>
                   </div>
 
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-amber-300 font-serif">
+                  <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-amber-300 font-serif shrink-0">
                         DADO
                       </h3>
-                      <span className="text-[11px] font-mono font-bold text-amber-400/80 uppercase px-3 py-1 rounded-full bg-amber-500/10 border border-amber-400/30">
+                      <span className="text-[11px] font-mono font-bold text-amber-400/80 uppercase px-3 py-1 rounded-full bg-amber-500/10 border border-amber-400/30 whitespace-nowrap shrink-0">
                         RILANCIO DELLA SORTE
                       </span>
                     </div>
-                    <p className="text-base lg:text-lg text-slate-200 leading-relaxed font-medium">
-                      Permette di <strong className="text-amber-300 font-bold">rilanciare il dado</strong> per determinare una nuova squadra da sfidare.
+                    <p className="text-[14px] lg:text-[15px] text-slate-200 leading-relaxed font-medium">
+                      Permette di <strong className="text-amber-300 font-bold">rilanciare il dado</strong> per cambiare la squadra da sfidare.
                     </p>
                   </div>
                 </div>
@@ -1179,16 +1174,22 @@ export default function SpiegazioneBox5Board({
 
             {/* 2. BONUS SWITCH */}
             <div
-              className={`transition-all duration-700 transform delay-75 ${
+              className={`h-[200px] transition-all duration-700 transform ${
                 showBonusSwitch
                   ? 'opacity-100 translate-y-0 scale-100'
-                  : 'opacity-0 translate-y-10 scale-95'
+                  : 'opacity-0 translate-y-10 scale-95 pointer-events-none'
               }`}
             >
-              <div className="relative group p-0.5 rounded-3xl bg-gradient-to-br from-cyan-500/50 via-sky-500/20 to-transparent shadow-[0_0_30px_rgba(6,182,212,0.2)]">
-                <div className="p-6 rounded-[22px] bg-slate-950/85 border border-cyan-400/40 backdrop-blur-md flex items-center gap-6 min-h-[175px]">
-                  <div className="shrink-0 relative">
-                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-cyan-400 via-sky-500 to-blue-600 p-1 shadow-[0_0_30px_rgba(6,182,212,0.5)] flex items-center justify-center">
+              <div
+                className={`h-full w-full relative group p-0.5 rounded-3xl transition-all duration-500 flex flex-col ${
+                  isSpeakingSwitch
+                    ? 'bg-gradient-to-br from-cyan-400 via-sky-300 to-blue-500 shadow-[0_0_45px_rgba(6,182,212,0.6)] scale-[1.02]'
+                    : 'bg-gradient-to-br from-cyan-500/50 via-sky-500/20 to-transparent shadow-[0_0_30px_rgba(6,182,212,0.2)]'
+                }`}
+              >
+                <div className="h-full w-full p-6 rounded-[22px] bg-slate-950/85 border border-cyan-400/40 backdrop-blur-md flex items-center gap-6">
+                  <div className="shrink-0 relative w-24 h-24 flex items-center justify-center">
+                    <div className="w-full h-full rounded-2xl bg-gradient-to-br from-cyan-400 via-sky-500 to-blue-600 p-1 shadow-[0_0_30px_rgba(6,182,212,0.5)] flex items-center justify-center">
                       <div className="w-full h-full rounded-[14px] bg-slate-950/85 flex items-center justify-center text-5xl">
                         🔄
                       </div>
@@ -1198,17 +1199,17 @@ export default function SpiegazioneBox5Board({
                     </span>
                   </div>
 
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-cyan-300 font-serif">
+                  <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-cyan-300 font-serif shrink-0">
                         SWITCH
                       </h3>
-                      <span className="text-[11px] font-mono font-bold text-cyan-400/80 uppercase px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30">
+                      <span className="text-[11px] font-mono font-bold text-cyan-400/80 uppercase px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30 whitespace-nowrap shrink-0">
                         CAMBIO DOMANDA
                       </span>
                     </div>
-                    <p className="text-base lg:text-lg text-slate-200 leading-relaxed font-medium">
-                      Permette di <strong className="text-cyan-300 font-bold">cambiare domanda</strong>. Essa resterà comunque disponibile per le altre squadre in caso vogliano sceglierla.
+                    <p className="text-[14px] lg:text-[15px] text-slate-200 leading-relaxed font-medium">
+                      Permette di <strong className="text-cyan-300 font-bold">sostituire la domanda</strong> appena scelta con una nuova. La domanda scartata resterà comunque disponibile per le altre squadre che vorranno sceglierla in seguito.
                     </p>
                   </div>
                 </div>
@@ -1217,16 +1218,22 @@ export default function SpiegazioneBox5Board({
 
             {/* 3. BONUS ARCO */}
             <div
-              className={`transition-all duration-700 transform delay-150 ${
+              className={`h-[200px] transition-all duration-700 transform ${
                 showBonusArco
                   ? 'opacity-100 translate-y-0 scale-100'
-                  : 'opacity-0 translate-y-10 scale-95'
+                  : 'opacity-0 translate-y-10 scale-95 pointer-events-none'
               }`}
             >
-              <div className="relative group p-0.5 rounded-3xl bg-gradient-to-br from-rose-500/50 via-red-500/20 to-transparent shadow-[0_0_30px_rgba(244,63,94,0.2)]">
-                <div className="p-6 rounded-[22px] bg-slate-950/85 border border-rose-400/40 backdrop-blur-md flex items-center gap-6 min-h-[175px]">
-                  <div className="shrink-0 relative">
-                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-rose-400 via-red-500 to-rose-700 p-1 shadow-[0_0_30px_rgba(244,63,94,0.5)] flex items-center justify-center">
+              <div
+                className={`h-full w-full relative group p-0.5 rounded-3xl transition-all duration-500 flex flex-col ${
+                  isSpeakingArco
+                    ? 'bg-gradient-to-br from-rose-400 via-pink-400 to-red-500 shadow-[0_0_45px_rgba(244,63,94,0.6)] scale-[1.02]'
+                    : 'bg-gradient-to-br from-rose-500/50 via-red-500/20 to-transparent shadow-[0_0_30px_rgba(244,63,94,0.2)]'
+                }`}
+              >
+                <div className="h-full w-full p-6 rounded-[22px] bg-slate-950/85 border border-rose-400/40 backdrop-blur-md flex items-center gap-6">
+                  <div className="shrink-0 relative w-24 h-24 flex items-center justify-center">
+                    <div className="w-full h-full rounded-2xl bg-gradient-to-br from-rose-400 via-red-500 to-rose-700 p-1 shadow-[0_0_30px_rgba(244,63,94,0.5)] flex items-center justify-center">
                       <div className="w-full h-full rounded-[14px] bg-slate-950/85 flex items-center justify-center text-5xl">
                         🏹
                       </div>
@@ -1236,17 +1243,17 @@ export default function SpiegazioneBox5Board({
                     </span>
                   </div>
 
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-rose-300 font-serif">
+                  <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-rose-300 font-serif shrink-0">
                         ARCO
                       </h3>
-                      <span className="text-[11px] font-mono font-bold text-rose-400/80 uppercase px-3 py-1 rounded-full bg-rose-500/10 border border-rose-400/30">
+                      <span className="text-[11px] font-mono font-bold text-rose-400/80 uppercase px-3 py-1 rounded-full bg-rose-500/10 border border-rose-400/30 whitespace-nowrap shrink-0">
                         RISPOSTA COATTA
                       </span>
                     </div>
-                    <p className="text-base lg:text-lg text-slate-200 leading-relaxed font-medium">
-                      <strong className="text-rose-400 font-bold">Obbliga la squadra sfidata a rispondere</strong> al posto della squadra che gioca tale bonus.
+                    <p className="text-[14px] lg:text-[15px] text-slate-200 leading-relaxed font-medium">
+                      <strong className="text-rose-400 font-bold">Obbliga la squadra sfidata a rispondere</strong> alla domanda al posto della squadra che ha giocato il jolly.
                     </p>
                   </div>
                 </div>
@@ -1255,16 +1262,22 @@ export default function SpiegazioneBox5Board({
 
             {/* 4. BONUS SCUDO */}
             <div
-              className={`transition-all duration-700 transform delay-200 ${
+              className={`h-[200px] transition-all duration-700 transform ${
                 showBonusScudo
                   ? 'opacity-100 translate-y-0 scale-100'
-                  : 'opacity-0 translate-y-10 scale-95'
+                  : 'opacity-0 translate-y-10 scale-95 pointer-events-none'
               }`}
             >
-              <div className="relative group p-0.5 rounded-3xl bg-gradient-to-br from-emerald-500/50 via-teal-500/20 to-transparent shadow-[0_0_30px_rgba(16,185,129,0.2)]">
-                <div className="p-6 rounded-[22px] bg-slate-950/85 border border-emerald-400/40 backdrop-blur-md flex items-center gap-6 min-h-[175px]">
-                  <div className="shrink-0 relative">
-                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-500 to-emerald-700 p-1 shadow-[0_0_30px_rgba(16,185,129,0.5)] flex items-center justify-center">
+              <div
+                className={`h-full w-full relative group p-0.5 rounded-3xl transition-all duration-500 flex flex-col ${
+                  isSpeakingScudo
+                    ? 'bg-gradient-to-br from-emerald-400 via-teal-300 to-green-500 shadow-[0_0_45px_rgba(16,185,129,0.6)] scale-[1.02]'
+                    : 'bg-gradient-to-br from-emerald-500/50 via-teal-500/20 to-transparent shadow-[0_0_30px_rgba(16,185,129,0.2)]'
+                }`}
+              >
+                <div className="h-full w-full p-6 rounded-[22px] bg-slate-950/85 border border-emerald-400/40 backdrop-blur-md flex items-center gap-6">
+                  <div className="shrink-0 relative w-24 h-24 flex items-center justify-center">
+                    <div className="w-full h-full rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-500 to-emerald-700 p-1 shadow-[0_0_30px_rgba(16,185,129,0.5)] flex items-center justify-center">
                       <div className="w-full h-full rounded-[14px] bg-slate-950/85 flex items-center justify-center text-5xl">
                         🛡️
                       </div>
@@ -1274,17 +1287,17 @@ export default function SpiegazioneBox5Board({
                     </span>
                   </div>
 
-                  <div className="flex-1 space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-emerald-300 font-serif">
+                  <div className="flex-1 min-w-0 flex flex-col justify-center gap-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-2xl lg:text-3xl font-black uppercase tracking-wider text-emerald-300 font-serif shrink-0">
                         SCUDO
                       </h3>
-                      <span className="text-[11px] font-mono font-bold text-emerald-400/80 uppercase px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/30">
+                      <span className="text-[11px] font-mono font-bold text-emerald-400/80 uppercase px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/30 whitespace-nowrap shrink-0">
                         SALVATAGGIO PRESCELTO
                       </span>
                     </div>
-                    <p className="text-base lg:text-lg text-slate-200 leading-relaxed font-medium">
-                      In ogni fase del gioco può essere usato per <strong className="text-emerald-300 font-bold">salvare un prescelto</strong> dall'eliminazione.
+                    <p className="text-[14px] lg:text-[15px] text-slate-200 leading-relaxed font-medium">
+                      Può essere attivato in qualsiasi fase del gioco per <strong className="text-emerald-300 font-bold">proteggere e salvare un prescelto</strong> dall'eliminazione.
                     </p>
                   </div>
                 </div>
@@ -1363,62 +1376,35 @@ export default function SpiegazioneBox5Board({
             >
               🔄
             </button>
-
-            {/* Switch Scheda 1 / Scheda 2 */}
-            <div className="flex items-center gap-1 bg-white/10 p-1 rounded-xl">
-              <button
-                type="button"
-                onClick={() => selectSlide(0)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeSlide === 0
-                    ? 'bg-red-600 text-white shadow'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                1. Regole
-              </button>
-              <button
-                type="button"
-                onClick={() => selectSlide(1)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  activeSlide === 1
-                    ? 'bg-amber-500 text-slate-950 shadow'
-                    : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                2. I 4 Bonus
-              </button>
-            </div>
           </div>
 
-          {/* Timeline Scrubber (attivo su Scheda 1 con audio narrativo) */}
-          {activeSlide === 0 ? (
-            <div className="flex-1 flex items-center gap-3 max-w-[480px]">
-              <span className="text-[11px] font-mono text-slate-400 shrink-0">
-                {formatTime(currentTime)}
-              </span>
+          {/* Timeline Scrubber globale (sincronizzato su entrambe le schede per l'intera durata di 75s) */}
+          <div className="flex-1 flex items-center gap-3 max-w-[480px]">
+            <span className="text-[11px] font-mono text-slate-400 shrink-0">
+              {formatTime(currentTime)}
+            </span>
+            <div
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+                const target = ratio * duration;
+                seekTo(target);
+              }}
+              className="relative flex-1 h-2 rounded-full bg-slate-800/80 cursor-pointer overflow-hidden border border-white/10 group"
+              title="Clicca per spostarti sulla timeline audio"
+            >
               <div
-                onClick={(e) => {
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const clickX = e.clientX - rect.left;
-                  const ratio = Math.max(0, Math.min(1, clickX / rect.width));
-                  seekTo(ratio * duration);
-                }}
-                className="relative flex-1 h-2 rounded-full bg-slate-800/80 cursor-pointer overflow-hidden border border-white/10 group"
-                title="Clicca per spostarti sulla timeline audio"
+                className="h-full bg-gradient-to-r from-red-500 via-amber-400 to-yellow-400 transition-all duration-100 relative"
+                style={{ width: `${Math.min(100, Math.max(0, (currentTime / duration) * 100))}%` }}
               >
-                <div
-                  className="h-full bg-gradient-to-r from-red-500 via-amber-400 to-yellow-400 transition-all duration-100 relative"
-                  style={{ width: `${Math.min(100, Math.max(0, (currentTime / duration) * 100))}%` }}
-                >
-                  <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md" />
-                </div>
+                <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-md" />
               </div>
-              <span className="text-[11px] font-mono text-slate-400 shrink-0">
-                {formatTime(duration)}
-              </span>
             </div>
-          ) : null}
+            <span className="text-[11px] font-mono text-slate-400 shrink-0">
+              {formatTime(duration)}
+            </span>
+          </div>
 
           {/* Indicatori Step Sincronizzati */}
           <div className="flex items-center gap-1.5">
@@ -1431,7 +1417,7 @@ export default function SpiegazioneBox5Board({
                     seekTo(2.4);
                   }}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    manualStep === 1 || (currentTime >= 2.4 && currentTime < 11.0)
+                    manualStep === 1 || (currentTime >= 2.4 && currentTime < 11.2)
                       ? 'bg-amber-500 text-slate-950 font-black shadow-md'
                       : manualStep >= 1
                       ? 'bg-amber-500/20 text-amber-300 border border-amber-400/50'
@@ -1445,16 +1431,16 @@ export default function SpiegazioneBox5Board({
                   type="button"
                   onClick={() => {
                     setManualStep(2);
-                    seekTo(11.0);
+                    seekTo(11.2);
                   }}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    manualStep === 2 || (currentTime >= 11.0 && currentTime < 20.0)
+                    manualStep === 2 || (currentTime >= 11.2 && currentTime < 20.0)
                       ? 'bg-red-500 text-white font-black shadow-md'
                       : manualStep >= 2
                       ? 'bg-red-500/20 text-red-300 border border-red-400/50'
                       : 'bg-white/5 text-slate-400'
                   }`}
-                  title="Vai a Regola 2 (11.0s)"
+                  title="Vai a Regola 2 (11.2s)"
                 >
                   2. Eliminazione
                 </button>
@@ -1465,7 +1451,7 @@ export default function SpiegazioneBox5Board({
                     seekTo(20.0);
                   }}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    manualStep === 3 || (currentTime >= 20.0 && currentTime < 27.8)
+                    manualStep === 3 || (currentTime >= 20.0 && currentTime < 27.5)
                       ? 'bg-cyan-500 text-slate-950 font-black shadow-md'
                       : manualStep >= 3
                       ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50'
@@ -1479,57 +1465,135 @@ export default function SpiegazioneBox5Board({
                   type="button"
                   onClick={() => {
                     setManualStep(4);
-                    seekTo(27.8);
+                    seekTo(27.5);
                   }}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    manualStep === 4 || currentTime >= 27.8
+                    manualStep === 4 || (currentTime >= 27.5 && currentTime < 33.0)
                       ? 'bg-purple-500 text-white font-black shadow-md'
                       : manualStep >= 4
                       ? 'bg-purple-500/20 text-purple-300 border border-purple-400/50'
                       : 'bg-white/5 text-slate-400'
                   }`}
-                  title="Vai a Regola 4 (27.8s)"
+                  title="Vai a Regola 4 (27.5s)"
                 >
                   4. Capitano
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualStep(5);
+                    seekTo(33.0);
+                    soundFX.playBoxActivation();
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-400/40 transition-all cursor-pointer flex items-center gap-1"
+                  title="Vai alla sezione Bonus (33.0s)"
+                >
+                  <span>🛡️ Bonus</span>
+                  <span>→</span>
                 </button>
               </>
             ) : (
               <>
                 <button
                   type="button"
-                  onClick={() => setManualStep(6)}
+                  onClick={() => {
+                    setManualStep(4);
+                    seekTo(27.5);
+                    soundFX.playBoxActivation();
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-400/40 transition-all cursor-pointer flex items-center gap-1"
+                  title="Torna alla sezione Regole (27.5s)"
+                >
+                  <span>←</span>
+                  <span>⚔️ Regole</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualStep(6);
+                    seekTo(41.2);
+                    soundFX.playDiceRoll();
+                  }}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    manualStep >= 6 ? 'bg-amber-500/20 text-amber-300 border border-amber-400/50' : 'bg-white/5 text-slate-400'
+                    manualStep === 6 || isSpeakingDado || (currentTime >= 41.2 && currentTime < 47.0)
+                      ? 'bg-amber-500 text-slate-950 font-black shadow-md'
+                      : manualStep >= 6
+                      ? 'bg-amber-500/20 text-amber-300 border border-amber-400/50'
+                      : 'bg-white/5 text-slate-400'
                   }`}
+                  title="Vai a Bonus Dado (41.2s)"
                 >
                   🎲 Dado
                 </button>
                 <button
                   type="button"
-                  onClick={() => setManualStep(7)}
+                  onClick={() => {
+                    setManualStep(7);
+                    seekTo(47.0);
+                    soundFX.playSwitchSound();
+                  }}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    manualStep >= 7 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50' : 'bg-white/5 text-slate-400'
+                    manualStep === 7 || isSpeakingSwitch || (currentTime >= 47.0 && currentTime < 60.0)
+                      ? 'bg-cyan-500 text-slate-950 font-black shadow-md'
+                      : manualStep >= 7
+                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/50'
+                      : 'bg-white/5 text-slate-400'
                   }`}
+                  title="Vai a Bonus Switch (47.0s)"
                 >
                   🔄 Switch
                 </button>
                 <button
                   type="button"
-                  onClick={() => setManualStep(8)}
+                  onClick={() => {
+                    setManualStep(8);
+                    seekTo(60.0);
+                    soundFX.playArrowWhoosh();
+                  }}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    manualStep >= 8 ? 'bg-rose-500/20 text-rose-300 border border-rose-400/50' : 'bg-white/5 text-slate-400'
+                    manualStep === 8 || isSpeakingArco || (currentTime >= 60.0 && currentTime < 67.5)
+                      ? 'bg-rose-500 text-white font-black shadow-md'
+                      : manualStep >= 8
+                      ? 'bg-rose-500/20 text-rose-300 border border-rose-400/50'
+                      : 'bg-white/5 text-slate-400'
                   }`}
+                  title="Vai a Bonus Arco (60.0s)"
                 >
                   🏹 Arco
                 </button>
                 <button
                   type="button"
-                  onClick={() => setManualStep(9)}
+                  onClick={() => {
+                    setManualStep(9);
+                    seekTo(67.5);
+                    soundFX.playShieldClang();
+                  }}
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                    manualStep >= 9 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/50' : 'bg-white/5 text-slate-400'
+                    manualStep === 9 || isSpeakingScudo || (currentTime >= 67.5 && currentTime < 75.4)
+                      ? 'bg-emerald-500 text-slate-950 font-black shadow-md'
+                      : manualStep >= 9
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/50'
+                      : 'bg-white/5 text-slate-400'
                   }`}
+                  title="Vai a Bonus Scudo (67.5s)"
                 >
                   🛡️ Scudo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualStep(10);
+                    seekTo(75.4);
+                    soundFX.playFanfare();
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    manualStep === 10 || currentTime >= 75.4
+                      ? 'bg-red-500 text-white font-black shadow-md'
+                      : 'bg-white/5 text-slate-400'
+                  }`}
+                  title="Vai a Conclusione (75.4s)"
+                >
+                  ⚔️ Finale
                 </button>
               </>
             )}

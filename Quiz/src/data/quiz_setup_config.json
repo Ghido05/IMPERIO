@@ -51,12 +51,39 @@
       },
       {
         "id": "nadia_1792744528334_88x8",
-        "domanda": "TRANSATLANTICO ACHILLE LAURO",
-        "rispostaCorretta": "",
-        "risposta2": "",
-        "risposta3": "",
+        "domanda": "Domanda: Abbiamo appena indovinato il cantante Achille Lauro, che ha preso in prestito il suo nome d'arte dal celebre transatlantico italiano. A sua volta, però, la nave era stata battezzata così in onore del suo proprietario: il potentissimo Achille Lauro, soprannominato \"Il Comandante\". Chi era?",
+        "rispostaCorretta": "Il sindaco di Napoli",
+        "risposta2": "Un ammiraglio della Marina Militare",
+        "risposta3": "Un ingegnere navale della Repubblica di Venezia",
         "targetBox": 1,
         "targetQuestion": 9
+      },
+      {
+        "id": "nadia_1792795820197_1y83",
+        "domanda": "Abbiamo appena indovinato Telemaco, il celebre figlio di Ulisse. Nei primi canti dell'Odissea, il giovane principe parte alla ricerca di notizie sul padre scomparso. Durante questo difficile viaggio viene accompagnato e consigliato da un anziano e saggio amico di famiglia (che in realtà è la dea Atena sotto mentite spoglie). Il nome di questo personaggio è diventato col tempo una parola che usiamo abitualmente ancora oggi. Chi era?",
+        "rispostaCorretta": "Mentore",
+        "risposta2": "Cicerone",
+        "risposta3": "Mecenate",
+        "targetBox": 1,
+        "targetQuestion": 2
+      },
+      {
+        "id": "nadia_1792796618500_ywzb",
+        "domanda": "Guardando il tabellone di questa manche, vediamo mondi apparentemente lontanissimi. Eppure, la Walt Disney Company negli anni si è allargata a dismisura, diventando un colosso e comprando interi universi narrativi. Tra questi tre celebri personaggi presenti nella nostra immagine, quale NON appartiene all'impero Disney?",
+        "rispostaCorretta": "HARRY POTTER",
+        "risposta2": "SPIDER MAN",
+        "risposta3": "INDIANA JONES",
+        "targetBox": 3,
+        "targetQuestion": 1
+      },
+      {
+        "id": "nadia_1792797306298_h37j",
+        "domanda": "Il nome completo di questo volatile è \"gallina faraona\", un titolo che ci porta direttamente nell'Antico Egitto. Ma da dove deriva storicamente questo nome così regale?",
+        "rispostaCorretta": "ERA CONSIDERATA UNA PRELIBATEZZA ESOTICA DALL'ORIENTE, CIBO PREGIATO DEI FARAONI",
+        "risposta2": "IN ONORE DELLA REGINA CLEOPATRA, CHE ESIGEVA ESCLUSIVAMENTE LE UOVA DI QUESTO ANIMALE",
+        "risposta3": "A CAUSA DELLA PROTUBERANZA OSSEA SULLA SUA TESTA, CHE RICORDA IL COPRICAPO DEI FARAONI",
+        "targetBox": 2,
+        "targetQuestion": 2
       }
     ]
   },
@@ -68,7 +95,7 @@
       "testo": "Imperio VIII è composto da 3 fasi: la prima fase è chiamata “I prodromi dello scontro”, in essa troviamo due giochi che vi permetteranno di ottenere punti. La seconda fase “La corsa agli equipaggiamenti”, formata da due giochi, è possibile ottenere oltre a punti, bonus, cioè vantaggi per il gioco finale. La fase finale “Termopili: scontro finale” nella quale si decreterà la squadra vincente.\n\nPer non delegittimare il percorso che intraprenderemo, la squadra con più punti giocherà la manche finale con 6 prescelti, la seconda, in base al divario con la prima squadra potrà giocare con 6, 5 o 4 persone secondo i delta punti riportati (<3.000 pt: 6 omini; da 3.000 a 15.000 pt: 5 omini; >15.000 pt: 4 omini), l’ultima con solo 3.",
       "notePresentatore": "Imperio VIII è composto da 3 fasi: la prima fase è chiamata “I prodromi dello scontro”, in essa troviamo due giochi che vi permetteranno di ottenere punti. La seconda fase “La corsa agli equipaggiamenti”, formata da due giochi, è possibile ottenere oltre a punti, bonus, cioè vantaggi per il gioco finale. La fase finale “Termopili: scontro finale” nella quale si decreterà la squadra vincente.\nPer non delegittimare il percorso che intraprenderemo, la squadra con più punti giocherà la manche finale con 6 prescelti, la seconda, in base al divario con la prima squadra potrà giocare con 6, 5 o 4 persone secondo i delta punti riportati (<3.000 pt: 6 omini; da 3.000 a 15.000 pt: 5 omini; >15.000 pt: 4 omini), l’ultima con solo 3."
     },
-    "videoPreSigla": "",
+    "videoPreSigla": "/Video/LA SFIDA COMINCIA ORA!.mp4",
     "videoSigla": "/Video/sigla_imperio.mp4",
     "sfondoSpiegazione": "/Icone/nessuno_img/sfondo_finale_acqua.jpg",
     "videoSpiegazione": "/Icone/nessuno_img/sfondo_finale_acqua.jpg",
@@ -85,7 +112,7 @@
   "gioco1": {
     "titolo": "IL MIO NOME è NESSUNO",
     "sottotitolo": "Musica & Immagini",
-    "selectedQuestion": 9,
+    "selectedQuestion": 2,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Mappa/spiegazione_box1_ambientazione.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box1.mp3",
@@ -156,7 +183,8 @@
           "categoria": "PERSONAGGIO MITOLOGICO",
           "grigliaSeme": 435724
         },
-        "sfondo": ""
+        "sfondo": "",
+        "notePresentatore": "È affascinante come l'Odissea abbia plasmato il nostro vocabolario! Nell'opera, Ulisse affida la cura della sua casa e l'educazione di Telemaco al suo caro amico Mentore prima di partire per la guerra di Troia. La dea Atena ne prende le sembianze per infondere coraggio al ragazzo e guidarlo nelle sue scelte. Proprio per questo ruolo cruciale di educatore e protettore, il nome proprio \"Mentore\" è diventato nei secoli un sostantivo comune in moltissime lingue moderne!"
       },
       "3": {
         "tipo": "canzone",
@@ -390,7 +418,7 @@
           "confermaAudio": "",
           "soluzione": ""
         },
-        "notePresentatore": "L'Achille Lauro è stata una celebre nave passeggeri italiana, nota principalmente per essere stata vittima di un clamoroso dirottamento terroristico nel 1985 e per essere affondata nel 1994.\n\nStoria e caratteristiche\n\n• Origini: Fu costruita nei Paesi Bassi tra il 1939 e il 1947 con il nome di Willem Ruys.\n• Acquisto: Negli anni '60 fu acquistata dall'armatore e sindaco di Napoli Achille Lauro, ristrutturata e trasformata in nave da crociera sotto la Flotta Lauro.\n\nIl dirottamento del 1985\n\n• L'evento: Il 7 ottobre 1985, mentre navigava al largo delle coste egiziane, la nave fu dirottata da un commando di quattro palestinesi del Fronte per la Liberazione della Palestina (FLP).\n• La vittima: Durante il sequestro venne ucciso un cittadino statunitense di religione ebraica e in sedia a rotelle, Leon Klinghoffer.\n• La crisi: La vicenda innescò una complessa trattativa diplomatica e un duro scontro politico e militare tra Italia e Stati Uniti (nota come la crisi di Sigonella).\n\nL'affondamento\n\n• L'incendio: Il 30 novembre 1994 scoppió un devastante incendio nella sala macchine al largo delle coste della Somalia.\n• La fine: L'equipaggio e i passeggeri furono evacuati, ma la nave si capovolse e affondò il 2 dicembre 1994 durante le operazioni di traino."
+        "notePresentatore": "L'Achille Lauro è stata una celebre nave passeggeri italiana, nota principalmente per essere stata vittima di un clamoroso dirottamento terroristico nel 1985 e per essere affondata nel 1994.\n\nStoria e caratteristiche\n\n• Origini: Fu costruita nei Paesi Bassi tra il 1939 e il 1947 con il nome di Willem Ruys.\n• Acquisto: Negli anni '60 fu acquistata dall'armatore e sindaco di Napoli Achille Lauro, ristrutturata e trasformata in nave da crociera sotto la Flotta Lauro.\n\nIl dirottamento del 1985\n\n• L'evento: Il 7 ottobre 1985, mentre navigava al largo delle coste egiziane, la nave fu dirottata da un commando di quattro palestinesi del Fronte per la Liberazione della Palestina (FLP).\n• La vittima: Durante il sequestro venne ucciso un cittadino statunitense di religione ebraica e in sedia a rotelle, Leon Klinghoffer.\n• La crisi: La vicenda innescò una complessa trattativa diplomatica e un duro scontro politico e militare tra Italia e Stati Uniti (nota come la crisi di Sigonella).\n\nL'affondamento\n\n• L'incendio: Il 30 novembre 1994 scoppió un devastante incendio nella sala macchine al largo delle coste della Somalia.\n• La fine: L'equipaggio e i passeggeri furono evacuati, ma la nave si capovolse e affondò il 2 dicembre 1994 durante le operazioni di traino.\n\nMILLE E UNA NADIA\nDurante le sue pittoresche campagne elettorali negli anni '50, Lauro era celebre per elargire doni ai cittadini per ottenere consensi. Inventò l'astuta e leggendarie tattica per assicurarsi il voto dagli elettori: regalava una scarpa sinistra prima del voto, promettendo la destra solo a elezioni vinte."
       },
       "10": {
         "tipo": "immagine",
@@ -430,7 +458,7 @@
   "gioco2": {
     "titolo": "LA SCALATA DEI CRISTALLI",
     "sottotitolo": "Classifica & Classifica Musicale",
-    "selectedQuestion": 5,
+    "selectedQuestion": 2,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box2_cristalli.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box2.mp3",
@@ -543,7 +571,7 @@
           "categoria": "ANIMALE",
           "domanda": "10 EMOTICON PIÙ UTILIZZATE A LIVELLO GLOBALE"
         },
-        "notePresentatore": "RIPORTA SKYTG24 CHE EMOJIPEDIA, IL MOTORE DI RICERCA CHE MONITORA L'UTILIZZO DELLE FACCINE, HA STILATO LA LISTA DI FACCINE PIÙ USATE NEL 2026.\nNON ACCETTARE GALLINA (EQUIVALE AD ACCETTARE GATTO PER LA TIGRE)"
+        "notePresentatore": "RIPORTA SKYTG24 CHE EMOJIPEDIA, IL MOTORE DI RICERCA CHE MONITORA L'UTILIZZO DELLE FACCINE, HA STILATO LA LISTA DI FACCINE PIÙ USATE NEL 2026.\n\nNON ACCETTARE GALLINA (EQUIVALE AD ACCETTARE GATTO PER LA TIGRE)\n\n1000 E UNA NADIA \nLa risposta sulla \"cresta\" a forma di copricapo è una trappola perfetta, perché la faraona ha effettivamente un \"casco\" osseo sulla testa, e i concorrenti potrebbero caderci in pieno! In realtà, gli antichi Romani la chiamavano gallina numidica (cioè della Numidia, l'attuale Nord Africa). Quando poi fu reintrodotta in Europa nel Medioevo dai mercanti veneziani e genovesi che commerciavano con il bacino del Mediterraneo orientale, prese il nome popolare di \"gallina faraona\" (cioè proveniente dalle terre dei Faraoni) per sottolinearne l'origine esotica e preziosa."
       },
       "3": {
         "tipo": "canzone",
@@ -768,7 +796,7 @@
   "gioco3": {
     "titolo": "Password",
     "sottotitolo": "Sfida a Squadre & Bussolotti",
-    "selectedQuestion": 3,
+    "selectedQuestion": 1,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box3_forzieri.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box3.mp3",
@@ -848,7 +876,7 @@
           "immagine_premio_squadra2": "dado",
           "immagine_premio_squadra3": "dado"
         },
-        "notePresentatore": "DALLA TORRE DI ASTRONOMIA CADE SILENTE (NON GANDALF)\nIL NECROMANTE è MEFISTO\nTRITONI NEL CALICE DI FUOCO VENGONO INCONTRATI DA HARRY DURANTE LA SECONDA PROVA"
+        "notePresentatore": "DALLA TORRE DI ASTRONOMIA CADE SILENTE (NON GANDALF)\nIL NECROMANTE è MEFISTO\nTRITONI NEL CALICE DI FUOCO VENGONO INCONTRATI DA HARRY DURANTE LA SECONDA PROVA\nSembra incredibile, ma Topolino è letteralmente il \"capo\" sia dell'Uomo Ragno che del celebre archeologo con la frusta! La Disney, infatti, ha acquistato in blocco la Marvel nel 2009 (portandosi a casa Spider-Man) e la Lucasfilm nel 2012 (acquisendo così i diritti di Star Wars e Indiana Jones). Harry Potter, invece, è la punta di diamante della scuderia rivale, la Warner Bros, che guarda caso è anche la proprietaria dei supereroi DC come Batman e Superman."
       },
       "2": {
         "sfondo": "/Icone/sfondi/3_2_dolci.jpg",
@@ -1298,8 +1326,8 @@
       {
         "numero": 4,
         "tempo": "presente",
-        "testo": "",
-        "risposta": ""
+        "testo": "Come è noto, il fiume più lungo che scorre interamente sul territorio italiano è il Po. Tuttavia, il fiume più lungo in assoluto che ha origine in Italia è la Drava, . Al termine del suo viaggio, in quale grande fiume che attraversa ben 10 stati europei sfocia?",
+        "risposta": "DANUBIO nasce a dobbiaco (TRENTINO) che scorre nel nostro Paese per appena 15 chilometri prima di oltrepassare il confine"
       },
       {
         "numero": 5,
@@ -1315,20 +1343,20 @@
       },
       {
         "numero": 7,
-        "tempo": "presente",
-        "testo": "",
-        "risposta": ""
+        "tempo": "passato",
+        "testo": "Ad avere vinto il premio nobel sono state solo due donne italiane. Una Grazia Deledda nel 1926, l'altra per la Medicina nel 1986. Di chi stiamo parlando?",
+        "risposta": "RITA LEVI MONTALCINI"
       },
       {
         "numero": 8,
-        "tempo": "passato",
+        "tempo": "presente",
         "testo": "Città con la squadra NBA con più titoli capitale di ...",
         "risposta": "BOSTON"
       },
       {
         "numero": 9,
         "tempo": "futuro",
-        "testo": "",
+        "testo": "FAI LA DOMANDA SULL'ANNO GIOCANDO CON LE CIFRE. Come si chiama la famosa cometa periodica che tornerà a essere visibile dalla Terra solo nel 2061?",
         "risposta": ""
       },
       {
@@ -1340,14 +1368,14 @@
       {
         "numero": 11,
         "tempo": "passato",
-        "testo": "",
-        "risposta": ""
+        "testo": "Come si chiamava il primo cane lanciato in orbita a bordo dello Sputnik 2 nel 1957? ",
+        "risposta": "LAIKA"
       },
       {
         "numero": 12,
         "tempo": "futuro",
-        "testo": "",
-        "risposta": ""
+        "testo": "In quale anno solare (secondo il calendario gregoriano) il mondo festeggerà l'inizio del XXII secolo? ",
+        "risposta": "2101"
       },
       {
         "numero": 13,

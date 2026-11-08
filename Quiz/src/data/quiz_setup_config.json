@@ -112,7 +112,7 @@
   "gioco1": {
     "titolo": "IL MIO NOME è NESSUNO",
     "sottotitolo": "Musica & Immagini",
-    "selectedQuestion": 2,
+    "selectedQuestion": 9,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Mappa/spiegazione_box1_ambientazione.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box1.mp3",
@@ -796,7 +796,7 @@
   "gioco3": {
     "titolo": "Password",
     "sottotitolo": "Sfida a Squadre & Bussolotti",
-    "selectedQuestion": 1,
+    "selectedQuestion": 3,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box3_forzieri.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box3.mp3",
@@ -862,14 +862,14 @@
           "immagine_premio": "/Icone/premio_bonus.png",
           "schede_2_posto": [
             "bonus",
-            "vuoto",
+            "2000",
             "vuoto"
           ],
           "schede_3_posto": [
             "vuoto",
+            "2000",
             "vuoto",
-            "vuoto",
-            "vuoto",
+            "1000",
             "bonus"
           ],
           "immagine_premio_squadra1": "dado",
@@ -938,14 +938,14 @@
         "bussolotti": {
           "immagine_premio": "/Icone/premio_bonus.png",
           "schede_2_posto": [
-            "bonus",
             "vuoto",
-            "vuoto"
+            "2000",
+            "bonus"
           ],
           "schede_3_posto": [
+            "2000",
             "vuoto",
-            "vuoto",
-            "vuoto",
+            "1000",
             "vuoto",
             "bonus"
           ],
@@ -977,7 +977,7 @@
             "parola": "BALLANDO CON LE STELLE"
           },
           {
-            "parola": "MONEY DROP"
+            "parola": "THE MONEY DROP"
           }
         ],
         "squadra3": [
@@ -1015,16 +1015,16 @@
         "bussolotti": {
           "immagine_premio": "/Icone/premio_bonus.png",
           "schede_2_posto": [
-            "bonus",
             "vuoto",
+            "bonus",
             "vuoto"
           ],
           "schede_3_posto": [
+            "1000",
             "vuoto",
-            "vuoto",
-            "vuoto",
-            "vuoto",
-            "bonus"
+            "bonus",
+            "2000",
+            "vuoto"
           ],
           "immagine_premio_squadra1": "arco",
           "immagine_premio_squadra2": "arco",
@@ -1132,7 +1132,7 @@
         ],
         "indizio": "212 A.C., SIRACUSA",
         "bonus": "",
-        "punti": 1000,
+        "punti": 4000,
         "notePresentatore": ""
       },
       {
@@ -1154,8 +1154,8 @@
           54
         ],
         "indizio": "31 MAGGIO 2026, EMIRATES STADIUM, LONDRA",
-        "bonus": "",
-        "punti": 1000,
+        "bonus": "arco",
+        "punti": 2000,
         "notePresentatore": ""
       },
       {
@@ -1198,8 +1198,8 @@
           53
         ],
         "indizio": "1300, LAGO DI COCITO",
-        "bonus": "",
-        "punti": 1000,
+        "bonus": "scudo",
+        "punti": 2000,
         "notePresentatore": "Nel nono cerchio dell'Inferno, imprigionato nel ghiaccio perenne del lago di Cocito, Dante si imbatte nel Conte Ugolino della Gherardesca. Condannato per tradimento politico, Ugolino è protagonista di uno degli episodi più tragici dell'intero poema: morì di inedia rinchiuso in una torre pisana insieme ai suoi figli e nipoti. Nell'Inferno dantesco è costretto al gelo eterno, condannato a sfogare la sua rabbia contro l'arcivescovo che lo aveva imprigionato.\nSe avete una memoria di ferro per la letteratura, avrete notato che c'è una piccola 'licenza poetica' nell'immagine che vi abbiamo mostrato. Nel testo originale della Divina Commedia, infatti, il Conte Ugolino non si trova affatto da solo nel ghiaccio. È condannato a stare nella stessa buca insieme al suo acerrimo nemico e carceriere, l'Arcivescovo Ruggieri. Per la precisione, Ugolino è posizionato sopra di lui e gli azzanna in eterno la nuca in quello che Dante definisce un fiero pasto. Nell'immagine, Ruggieri è stato provvidenzialmente omesso per non rendere la scena troppo macabra!"
       },
       {
@@ -1226,7 +1226,7 @@
         ],
         "indizio": "STOCCOLMA, OTTOBRE 1922",
         "bonus": "",
-        "punti": 1000,
+        "punti": 4000,
         "notePresentatore": ""
       },
       {
@@ -1251,8 +1251,8 @@
           67
         ],
         "indizio": "SFERA EBBASTA, 2026",
-        "bonus": "",
-        "punti": 1000,
+        "bonus": "scudo",
+        "punti": 4000,
         "notePresentatore": ""
       },
       {
@@ -1279,8 +1279,8 @@
           64
         ],
         "indizio": "TERRITORIO DI MORIA, 2000 a. C. CIRCA",
-        "bonus": "",
-        "punti": 1000,
+        "bonus": "scudo",
+        "punti": 5000,
         "notePresentatore": ""
       },
       {
@@ -1326,7 +1326,7 @@
       {
         "numero": 4,
         "tempo": "presente",
-        "testo": "Come è noto, il fiume più lungo che scorre interamente sul territorio italiano è il Po. Tuttavia, il fiume più lungo in assoluto che ha origine in Italia è la Drava, . Al termine del suo viaggio, in quale grande fiume che attraversa ben 10 stati europei sfocia?",
+        "testo": "Come è noto, il fiume più lungo che scorre interamente sul territorio italiano è il Po. Tuttavia, il fiume più lungo in assoluto che ha origine in Italia è la Drava. Al termine del suo viaggio, in quale grande fiume che attraversa ben 10 stati europei sfocia?",
         "risposta": "DANUBIO nasce a dobbiaco (TRENTINO) che scorre nel nostro Paese per appena 15 chilometri prima di oltrepassare il confine"
       },
       {

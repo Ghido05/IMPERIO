@@ -13,6 +13,9 @@ class Box2SuspenseSoundFXEngine {
 
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
+    const mode = new URLSearchParams(window.location.search).get('mode');
+    if (mode === 'games' || mode === 'scores') return null;
+
     const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     if (!AudioCtx) return null;
 

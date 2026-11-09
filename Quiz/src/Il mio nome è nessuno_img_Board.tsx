@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useGameData } from './context/GameDataContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
@@ -42,6 +42,18 @@ const GameBoard = ({ interactive = true, revealAll = false, isPresenter = false 
   const [bookedTeam, setBookedTeam] = useSyncedState<number | null>(`playstate_${slideId}_booked_team`, null);
   const [lockedStep, setLockedStep] = useSyncedState<number | null>(`playstate_${slideId}_locked_step`, null);
   const [excludedTeams, setExcludedTeams] = useSyncedState<number[]>(`playstate_${slideId}_excluded_teams`, []);
+
+  // L'audio deve suonare SOLO dalla finestra del relatore o in sandbox, mai dalla finestra pubblico/squadre
+  const isPresenterMode = useMemo(() => {
+    if (isPresenter !== undefined && isPresenter !== false) return true;
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('sandbox') === 'true') return true;
+    if (params.get('mode') === 'games' || params.get('mode') === 'scores') return false;
+    return isPresenter || params.get('mode') === 'presenter' || !params.get('mode');
+  }, [isPresenter]);
+
+  const canPlayAudio = interactive && isPresenterMode;
 
   // Transizione d'ingresso cinematica dalla spiegazione alla prima domanda
   const [showIntroTransition, setShowIntroTransition] = useState(() => {
@@ -218,9 +230,14 @@ const GameBoard = ({ interactive = true, revealAll = false, isPresenter = false 
     }
   }, [gameData.audio, (gameData as any).confermaAudio, interactive, assetRefresh]);
 
-  // Gestione dell'audio al cambio di step (riproduzione a step 9)
+  // Gestione dell'audio al cambio di step (riproduzione a step 9 solo se canPlayAudio)
   useEffect(() => {
-    if (!interactive) return;
+    if (!canPlayAudio) {
+      if (audioRef.current && !audioRef.current.paused) {
+        audioRef.current.pause();
+      }
+      return;
+    }
 
     const stepChanged = step !== lastPlayedStepRef.current;
     lastPlayedStepRef.current = step;
@@ -249,13 +266,13 @@ const GameBoard = ({ interactive = true, revealAll = false, isPresenter = false 
         }
       }
     }
-  }, [step, interactive, gameData.audio, (gameData as any).confermaAudio]);
+  }, [step, canPlayAudio, gameData.audio, (gameData as any).confermaAudio]);
 
   useEffect(() => {
-    if (!interactive && audioRef.current && !audioRef.current.paused) {
+    if (!canPlayAudio && audioRef.current && !audioRef.current.paused) {
       audioRef.current.pause();
     }
-  }, [interactive]);
+  }, [canPlayAudio]);
 
   // Cleanup dell'audio all'unmount
   useEffect(() => {
@@ -325,6 +342,7 @@ const GameBoard = ({ interactive = true, revealAll = false, isPresenter = false 
       } else if (e.key.toLowerCase() === 'e' || e.key.toLowerCase() === 'x') {
         setShowError(true);
       } else if (e.key.toLowerCase() === 'm') {
+        if (!canPlayAudio) return;
         if (audioRef.current) {
           if (audioRef.current.paused) {
             audioRef.current.play().catch(err => console.error("Audio play error:", err));

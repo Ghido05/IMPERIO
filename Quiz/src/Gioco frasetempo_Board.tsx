@@ -25,9 +25,15 @@ const getBonusDisplayEmoji = (slideBonus: string): string => {
   return '🎁';
 };
 
-const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ interactive = true, revealAll = false }) => {
+const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresenter?: boolean }> = ({ interactive = true, revealAll = false, isPresenter: isPresenterProp }) => {
   const phrasesData = useGameData();
   const slideId = phrasesData.slideId ?? 'sandbox';
+
+  const isPresenter = typeof window !== 'undefined' && 
+    (isPresenterProp !== undefined 
+      ? isPresenterProp 
+      : (new URLSearchParams(window.location.search).get('mode') !== 'games' && 
+         new URLSearchParams(window.location.search).get('mode') !== 'scores'));
 
   // Active phrase index from parent slide or synced state
   const defaultPhraseIndex = typeof phrasesData.currentPhraseIndex === 'number' ? phrasesData.currentPhraseIndex : 0;
@@ -87,10 +93,6 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
 
   const teamNames: string[] = setupState?.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
 
-  const isPresenter = typeof window !== 'undefined' && 
-    (new URLSearchParams(window.location.search).get('mode') !== 'games' && 
-     new URLSearchParams(window.location.search).get('mode') !== 'scores');
-
   // Award scores and handle bonus duplicate rules (awards 4000 extra points instead if team already has that bonus in Gioco 4)
   const awardPointsAndBonus = useCallback((t: number) => {
     // 1. Punti base configurati nel setup
@@ -132,6 +134,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   }, []);
 
   const playTone = useCallback((frequency: number, duration: number, type: OscillatorType, volume: number, endFrequency?: number) => {
+    if (!isPresenter) return;
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioContextClass();
@@ -332,8 +335,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     setTokens([...targetTokens]);
     setStep(8);
 
-    // Riproduzione Canzone di Conferma / Stacchetto se presente
-    if (phrase.confermaAudio) {
+    // Riproduzione Canzone di Conferma / Stacchetto se presente (solo finestra Relatore / Sandbox)
+    if (isPresenter && phrase.confermaAudio) {
       const resolved = assetUrl(phrase.confermaAudio);
       if (resolved) {
         try {
@@ -364,8 +367,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     setTokens([...targetTokens]);
     setStep(8);
 
-    // Riproduzione Canzone di Conferma / Stacchetto anche in caso di errore (dopo la croce rossa di 800ms)
-    if (phrase.confermaAudio) {
+    // Riproduzione Canzone di Conferma / Stacchetto anche in caso di errore (solo finestra Relatore / Sandbox dopo la croce rossa di 800ms)
+    if (isPresenter && phrase.confermaAudio) {
       const resolved = assetUrl(phrase.confermaAudio);
       if (resolved) {
         setTimeout(() => {
@@ -566,7 +569,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
           : 'linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.45))';
         return (
           <div 
-            className="absolute inset-0 bg-cover bg-center animate-fade-in pointer-events-none z-0"
+            className="absolute inset-[5%] w-[90%] h-[90%] rounded-3xl overflow-hidden shadow-[0_15px_60px_rgba(0,0,0,0.85)] border-2 border-white/20 bg-cover bg-center animate-fade-in pointer-events-none z-0"
             style={{
               backgroundImage: `${overlayGradient}, url("${assetUrl(phrase.sfondo)}")`,
             }}

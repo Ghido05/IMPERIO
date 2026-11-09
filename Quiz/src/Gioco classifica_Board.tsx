@@ -66,6 +66,15 @@ const ClassificaBoard = ({
   
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
+  // L'audio deve suonare SOLO dalla finestra del relatore o in sandbox
+  const shouldPlayAudio = React.useMemo(() => {
+    if (!interactive) return false;
+    const mode = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('mode') : null;
+    const isSandbox = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('sandbox') === 'true' : false;
+    if (mode === 'games' || mode === 'scores') return false;
+    return isPresenter || mode === 'presenter' || isSandbox || !mode;
+  }, [interactive, isPresenter]);
+
   // Inizializza l'audio se presente nel JSON
   useEffect(() => {
     if (!interactive) return;
@@ -85,13 +94,13 @@ const ClassificaBoard = ({
   // Controlla se tutti gli indizi da 1 a 10 sono stati svelati
   const isGameComplete = revealAll || Array.from({ length: 10 }, (_, i) => i + 1).every(i => revealed[i]);
 
-  // Avvia l'audio in automatico al completamento del gioco (quando tutti i 10 elementi sono svelati)
+  // Avvia l'audio in automatico al completamento del gioco (quando tutti i 10 elementi sono svelati e solo su relatore)
   useEffect(() => {
-    if (isGameComplete && audioRef.current && interactive) {
+    if (isGameComplete && audioRef.current && shouldPlayAudio) {
       audioRef.current.currentTime = 0;
       audioRef.current.play().catch(err => console.error("Auto play solution audio error:", err));
     }
-  }, [isGameComplete, interactive]);
+  }, [isGameComplete, shouldPlayAudio]);
 
   // Generiamo l'ordine di rivelazione dei tasselli per l'immagine
   const totalTiles = (gameData.griglia?.colonne || 10) * (gameData.griglia?.righe || 10);
@@ -161,8 +170,9 @@ const ClassificaBoard = ({
     return "bg-[#d4d400]"; // clue 10
   };
 
-  // Suono gong / avviso scadenza del timer tramite Web Audio API
+  // Suono gong / avviso scadenza del timer tramite Web Audio API (solo su relatore)
   const playTimerGong = useCallback(() => {
+    if (!shouldPlayAudio) return;
     try {
       const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
@@ -453,7 +463,8 @@ const ClassificaBoard = ({
       } else if (key.toLowerCase() === 't') {
         setShowTitle(true);
       } else if (key.toLowerCase() === 'm') {
-        // Tasto M (Musica) per play/pause
+        // Tasto M (Musica) per play/pause (solo relatore)
+        if (!shouldPlayAudio) return;
         if (audioRef.current) {
           if (audioRef.current.paused) {
             audioRef.current.play().catch(err => console.error("Audio play error:", err));
@@ -810,7 +821,7 @@ const ClassificaBoard = ({
         revealedState={revealed}
         categoryTitle={gameData.categoria || (gameData as any).soluzione?.categoria || gameData.titolo || 'CLASSIFICA TOP 10'}
         sfondoUrl={currentSfondo}
-        canPlayAudio={interactive}
+        canPlayAudio={shouldPlayAudio}
         onRevealPoint={handleSuspenseReveal}
         onComplete={handleSuspenseComplete}
       />

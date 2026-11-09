@@ -46,7 +46,18 @@ export default function VideoBoard({ interactive = true, isPresenter }: VideoBoa
 
   // Sincronizzazione dello stato di riproduzione tra finestre (Relatore <-> Schermo Pubblico)
   const [isPlaying, setIsPlaying] = useSyncedState<boolean>(`playstate_${slideId}_video_playing`, false);
-  const [isMuted, setIsMuted] = useState(false);
+  const shouldMuteAudio = !isPresenterMode;
+  const [isMuted, setIsMuted] = useState(shouldMuteAudio);
+
+  useEffect(() => {
+    setIsMuted(!isPresenterMode);
+  }, [isPresenterMode]);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.muted = isMuted;
+    }
+  }, [isMuted]);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);

@@ -262,10 +262,10 @@ const ClassificaMusicaleBoard = ({
 
   const shouldPlayAudio = React.useMemo(() => {
     if (!interactive) return false;
-    if (isPresenter) return false;
     const mode = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('mode') : null;
     const isSandbox = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('sandbox') === 'true' : false;
-    return mode === 'games' || isSandbox || !mode;
+    if (mode === 'games' || mode === 'scores') return false;
+    return isPresenter || mode === 'presenter' || isSandbox || !mode;
   }, [interactive, isPresenter]);
 
   const audiosRef = React.useRef<Record<number, HTMLAudioElement>>({});
@@ -350,8 +350,8 @@ const ClassificaMusicaleBoard = ({
     if (canzoneFinaleUrl) {
       const finAudio = new Audio(assetUrl(canzoneFinaleUrl));
       finAudio.loop = false;
-      finAudio.volume = isPresenter ? 0 : 1;
-      finAudio.muted = isPresenter;
+      finAudio.volume = shouldPlayAudio ? 1 : 0;
+      finAudio.muted = !shouldPlayAudio;
       finalAudioRef.current = finAudio;
     }
 
@@ -396,8 +396,8 @@ const ClassificaMusicaleBoard = ({
       if (stemAudio) {
         if (revealed[clue]) {
           if (!isFadingOutRef.current) {
-            stemAudio.muted = isPresenter;
-            stemAudio.volume = isPresenter ? 0 : 1;
+            stemAudio.muted = !shouldPlayAudio;
+            stemAudio.volume = shouldPlayAudio ? 1 : 0;
           }
         } else {
           stemAudio.volume = 0;
@@ -405,7 +405,7 @@ const ClassificaMusicaleBoard = ({
         }
       }
     });
-  }, [revealed, showSolution, solutionAwarded, interactive, isPresenter, stopAndMuteAllStems]);
+  }, [revealed, showSolution, solutionAwarded, interactive, shouldPlayAudio, stopAndMuteAllStems]);
 
   // Traccia l'ultimo trigger gestito per evitare di ri-eseguire trigger passati memorizzati al mount della slide
   const lastTriggerRef = React.useRef<number>(playTrigger);
@@ -499,8 +499,8 @@ const ClassificaMusicaleBoard = ({
       if (finalAudioRef.current) {
         try {
           finalAudioRef.current.currentTime = 0;
-          finalAudioRef.current.muted = isPresenter;
-          finalAudioRef.current.volume = isPresenter ? 0 : 1;
+          finalAudioRef.current.muted = !shouldPlayAudio;
+          finalAudioRef.current.volume = shouldPlayAudio ? 1 : 0;
           const p = finalAudioRef.current.play();
           if (p !== undefined) {
             p.catch(err => console.log("Errore riproduzione canzone finale:", err));
@@ -522,7 +522,7 @@ const ClassificaMusicaleBoard = ({
       stopAndMuteAllStems();
       setIsPlaying(false);
     }
-  }, [showSolution, interactive, isPresenter, stopAndMuteAllStems, setIsPlaying]);
+  }, [showSolution, interactive, shouldPlayAudio, stopAndMuteAllStems, setIsPlaying]);
 
   const getPhraseStyle = (clue: number, isRevealed: boolean) => {
     if (!isRevealed) return "bg-white/5 border border-white/10";

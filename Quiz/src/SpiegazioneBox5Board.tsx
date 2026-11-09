@@ -341,17 +341,6 @@ export default function SpiegazioneBox5Board({
     return true;
   }, [isPresenter]);
 
-  // Gestione emissione audio: in Electron multi-finestra, solo la finestra Giochi emette audio
-  const isMultiWindowRelatore = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    const isElectron = (window as any).electron !== undefined;
-    if (!isElectron) return false;
-    const params = new URLSearchParams(window.location.search);
-    const mode = params.get('mode');
-    const isSandbox = params.get('sandbox') === 'true';
-    return (mode === 'presenter' || isPresenter === true) && !isSandbox;
-  }, [isPresenter]);
-
   // =========================================================================
   // STATO SINCRONIZZATO TRA FINESTRE (useSyncedState su localStorage + IPC)
   // =========================================================================
@@ -377,7 +366,12 @@ export default function SpiegazioneBox5Board({
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(75.73);
-  const [isMuted, setIsMuted] = useState(isMultiWindowRelatore);
+  const shouldMuteAudio = !isPresenterMode;
+  const [isMuted, setIsMuted] = useState(shouldMuteAudio);
+
+  useEffect(() => {
+    setIsMuted(!isPresenterMode);
+  }, [isPresenterMode]);
 
   // Calcolo derivato deterministico di activeSlide per evitare conflitti o rimbalzi IPC multi-finestra
   // Slide 0 = Slide 1 (Regole dello Scontro), Slide 1 = Slide 2 (I 4 Bonus & Jolly)
@@ -529,10 +523,10 @@ export default function SpiegazioneBox5Board({
     return () => clearTimeout(timer);
   }, [seekTrigger, duration, setManualStep]);
 
-  // Esecuzione effetti sonori sincronizzati ai cue della narrazione
+  // Esecuzione effetti sonori sincronizzati ai cue della narrazione (solo relatore)
   useEffect(() => {
     if (!interactive || !isPlaying) return;
-    const canPlaySFX = !isMultiWindowRelatore;
+    const canPlaySFX = isPresenterMode;
     if (!canPlaySFX) return;
 
     SFX_CUES.forEach((cue) => {
@@ -541,7 +535,7 @@ export default function SpiegazioneBox5Board({
         cue.play();
       }
     });
-  }, [currentTime, isPlaying, interactive, isMultiWindowRelatore]);
+  }, [currentTime, isPlaying, interactive, isPresenterMode]);
 
   const handleTimeUpdate = () => {
     if (isSeekingRef.current) return;

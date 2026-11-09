@@ -12,6 +12,9 @@ class TempleSoundFXEngine {
 
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
+    const mode = new URLSearchParams(window.location.search).get('mode');
+    if (mode === 'games' || mode === 'scores') return null;
+
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return null;
 

@@ -40,6 +40,10 @@ function createWindows() {
     title: 'IMPERIO - Giochi',
     webPreferences: commonWebPreferences
   });
+  gamesWindow.webContents.setAudioMuted(true);
+  gamesWindow.webContents.on('did-finish-load', () => {
+    gamesWindow.webContents.setAudioMuted(true);
+  });
 
   // 3. Scores Window
   scoresWindow = new BrowserWindow({
@@ -50,6 +54,10 @@ function createWindows() {
     backgroundColor: '#000000',
     title: 'IMPERIO - Punti',
     webPreferences: commonWebPreferences
+  });
+  scoresWindow.webContents.setAudioMuted(true);
+  scoresWindow.webContents.on('did-finish-load', () => {
+    scoresWindow.webContents.setAudioMuted(true);
   });
 
   const isDev = process.env.NODE_ENV === 'development';

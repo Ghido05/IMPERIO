@@ -16,7 +16,7 @@ const teamColors = {
   neutral: 'bg-gray-600 border-gray-400'
 };
 
-const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boolean }> = ({ interactive = true, ipadMode = false }) => {
+const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boolean; isPresenter?: boolean }> = ({ interactive = true, ipadMode = false, isPresenter }) => {
   const gameDataRaw = useGameData();
   if (!gameDataRaw) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -142,8 +142,9 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     if (!interactive) return false;
     const mode = new URLSearchParams(window.location.search).get('mode');
     const isSandbox = new URLSearchParams(window.location.search).get('sandbox') === 'true';
-    return mode === 'games' || isSandbox || !mode;
-  }, [interactive]);
+    if (mode === 'games' || mode === 'scores') return false;
+    return isPresenter || mode === 'presenter' || isSandbox || !mode;
+  }, [interactive, isPresenter]);
 
   useEffect(() => {
     setAudioPlaying(false);

@@ -35,9 +35,9 @@ export default function SlideRenderer({ type, interactive = true, revealAll = fa
       {type === 'classifica' && <ClassificaBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
       {type === 'classifica_musicale' && <ClassificaMusicaleBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
       {type === 'cruciverba' && <CruciverbaBoard interactive={interactive} revealAll={revealAll} />}
-      {type === 'gioco_frase_tempo' && <GiocoFraseTempoBoard interactive={interactive} revealAll={revealAll} />}
-      {type === 'password_squadre' && <PasswordSquadreBoard interactive={interactive} revealAll={revealAll} />}
-      {type === 'password_prescelti' && <PasswordPresceltiBoard interactive={interactive} />}
+      {type === 'gioco_frase_tempo' && <GiocoFraseTempoBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
+      {type === 'password_squadre' && <PasswordSquadreBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
+      {type === 'password_prescelti' && <PasswordPresceltiBoard interactive={interactive} isPresenter={isPresenter} />}
       {type === 'classifica_generale' && <ClassificaGeneraleBoard />}
       {type === 'finale_squadre' && <FinaleSquadreBoard />}
       {type === 'scenetta' && <ScenettaBoard interactive={interactive} revealAll={revealAll} />}

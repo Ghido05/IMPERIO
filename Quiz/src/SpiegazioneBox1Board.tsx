@@ -289,17 +289,6 @@ export default function SpiegazioneBox1Board({
     return true;
   }, [isPresenter]);
 
-  // Gestione emissione audio: in Electron multi-finestra, solo la finestra Giochi emette audio
-  const isMultiWindowRelatore = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    const isElectron = (window as any).electron !== undefined;
-    if (!isElectron) return false;
-    const params = new URLSearchParams(window.location.search);
-    const mode = params.get('mode');
-    const isSandbox = params.get('sandbox') === 'true';
-    return (mode === 'presenter' || isPresenter === true) && !isSandbox;
-  }, [isPresenter]);
-
   // Sincronizzazione degli stati tra finestre tramite IPC / localStorage
   const [isPlaying, setIsPlaying] = useSyncedState<boolean>(
     `playstate_${slideId}_playing`,
@@ -325,7 +314,12 @@ export default function SpiegazioneBox1Board({
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(21.63);
-  const [isMuted, setIsMuted] = useState(isMultiWindowRelatore);
+  const shouldMuteAudio = !isPresenterMode;
+  const [isMuted, setIsMuted] = useState(shouldMuteAudio);
+
+  useEffect(() => {
+    setIsMuted(!isPresenterMode);
+  }, [isPresenterMode]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playedSoundsRef = useRef<Set<string>>(new Set());

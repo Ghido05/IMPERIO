@@ -136,8 +136,12 @@ const BONUS_CONFIGS = [
   { key: 'scudo', label: 'SCUDO', sublabel: 'Difesa', type: 'shield' },
 ];
 
-// Audio synthesizer for zero-dependency sounds
+// Audio synthesizer for zero-dependency sounds (solo relatore o sandbox)
 function playSound(type: 'roll' | 'land' | 'correct' | 'wrong' | 'eliminate' | 'wipeout' | 'victory') {
+  if (typeof window !== 'undefined') {
+    const mode = new URLSearchParams(window.location.search).get('mode');
+    if (mode === 'games' || mode === 'scores') return;
+  }
   try {
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return;

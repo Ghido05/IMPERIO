@@ -88,7 +88,7 @@ const DynamicHint: React.FC<{
         {/* 1. IL BOX (Rectangle 1) */}
         <div 
           ref={innerRef}
-          className={`absolute z-20 pointer-events-auto flex items-center justify-center px-[8%] py-[4%] transition-all duration-500 ${isStructureVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}
+          className={`absolute z-20 pointer-events-auto flex items-center justify-center px-[5%] py-[3%] transition-all duration-500 ${isStructureVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'}`}
           style={{
             backgroundColor: note.color,
             bottom: `${100 - (boxH / compH * 100)}%`, 
@@ -99,7 +99,7 @@ const DynamicHint: React.FC<{
             transform: `translateY(-${yOffset}px)`
           }}
         >
-          <p className="text-white font-bold text-center text-[clamp(0.7rem,1.4vw,1.1rem)] leading-snug whitespace-pre-line drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+          <p className="text-white font-black text-center text-[26px] xl:text-[28px] leading-snug whitespace-pre-line drop-shadow-[0_2px_5px_rgba(0,0,0,0.9)] tracking-tight">
             {(note?.text || '').replace(/\\n/g, '\n')}
           </p>
           <div className="absolute top-[10%] left-[5%] w-[25%] h-[10%] rounded-full bg-white/30"></div>
@@ -233,6 +233,18 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
   const [bookedTeam, setBookedTeam] = useSyncedState<number | null>(`playstate_${slideId}_booked_team`, null);
   const [lockedStep, setLockedStep] = useSyncedState<number | null>(`playstate_${slideId}_locked_step`, null);
   const [excludedTeams, setExcludedTeams] = useSyncedState<number[]>(`playstate_${slideId}_excluded_teams`, []);
+
+  // L'audio deve suonare SOLO dalla finestra del relatore o in sandbox, mai dalla finestra pubblico/squadre
+  const isPresenterMode = React.useMemo(() => {
+    if (isPresenter !== undefined && isPresenter !== false) return true;
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('sandbox') === 'true') return true;
+    if (params.get('mode') === 'games' || params.get('mode') === 'scores') return false;
+    return isPresenter || params.get('mode') === 'presenter' || !params.get('mode');
+  }, [isPresenter]);
+
+  const canPlayAudio = interactive && isPresenterMode;
 
   // Transizione d'ingresso cinematica dalla spiegazione alla prima domanda
   const [showIntroTransition, setShowIntroTransition] = useState(() => {
@@ -413,21 +425,21 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
 
     const isBackingFromSolution = prevStep === 10 && step === 9;
     const isSolutionStep = step === 10;
-    const shouldPlay = stepChanged && (!isAutoAdvancing || isSolutionStep) && !isBackingFromSolution && interactive;
+    const shouldPlay = stepChanged && (!isAutoAdvancing || isSolutionStep) && !isBackingFromSolution && canPlayAudio;
 
     if (shouldPlay && audioPath) {
       const newAudio = new Audio(assetUrl(audioPath));
       audioRef.current = newAudio;
       newAudio.play().catch(error => console.log('Autoplay intercettato dal browser:', error));
     }
-  }, [step, isAutoAdvancing, prevStep, interactive, gameData.soluzione, audioMap]);
+  }, [step, isAutoAdvancing, prevStep, canPlayAudio, gameData.soluzione, audioMap]);
 
   useEffect(() => {
-    console.log(`[MusicBoard Step Effect] Step changed to: ${step}, interactive: ${interactive}`);
-    if (!interactive && audioRef.current && !audioRef.current.paused) {
+    console.log(`[MusicBoard Step Effect] Step changed to: ${step}, canPlayAudio: ${canPlayAudio}`);
+    if (!canPlayAudio && audioRef.current && !audioRef.current.paused) {
       audioRef.current.pause();
     }
-  }, [step, interactive]);
+  }, [step, canPlayAudio]);
 
   // Ascolta la pressione dei tasti freccia e comandi speciali
   useEffect(() => {
@@ -467,8 +479,9 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
         }
       }
 
-      // Tasto M: Avvia / Pausa l'audio dello strumento corrente
+      // Tasto M: Avvia / Pausa l'audio dello strumento corrente (solo finestra Relatore / Sandbox)
       if (e.key.toLowerCase() === 'm') {
+        if (!canPlayAudio) return;
         if (audioRef.current) {
           if (audioRef.current.paused) {
             audioRef.current.play().catch(err => console.log('Errore play audio:', err));

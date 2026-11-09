@@ -257,7 +257,7 @@ export const BussolottiOverlay: React.FC<{
 
 // Dummy line to match bounds
 
-const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = ({ interactive = true, revealAll = false }) => {
+const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresenter?: boolean }> = ({ interactive = true, revealAll = false, isPresenter }) => {
   const gameDataRaw = useGameData();
   if (!gameDataRaw) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
@@ -334,6 +334,7 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
   const gongPlayedForRef = useRef<number>(0);
 
   const playTone = useCallback((frequency: number, duration: number, type: OscillatorType, volume: number, endFrequency?: number) => {
+    if (!shouldPlayAudio) return;
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
       const ctx = new AudioContextClass();
@@ -403,8 +404,9 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean }> = 
     if (!interactive) return false;
     const mode = new URLSearchParams(window.location.search).get('mode');
     const isSandbox = new URLSearchParams(window.location.search).get('sandbox') === 'true';
-    return mode === 'games' || isSandbox || !mode;
-  }, [interactive]);
+    if (mode === 'games' || mode === 'scores') return false;
+    return isPresenter || mode === 'presenter' || isSandbox || !mode;
+  }, [interactive, isPresenter]);
 
   useEffect(() => {
     setAudioPlaying(false);

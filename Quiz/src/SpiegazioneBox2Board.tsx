@@ -238,9 +238,27 @@ export default function SpiegazioneBox2Board({
   // File audio ufficiale di spiegazione
   const audioSource = data?.audioSpiegazione || data?.audioUrl || '/Audio/Spiegazioni/Spiegazione_box2.mp3';
 
+  // Identificazione modalità Relatore vs Schermo Pubblico
+  const isPresenterMode = useMemo(() => {
+    if (isPresenter !== undefined) return isPresenter;
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('sandbox') === 'true') return true;
+    if (
+      params.get('mode') === 'games' ||
+      params.get('mode') === 'scores' ||
+      params.get('project') === 'true'
+    ) {
+      return false;
+    }
+    return true;
+  }, [isPresenter]);
+
   // Riconoscimento della modalità multi-finestra Electron/Web
   const isMultiWindowRelatore = useMemo(() => {
     if (typeof window === 'undefined') return false;
+    const isElectron = (window as any).electron !== undefined;
+    if (!isElectron) return false;
     const params = new URLSearchParams(window.location.search);
     const mode = params.get('mode');
     const isSandbox = params.get('sandbox') === 'true';
@@ -272,7 +290,12 @@ export default function SpiegazioneBox2Board({
 
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(33.04);
-  const [isMuted, setIsMuted] = useState(isMultiWindowRelatore);
+  const shouldMuteAudio = !isPresenterMode;
+  const [isMuted, setIsMuted] = useState(shouldMuteAudio);
+
+  useEffect(() => {
+    setIsMuted(!isPresenterMode);
+  }, [isPresenterMode]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playedSoundsRef = useRef<Set<string>>(new Set());

@@ -68,6 +68,49 @@ export function getSlideForBoxQuestion(
         },
       };
     }
+    if (questionNum === 4) {
+      return {
+        id: 'box0_squadre',
+        type: 'presentazione_squadre',
+        data: {
+          titolo: setupState.box0?.presentazioneSquadre?.titolo || 'PRESENTAZIONE SQUADRE',
+          sottotitolo: setupState.box0?.presentazioneSquadre?.sottotitolo || 'I contendenti di IMPERIO',
+          sfondo: setupState.box0?.presentazioneSquadre?.sfondo || '',
+          musicaIngresso: setupState.box0?.presentazioneSquadre?.musicaIngresso || '/Audio/ingresso_coppa.mp3',
+          slideId: 'box0_squadre',
+          notePresentatore: setupState.box0?.presentazioneSquadre?.notePresentatore || 'Presentazione ufficiale delle tre squadre e ingresso solenne della Coppa.',
+        },
+      };
+    }
+    if (questionNum === 5) {
+      return {
+        id: 'box0_pulsantiera',
+        type: 'prova_pulsantiera',
+        data: {
+          titolo: setupState.box0?.provaPulsantiera?.titolo || 'PROVA PULSANTIERA',
+          sottotitolo: setupState.box0?.provaPulsantiera?.sottotitolo || 'Test di reattività e prenotazione',
+          sfondo: setupState.box0?.provaPulsantiera?.sfondo || '',
+          slideId: 'box0_pulsantiera',
+          notePresentatore: setupState.box0?.provaPulsantiera?.notePresentatore || 'Test dei 3 pulsanti digitali / fisici prima di iniziare le sfide.',
+        },
+      };
+    }
+    if (questionNum === 6) {
+      return {
+        id: 'box0_nadia',
+        type: 'introduzione_nadia',
+        data: {
+          titolo: setupState.box0?.introduzioneNadia?.titolo || 'MILLE E UNA NADIA',
+          sottotitolo: setupState.box0?.introduzioneNadia?.sottotitolo || 'Il Jolly del Sultano — Regole e Meccanica',
+          video: setupState.box0?.introduzioneNadia?.video || '',
+          videoUrl: setupState.box0?.introduzioneNadia?.video || '',
+          sfondo: setupState.box0?.introduzioneNadia?.sfondo || '',
+          audioStacchetto: setupState.box0?.introduzioneNadia?.audioStacchetto || '/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3',
+          slideId: 'box0_nadia',
+          notePresentatore: setupState.box0?.introduzioneNadia?.notePresentatore || 'Introduzione di Nadia, spiegazione del gettone e delle modalità di invocazione.',
+        },
+      };
+    }
     const customSfondo = setupState.box0?.sfondoSpiegazione || setupState.box0?.videoSpiegazione || '';
     return {
       id: 'box0_spiegazione',
@@ -1022,7 +1065,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   const box2QuestionKeys = Object.keys(setupState.gioco2?.questions || {}).map(Number);
   const numBox2Questions = Math.max(6, box2QuestionKeys.length > 0 ? Math.max(...box2QuestionKeys) : 6);
   const numBox4Questions = Math.max(1, (setupState.gioco4?.frasi && setupState.gioco4.frasi.length > 0) ? setupState.gioco4.frasi.length : 2);
-  const maxQuestionsForBox = activeBox === 0 ? 4 : activeBox === 1 ? numBox1Questions : activeBox === 2 ? numBox2Questions : activeBox === 3 ? 3 : activeBox === 4 ? numBox4Questions : 1;
+  const maxQuestionsForBox = activeBox === 0 ? 7 : activeBox === 1 ? numBox1Questions : activeBox === 2 ? numBox2Questions : activeBox === 3 ? 3 : activeBox === 4 ? numBox4Questions : 1;
 
   const handleNext = () => {
     sendSerialReset();
@@ -1031,7 +1074,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
       handleCloseNadia();
     }
     if (activeBox === 0) {
-      if (activeQuestion < 4) {
+      if (activeQuestion < 7) {
         setActiveQuestion(activeQuestion + 1);
       } else {
         // Pass to Box 1, starting with Video Spiegazione (q = 0)
@@ -1094,7 +1137,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
         // From Video Spiegazione back to previous Box
         if (activeBox === 1) {
           setActiveBox(0);
-          setActiveQuestion(4);
+          setActiveQuestion(7);
         } else {
           const prevBox = activeBox - 1;
           const prevMax = prevBox === 1 ? 10 : prevBox === 2 ? 6 : prevBox === 3 ? 3 : prevBox === 4 ? numBox4Questions : 1;
@@ -1211,7 +1254,10 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                     { q: 1, label: '🎭 #1 Scenetta' },
                     { q: 2, label: '🎞️ #2 Pre-Sigla' },
                     { q: 3, label: '🎵 #3 Sigla' },
-                    { q: 4, label: '📢 #4 Spiegazione' },
+                    { q: 4, label: '👥 #4 Presentazione Squadre' },
+                    { q: 5, label: '🚨 #5 Prova Pulsantiera' },
+                    { q: 6, label: '✨ #6 Introduzione Nadia' },
+                    { q: 7, label: '📢 #7 Spiegazione Fasi' },
                   ].map((item) => (
                     <button
                       key={item.q}
@@ -1359,7 +1405,10 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                   if (activeQuestion === 1) return 'BOX 0 — 1. Scenetta (Regolamento & Delta Punti)';
                   if (activeQuestion === 2) return 'BOX 0 — 2. Video Pre-Sigla';
                   if (activeQuestion === 3) return 'BOX 0 — 3. Video Sigla Ufficiale';
-                  if (activeQuestion === 4) return 'BOX 0 — 4. Spiegazione Fasi Quiz';
+                  if (activeQuestion === 4) return 'BOX 0 — 4. Presentazione Squadre & Coppa';
+                  if (activeQuestion === 5) return 'BOX 0 — 5. Prova Pulsantiera';
+                  if (activeQuestion === 6) return 'BOX 0 — 6. Introduzione Nadia';
+                  if (activeQuestion === 7) return 'BOX 0 — 7. Spiegazione Fasi Quiz';
                   return `BOX 0 — Passaggio #${activeQuestion}`;
                 }
                 if (activeQuestion === 0) {

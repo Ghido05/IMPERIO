@@ -5,31 +5,13 @@
     "canzoneStacchetto": "/Audio/strumenti/DJ Antoine ft The Beat Shakers   Ma Chérie (_[cut_23sec].mp3",
     "domande": [
       {
-        "id": "nadia_1",
-        "domanda": "Nel suo capolavoro letterario del 1939 \"Furore\" (The Grapes of Wrath), lo scrittore John Steinbeck descrive la migrazione della famiglia Joad verso ovest durante la Grande Depressione. In questo romanzo, Steinbeck coniò per la Route 66 un celebre soprannome che è rimasto nella storia. Quale?",
-        "rispostaCorretta": "La strada madre",
-        "risposta2": "L'arteria d'America",
-        "risposta3": "La bretella lungo la vita",
-        "targetBox": 4,
-        "targetQuestion": 1
-      },
-      {
-        "id": "nadia_1790272964098_kwak",
-        "domanda": "Tradotto dal persiano e dall'arabo, qual è il significato letterale del nome \"Taj Mahal\", l'imponente monumento in marmo bianco costruito in India dall'imperatore Shah Jahan?",
-        "rispostaCorretta": "La Corona dei Palazzi",
-        "risposta2": "Il Tempio delle Lacrime",
-        "risposta3": "La casa dell'eternità",
+        "id": "nadia_1792795820197_1y83",
+        "domanda": "Abbiamo appena indovinato Telemaco, il celebre figlio di Ulisse. Nei primi canti dell'Odissea, il giovane principe parte alla ricerca di notizie sul padre scomparso. Durante questo difficile viaggio viene accompagnato e consigliato da un anziano e saggio amico di famiglia (che in realtà è la dea Atena sotto mentite spoglie). Il nome di questo personaggio è diventato col tempo una parola che usiamo abitualmente ancora oggi. Chi era?",
+        "rispostaCorretta": "Mentore",
+        "risposta2": "Cicerone",
+        "risposta3": "Mecenate",
         "targetBox": 1,
-        "targetQuestion": 8
-      },
-      {
-        "id": "nadia_1790712588000_qjr1",
-        "domanda": "Nel gioco avete indovinato i canali YouTube italiani con più visualizzazioni. Ma facendo un salto indietro nel tempo, sapreste dire quale soggetto era ripreso nel primissimo video in assoluto caricato sulla piattaforma nel 2005?",
-        "rispostaCorretta": "Un ragazzo allo zoo davanti agli elefanti",
-        "risposta2": "Un gatto che suona la tastiera",
-        "risposta3": "Un gruppo di amici che brinda con la birra",
-        "targetBox": 2,
-        "targetQuestion": 5
+        "targetQuestion": 2
       },
       {
         "id": "nadia_1792340284874_kb0u",
@@ -41,13 +23,13 @@
         "targetQuestion": 6
       },
       {
-        "id": "nadia_1792340521197_z0qd",
-        "domanda": "Nella manche dei dolci abbiamo incontrato classici siciliani come il Cannolo e la Cassata. A quale antica dominazione dell'isola si deve l'introduzione di ingredienti fondamentali per questi dessert, come la canna da zucchero e la canditura?",
-        "rispostaCorretta": "Agli Arabi",
-        "risposta2": "Ai Normanni",
-        "risposta3": "Ai Normanni",
-        "targetBox": 3,
-        "targetQuestion": 2
+        "id": "nadia_1790272964098_kwak",
+        "domanda": "Tradotto dal persiano e dall'arabo, qual è il significato letterale del nome \"Taj Mahal\", l'imponente monumento in marmo bianco costruito in India dall'imperatore Shah Jahan?",
+        "rispostaCorretta": "La Corona dei Palazzi",
+        "risposta2": "Il Tempio delle Lacrime",
+        "risposta3": "La casa dell'eternità",
+        "targetBox": 1,
+        "targetQuestion": 8
       },
       {
         "id": "nadia_1792744528334_88x8",
@@ -59,13 +41,22 @@
         "targetQuestion": 9
       },
       {
-        "id": "nadia_1792795820197_1y83",
-        "domanda": "Abbiamo appena indovinato Telemaco, il celebre figlio di Ulisse. Nei primi canti dell'Odissea, il giovane principe parte alla ricerca di notizie sul padre scomparso. Durante questo difficile viaggio viene accompagnato e consigliato da un anziano e saggio amico di famiglia (che in realtà è la dea Atena sotto mentite spoglie). Il nome di questo personaggio è diventato col tempo una parola che usiamo abitualmente ancora oggi. Chi era?",
-        "rispostaCorretta": "Mentore",
-        "risposta2": "Cicerone",
-        "risposta3": "Mecenate",
-        "targetBox": 1,
+        "id": "nadia_1792797306298_h37j",
+        "domanda": "Il nome completo di questo volatile è \"gallina faraona\", un titolo che ci porta direttamente nell'Antico Egitto. Ma da dove deriva storicamente questo nome così regale?",
+        "rispostaCorretta": "ERA CONSIDERATA UNA PRELIBATEZZA ESOTICA DALL'ORIENTE, CIBO PREGIATO DEI FARAONI",
+        "risposta2": "IN ONORE DELLA REGINA CLEOPATRA, CHE ESIGEVA ESCLUSIVAMENTE LE UOVA DI QUESTO ANIMALE",
+        "risposta3": "A CAUSA DELLA PROTUBERANZA OSSEA SULLA SUA TESTA, CHE RICORDA IL COPRICAPO DEI FARAONI",
+        "targetBox": 2,
         "targetQuestion": 2
+      },
+      {
+        "id": "nadia_1790712588000_qjr1",
+        "domanda": "Nel gioco avete indovinato i canali YouTube italiani con più visualizzazioni. Ma facendo un salto indietro nel tempo, sapreste dire quale soggetto era ripreso nel primissimo video in assoluto caricato sulla piattaforma nel 2005?",
+        "rispostaCorretta": "Un ragazzo allo zoo davanti agli elefanti",
+        "risposta2": "Un gatto che suona la tastiera",
+        "risposta3": "Un gruppo di amici che brinda con la birra",
+        "targetBox": 2,
+        "targetQuestion": 5
       },
       {
         "id": "nadia_1792796618500_ywzb",
@@ -77,13 +68,22 @@
         "targetQuestion": 1
       },
       {
-        "id": "nadia_1792797306298_h37j",
-        "domanda": "Il nome completo di questo volatile è \"gallina faraona\", un titolo che ci porta direttamente nell'Antico Egitto. Ma da dove deriva storicamente questo nome così regale?",
-        "rispostaCorretta": "ERA CONSIDERATA UNA PRELIBATEZZA ESOTICA DALL'ORIENTE, CIBO PREGIATO DEI FARAONI",
-        "risposta2": "IN ONORE DELLA REGINA CLEOPATRA, CHE ESIGEVA ESCLUSIVAMENTE LE UOVA DI QUESTO ANIMALE",
-        "risposta3": "A CAUSA DELLA PROTUBERANZA OSSEA SULLA SUA TESTA, CHE RICORDA IL COPRICAPO DEI FARAONI",
-        "targetBox": 2,
+        "id": "nadia_1792340521197_z0qd",
+        "domanda": "Nella manche dei dolci abbiamo incontrato classici siciliani come il Cannolo e la Cassata. A quale antica dominazione dell'isola si deve l'introduzione di ingredienti fondamentali per questi dessert, come la canna da zucchero e la canditura?",
+        "rispostaCorretta": "Agli Arabi",
+        "risposta2": "Ai Normanni",
+        "risposta3": "Ai Normanni",
+        "targetBox": 3,
         "targetQuestion": 2
+      },
+      {
+        "id": "nadia_1",
+        "domanda": "Nel suo capolavoro letterario del 1939 \"Furore\" (The Grapes of Wrath), lo scrittore John Steinbeck descrive la migrazione della famiglia Joad verso ovest durante la Grande Depressione. In questo romanzo, Steinbeck coniò per la Route 66 un celebre soprannome che è rimasto nella storia. Quale?",
+        "rispostaCorretta": "La strada madre",
+        "risposta2": "L'arteria d'America",
+        "risposta3": "La bretella lungo la vita",
+        "targetBox": 4,
+        "targetQuestion": 1
       }
     ]
   },
@@ -97,6 +97,27 @@
     },
     "videoPreSigla": "/Video/LA SFIDA COMINCIA ORA!.mp4",
     "videoSigla": "/Video/sigla_imperio.mp4",
+    "presentazioneSquadre": {
+      "titolo": "PRESENTAZIONE SQUADRE",
+      "sottotitolo": "I contendenti di IMPERIO",
+      "sfondo": "",
+      "musicaIngresso": "/Audio/ingresso_coppa.mp3",
+      "notePresentatore": "Presentazione ufficiale delle tre squadre e ingresso solenne della Coppa."
+    },
+    "provaPulsantiera": {
+      "titolo": "PROVA PULSANTIERA",
+      "sottotitolo": "Test di reattività e prenotazione",
+      "sfondo": "",
+      "notePresentatore": "Test dei 3 pulsanti digitali / fisici prima di iniziare le sfide."
+    },
+    "introduzioneNadia": {
+      "titolo": "MILLE E UNA NADIA",
+      "sottotitolo": "Il Jolly del Sultano — Regole e Meccanica",
+      "video": "",
+      "sfondo": "",
+      "audioStacchetto": "/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3",
+      "notePresentatore": "Introduzione di Nadia, spiegazione del gettone e delle modalità di invocazione."
+    },
     "sfondoSpiegazione": "/Icone/nessuno_img/sfondo_finale_acqua.jpg",
     "videoSpiegazione": "/Icone/nessuno_img/sfondo_finale_acqua.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/spiegazione_fasi_audio.mp3",

@@ -66,10 +66,37 @@ export interface Box0ScenettaSetup {
   notePresentatore?: string;
 }
 
+export interface Box0PresentazioneSquadreSetup {
+  titolo?: string;
+  sottotitolo?: string;
+  sfondo?: string;
+  musicaIngresso?: string;
+  notePresentatore?: string;
+}
+
+export interface Box0ProvaPulsantieraSetup {
+  titolo?: string;
+  sottotitolo?: string;
+  sfondo?: string;
+  notePresentatore?: string;
+}
+
+export interface Box0IntroduzioneNadiaSetup {
+  titolo?: string;
+  sottotitolo?: string;
+  video?: string;
+  sfondo?: string;
+  audioStacchetto?: string;
+  notePresentatore?: string;
+}
+
 export interface Box0Setup {
   scenetta: Box0ScenettaSetup;
   videoPreSigla?: string;
   videoSigla?: string;
+  presentazioneSquadre?: Box0PresentazioneSquadreSetup;
+  provaPulsantiera?: Box0ProvaPulsantieraSetup;
+  introduzioneNadia?: Box0IntroduzioneNadiaSetup;
   sfondoSpiegazione?: string;
   videoSpiegazione?: string;
   audioSpiegazione?: string;
@@ -299,6 +326,27 @@ export function createDefaultBox0Setup(): Box0Setup {
     },
     videoPreSigla: '',
     videoSigla: '/Video/sigla_imperio.mp4',
+    presentazioneSquadre: {
+      titolo: 'PRESENTAZIONE SQUADRE',
+      sottotitolo: 'I contendenti di IMPERIO',
+      sfondo: '',
+      musicaIngresso: '/Audio/ingresso_coppa.mp3',
+      notePresentatore: 'Presentazione ufficiale delle tre squadre e ingresso solenne della Coppa.',
+    },
+    provaPulsantiera: {
+      titolo: 'PROVA PULSANTIERA',
+      sottotitolo: 'Test di reattività e prenotazione',
+      sfondo: '',
+      notePresentatore: 'Test dei 3 pulsanti digitali / fisici prima di iniziare le sfide.',
+    },
+    introduzioneNadia: {
+      titolo: 'MILLE E UNA NADIA',
+      sottotitolo: 'Il Jolly del Sultano — Regole e Meccanica',
+      video: '',
+      sfondo: '',
+      audioStacchetto: '/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3',
+      notePresentatore: 'Introduzione di Nadia, spiegazione del gettone e delle modalità di invocazione.',
+    },
     sfondoSpiegazione: '',
     videoSpiegazione: '',
     audioSpiegazione: '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3',
@@ -326,6 +374,27 @@ export function normalizeBox0(raw: any, def: Box0Setup): Box0Setup {
     },
     videoPreSigla: raw.videoPreSigla || '',
     videoSigla: raw.videoSigla || '',
+    presentazioneSquadre: {
+      titolo: raw.presentazioneSquadre?.titolo || def.presentazioneSquadre?.titolo || 'PRESENTAZIONE SQUADRE',
+      sottotitolo: raw.presentazioneSquadre?.sottotitolo || def.presentazioneSquadre?.sottotitolo || 'I contendenti di IMPERIO',
+      sfondo: raw.presentazioneSquadre?.sfondo || def.presentazioneSquadre?.sfondo || '',
+      musicaIngresso: raw.presentazioneSquadre?.musicaIngresso || def.presentazioneSquadre?.musicaIngresso || '/Audio/ingresso_coppa.mp3',
+      notePresentatore: raw.presentazioneSquadre?.notePresentatore || def.presentazioneSquadre?.notePresentatore || 'Presentazione ufficiale delle tre squadre e ingresso solenne della Coppa.',
+    },
+    provaPulsantiera: {
+      titolo: raw.provaPulsantiera?.titolo || def.provaPulsantiera?.titolo || 'PROVA PULSANTIERA',
+      sottotitolo: raw.provaPulsantiera?.sottotitolo || def.provaPulsantiera?.sottotitolo || 'Test di reattività e prenotazione',
+      sfondo: raw.provaPulsantiera?.sfondo || def.provaPulsantiera?.sfondo || '',
+      notePresentatore: raw.provaPulsantiera?.notePresentatore || def.provaPulsantiera?.notePresentatore || 'Test dei 3 pulsanti digitali / fisici prima di iniziare le sfide.',
+    },
+    introduzioneNadia: {
+      titolo: raw.introduzioneNadia?.titolo || def.introduzioneNadia?.titolo || 'MILLE E UNA NADIA',
+      sottotitolo: raw.introduzioneNadia?.sottotitolo || def.introduzioneNadia?.sottotitolo || 'Il Jolly del Sultano — Regole e Meccanica',
+      video: raw.introduzioneNadia?.video || def.introduzioneNadia?.video || '',
+      sfondo: raw.introduzioneNadia?.sfondo || def.introduzioneNadia?.sfondo || '',
+      audioStacchetto: raw.introduzioneNadia?.audioStacchetto || def.introduzioneNadia?.audioStacchetto || '/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3',
+      notePresentatore: raw.introduzioneNadia?.notePresentatore || def.introduzioneNadia?.notePresentatore || 'Introduzione di Nadia, spiegazione del gettone e delle modalità di invocazione.',
+    },
     sfondoSpiegazione: sfondoSpieg,
     videoSpiegazione: sfondoSpieg,
     audioSpiegazione: raw.audioSpiegazione || def.audioSpiegazione || '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3',
@@ -552,6 +621,8 @@ export function normalizeNadia(raw: any, def: NadiaSetup): NadiaSetup {
   if (!sfondo || sfondo.includes('1001Nadia') || sfondo.includes('nessuno_img') || sfondo.includes('imperio_island_map') || sfondo.startsWith('idb://')) {
     sfondo = '/Icone/sfondi/sfondo_nadia_lampada.jpg';
   }
+  // Ordina sempre le domande di Nadia in base alla sequenza di apparizione nel quiz (Box crescente, Domanda crescente)
+  domande = [...domande].sort((a, b) => (Number(a.targetBox) * 1000 + Number(a.targetQuestion)) - (Number(b.targetBox) * 1000 + Number(b.targetQuestion)));
   return {
     sfondo,
     musicaStacchetto: raw.musicaStacchetto || '',
@@ -1172,6 +1243,61 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     }));
   };
 
+  const handleMoveGioco4Frase = (fromIdx: number, direction: 'up' | 'down' | number) => {
+    let targetIdx = fromIdx;
+    if (direction === 'up') {
+      targetIdx = fromIdx - 1;
+    } else if (direction === 'down') {
+      targetIdx = fromIdx + 1;
+    } else if (typeof direction === 'number') {
+      targetIdx = direction;
+    }
+
+    const currentFrasi = state.gioco4?.frasi || [];
+    if (fromIdx < 0 || fromIdx >= currentFrasi.length || targetIdx < 0 || targetIdx >= currentFrasi.length || targetIdx === fromIdx) {
+      return;
+    }
+
+    const oldIndices = currentFrasi.map((_, i) => i);
+    const [movedOldIdx] = oldIndices.splice(fromIdx, 1);
+    oldIndices.splice(targetIdx, 0, movedOldIdx);
+
+    const oldToNewMap: Record<number, number> = {};
+    oldIndices.forEach((origIdx, newIdx) => {
+      oldToNewMap[origIdx + 1] = newIdx + 1;
+    });
+
+    const frasi = [...currentFrasi];
+    const [moved] = frasi.splice(fromIdx, 1);
+    frasi.splice(targetIdx, 0, moved);
+
+    const updatedNadiaDomande = (state.nadia?.domande || []).map((nq) => {
+      if (nq.targetBox === 4 && oldToNewMap[nq.targetQuestion]) {
+        return {
+          ...nq,
+          targetQuestion: oldToNewMap[nq.targetQuestion],
+        };
+      }
+      return nq;
+    }).sort((a, b) => (a.targetBox * 1000 + a.targetQuestion) - (b.targetBox * 1000 + b.targetQuestion));
+
+    setState((prev) => {
+      const nadia = normalizeNadia(prev.nadia, getDefaultSetupState().nadia!);
+      return {
+        ...prev,
+        nadia: {
+          ...nadia,
+          domande: updatedNadiaDomande,
+        },
+        gioco4: {
+          ...prev.gioco4,
+          frasi,
+        },
+      };
+    });
+    showToast(`Frase #${fromIdx + 1} spostata alla posizione #${targetIdx + 1}`);
+  };
+
   const handleResetSession = () => {
     if (confirm("Sei sicuro di voler azzerare tutti gli stati interattivi dei giochi (step svelati, timer, parole indovinate) e tutti i punteggi delle squadre? I contenuti del setup (canzoni, immagini, definizioni) non verranno persi.")) {
       const keysToRemove: string[] = [];
@@ -1594,12 +1720,26 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     }));
   };
 
+  const sortNadiaDomande = (items: NadiaQuestionItem[]) => {
+    return [...items].sort((a, b) => (Number(a.targetBox) * 1000 + Number(a.targetQuestion)) - (Number(b.targetBox) * 1000 + Number(b.targetQuestion)));
+  };
+
   const updateCurrentNadiaQ = (updater: (prev: NadiaQuestionItem) => NadiaQuestionItem) => {
     updateNadia((prev) => {
       const newDomande = [...prev.domande];
       const validIdx = Math.min(selectedNadiaIdx, Math.max(0, newDomande.length - 1));
-      newDomande[validIdx] = updater(newDomande[validIdx] || createDefaultNadiaQuestion());
-      return { ...prev, domande: newDomande };
+      const currentItem = newDomande[validIdx] || createDefaultNadiaQuestion();
+      const updatedItem = updater(currentItem);
+      newDomande[validIdx] = updatedItem;
+
+      // Ordina sempre in base alla sequenza di apparizione nel quiz
+      const sorted = sortNadiaDomande(newDomande);
+      const newIdx = sorted.findIndex((d) => d.id === updatedItem.id);
+      if (newIdx !== -1) {
+        setSelectedNadiaIdx(newIdx);
+      }
+
+      return { ...prev, domande: sorted };
     });
   };
 
@@ -1708,6 +1848,69 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     }));
   };
 
+  const handleMoveQ1 = (fromNum: number, direction: 'up' | 'down' | number) => {
+    const currentIndex = activeQ1Keys.indexOf(fromNum);
+    if (currentIndex === -1) return;
+
+    let targetIndex = currentIndex;
+    if (direction === 'up') {
+      targetIndex = currentIndex - 1;
+    } else if (direction === 'down') {
+      targetIndex = currentIndex + 1;
+    } else if (typeof direction === 'number') {
+      targetIndex = activeQ1Keys.indexOf(direction);
+    }
+
+    if (targetIndex < 0 || targetIndex >= activeQ1Keys.length || targetIndex === currentIndex) return;
+
+    const oldKeysOrdered = [...activeQ1Keys];
+    const [movedKey] = oldKeysOrdered.splice(currentIndex, 1);
+    oldKeysOrdered.splice(targetIndex, 0, movedKey);
+
+    const ordered = activeQ1Keys.map((k) => state.gioco1.questions[k] || createDefaultGioco1Question());
+    const [moved] = ordered.splice(currentIndex, 1);
+    ordered.splice(targetIndex, 0, moved);
+
+    const oldToNewMap: Record<number, number> = {};
+    const newQuestions: Record<number, Gioco1Question> = {};
+    ordered.forEach((q, idx) => {
+      const num = idx + 1;
+      newQuestions[num] = { ...q };
+      const originalKey = oldKeysOrdered[idx];
+      oldToNewMap[originalKey] = num;
+    });
+
+    const newSelected = targetIndex + 1;
+
+    // Sincronizza targetQuestion per le domande di Nadia collegate al Box 1
+    const updatedNadiaDomande = (state.nadia?.domande || []).map((nq) => {
+      if (nq.targetBox === 1 && oldToNewMap[nq.targetQuestion]) {
+        return {
+          ...nq,
+          targetQuestion: oldToNewMap[nq.targetQuestion],
+        };
+      }
+      return nq;
+    }).sort((a, b) => (a.targetBox * 1000 + a.targetQuestion) - (b.targetBox * 1000 + b.targetQuestion));
+
+    setState((prev) => {
+      const nadia = normalizeNadia(prev.nadia, getDefaultSetupState().nadia!);
+      return {
+        ...prev,
+        nadia: {
+          ...nadia,
+          domande: updatedNadiaDomande,
+        },
+        gioco1: {
+          ...prev.gioco1,
+          selectedQuestion: newSelected,
+          questions: newQuestions,
+        },
+      };
+    });
+    showToast(`Domanda #${fromNum} spostata alla posizione #${newSelected}`);
+  };
+
   // Box 2 Question & Data getters/setters
   const q2Keys = Object.keys(state.gioco2?.questions || {}).map(Number).sort((a, b) => a - b);
   const activeQ2Keys = q2Keys.length > 0 ? q2Keys : [1, 2, 3, 4, 5, 6];
@@ -1758,6 +1961,69 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
         },
       },
     }));
+  };
+
+  const handleMoveQ2 = (fromNum: number, direction: 'up' | 'down' | number) => {
+    const currentIndex = activeQ2Keys.indexOf(fromNum);
+    if (currentIndex === -1) return;
+
+    let targetIndex = currentIndex;
+    if (direction === 'up') {
+      targetIndex = currentIndex - 1;
+    } else if (direction === 'down') {
+      targetIndex = currentIndex + 1;
+    } else if (typeof direction === 'number') {
+      targetIndex = activeQ2Keys.indexOf(direction);
+    }
+
+    if (targetIndex < 0 || targetIndex >= activeQ2Keys.length || targetIndex === currentIndex) return;
+
+    const oldKeysOrdered = [...activeQ2Keys];
+    const [movedKey] = oldKeysOrdered.splice(currentIndex, 1);
+    oldKeysOrdered.splice(targetIndex, 0, movedKey);
+
+    const ordered = activeQ2Keys.map((k) => state.gioco2.questions[k] || createDefaultGioco2Question());
+    const [moved] = ordered.splice(currentIndex, 1);
+    ordered.splice(targetIndex, 0, moved);
+
+    const oldToNewMap: Record<number, number> = {};
+    const newQuestions: Record<number, Gioco2Question> = {};
+    ordered.forEach((q, idx) => {
+      const num = idx + 1;
+      newQuestions[num] = { ...q };
+      const originalKey = oldKeysOrdered[idx];
+      oldToNewMap[originalKey] = num;
+    });
+
+    const newSelected = targetIndex + 1;
+
+    // Sincronizza targetQuestion per le domande di Nadia collegate al Box 2
+    const updatedNadiaDomande = (state.nadia?.domande || []).map((nq) => {
+      if (nq.targetBox === 2 && oldToNewMap[nq.targetQuestion]) {
+        return {
+          ...nq,
+          targetQuestion: oldToNewMap[nq.targetQuestion],
+        };
+      }
+      return nq;
+    }).sort((a, b) => (a.targetBox * 1000 + a.targetQuestion) - (b.targetBox * 1000 + b.targetQuestion));
+
+    setState((prev) => {
+      const nadia = normalizeNadia(prev.nadia, getDefaultSetupState().nadia!);
+      return {
+        ...prev,
+        nadia: {
+          ...nadia,
+          domande: updatedNadiaDomande,
+        },
+        gioco2: {
+          ...prev.gioco2,
+          selectedQuestion: newSelected,
+          questions: newQuestions,
+        },
+      };
+    });
+    showToast(`Domanda #${fromNum} spostata alla posizione #${newSelected}`);
   };
 
   const currentQ3Num = state.gioco3?.selectedQuestion !== undefined ? state.gioco3.selectedQuestion : 1;
@@ -2138,13 +2404,13 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    const nextQNum = nadiaData.domande.length + 1;
-                    const newQ = createDefaultNadiaQuestion(1, Math.min(nextQNum, 10));
-                    updateNadia((prev) => ({
-                      ...prev,
-                      domande: [...prev.domande, newQ],
-                    }));
-                    setSelectedNadiaIdx(nadiaData.domande.length);
+                    const newQ = createDefaultNadiaQuestion(1, 1);
+                    updateNadia((prev) => {
+                      const sorted = sortNadiaDomande([...prev.domande, newQ]);
+                      const newIdx = sorted.findIndex((d) => d.id === newQ.id);
+                      if (newIdx !== -1) setSelectedNadiaIdx(newIdx);
+                      return { ...prev, domande: sorted };
+                    });
                   }}
                   className="px-3 py-1 text-xs font-bold bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
                 >
@@ -2171,7 +2437,11 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               </div>
             </div>
 
-            {/* Pills Selettore Domanda Nadia */}
+            {/* Pills Selettore Domanda Nadia — Ordinate per sequenza nel Quiz */}
+            <div className="flex items-center justify-between text-[11px] text-amber-300/80 font-medium">
+              <span>⚡ Ordine di comparizione nel Quiz:</span>
+              <span className="text-[10px] text-white/40">Domande ordinate automaticamente dal Box 1 al Box 5</span>
+            </div>
             <div className="flex items-center gap-2 overflow-x-auto py-1">
               {nadiaData.domande.map((d, idx) => (
                 <button
@@ -2185,8 +2455,8 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   }`}
                 >
                   <span>Domanda #{idx + 1}</span>
-                  <span className="text-[10px] opacity-75 font-normal">
-                    (Box {d.targetBox} D#{d.targetQuestion})
+                  <span className="text-[10px] opacity-80 font-semibold px-1 py-0.5 rounded bg-black/30">
+                    Box {d.targetBox} • D#{d.targetQuestion}
                   </span>
                 </button>
               ))}
@@ -2374,15 +2644,15 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               </div>
               <div>
                 <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-100 tracking-wide">
-                  BOX 0 — Scenetta, Sigle e Introduzione Generale
+                  BOX 0 — Scenetta, Sigle, Squadre, Pulsantiera, Nadia & Spiegazione
                 </h3>
                 <p className="text-xs text-indigo-200/70">
-                  Fase introduttiva: Scenetta con regole generali e delta punti, Video Pre-Sigla, Sigla ufficiale e Spiegazione generale
+                  Sequenza introduttiva a 7 passaggi sequenziali prima dell'inizio del Torneo Imperio VIII
                 </p>
               </div>
             </div>
             <span className="px-3 py-1 text-xs font-extrabold uppercase tracking-wider rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shrink-0 self-start sm:self-auto">
-              PROLOGO & SIGLE
+              7 PASSAGGI INTRODUTTIVI
             </span>
           </div>
 
@@ -2674,18 +2944,555 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 </div>
               </div>
 
-              {/* 4. Sfondo Spiegazione Generale */}
-              <div className="bg-[#120f1e] p-4 rounded-xl border border-indigo-500/20 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>🖼️</span> 4. Sfondo Spiegazione Generale
-                  </span>
-                  <span className="text-[10px] text-white/40">Immagine di sfondo per la Spiegazione Fasi e Podio</span>
+
+            </div>
+          </div>
+
+          {/* Griglia Passaggi 4, 5, 6 */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* 4. PRESENTAZIONE SQUADRE & COPPA */}
+            <div className="bg-[#120f1e] p-5 rounded-xl border border-indigo-500/30 space-y-3">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>👥</span> 4. Presentazione Squadre & Coppa
+                </span>
+                <span className="text-[10px] text-amber-400 font-semibold">Tasto 1-3 + Coppa</span>
+              </div>
+              <p className="text-[10px] text-white/50">
+                Svela le 3 squadre una alla volta e fa entrare la Coppa con animazione dorata e musica trionfale.
+              </p>
+
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Titolo:</label>
+                  <input
+                    type="text"
+                    value={state.box0?.presentazioneSquadre?.titolo ?? 'PRESENTAZIONE SQUADRE'}
+                    placeholder="PRESENTAZIONE SQUADRE"
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: {
+                        ...(prev.box0 || createDefaultBox0Setup()),
+                        presentazioneSquadre: {
+                          ...(prev.box0?.presentazioneSquadre || createDefaultBox0Setup().presentazioneSquadre!),
+                          titolo: e.target.value
+                        }
+                      }
+                    }))}
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400 font-bold"
+                  />
                 </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Sottotitolo:</label>
+                  <input
+                    type="text"
+                    value={state.box0?.presentazioneSquadre?.sottotitolo ?? 'I contendenti di IMPERIO'}
+                    placeholder="I contendenti di IMPERIO"
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: {
+                        ...(prev.box0 || createDefaultBox0Setup()),
+                        presentazioneSquadre: {
+                          ...(prev.box0?.presentazioneSquadre || createDefaultBox0Setup().presentazioneSquadre!),
+                          sottotitolo: e.target.value
+                        }
+                      }
+                    }))}
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                  />
+                </div>
+
+                {/* Sfondo opzionale */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    🖼️ Sfondo Opzionale:
+                  </label>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.box0?.presentazioneSquadre?.sfondo?.startsWith('data:') || state.box0?.presentazioneSquadre?.sfondo?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[150px]">
+                          {formatBase64Info(state.box0.presentazioneSquadre.sfondo)?.name || 'Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({
+                            ...prev,
+                            box0: {
+                              ...(prev.box0 || createDefaultBox0Setup()),
+                              presentazioneSquadre: {
+                                ...(prev.box0?.presentazioneSquadre || createDefaultBox0Setup().presentazioneSquadre!),
+                                sfondo: ''
+                              }
+                            }
+                          }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Default se vuoto..."
+                        value={state.box0?.presentazioneSquadre?.sfondo || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({
+                            ...prev,
+                            box0: {
+                              ...(prev.box0 || createDefaultBox0Setup()),
+                              presentazioneSquadre: {
+                                ...(prev.box0?.presentazioneSquadre || createDefaultBox0Setup().presentazioneSquadre!),
+                                sfondo: val
+                              }
+                            }
+                          }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                      />
+                    )}
+                    <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🖼️ Sfoglia
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({
+                              ...prev,
+                              box0: {
+                                ...(prev.box0 || createDefaultBox0Setup()),
+                                presentazioneSquadre: {
+                                  ...(prev.box0?.presentazioneSquadre || createDefaultBox0Setup().presentazioneSquadre!),
+                                  sfondo: base64
+                                }
+                              }
+                            }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Musica Ingresso Coppa */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    🏆 Musica Ingresso Coppa (Audio):
+                  </label>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.box0?.presentazioneSquadre?.musicaIngresso?.startsWith('data:') || state.box0?.presentazioneSquadre?.musicaIngresso?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[150px]">
+                          🎵 {formatBase64Info(state.box0.presentazioneSquadre.musicaIngresso)?.name || 'Audio Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({
+                            ...prev,
+                            box0: {
+                              ...(prev.box0 || createDefaultBox0Setup()),
+                              presentazioneSquadre: {
+                                ...(prev.box0?.presentazioneSquadre || createDefaultBox0Setup().presentazioneSquadre!),
+                                musicaIngresso: ''
+                              }
+                            }
+                          }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="URL audio (es. /Audio/ingresso_coppa.mp3)..."
+                        value={state.box0?.presentazioneSquadre?.musicaIngresso || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({
+                            ...prev,
+                            box0: {
+                              ...(prev.box0 || createDefaultBox0Setup()),
+                              presentazioneSquadre: {
+                                ...(prev.box0?.presentazioneSquadre || createDefaultBox0Setup().presentazioneSquadre!),
+                                musicaIngresso: val
+                              }
+                            }
+                          }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                      />
+                    )}
+                    <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🎵 Sfoglia
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({
+                              ...prev,
+                              box0: {
+                                ...(prev.box0 || createDefaultBox0Setup()),
+                                presentazioneSquadre: {
+                                  ...(prev.box0?.presentazioneSquadre || createDefaultBox0Setup().presentazioneSquadre!),
+                                  musicaIngresso: base64
+                                }
+                              }
+                            }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Note Relatore */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">📝 Note Relatore:</label>
+                  <textarea
+                    rows={2}
+                    value={state.box0?.presentazioneSquadre?.notePresentatore ?? 'Presentazione ufficiale delle tre squadre e ingresso solenne della Coppa.'}
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: {
+                        ...(prev.box0 || createDefaultBox0Setup()),
+                        presentazioneSquadre: {
+                          ...(prev.box0?.presentazioneSquadre || createDefaultBox0Setup().presentazioneSquadre!),
+                          notePresentatore: e.target.value
+                        }
+                      }
+                    }))}
+                    className="w-full bg-black/40 border border-white/10 rounded p-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 5. PROVA PULSANTIERA */}
+            <div className="bg-[#120f1e] p-5 rounded-xl border border-indigo-500/30 space-y-3">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>🚨</span> 5. Prova Pulsantiera
+                </span>
+                <span className="text-[10px] text-emerald-400 font-semibold">Tasti 1-2-3 / Reset</span>
+              </div>
+              <p className="text-[10px] text-white/50">
+                Mostra 3 grandi pulsanti digitali nello stesso ordine dei punteggi (Rosso, Blu, Verde) per testare pulsanti fisici o digitali.
+              </p>
+
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Titolo:</label>
+                  <input
+                    type="text"
+                    value={state.box0?.provaPulsantiera?.titolo ?? 'PROVA PULSANTIERA'}
+                    placeholder="PROVA PULSANTIERA"
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: {
+                        ...(prev.box0 || createDefaultBox0Setup()),
+                        provaPulsantiera: {
+                          ...(prev.box0?.provaPulsantiera || createDefaultBox0Setup().provaPulsantiera!),
+                          titolo: e.target.value
+                        }
+                      }
+                    }))}
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Sottotitolo:</label>
+                  <input
+                    type="text"
+                    value={state.box0?.provaPulsantiera?.sottotitolo ?? 'Test di reattività e prenotazione'}
+                    placeholder="Test di reattività e prenotazione"
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: {
+                        ...(prev.box0 || createDefaultBox0Setup()),
+                        provaPulsantiera: {
+                          ...(prev.box0?.provaPulsantiera || createDefaultBox0Setup().provaPulsantiera!),
+                          sottotitolo: e.target.value
+                        }
+                      }
+                    }))}
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                  />
+                </div>
+
+                {/* Sfondo opzionale */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    🖼️ Sfondo Opzionale:
+                  </label>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.box0?.provaPulsantiera?.sfondo?.startsWith('data:') || state.box0?.provaPulsantiera?.sfondo?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[150px]">
+                          {formatBase64Info(state.box0.provaPulsantiera.sfondo)?.name || 'Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({
+                            ...prev,
+                            box0: {
+                              ...(prev.box0 || createDefaultBox0Setup()),
+                              provaPulsantiera: {
+                                ...(prev.box0?.provaPulsantiera || createDefaultBox0Setup().provaPulsantiera!),
+                                sfondo: ''
+                              }
+                            }
+                          }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Default se vuoto..."
+                        value={state.box0?.provaPulsantiera?.sfondo || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({
+                            ...prev,
+                            box0: {
+                              ...(prev.box0 || createDefaultBox0Setup()),
+                              provaPulsantiera: {
+                                ...(prev.box0?.provaPulsantiera || createDefaultBox0Setup().provaPulsantiera!),
+                                sfondo: val
+                              }
+                            }
+                          }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                      />
+                    )}
+                    <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🖼️ Sfoglia
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({
+                              ...prev,
+                              box0: {
+                                ...(prev.box0 || createDefaultBox0Setup()),
+                                provaPulsantiera: {
+                                  ...(prev.box0?.provaPulsantiera || createDefaultBox0Setup().provaPulsantiera!),
+                                  sfondo: base64
+                                }
+                              }
+                            }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Note Relatore */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">📝 Note Relatore:</label>
+                  <textarea
+                    rows={2}
+                    value={state.box0?.provaPulsantiera?.notePresentatore ?? 'Test dei 3 pulsanti digitali / fisici prima di iniziare le sfide.'}
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: {
+                        ...(prev.box0 || createDefaultBox0Setup()),
+                        provaPulsantiera: {
+                          ...(prev.box0?.provaPulsantiera || createDefaultBox0Setup().provaPulsantiera!),
+                          notePresentatore: e.target.value
+                        }
+                      }
+                    }))}
+                    className="w-full bg-black/40 border border-white/10 rounded p-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 6. INTRODUZIONE NADIA */}
+            <div className="bg-[#120f1e] p-5 rounded-xl border border-indigo-500/30 space-y-3">
+              <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span>✨</span> 6. Introduzione Nadia
+                </span>
+                <span className="text-[10px] text-pink-400 font-semibold">Video opzionale / Lampada</span>
+              </div>
+              <p className="text-[10px] text-white/50">
+                Presenta Nadia e le regole del Gettone Jolly senza domande. Puoi caricare un video introduttivo o usare la schermata ambientata.
+              </p>
+
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Titolo:</label>
+                  <input
+                    type="text"
+                    value={state.box0?.introduzioneNadia?.titolo ?? 'MILLE E UNA NADIA'}
+                    placeholder="MILLE E UNA NADIA"
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: {
+                        ...(prev.box0 || createDefaultBox0Setup()),
+                        introduzioneNadia: {
+                          ...(prev.box0?.introduzioneNadia || createDefaultBox0Setup().introduzioneNadia!),
+                          titolo: e.target.value
+                        }
+                      }
+                    }))}
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400 font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Sottotitolo:</label>
+                  <input
+                    type="text"
+                    value={state.box0?.introduzioneNadia?.sottotitolo ?? 'Il Jolly del Sultano — Regole e Meccanica'}
+                    placeholder="Il Jolly del Sultano — Regole e Meccanica"
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: {
+                        ...(prev.box0 || createDefaultBox0Setup()),
+                        introduzioneNadia: {
+                          ...(prev.box0?.introduzioneNadia || createDefaultBox0Setup().introduzioneNadia!),
+                          sottotitolo: e.target.value
+                        }
+                      }
+                    }))}
+                    className="w-full bg-black/40 border border-white/10 rounded px-2 py-1.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                  />
+                </div>
+
+                {/* Video Introduzione Nadia (Opzionale) */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    🎬 Video Introduzione Nadia (Opzionale):
+                  </label>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.box0?.introduzioneNadia?.video?.startsWith('data:') || state.box0?.introduzioneNadia?.video?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[150px]">
+                          🎬 {formatBase64Info(state.box0.introduzioneNadia.video)?.name || 'Video Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({
+                            ...prev,
+                            box0: {
+                              ...(prev.box0 || createDefaultBox0Setup()),
+                              introduzioneNadia: {
+                                ...(prev.box0?.introduzioneNadia || createDefaultBox0Setup().introduzioneNadia!),
+                                video: ''
+                              }
+                            }
+                          }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Rimuovi
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Lascia vuoto per schermata grafica Nadia..."
+                        value={state.box0?.introduzioneNadia?.video || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({
+                            ...prev,
+                            box0: {
+                              ...(prev.box0 || createDefaultBox0Setup()),
+                              introduzioneNadia: {
+                                ...(prev.box0?.introduzioneNadia || createDefaultBox0Setup().introduzioneNadia!),
+                                video: val
+                              }
+                            }
+                          }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                      />
+                    )}
+                    <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🎬 Sfoglia
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({
+                              ...prev,
+                              box0: {
+                                ...(prev.box0 || createDefaultBox0Setup()),
+                                introduzioneNadia: {
+                                  ...(prev.box0?.introduzioneNadia || createDefaultBox0Setup().introduzioneNadia!),
+                                  video: base64
+                                }
+                              }
+                            }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Note Relatore */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">📝 Note Relatore:</label>
+                  <textarea
+                    rows={2}
+                    value={state.box0?.introduzioneNadia?.notePresentatore ?? 'Introduzione di Nadia, spiegazione del gettone e delle modalità di invocazione.'}
+                    onChange={(e) => setState(prev => ({
+                      ...prev,
+                      box0: {
+                        ...(prev.box0 || createDefaultBox0Setup()),
+                        introduzioneNadia: {
+                          ...(prev.box0?.introduzioneNadia || createDefaultBox0Setup().introduzioneNadia!),
+                          notePresentatore: e.target.value
+                        }
+                      }
+                    }))}
+                    className="w-full bg-black/40 border border-white/10 rounded p-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 7. SPIEGAZIONE FASI DEL QUIZ & NOMI FASI */}
+          <div className="bg-[#120f1e] p-5 rounded-xl border border-indigo-500/30 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/10 pb-2 gap-1">
+              <div>
+                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-2">
+                  <span>📢</span> 7. Spiegazione Fasi Quiz & Podio
+                </span>
+                <p className="text-[10px] text-white/50 mt-0.5">
+                  Presentazione animata delle 3 fasi, del montepremi e della dinamica finale con omini e delta punti.
+                </p>
+              </div>
+            </div>
+
+            {/* Sfondo & Audio Spiegazione */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Sfondo Spiegazione Generale */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-semibold text-slate-400">
+                  🖼️ Sfondo / Video Spiegazione Generale:
+                </label>
                 <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
                   {(state.box0?.sfondoSpiegazione || state.box0?.videoSpiegazione)?.startsWith('data:') || (state.box0?.sfondoSpiegazione || state.box0?.videoSpiegazione)?.startsWith('idb://') ? (
                     <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
-                      <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                      <span className="text-emerald-400 font-medium truncate max-w-[200px]">
                         🖼️ {formatBase64Info(state.box0.sfondoSpiegazione || state.box0.videoSpiegazione)?.name || 'Sfondo Caricato'}
                       </span>
                       <button
@@ -2702,7 +3509,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   ) : (
                     <input
                       type="text"
-                      placeholder="Percorso o URL Sfondo Spiegazione (es. /Icone/sfondi/spiegazione.jpg)..."
+                      placeholder="Percorso o URL Sfondo (es. /Icone/sfondi/spiegazione.jpg)..."
                       value={state.box0?.sfondoSpiegazione || state.box0?.videoSpiegazione || ''}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -2718,7 +3525,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     🖼️ Sfoglia
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,video/*"
                       className="hidden"
                       onChange={(e) =>
                         handleFileUpload(e, (base64) =>
@@ -2732,21 +3539,69 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   </label>
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* 5. Nomi Fasi e Giochi (Badge Spiegazione Fasi) */}
-          <div className="bg-[#120f1e] p-5 rounded-xl border border-indigo-500/30 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-white/10 pb-2 gap-1">
-              <div>
-                <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-2">
-                  <span>🏷️</span> 5. Personalizzazione Nomi Fasi & Badge Giochi (Spiegazione Fasi Box 0)
-                </span>
-                <p className="text-[10px] text-white/50 mt-0.5">
-                  Questi nomi compaiono sui badge animati (G1, G2, G3, G4, FINALE) e sulle intestazioni delle fasi. Se lasci vuoto il nome di un gioco, eredita automaticamente il nome impostato nel rispettivo Box sottostante.
-                </p>
+              {/* Audio Spiegazione */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-semibold text-slate-400">
+                  🎵 Audio Voce Narrante / Colonna Sonora Spiegazione:
+                </label>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.box0?.audioSpiegazione?.startsWith('data:') || state.box0?.audioSpiegazione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                        🎵 {formatBase64Info(state.box0.audioSpiegazione)?.name || 'Audio Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({
+                          ...prev,
+                          box0: { ...(prev.box0 || createDefaultBox0Setup()), audioSpiegazione: '' }
+                        }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Rimuovi
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder="Default: /Audio/Spiegazioni/spiegazione_fasi_audio.mp3..."
+                      value={state.box0?.audioSpiegazione || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({
+                          ...prev,
+                          box0: { ...(prev.box0 || createDefaultBox0Setup()), audioSpiegazione: val }
+                        }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                    />
+                  )}
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎵 Sfoglia
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({
+                            ...prev,
+                            box0: { ...(prev.box0 || createDefaultBox0Setup()), audioSpiegazione: base64 }
+                          }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
               </div>
             </div>
+
+            {/* Nomi Fasi e Badge Giochi */}
+            <div className="pt-2 border-t border-white/10 space-y-3">
+              <span className="text-[11px] font-bold text-white/70 uppercase tracking-wider block">
+                🏷️ Personalizzazione Nomi Fasi & Badge Giochi (G1, G2, G3, G4, Finale)
+              </span>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* FASE 1 */}
@@ -2894,6 +3749,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </div>
           </div>
         </div>
+      </div>
 
         {/* 5 Boxes Container Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -2951,23 +3807,24 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </div>
 
             {/* Controls Bar: Question & Type Selectors */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
-              {/* Question Selector (0 = Spiegazione, 1 to 10) */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-slate-300">
-                    Seleziona Contenuto Box 1:
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleAddQ1}
-                    className="text-[11px] font-bold text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-2 py-0.5 rounded border border-amber-500/30 transition-all cursor-pointer flex items-center gap-1"
-                    title="Aggiungi una nuova domanda al Gioco 1"
-                  >
-                    <span>+</span> Aggiungi Domanda
-                  </button>
-                </div>
-                <div className="flex gap-2">
+            <div className="bg-[#121217] p-4 rounded-xl border border-white/10 space-y-3.5 shadow-md">
+              {/* Top Row: Content Selector & Question Type */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Left: Question Selection Dropdown + Add Question */}
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-300">
+                      Seleziona Contenuto Box 1:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddQ1}
+                      className="text-[11px] font-bold text-amber-400 hover:text-white bg-amber-500/15 hover:bg-amber-500/30 px-2.5 py-1 rounded border border-amber-500/30 transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                      title="Aggiungi una nuova domanda al Gioco 1"
+                    >
+                      <span>+</span> Aggiungi Domanda
+                    </button>
+                  </div>
                   <select
                     value={currentQ1Num}
                     onChange={(e) =>
@@ -2979,56 +3836,115 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                         },
                       }))
                     }
-                    className="flex-1 bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-[#d24726]"
+                    className="w-full min-w-0 bg-[#18181f] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-amber-400 truncate cursor-pointer"
                   >
-                    <option value={0}>🗺️ Spiegazione Regole</option>
-                    {activeQ1Keys.map((n) => (
-                      <option key={n} value={n}>
-                        Domanda #{n}
-                      </option>
-                    ))}
+                    <option value={0}>🗺️ Spiegazione Regole Olografica</option>
+                    {activeQ1Keys.map((n) => {
+                      const q = state.gioco1.questions[n];
+                      const typeLabel = q?.tipo === 'immagine' ? '🖼️ Immagine' : '🎵 Canzone';
+                      const titleLabel = q?.tipo === 'immagine' 
+                        ? (q?.immagine?.soluzione || 'Senza titolo')
+                        : (q?.canzone?.titolo || 'Senza titolo');
+                      return (
+                        <option key={n} value={n}>
+                          Domanda #{n} — {typeLabel} ({titleLabel})
+                        </option>
+                      );
+                    })}
                   </select>
-                  {currentQ1Num > 0 && activeQ1Keys.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveQ1(currentQ1Num)}
-                      className="px-2.5 py-1.5 text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-lg border border-red-500/30 transition-all cursor-pointer shrink-0"
-                      title={`Rimuovi Domanda #${currentQ1Num}`}
-                    >
-                      🗑️
-                    </button>
+                </div>
+
+                {/* Right: Type Selector or Spiegazione Badge */}
+                <div className="flex flex-col justify-end gap-1.5 min-w-0">
+                  {currentQ1Num === 0 ? (
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-400 mb-1.5">
+                        Contenuto Attivo:
+                      </span>
+                      <div className="px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-xs flex items-center gap-2">
+                        <span>🗺️</span> Spiegazione Regole Olografica
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                        Tipo di Domanda:
+                      </label>
+                      <select
+                        value={currentQ1.tipo}
+                        onChange={(e) =>
+                          updateQ1((prev) => ({
+                            ...prev,
+                            tipo: e.target.value as 'canzone' | 'immagine',
+                          }))
+                        }
+                        className="w-full min-w-0 bg-[#18181f] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-amber-400 cursor-pointer"
+                      >
+                        <option value="canzone">🎵 Canzone (5 Strumenti + 4 Indizi)</option>
+                        <option value="immagine">🖼️ Immagine (5 Step Tasselli + 4 Indizi)</option>
+                      </select>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Type Selector ("canzone" | "immagine") o Badge Spiegazione */}
-              {currentQ1Num === 0 ? (
-                <div className="flex flex-col justify-center">
-                  <span className="block text-xs font-semibold text-slate-400 mb-1.5">
-                    Contenuto Attivo:
-                  </span>
-                  <div className="px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-xs flex items-center gap-2">
-                    <span>🗺️</span> Spiegazione Regole Olografica
+              {/* Bottom Row: Reorder & Delete Toolbar (only when editing a question) */}
+              {currentQ1Num > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10 bg-black/30 -mx-4 -mb-4 px-4 py-2.5 rounded-b-xl">
+                  {/* Left: Reorder controls */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5 mr-1">
+                      <span>🔄</span> Ordine Domanda #{currentQ1Num}:
+                    </span>
+
+                    <button
+                      type="button"
+                      disabled={activeQ1Keys.indexOf(currentQ1Num) === 0}
+                      onClick={() => handleMoveQ1(currentQ1Num, 'up')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-300 hover:text-white bg-amber-500/15 hover:bg-amber-500/30 disabled:opacity-30 disabled:pointer-events-none rounded-lg border border-amber-500/30 transition-all cursor-pointer shadow-sm active:scale-95"
+                      title="Sposta prima (scambia con la domanda precedente)"
+                    >
+                      <span>⬆️</span> <span>Prima</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={activeQ1Keys.indexOf(currentQ1Num) === activeQ1Keys.length - 1}
+                      onClick={() => handleMoveQ1(currentQ1Num, 'down')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-300 hover:text-white bg-amber-500/15 hover:bg-amber-500/30 disabled:opacity-30 disabled:pointer-events-none rounded-lg border border-amber-500/30 transition-all cursor-pointer shadow-sm active:scale-95"
+                      title="Sposta dopo (scambia con la domanda successiva)"
+                    >
+                      <span>⬇️</span> <span>Dopo</span>
+                    </button>
+
+                    <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-white/10">
+                      <span className="text-[11px] font-medium text-slate-400">Sposta a:</span>
+                      <select
+                        value={currentQ1Num}
+                        onChange={(e) => handleMoveQ1(currentQ1Num, Number(e.target.value))}
+                        className="bg-[#18181f] border border-amber-500/40 text-amber-300 font-bold text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400 cursor-pointer"
+                        title="Sposta direttamente alla posizione scelta"
+                      >
+                        {activeQ1Keys.map((n) => (
+                          <option key={n} value={n} className="bg-[#141417] text-white">
+                            Posizione #{n}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Tipo di Domanda:
-                  </label>
-                  <select
-                    value={currentQ1.tipo}
-                    onChange={(e) =>
-                      updateQ1((prev) => ({
-                        ...prev,
-                        tipo: e.target.value as 'canzone' | 'immagine',
-                      }))
-                    }
-                    className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-[#d24726]"
-                  >
-                    <option value="canzone">🎵 Canzone</option>
-                    <option value="immagine">🖼️ Immagine</option>
-                  </select>
+
+                  {/* Right: Delete button */}
+                  {activeQ1Keys.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveQ1(currentQ1Num)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-400 hover:text-white bg-red-500/15 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-all cursor-pointer shadow-sm active:scale-95"
+                      title={`Rimuovi Domanda #${currentQ1Num}`}
+                    >
+                      <span>🗑️</span> <span>Elimina Domanda #{currentQ1Num}</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -3910,23 +4826,24 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             </div>
 
             {/* Controls Bar: Question & Type Selectors */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white/5 p-4 rounded-xl border border-white/5">
-              {/* Question Selector (0 = Spiegazione, 1 to N) */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-slate-300">
-                    Seleziona Contenuto Box 2:
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleAddQ2}
-                    className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-2 py-0.5 rounded border border-indigo-500/30 transition-all cursor-pointer flex items-center gap-1"
-                    title="Aggiungi una nuova domanda al Gioco 2"
-                  >
-                    <span>+</span> Aggiungi Domanda
-                  </button>
-                </div>
-                <div className="flex gap-2">
+            <div className="bg-[#121217] p-4 rounded-xl border border-white/10 space-y-3.5 shadow-md">
+              {/* Top Row: Content Selector & Question Type */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Left: Question Selection Dropdown + Add Question */}
+                <div className="flex flex-col gap-1.5 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-300">
+                      Seleziona Contenuto Box 2:
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddQ2}
+                      className="text-[11px] font-bold text-indigo-400 hover:text-white bg-indigo-500/15 hover:bg-indigo-500/30 px-2.5 py-1 rounded border border-indigo-500/30 transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                      title="Aggiungi una nuova domanda al Gioco 2"
+                    >
+                      <span>+</span> Aggiungi Domanda
+                    </button>
+                  </div>
                   <select
                     value={currentQ2Num}
                     onChange={(e) =>
@@ -3938,56 +4855,115 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                         },
                       }))
                     }
-                    className="flex-1 bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500"
+                    className="w-full min-w-0 bg-[#18181f] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-indigo-400 truncate cursor-pointer"
                   >
-                    <option value={0}>🗺️ Spiegazione Regole</option>
-                    {activeQ2Keys.map((n) => (
-                      <option key={n} value={n}>
-                        Domanda #{n}
-                      </option>
-                    ))}
+                    <option value={0}>🗺️ Spiegazione Regole Classifiche</option>
+                    {activeQ2Keys.map((n) => {
+                      const q = state.gioco2.questions[n];
+                      const titleLabel = q?.tipo === 'canzone'
+                        ? (q?.canzone?.titolo || q?.canzone?.domanda || 'Senza titolo')
+                        : (q?.immagine?.domanda || q?.immagine?.categoria || q?.immagine?.soluzioneTesto || 'Senza titolo');
+                      const modeLabel = q?.tipo === 'canzone' ? '🎼 Canzone' : '📊 Classifica';
+                      return (
+                        <option key={n} value={n}>
+                          Domanda #{n} — {modeLabel} ({titleLabel})
+                        </option>
+                      );
+                    })}
                   </select>
-                  {currentQ2Num > 0 && activeQ2Keys.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveQ2(currentQ2Num)}
-                      className="px-2.5 py-1.5 text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-lg border border-red-500/30 transition-all cursor-pointer shrink-0"
-                      title={`Rimuovi Domanda #${currentQ2Num}`}
-                    >
-                      🗑️
-                    </button>
+                </div>
+
+                {/* Right: Type Selector or Spiegazione Badge */}
+                <div className="flex flex-col justify-end gap-1.5 min-w-0">
+                  {currentQ2Num === 0 ? (
+                    <div>
+                      <span className="block text-xs font-semibold text-slate-400 mb-1.5">
+                        Contenuto Attivo:
+                      </span>
+                      <div className="px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-bold text-xs flex items-center gap-2">
+                        <span>🗺️</span> Spiegazione Regole Classifiche
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-xs font-bold text-slate-300 mb-1.5">
+                        Tipo di Domanda:
+                      </label>
+                      <select
+                        value={currentQ2.tipo}
+                        onChange={(e) =>
+                          updateQ2((prev) => ({
+                            ...prev,
+                            tipo: e.target.value as 'canzone' | 'immagine',
+                          }))
+                        }
+                        className="w-full min-w-0 bg-[#18181f] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-indigo-400 cursor-pointer"
+                      >
+                        <option value="canzone">🎼 Canzone (7 Stems Musicali)</option>
+                        <option value="immagine">📊 Classifica (10 Posizioni)</option>
+                      </select>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* Type Selector ("canzone" | "immagine") o Badge Spiegazione */}
-              {currentQ2Num === 0 ? (
-                <div className="flex flex-col justify-center">
-                  <span className="block text-xs font-semibold text-slate-400 mb-1.5">
-                    Contenuto Attivo:
-                  </span>
-                  <div className="px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-bold text-xs flex items-center gap-2">
-                    <span>🗺️</span> Spiegazione Regole Classifiche
+              {/* Bottom Row: Reorder & Delete Toolbar (only when editing a question) */}
+              {currentQ2Num > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10 bg-black/30 -mx-4 -mb-4 px-4 py-2.5 rounded-b-xl">
+                  {/* Left: Reorder controls */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-indigo-400 flex items-center gap-1.5 mr-1">
+                      <span>🔄</span> Ordine Domanda #{currentQ2Num}:
+                    </span>
+
+                    <button
+                      type="button"
+                      disabled={activeQ2Keys.indexOf(currentQ2Num) === 0}
+                      onClick={() => handleMoveQ2(currentQ2Num, 'up')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-300 hover:text-white bg-indigo-500/15 hover:bg-indigo-500/30 disabled:opacity-30 disabled:pointer-events-none rounded-lg border border-indigo-500/30 transition-all cursor-pointer shadow-sm active:scale-95"
+                      title="Sposta prima (scambia con la domanda precedente)"
+                    >
+                      <span>⬆️</span> <span>Prima</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={activeQ2Keys.indexOf(currentQ2Num) === activeQ2Keys.length - 1}
+                      onClick={() => handleMoveQ2(currentQ2Num, 'down')}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-300 hover:text-white bg-indigo-500/15 hover:bg-indigo-500/30 disabled:opacity-30 disabled:pointer-events-none rounded-lg border border-indigo-500/30 transition-all cursor-pointer shadow-sm active:scale-95"
+                      title="Sposta dopo (scambia con la domanda successiva)"
+                    >
+                      <span>⬇️</span> <span>Dopo</span>
+                    </button>
+
+                    <div className="flex items-center gap-1.5 ml-2 pl-3 border-l border-white/10">
+                      <span className="text-[11px] font-medium text-slate-400">Sposta a:</span>
+                      <select
+                        value={currentQ2Num}
+                        onChange={(e) => handleMoveQ2(currentQ2Num, Number(e.target.value))}
+                        className="bg-[#18181f] border border-indigo-500/40 text-indigo-300 font-bold text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-400 cursor-pointer"
+                        title="Sposta direttamente alla posizione scelta"
+                      >
+                        {activeQ2Keys.map((n) => (
+                          <option key={n} value={n} className="bg-[#141417] text-white">
+                            Posizione #{n}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                    Tipo di Domanda:
-                  </label>
-                  <select
-                    value={currentQ2.tipo}
-                    onChange={(e) =>
-                      updateQ2((prev) => ({
-                        ...prev,
-                        tipo: e.target.value as 'canzone' | 'immagine',
-                      }))
-                    }
-                    className="w-full bg-[#141417] border border-white/15 rounded-lg px-3 py-2 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="canzone">🎵 Canzone</option>
-                    <option value="immagine">🖼️ Immagine</option>
-                  </select>
+
+                  {/* Right: Delete button */}
+                  {activeQ2Keys.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveQ2(currentQ2Num)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-red-400 hover:text-white bg-red-500/15 hover:bg-red-500/30 rounded-lg border border-red-500/30 transition-all cursor-pointer shadow-sm active:scale-95"
+                      title={`Rimuovi Domanda #${currentQ2Num}`}
+                    >
+                      <span>🗑️</span> <span>Elimina Domanda #{currentQ2Num}</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -5771,8 +6747,42 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                     value={frase.testo}
                     onChange={(e) => handleGioco4FraseChange(idx, e.target.value)}
                     placeholder={`Inserisci la frase ${idx + 1}...`}
-                    className="flex-1 bg-black/40 border border-white/15 rounded-lg px-3 py-2 text-xs text-white uppercase placeholder:normal-case placeholder:text-white/30 focus:outline-none focus:border-cyan-500 transition-colors"
+                    className="flex-1 min-w-0 bg-black/40 border border-white/15 rounded-lg px-3 py-2 text-xs text-white uppercase placeholder:normal-case placeholder:text-white/30 focus:outline-none focus:border-cyan-500 transition-colors"
                   />
+                  {(state.gioco4?.frasi?.length || 0) > 1 && (
+                    <div className="flex items-center gap-1 shrink-0 bg-black/40 p-0.5 rounded-lg border border-cyan-500/30">
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => handleMoveGioco4Frase(idx, 'up')}
+                        className="px-2 py-1 text-xs font-bold text-cyan-300 hover:text-white bg-cyan-500/10 hover:bg-cyan-500/25 disabled:opacity-25 disabled:pointer-events-none rounded transition-all cursor-pointer"
+                        title="Sposta prima (scambia con la frase precedente)"
+                      >
+                        ⬆️
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === (state.gioco4?.frasi?.length || 0) - 1}
+                        onClick={() => handleMoveGioco4Frase(idx, 'down')}
+                        className="px-2 py-1 text-xs font-bold text-cyan-300 hover:text-white bg-cyan-500/10 hover:bg-cyan-500/25 disabled:opacity-25 disabled:pointer-events-none rounded transition-all cursor-pointer"
+                        title="Sposta dopo (scambia con la frase successiva)"
+                      >
+                        ⬇️
+                      </button>
+                      <select
+                        value={idx}
+                        onChange={(e) => handleMoveGioco4Frase(idx, Number(e.target.value))}
+                        className="bg-transparent border-0 text-[11px] font-bold text-cyan-300 px-1 py-1 focus:outline-none cursor-pointer"
+                        title="Sposta direttamente alla posizione scelta"
+                      >
+                        {(state.gioco4?.frasi || []).map((_, fIdx) => (
+                          <option key={fIdx} value={fIdx} className="bg-[#141417] text-white">
+                            Pos. #{fIdx + 1}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   {(state.gioco4?.frasi?.length || 0) > 1 && (
                     <button
                       type="button"

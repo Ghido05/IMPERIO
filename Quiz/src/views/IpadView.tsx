@@ -525,7 +525,7 @@ function IpadContent() {
   const currentSlideId = activeSlide?.id ?? '';
 
   const getActiveNoteContext = () => {
-    // 0. Box 0: Scenetta, Sigle e Spiegazione Generale
+    // 0. Box 0: Scenetta, Sigle, Squadre, Pulsantiera, Nadia e Spiegazione Fasi
     if (activeBox === 0 || currentSlideId.startsWith('box0_')) {
       let label = 'BOX 0 — Scenetta (Regole)';
       let note = setupState?.box0?.scenetta?.notePresentatore || '';
@@ -535,9 +535,18 @@ function IpadContent() {
       } else if (activeQuestion === 3 || currentSlideId === 'box0_sigla') {
         label = 'BOX 0 — Video Sigla';
         note = 'Sigla ufficiale di inizio torneo';
-      } else if (activeQuestion === 4 || currentSlideId === 'box0_spiegazione') {
-        label = 'BOX 0 — Video Spiegazione Generale';
-        note = 'Video esplicativo del regolamento globale e delle 3 fasi';
+      } else if (activeQuestion === 4 || currentSlideId === 'box0_squadre') {
+        label = 'BOX 0 — Presentazione Squadre & Coppa';
+        note = setupState?.box0?.presentazioneSquadre?.notePresentatore || 'Presentazione ufficiale delle tre squadre e ingresso solenne della Coppa';
+      } else if (activeQuestion === 5 || currentSlideId === 'box0_pulsantiera') {
+        label = 'BOX 0 — Prova Pulsantiera';
+        note = setupState?.box0?.provaPulsantiera?.notePresentatore || 'Test dei 3 pulsanti digitali e fisici prima delle sfide';
+      } else if (activeQuestion === 6 || currentSlideId === 'box0_nadia') {
+        label = 'BOX 0 — Introduzione Nadia';
+        note = setupState?.box0?.introduzioneNadia?.notePresentatore || 'Introduzione di Nadia, spiegazione del gettone e delle modalità di invocazione';
+      } else if (activeQuestion === 7 || currentSlideId === 'box0_spiegazione') {
+        label = 'BOX 0 — Video Spiegazione Fasi';
+        note = 'Spiegazione del regolamento globale, delle 3 fasi e del podio finale';
       }
       return {
         box: 0,

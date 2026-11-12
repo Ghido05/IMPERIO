@@ -1,53 +1,45 @@
 import { useState, useEffect, useCallback } from 'react';
 
 export function useSyncedState<T>(key: string, initialValue: T): [T, (val: T | ((prev: T) => T)) => void] {
-  const [state, setState] = useState<T>(() => {
-    const saved = localStorage.getItem(key);
-    if (saved !== null) {
+  const parseValue = useCallback((val: any): T => {
+    if (val === null || val === undefined || val === 'null' || val === '') {
+      return initialValue;
+    }
+    if (typeof val === 'string') {
       try {
-        return JSON.parse(saved);
-      } catch (e) {
-        return initialValue;
+        const parsed = JSON.parse(val);
+        return parsed === null && initialValue !== null ? initialValue : parsed;
+      } catch {
+        return val as unknown as T;
       }
     }
-    return initialValue;
+    return val;
+  }, [initialValue]);
+
+  const [state, setState] = useState<T>(() => {
+    const saved = localStorage.getItem(key);
+    return parseValue(saved);
   });
 
   const [prevKey, setPrevKey] = useState(key);
   if (key !== prevKey) {
     setPrevKey(key);
     const saved = localStorage.getItem(key);
-    let newValue = initialValue;
-    if (saved !== null) {
-      try {
-        newValue = JSON.parse(saved);
-      } catch (e) {
-        newValue = initialValue;
-      }
-    }
-    setState(newValue);
+    setState(parseValue(saved));
   }
 
   // Synchronize state changes across windows and inside the same window
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === key && e.newValue !== null) {
-        try {
-          setState(JSON.parse(e.newValue));
-        } catch (err) {
-          console.error(err);
-        }
+      if (e.key === key) {
+        setState(parseValue(e.newValue));
       }
     };
 
     const handleLocalUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail && customEvent.detail.key === key) {
-        try {
-          setState(JSON.parse(customEvent.detail.value));
-        } catch (err) {
-          console.error(err);
-        }
+        setState(parseValue(customEvent.detail.value));
       }
     };
 
@@ -60,11 +52,7 @@ export function useSyncedState<T>(key: string, initialValue: T): [T, (val: T | (
       const electron = (window as any).electron;
       unsubscribe = electron.onStateUpdate((ipcState: any) => {
         if (ipcState && ipcState.localStorageUpdate && ipcState.localStorageUpdate.key === key) {
-          try {
-            setState(JSON.parse(ipcState.localStorageUpdate.value));
-          } catch (err) {
-            console.error(err);
-          }
+          setState(parseValue(ipcState.localStorageUpdate.value));
         }
       });
     }
@@ -74,7 +62,7 @@ export function useSyncedState<T>(key: string, initialValue: T): [T, (val: T | (
       window.removeEventListener('local-storage-update', handleLocalUpdate);
       if (unsubscribe) unsubscribe();
     };
-  }, [key]);
+  }, [key, parseValue]);
 
   const setSyncedState = useCallback((newValue: T | ((prev: T) => T)) => {
     setState(prev => {

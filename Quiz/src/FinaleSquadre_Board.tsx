@@ -2270,11 +2270,13 @@ export default function FinaleSquadre_Board() {
                   }}
                 />
                 <div
-                  className="absolute w-[900px] h-[900px] opacity-25"
+                  className="absolute w-[1800px] h-[1800px] rounded-full pointer-events-none"
                   style={{
                     background:
                       'conic-gradient(from 0deg, transparent 0deg, rgba(255,215,0,0.3) 15deg, transparent 30deg, rgba(255,215,0,0.3) 45deg, transparent 60deg, rgba(255,215,0,0.3) 75deg, transparent 90deg, rgba(255,215,0,0.3) 105deg, transparent 120deg, rgba(255,215,0,0.3) 135deg, transparent 150deg, rgba(255,215,0,0.3) 165deg, transparent 180deg, rgba(255,215,0,0.3) 195deg, transparent 210deg, rgba(255,215,0,0.3) 225deg, transparent 240deg, rgba(255,215,0,0.3) 255deg, transparent 270deg, rgba(255,215,0,0.3) 285deg, transparent 300deg, rgba(255,215,0,0.3) 315deg, transparent 330deg, rgba(255,215,0,0.3) 345deg, transparent 360deg)',
                     animation: 'sunburst-spin 25s infinite linear',
+                    maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 30%, rgba(0,0,0,0.3) 52%, rgba(0,0,0,0) 68%)',
+                    WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 0%, rgba(0,0,0,0.85) 30%, rgba(0,0,0,0.3) 52%, rgba(0,0,0,0) 68%)',
                   }}
                 />
               </div>

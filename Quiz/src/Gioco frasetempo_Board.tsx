@@ -64,6 +64,14 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   const [winningTeamIndex, setWinningTeamIndex] = useSyncedState<number | null>(`${phrasePrefix}_winning_team`, null);
   const [scoreAwarded, setScoreAwarded] = useSyncedState<boolean>(`${phrasePrefix}_score_awarded`, false);
 
+  // GESTIONE PRENOTAZIONE (Buzzer Hardware WebSerialManager + Tastiera)
+  // bookedTeam: sincronizzato con la pulsantiera fisica (si resetta dopo 3s per consentire nuove prenotazioni)
+  const [bookedTeam, setBookedTeam] = useSyncedState<number | null>(`playstate_${slideId}_booked_team`, null);
+  // activeBidder: squadra che detiene l'offerta corrente nell'asta, rimane visibile sotto l'indizio finché un'altra non si prenota o fino ad aggiudicazione con Invio
+  const [activeBidder, setActiveBidder] = useSyncedState<number | null>(`${phrasePrefix}_active_bidder`, null);
+
+  const buzzerResetTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Scores context
   const { bonuses, awardBonusAndPoints } = useScores();
 
@@ -149,7 +157,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       osc.start(); osc.stop(ctx.currentTime + duration);
       setTimeout(() => ctx.close(), duration * 1000 + 100);
     } catch { /* Audio non disponibile */ }
-  }, []);
+  }, [isPresenter]);
 
   const playHammerSound = useCallback(() => {
     playTone(145, 0.18, 'triangle', 0.3, 65);
@@ -161,6 +169,56 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       setTimeout(() => playTone(frequency, 2.2, 'sine', 0.16 / (i + 1)), i * 12);
     });
   }, [playTone]);
+
+  // Suono energico del buzzer di prenotazione squadra
+  const playBuzzerSound = useCallback(() => {
+    if (!isPresenter) return;
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(440, now);
+      osc.frequency.exponentialRampToValueAtTime(554.37, now + 0.18);
+      gain.gain.setValueAtTime(0.24, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.3);
+      setTimeout(() => ctx.close(), 500);
+    } catch {}
+  }, [isPresenter]);
+
+  // Suono di riapertura asta dopo 3 secondi dalla prenotazione (doppio rintocco armonico brillante)
+  const playReopenAuctionSound = useCallback(() => {
+    if (!isPresenter) return;
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      const now = ctx.currentTime;
+
+      // Due note cristalline di riapertura (E5: 659.25Hz -> B5: 987.77Hz)
+      const freqs = [659.25, 987.77];
+      freqs.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+        gain.gain.setValueAtTime(0.2, now + idx * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.45);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.12);
+        osc.stop(now + idx * 0.12 + 0.5);
+      });
+      setTimeout(() => ctx.close(), 800);
+    } catch {}
+  }, [isPresenter]);
 
   // Trigger gavel strike animation when letter counter changes after lock
   useEffect(() => {
@@ -228,6 +286,53 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     prevTimerDisplay.current = timerDisplay;
   }, [timerDisplay, guessTimerEndAt, playGongSound]);
 
+  // ============================================================
+  // GESTIONE PRENOTAZIONE SQUADRE (BUZZER) PER IL GIOCO 4
+  // - Si attiva SOLO dopo lo Step 5 (quando appare il tabellone frase e l'asta)
+  // - Mostra il rettangolo con il nome e colore della squadra sotto l'indizio
+  // - Resetta la pulsantiera hardware automaticamente dopo 3 secondi ed emette il suono di riapertura
+  // - Il rettangolo rimane visibile finché un'altra squadra si prenota o finché si preme Invio
+  // ============================================================
+  useEffect(() => {
+    // Prima dello step 5 o dopo l'aggiudicazione, non sono permesse prenotazioni
+    if (step < 5 || auctionLocked) {
+      if (bookedTeam !== null) {
+        setBookedTeam(null);
+      }
+      return;
+    }
+
+    if (bookedTeam !== null) {
+      const teamNum = Number(bookedTeam);
+      if ([1, 2, 3].includes(teamNum)) {
+        // Assegna l'offerta corrente a questa squadra
+        setActiveBidder(teamNum);
+        playBuzzerSound();
+
+        // Cancella eventuale timer di reset precedente
+        if (buzzerResetTimerRef.current) {
+          clearTimeout(buzzerResetTimerRef.current);
+        }
+
+        // Resetta la pulsantiera in automatico dopo 3 secondi per consentire rilanci al ribasso
+        buzzerResetTimerRef.current = setTimeout(() => {
+          if (!auctionLocked) {
+            setBookedTeam(null);
+            playReopenAuctionSound();
+          }
+        }, 3000);
+      }
+    }
+  }, [bookedTeam, step, auctionLocked, playBuzzerSound, playReopenAuctionSound, setActiveBidder, setBookedTeam]);
+
+  useEffect(() => {
+    return () => {
+      if (buzzerResetTimerRef.current) {
+        clearTimeout(buzzerResetTimerRef.current);
+      }
+    };
+  }, []);
+
   const initGame = useCallback((idx: number) => {
     if (phraseList.length === 0) {
       setTargetTokens([]);
@@ -259,6 +364,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     localStorage.setItem(`${phrasePrefix}_guess_timer_end`, '0');
     localStorage.setItem(`${phrasePrefix}_step`, '0');
     localStorage.setItem(`${phrasePrefix}_winning_team`, 'null');
+    localStorage.setItem(`${phrasePrefix}_active_bidder`, 'null');
+    localStorage.setItem(`playstate_${slideId}_booked_team`, 'null');
     localStorage.setItem(`${phrasePrefix}_score_awarded`, 'false');
     localStorage.setItem(`${phrasePrefix}_show_error`, 'false');
     localStorage.setItem(`${phrasePrefix}_show_success`, 'false');
@@ -280,6 +387,16 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     }));
     window.dispatchEvent(new StorageEvent('storage', {
       key: `${phrasePrefix}_winning_team`,
+      newValue: null,
+      storageArea: localStorage
+    }));
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: `${phrasePrefix}_active_bidder`,
+      newValue: null,
+      storageArea: localStorage
+    }));
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: `playstate_${slideId}_booked_team`,
       newValue: null,
       storageArea: localStorage
     }));
@@ -357,7 +474,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       awardPointsAndBonus(winningTeamIndex);
       setScoreAwarded(true);
     }
-  }, [revealed, targetTokens, phrase.confermaAudio, winningTeamIndex, scoreAwarded, awardPointsAndBonus, setStep, setTokens, setRevealed, setShowSuccess, playTone]);
+  }, [revealed, targetTokens, phrase.confermaAudio, winningTeamIndex, scoreAwarded, isPresenter, awardPointsAndBonus, setStep, setTokens, setRevealed, setShowSuccess, playTone]);
 
   const handleWrongGuess = useCallback(() => {
     if (revealed) return;
@@ -394,7 +511,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       });
       setScoreAwarded(true);
     }
-  }, [revealed, targetTokens, phrase.confermaAudio, winningTeamIndex, scoreAwarded, awardPointsAndBonus, setStep, setTokens, setRevealed, setShowError, playErrorSound]);
+  }, [revealed, targetTokens, phrase.confermaAudio, winningTeamIndex, scoreAwarded, isPresenter, awardPointsAndBonus, setStep, setTokens, setRevealed, setShowError, playErrorSound]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (
@@ -412,6 +529,9 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
+      if (buzzerResetTimerRef.current) {
+        clearTimeout(buzzerResetTimerRef.current);
+      }
       const visible = new Set(phrase.lettereVisibili || []);
       const initialTokens = targetTokens.map((t, tokenIndex) => (isPhraseLetterToken(t) ? (visible.has(tokenIndex) ? t : '_') : t));
       setTokens(initialTokens);
@@ -424,6 +544,8 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       setGuessTimerEndAt(0);
       setStep(0);
       setWinningTeamIndex(null);
+      setActiveBidder(null);
+      setBookedTeam(null);
       setScoreAwarded(false);
       setShowError(false);
       setShowSuccess(false);
@@ -446,6 +568,15 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
           setStep(prev => prev - 1);
           return;
         }
+      }
+    }
+
+    // Prenotazione da tastiera tramite tasti 1, 2, 3 durante lo Step 5 prima dell'aggiudicazione
+    if (step >= 5 && !auctionLocked) {
+      if (['1', '2', '3'].includes(e.key)) {
+        const teamNum = parseInt(e.key, 10);
+        setBookedTeam(teamNum);
+        return;
       }
     }
 
@@ -474,9 +605,21 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
 
       // Invio: conferma e aggiudica l'offerta corrente
       if (e.key === 'Enter') {
+        if (buzzerResetTimerRef.current) {
+          clearTimeout(buzzerResetTimerRef.current);
+        }
         setAuctionLocked(true);
         setLetterCounter(auctionValue);
-        setStep(6);
+
+        // Se una squadra si è prenotata durante l'asta, viene aggiudicata direttamente a lei
+        if (activeBidder !== null) {
+          setWinningTeamIndex(activeBidder - 1);
+          setStep(7); // Passa direttamente alla chiamata lettere
+          playHammerSound();
+        } else {
+          // Se nessuna squadra si è prenotata, apre il modale di scelta relatore
+          setStep(6);
+        }
         return;
       }
     }
@@ -501,7 +644,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         processLetter(key);
       }
     }
-  }, [targetTokens, phrase.lettereVisibili, revealed, auctionLocked, step, auctionValue, winningTeamIndex, processLetter, setTokens, setCalledLetters, setLetterCounter, setAuctionValue, setAuctionLocked, setRevealed, setWrongLetter, setGuessTimerEndAt, setStep, setWinningTeamIndex, setScoreAwarded, handleCorrectGuess, handleWrongGuess]);
+  }, [targetTokens, phrase.lettereVisibili, revealed, auctionLocked, step, auctionValue, winningTeamIndex, activeBidder, processLetter, setTokens, setCalledLetters, setLetterCounter, setAuctionValue, setAuctionLocked, setRevealed, setWrongLetter, setGuessTimerEndAt, setStep, setWinningTeamIndex, setActiveBidder, setBookedTeam, setScoreAwarded, handleCorrectGuess, handleWrongGuess, playHammerSound]);
 
   useEffect(() => {
     if (!interactive) return;
@@ -559,23 +702,27 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         />
       )}
 
-      {/* Sfondo proprio della frase (Step >= 3, renderizzato sopra lo sfondo orologi con fade-in) */}
+      {/* Sfondo proprio della frase (Step >= 3, al 90% con sfumatura radiale e dissolvenza morbida ai bordi) */}
       {showPhraseSfondo && phrase.sfondo && (() => {
         const isDante = phraseIndex === 6 || 
           (typeof phrase.testo === 'string' && phrase.testo.toUpperCase().includes('DANTE')) ||
           (typeof phrase.sfondo === 'string' && phrase.sfondo.toLowerCase().includes('dante'));
         const overlayGradient = isDante
           ? 'linear-gradient(rgba(0,0,0,.15), rgba(0,0,0,.25))'
-          : 'linear-gradient(rgba(0,0,0,.30), rgba(0,0,0,.45))';
+          : 'linear-gradient(180deg, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.15) 35%, rgba(0,0,0,0.20) 65%, rgba(0,0,0,0.60) 100%), radial-gradient(circle at center, transparent 35%, rgba(0,0,0,0.55) 100%)';
         return (
           <div 
-            className="absolute inset-[5%] w-[90%] h-[90%] rounded-3xl overflow-hidden shadow-[0_15px_60px_rgba(0,0,0,0.85)] border-2 border-white/20 bg-cover bg-center animate-fade-in pointer-events-none z-0"
+            className="absolute inset-[5%] w-[90%] h-[90%] rounded-3xl overflow-hidden bg-cover bg-center animate-fade-in pointer-events-none z-0 border border-white/10"
             style={{
               backgroundImage: `${overlayGradient}, url("${assetUrl(phrase.sfondo)}")`,
+              boxShadow: 'inset 0 0 100px 30px rgba(0,0,0,0.85), 0 20px 60px rgba(0,0,0,0.9)',
+              maskImage: 'radial-gradient(ellipse 96% 96% at 50% 50%, black 72%, rgba(0,0,0,0.6) 88%, transparent 100%)',
+              WebkitMaskImage: 'radial-gradient(ellipse 96% 96% at 50% 50%, black 72%, rgba(0,0,0,0.6) 88%, transparent 100%)',
             }}
           />
         );
       })()}
+
       {/* Overlay Errore (Sfondo Rosso + X Gigante) */}
       {showError && (
         <div className="absolute inset-0 z-[100] pointer-events-none flex items-center justify-center">
@@ -661,7 +808,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         </div>
       )}
 
-      {/* Team selection modal overlay for Step 6 (Presenter/Relatore only) */}
+      {/* Team selection modal overlay for Step 6 (Presenter/Relatore only se nessuna squadra si era prenotata) */}
       {isPresenter && step === 6 && winningTeamIndex === null && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md">
           <div className="bg-zinc-900 border-2 border-amber-500 rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl animate-zoom-in">
@@ -678,6 +825,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
                   type="button"
                   onClick={() => {
                     setWinningTeamIndex(idx);
+                    setActiveBidder(idx + 1);
                     setStep(7);
                   }}
                   className={`py-4 rounded-xl text-lg font-black text-white uppercase tracking-wider border shadow-lg transition-all transform hover:scale-105 active:scale-95 cursor-pointer
@@ -706,19 +854,6 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
             <h1 className="text-[clamp(24px,3.2vw,56px)] font-black text-yellow-400 tracking-tight uppercase drop-shadow-[0_2px_15px_rgba(234,179,8,0.4)]">
               INDOVINA LA FRASE
             </h1>
-          </div>
-        )}
-
-        {/* Flashing Team Name Banner if winningTeamIndex !== null */}
-        {winningTeamIndex !== null && (
-          <div className="text-center mb-4 animate-team-blink">
-            <span className={`px-6 py-2 rounded-xl text-lg font-black uppercase tracking-wider text-white border shadow-lg
-              ${winningTeamIndex === 0 ? 'bg-red-600 border-red-400 shadow-red-900/50' : ''}
-              ${winningTeamIndex === 1 ? 'bg-blue-600 border-blue-400 shadow-blue-900/50' : ''}
-              ${winningTeamIndex === 2 ? 'bg-emerald-600 border-emerald-400 shadow-emerald-900/50' : ''}
-            `}>
-              ASTA AGGIUDICATA A: {teamNames[winningTeamIndex]}
-            </span>
           </div>
         )}
 
@@ -810,10 +945,19 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
                     disabled={!interactive || auctionLocked || !showFraseAndAsta}
                     onClick={() => {
                       if (!interactive || auctionLocked || !showFraseAndAsta) return;
+                      if (buzzerResetTimerRef.current) {
+                        clearTimeout(buzzerResetTimerRef.current);
+                      }
                       setAuctionValue(stepNum);
                       setLetterCounter(stepNum);
                       setAuctionLocked(true);
-                      setStep(6);
+                      if (activeBidder !== null) {
+                        setWinningTeamIndex(activeBidder - 1);
+                        setStep(7);
+                        playHammerSound();
+                      } else {
+                        setStep(6);
+                      }
                     }}
                     className={`relative py-3 rounded-xl border flex flex-col items-center justify-center transition-all duration-300 select-none cursor-pointer
                       ${isWinningBid
@@ -943,9 +1087,9 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
 
         {/* Clue Box (visible if step >= 4 or revealAll) */}
         {showIndizio && (
-          <div className="flex flex-col items-center gap-4 mt-2">
+          <div className="flex flex-col items-center gap-2 mt-2">
             {/* Clue Box */}
-            <div className="bg-zinc-950/90 border-2 border-amber-500/50 rounded-2xl px-8 py-4 shadow-2xl backdrop-blur-md text-center max-w-[800px] animate-fade-in mb-2">
+            <div className="bg-zinc-950/90 border-2 border-amber-500/50 rounded-2xl px-8 py-4 shadow-2xl backdrop-blur-md text-center max-w-[800px] animate-fade-in mb-1">
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-amber-500 mb-1 block">
                 INDIZIO MISTERIOSO
               </span>
@@ -953,6 +1097,36 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
                 {phrase.indizio || 'Nessun indizio inserito'}
               </p>
             </div>
+
+            {/* Rettangolo Prenotazione Squadra (Posizionato sotto la frase indizio, attivo dallo Step 5) */}
+            {step >= 5 && activeBidder !== null && (
+              <div className="flex flex-col items-center animate-zoom-in my-1">
+                <div
+                  className={`px-8 py-3 rounded-2xl border-3 flex items-center gap-4 shadow-2xl transition-all duration-300 backdrop-blur-md
+                    ${activeBidder === 1
+                      ? 'bg-gradient-to-r from-red-600 via-rose-600 to-red-700 border-red-400 shadow-[0_0_40px_rgba(239,68,68,0.75)] text-white'
+                      : activeBidder === 2
+                        ? 'bg-gradient-to-r from-blue-600 via-cyan-600 to-blue-700 border-blue-400 shadow-[0_0_40px_rgba(59,130,246,0.75)] text-white'
+                        : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 border-emerald-400 shadow-[0_0_40px_rgba(16,185,129,0.75)] text-white'
+                    }`}
+                >
+                  <span className="w-3.5 h-3.5 rounded-full bg-white shadow-[0_0_10px_white] animate-ping" />
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/80">
+                      {auctionLocked ? 'Asta Aggiudicata a:' : 'Squadra Prenotata:'}
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-black uppercase tracking-wider drop-shadow-lg">
+                      {teamNames[activeBidder - 1] || `SQUADRA ${activeBidder}`}
+                    </span>
+                  </div>
+                  {!auctionLocked && (
+                    <span className="ml-2 px-3 py-1 rounded-xl bg-black/40 border border-white/20 text-xs font-black uppercase tracking-wider text-amber-300">
+                      Offerta: {auctionValue} Lettere
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

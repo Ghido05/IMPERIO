@@ -164,8 +164,10 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
       return false;
     }
 
-    // Solo il primo a prenotarsi vince il turno (se non già prenotato o con punti assegnati)
-    if (!currentBooked && !currentAssigned) {
+    const isTestSlide = activeSlideId === 'box0_pulsantiera' || activeSlideType === 'prova_pulsantiera';
+
+    // Solo il primo a prenotarsi vince il turno (se non già prenotato o con punti assegnati), a meno che non siamo in modalità collaudo
+    if ((!currentBooked && !currentAssigned) || isTestSlide) {
       const stepKey = `playstate_${activeSlideId}_step`;
       const currentStep = parseInt(localStorage.getItem(stepKey) || '0', 10);
 
@@ -203,6 +205,16 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
 
       setBookedTeam(playerNum.toString());
       console.log(`[WebSerialManager] Registrata prenotazione squadra ${teamColor.toUpperCase()} (${playerNum}) per ${activeSlideId} a step ${currentStep}`);
+
+      if (isTestSlide) {
+        // In modalità collaudo sblocca l'hardware dopo 500ms per consentire il test alle altre squadre
+        setTimeout(() => {
+          try {
+            sendSerialReset().catch(() => {});
+          } catch {}
+        }, 500);
+      }
+
       return true;
     }
 
@@ -230,10 +242,16 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
       activeSlideId.startsWith('box1_') || 
       activeSlideType === 'gioco_frase_tempo' ||
       activeSlideType === 'finale_squadre' ||
-      activeSlideId === 'finale_squadre';
+      activeSlideId === 'finale_squadre' ||
+      activeSlideType === 'prova_pulsantiera' ||
+      activeSlideId === 'box0_pulsantiera';
+
+    const isTestSlide = activeSlideId === 'box0_pulsantiera' || activeSlideType === 'prova_pulsantiera';
 
     const hasActiveBooking = isNadiaActive 
       ? hasNadiaBooking 
+      : isTestSlide
+      ? false // In modalità collaudo hardware, mantiene il polling attivo per collaudare tutte le pulsantiere
       : ((bookedTeam !== null && bookedTeam !== 'null' && bookedTeam !== '') ||
          (assignedTeam !== null && assignedTeam !== 'null' && assignedTeam !== ''));
 
@@ -279,7 +297,9 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
           activeSlideId.startsWith('box1_') || 
           activeSlideType === 'gioco_frase_tempo' ||
           activeSlideType === 'finale_squadre' ||
-          activeSlideId === 'finale_squadre';
+          activeSlideId === 'finale_squadre' ||
+          activeSlideType === 'prova_pulsantiera' ||
+          activeSlideId === 'box0_pulsantiera';
 
         if (isPrenotazioneGame && !isPaused) {
           startBuzzerFastPolling(handleBookingEvent, 120);
@@ -371,7 +391,9 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
       activeSlideId.startsWith('box1_') || 
       activeSlideType === 'gioco_frase_tempo' ||
       activeSlideType === 'finale_squadre' ||
-      activeSlideId === 'finale_squadre';
+      activeSlideId === 'finale_squadre' ||
+      activeSlideType === 'prova_pulsantiera' ||
+      activeSlideId === 'box0_pulsantiera';
 
     if (isPrenotazioneGame && !isPaused) {
       startBuzzerFastPolling(handleBookingEvent, 120);

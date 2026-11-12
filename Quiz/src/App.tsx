@@ -25,7 +25,10 @@ export type SlideType =
   | 'spiegazione_box2'
   | 'spiegazione_box3'
   | 'spiegazione_box4'
-  | 'spiegazione_box5';
+  | 'spiegazione_box5'
+  | 'presentazione_squadre'
+  | 'prova_pulsantiera'
+  | 'introduzione_nadia';
 
 export interface Slide {
   id: string;

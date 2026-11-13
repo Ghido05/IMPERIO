@@ -1,9 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { useSyncedState } from './hooks/useSyncedState';
 import { assetUrl } from './lib/assetUrl';
 import { BussolottiOverlay } from './Gioco password_squadre_Board';
 import { getInitialPasswordGrid, type WordItem } from './lib/passwordUtils';
+import type { ActiveRevealData } from './components/TempleWordSuspenseOverlay';
+import { templeSoundFX } from './lib/templeSoundFX';
+
+const getStoredActiveReveal = (): ActiveRevealData | null => {
+  try {
+    const raw = localStorage.getItem('password_active_reveal');
+    return raw && raw !== 'null' ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
 
 type RankType = 1 | 2 | 3;
 type BussolottiStatus = 'pending' | 'active' | 'done';
@@ -45,6 +56,11 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     return stored || "";
   });
   const [grid, setGrid] = useState<WordItem[]>([]);
+  const [activeReveal, setActiveReveal] = useState<ActiveRevealData | null>(getStoredActiveReveal);
+  const lastPlayedRevealTsRef = useRef<number | null>(activeReveal?.timestamp ?? null);
+  const revealOutcomeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevTimerDisplayRef = useRef(0);
+  const gongPlayedForRef = useRef<number>(0);
 
   const manches = gameDataRaw.manches;
   const gameData = manches[currentManche] || manches[0];
@@ -69,7 +85,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       setTimerDisplay(Math.max(0, (suggestionTimerEndAt - Date.now()) / 1000));
     };
     tick();
-    const id = setInterval(tick, 100);
+    const id = setInterval(tick, 50);
     return () => clearInterval(id);
   }, [suggestionTimerEndAt]);
   const [bussolottiStatus, setBussolottiStatus] = useState<Record<RankType, BussolottiStatus>>(() => {
@@ -142,9 +158,63 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     if (!interactive) return false;
     const mode = new URLSearchParams(window.location.search).get('mode');
     const isSandbox = new URLSearchParams(window.location.search).get('sandbox') === 'true';
-    if (mode === 'games' || mode === 'scores') return false;
+    if (mode === 'games' || mode === 'scores' || mode === 'ipad') return false;
     return isPresenter || mode === 'presenter' || isSandbox || !mode;
   }, [interactive, isPresenter]);
+
+  useEffect(() => {
+    if (
+      suggestionTimerEndAt > 0 &&
+      prevTimerDisplayRef.current > 0 &&
+      timerDisplay <= 0 &&
+      gongPlayedForRef.current !== suggestionTimerEndAt
+    ) {
+      gongPlayedForRef.current = suggestionTimerEndAt;
+      if (shouldPlayAudio) {
+        templeSoundFX.playSuggestionGong();
+      }
+    }
+    prevTimerDisplayRef.current = timerDisplay;
+  }, [timerDisplay, suggestionTimerEndAt, shouldPlayAudio]);
+
+  const activeRevealTs = activeReveal?.timestamp;
+  const activeRevealType = activeReveal?.type;
+  const activeRevealTeam = activeReveal?.team;
+
+  useEffect(() => {
+    if (!shouldPlayAudio) {
+      if (revealOutcomeTimeoutRef.current) {
+        clearTimeout(revealOutcomeTimeoutRef.current);
+        revealOutcomeTimeoutRef.current = null;
+      }
+      return;
+    }
+    if (!activeRevealTs || !activeRevealType || activeRevealTeam === undefined) return;
+    if (lastPlayedRevealTsRef.current === activeRevealTs) return;
+
+    lastPlayedRevealTsRef.current = activeRevealTs;
+
+    if (revealOutcomeTimeoutRef.current) {
+      clearTimeout(revealOutcomeTimeoutRef.current);
+      revealOutcomeTimeoutRef.current = null;
+    }
+
+    templeSoundFX.playRevealStart();
+
+    revealOutcomeTimeoutRef.current = setTimeout(() => {
+      revealOutcomeTimeoutRef.current = null;
+      templeSoundFX.playRevealOutcome(activeRevealType, activeRevealTeam);
+    }, 1700);
+  }, [activeRevealTs, activeRevealType, activeRevealTeam, shouldPlayAudio]);
+
+  useEffect(() => {
+    return () => {
+      if (revealOutcomeTimeoutRef.current) {
+        clearTimeout(revealOutcomeTimeoutRef.current);
+        revealOutcomeTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     setAudioPlaying(false);
@@ -299,6 +369,9 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       } else {
         setActiveBussolottiRank(null);
       }
+
+      const nextReveal = getStoredActiveReveal();
+      setActiveReveal(prev => (prev?.timestamp === nextReveal?.timestamp ? prev : nextReveal));
     };
 
     window.addEventListener('storage', handleStorage);
@@ -379,13 +452,17 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     newGrid[index] = clickedWord;
     setGrid(newGrid);
 
-    const revealData = {
+    const revealData: ActiveRevealData = {
       index,
       word: clickedWord.word,
       type: clickedWord.type,
       team: currentTeam,
       timestamp: Date.now()
     };
+    if (shouldPlayAudio) {
+      templeSoundFX.resume();
+    }
+    setActiveReveal(revealData);
     localStorage.setItem('password_active_reveal', JSON.stringify(revealData));
 
     // Reset suggestion countdown timer on word click
@@ -584,13 +661,21 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
 
   const resetGame = () => {
     if (!confirm("Sei sicuro di voler resettare l'intero gioco (tutte le manche)?")) return;
-    
+
+    if (revealOutcomeTimeoutRef.current) {
+      clearTimeout(revealOutcomeTimeoutRef.current);
+      revealOutcomeTimeoutRef.current = null;
+    }
+    lastPlayedRevealTsRef.current = null;
+    setActiveReveal(null);
+
     const keysToRemove = [
       'password_current_manche',
       'password_current_round',
       'password_current_team',
       'password_excluded_teams',
       'password_grid_state',
+      'password_active_reveal',
       'password_chosen_suggestion',
       'password_suggestion_timer_end',
       'password_winners_order',

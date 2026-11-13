@@ -27,7 +27,12 @@ export const TempleWordSuspenseOverlay: React.FC<TempleWordSuspenseOverlayProps>
   onComplete,
 }) => {
   const [phase, setPhase] = useState<'tension' | 'reveal' | 'settle'>('tension');
-  const hasTriggeredAudioRef = useRef(false);
+  const lastTriggeredTimestampRef = useRef<number | null>(null);
+  const onCompleteRef = useRef(onComplete);
+
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  }, [onComplete]);
 
   const bgImage = sfondoUrl || (() => {
     try {
@@ -65,20 +70,22 @@ export const TempleWordSuspenseOverlay: React.FC<TempleWordSuspenseOverlayProps>
     return '';
   };
 
+  const activeRevealTs = activeReveal?.timestamp;
+  const activeRevealType = activeReveal?.type;
+  const activeRevealTeam = activeReveal?.team;
+
   useEffect(() => {
-    if (!activeReveal) {
+    if (!activeRevealTs || !activeRevealType || activeRevealTeam === undefined) {
       setPhase('tension');
-      hasTriggeredAudioRef.current = false;
+      lastTriggeredTimestampRef.current = null;
       return;
     }
 
     setPhase('tension');
 
-    if (canPlayAudio && !hasTriggeredAudioRef.current) {
-      hasTriggeredAudioRef.current = true;
-      templeSoundFX.resume();
-      templeSoundFX.playStoneStep();
-      templeSoundFX.playSuspenseTension();
+    if (canPlayAudio && lastTriggeredTimestampRef.current !== activeRevealTs) {
+      lastTriggeredTimestampRef.current = activeRevealTs;
+      templeSoundFX.playRevealStart();
     }
 
     // Cronometro della sequenza (3.8 secondi totali)
@@ -88,20 +95,7 @@ export const TempleWordSuspenseOverlay: React.FC<TempleWordSuspenseOverlayProps>
     const tReveal = setTimeout(() => {
       setPhase('reveal');
       if (canPlayAudio) {
-        const isCurrentTeamWord = activeReveal.type === `team${activeReveal.team}`;
-        if (isCurrentTeamWord) {
-          // Parola della squadra che tiene la mano: tiene tutto così
-          templeSoundFX.playTeamTileReveal();
-        } else if (activeReveal.type === 'bomb') {
-          // Parola bomba: tiene tutto così
-          templeSoundFX.playBombExplosion();
-        } else if (activeReveal.type === 'neutral') {
-          // Parola nulla: tiene tutto così
-          templeSoundFX.playNeutralThud();
-        } else {
-          // Parola delle altre due squadre: suono diverso (specchio rotto)
-          templeSoundFX.playGlassShatter();
-        }
+        templeSoundFX.playRevealOutcome(activeRevealType, activeRevealTeam);
       }
     }, 1700);
 
@@ -110,7 +104,7 @@ export const TempleWordSuspenseOverlay: React.FC<TempleWordSuspenseOverlayProps>
     }, 3300);
 
     const tComplete = setTimeout(() => {
-      onComplete();
+      onCompleteRef.current();
     }, 3800);
 
     return () => {
@@ -118,7 +112,7 @@ export const TempleWordSuspenseOverlay: React.FC<TempleWordSuspenseOverlayProps>
       clearTimeout(tSettle);
       clearTimeout(tComplete);
     };
-  }, [activeReveal?.timestamp, canPlayAudio, onComplete]);
+  }, [activeRevealTs, activeRevealType, activeRevealTeam, canPlayAudio]);
 
   if (!activeReveal) return null;
 

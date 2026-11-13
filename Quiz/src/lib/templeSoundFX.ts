@@ -13,7 +13,7 @@ class TempleSoundFXEngine {
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
     const mode = new URLSearchParams(window.location.search).get('mode');
-    if (mode === 'games' || mode === 'scores') return null;
+    if (mode === 'games' || mode === 'scores' || mode === 'ipad') return null;
 
     const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioCtx) return null;
@@ -398,6 +398,54 @@ class TempleSoundFXEngine {
 
     thudOsc.start(now);
     thudOsc.stop(now + 0.2);
+  }
+
+  /**
+   * Avvia gli effetti iniziali della suspense al click di una tessera del tempio
+   */
+  playRevealStart() {
+    this.resume();
+    this.playStoneStep();
+    this.playSuspenseTension();
+  }
+
+  /**
+   * Riproduce l'effetto sonoro finale della tessera rivelata in base al tipo e alla squadra di turno
+   */
+  playRevealOutcome(wordType: string, team: number) {
+    const isCurrentTeamWord = wordType === `team${team}`;
+    if (isCurrentTeamWord) {
+      this.playTeamTileReveal();
+    } else if (wordType === 'bomb') {
+      this.playBombExplosion();
+    } else if (wordType === 'neutral') {
+      this.playNeutralThud();
+    } else {
+      this.playGlassShatter();
+    }
+  }
+
+  /**
+   * Gong di fine tempo (10 secondi) dopo la scelta del suggerimento
+   */
+  playSuggestionGong() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = Math.max(ctx.currentTime, 0.05);
+
+    [220, 277, 330, 440].forEach((frequency, i) => {
+      const startAt = now + i * 0.012;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(frequency, startAt);
+      gain.gain.setValueAtTime(0.16 / (i + 1), startAt);
+      gain.gain.exponentialRampToValueAtTime(0.001, startAt + 2.2);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(startAt);
+      osc.stop(startAt + 2.25);
+    });
   }
 }
 

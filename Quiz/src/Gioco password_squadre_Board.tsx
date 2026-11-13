@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { useScores } from './context/ScoreContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
@@ -6,6 +6,7 @@ import { useSyncedState } from './hooks/useSyncedState';
 
 import { getInitialPasswordGrid, type WordItem, type WordType } from './lib/passwordUtils';
 import { TempleWordSuspenseOverlay, type ActiveRevealData } from './components/TempleWordSuspenseOverlay';
+import { templeSoundFX } from './lib/templeSoundFX';
 
 type RankType = 1 | 2 | 3;
 type BussolottiStatus = 'pending' | 'active' | 'done';
@@ -333,29 +334,13 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPr
   const prevTimerDisplayRef = useRef(0);
   const gongPlayedForRef = useRef<number>(0);
 
-  const playTone = useCallback((frequency: number, duration: number, type: OscillatorType, volume: number, endFrequency?: number) => {
-    if (!shouldPlayAudio) return;
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      const ctx = new AudioContextClass();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = type;
-      osc.frequency.setValueAtTime(frequency, ctx.currentTime);
-      if (endFrequency) osc.frequency.exponentialRampToValueAtTime(endFrequency, ctx.currentTime + duration);
-      gain.gain.setValueAtTime(volume, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.start(); osc.stop(ctx.currentTime + duration);
-      setTimeout(() => ctx.close(), duration * 1000 + 100);
-    } catch { /* Audio non disponibile */ }
-  }, []);
-
-  const playGongSound = useCallback(() => {
-    [220, 277, 330, 440].forEach((frequency, i) => {
-      setTimeout(() => playTone(frequency, 2.2, 'sine', 0.16 / (i + 1)), i * 12);
-    });
-  }, [playTone]);
+  const shouldPlayAudio = React.useMemo(() => {
+    if (!interactive) return false;
+    const mode = new URLSearchParams(window.location.search).get('mode');
+    const isSandbox = new URLSearchParams(window.location.search).get('sandbox') === 'true';
+    if (mode === 'games' || mode === 'scores') return false;
+    return isPresenter || mode === 'presenter' || isSandbox || !mode;
+  }, [interactive, isPresenter]);
 
   useEffect(() => {
     if (!suggestionTimerEndAt) {
@@ -373,10 +358,12 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPr
   useEffect(() => {
     if (suggestionTimerEndAt > 0 && prevTimerDisplayRef.current > 0 && timerDisplay <= 0 && gongPlayedForRef.current !== suggestionTimerEndAt) {
       gongPlayedForRef.current = suggestionTimerEndAt;
-      playGongSound();
+      if (shouldPlayAudio) {
+        templeSoundFX.playSuggestionGong();
+      }
     }
     prevTimerDisplayRef.current = timerDisplay;
-  }, [timerDisplay, suggestionTimerEndAt, playGongSound]);
+  }, [timerDisplay, suggestionTimerEndAt, shouldPlayAudio]);
 
   const timerRadius = 54;
   const timerCircumference = 2 * Math.PI * timerRadius;
@@ -399,14 +386,6 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPr
   const musicaIntro = (gameData as any).musicaIntro;
 
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
-
-  const shouldPlayAudio = React.useMemo(() => {
-    if (!interactive) return false;
-    const mode = new URLSearchParams(window.location.search).get('mode');
-    const isSandbox = new URLSearchParams(window.location.search).get('sandbox') === 'true';
-    if (mode === 'games' || mode === 'scores') return false;
-    return isPresenter || mode === 'presenter' || isSandbox || !mode;
-  }, [interactive, isPresenter]);
 
   useEffect(() => {
     setAudioPlaying(false);

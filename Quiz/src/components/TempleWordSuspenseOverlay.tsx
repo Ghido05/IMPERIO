@@ -88,12 +88,19 @@ export const TempleWordSuspenseOverlay: React.FC<TempleWordSuspenseOverlayProps>
     const tReveal = setTimeout(() => {
       setPhase('reveal');
       if (canPlayAudio) {
-        if (activeReveal.type === 'bomb') {
+        const isCurrentTeamWord = activeReveal.type === `team${activeReveal.team}`;
+        if (isCurrentTeamWord) {
+          // Parola della squadra che tiene la mano: tiene tutto così
+          templeSoundFX.playTeamTileReveal();
+        } else if (activeReveal.type === 'bomb') {
+          // Parola bomba: tiene tutto così
           templeSoundFX.playBombExplosion();
         } else if (activeReveal.type === 'neutral') {
+          // Parola nulla: tiene tutto così
           templeSoundFX.playNeutralThud();
         } else {
-          templeSoundFX.playTeamTileReveal();
+          // Parola delle altre due squadre: suono diverso (specchio rotto)
+          templeSoundFX.playGlassShatter();
         }
       }
     }, 1700);

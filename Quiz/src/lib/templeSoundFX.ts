@@ -282,6 +282,123 @@ class TempleSoundFXEngine {
       aOsc.stop(now + offset + 0.3);
     });
   }
+
+  /**
+   * Effetto specchio rotto / vetro frantumato (quando si sceglie una parola delle altre squadre)
+   */
+  playGlassShatter() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+    const now = Math.max(ctx.currentTime, 0.05);
+
+    // 1. Schianto e impatto iniziale (rumore bianco ad alta frequenza filtrato)
+    try {
+      const noiseDuration = 0.65;
+      const bufferSize = Math.floor(ctx.sampleRate * noiseDuration);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      // Filtro passa-alto per frequenze cristalline e taglienti
+      const highpass = ctx.createBiquadFilter();
+      highpass.type = 'highpass';
+      highpass.frequency.setValueAtTime(2200, now);
+      highpass.frequency.exponentialRampToValueAtTime(900, now + 0.35);
+
+      // Filtro bandpass con risonanza su timbrica vitrea
+      const bandpass = ctx.createBiquadFilter();
+      bandpass.type = 'bandpass';
+      bandpass.frequency.setValueAtTime(3800, now);
+      bandpass.Q.setValueAtTime(3.5, now);
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.001, now);
+      noiseGain.gain.linearRampToValueAtTime(0.7, now + 0.015);
+      noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.6);
+
+      noise.connect(highpass);
+      highpass.connect(bandpass);
+      bandpass.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+
+      noise.start(now);
+      noise.stop(now + noiseDuration);
+    } catch {}
+
+    // 2. Frattura inarmonica dello specchio (frequenze acute dissonanti con decadimento rapido)
+    const crackFrequencies = [2150, 2840, 3960, 5240, 7100];
+    crackFrequencies.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.75, now + 0.12);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.24 / (idx + 1), now + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15 + idx * 0.03);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.25);
+    });
+
+    // 3. Cascata di schegge e frammenti di vetro che cadono e rimbalzano
+    const shards = [
+      { time: 0.05, freq: 4600, dur: 0.08, vol: 0.22 },
+      { time: 0.09, freq: 5900, dur: 0.07, vol: 0.20 },
+      { time: 0.13, freq: 3300, dur: 0.09, vol: 0.19 },
+      { time: 0.17, freq: 6500, dur: 0.06, vol: 0.17 },
+      { time: 0.21, freq: 2900, dur: 0.08, vol: 0.16 },
+      { time: 0.26, freq: 5100, dur: 0.07, vol: 0.15 },
+      { time: 0.31, freq: 3700, dur: 0.06, vol: 0.14 },
+      { time: 0.36, freq: 5400, dur: 0.05, vol: 0.12 },
+      { time: 0.42, freq: 4200, dur: 0.06, vol: 0.10 },
+      { time: 0.48, freq: 6200, dur: 0.05, vol: 0.08 },
+    ];
+
+    shards.forEach((s) => {
+      const shardOsc = ctx.createOscillator();
+      const shardGain = ctx.createGain();
+      shardOsc.type = 'triangle';
+      shardOsc.frequency.setValueAtTime(s.freq, now + s.time);
+      shardOsc.frequency.exponentialRampToValueAtTime(s.freq * 0.85, now + s.time + s.dur);
+
+      shardGain.gain.setValueAtTime(0.001, now + s.time);
+      shardGain.gain.linearRampToValueAtTime(s.vol, now + s.time + 0.005);
+      shardGain.gain.exponentialRampToValueAtTime(0.0001, now + s.time + s.dur);
+
+      shardOsc.connect(shardGain);
+      shardGain.connect(ctx.destination);
+
+      shardOsc.start(now + s.time);
+      shardOsc.stop(now + s.time + s.dur + 0.01);
+    });
+
+    // 4. Tonfo cupo d'impatto fisico
+    const thudOsc = ctx.createOscillator();
+    const thudGain = ctx.createGain();
+    thudOsc.type = 'sine';
+    thudOsc.frequency.setValueAtTime(150, now);
+    thudOsc.frequency.exponentialRampToValueAtTime(40, now + 0.16);
+
+    thudGain.gain.setValueAtTime(0.001, now);
+    thudGain.gain.linearRampToValueAtTime(0.35, now + 0.012);
+    thudGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+
+    thudOsc.connect(thudGain);
+    thudGain.connect(ctx.destination);
+
+    thudOsc.start(now);
+    thudOsc.stop(now + 0.2);
+  }
 }
 
 export const templeSoundFX = new TempleSoundFXEngine();

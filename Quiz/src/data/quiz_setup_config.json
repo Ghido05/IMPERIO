@@ -133,7 +133,7 @@
   "gioco1": {
     "titolo": "IL MIO NOME è NESSUNO",
     "sottotitolo": "Musica & Immagini",
-    "selectedQuestion": 9,
+    "selectedQuestion": 10,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Mappa/spiegazione_box1_ambientazione.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box1.mp3",
@@ -462,15 +462,16 @@
           "anno": ""
         },
         "immagine": {
-          "immagineJpg": "",
+          "immagineJpg": "/Icone/nessuno_img/1_10_scorfano.webp",
           "indizi": [
-            "",
-            "",
-            "",
-            ""
+            "NUOTA SENZA PROFERIR PAROLA \\n NEL REGNO ACQUATICO è UNA SPECIE CHE NON VOLA",
+            "TRA MOLTE SPECIE MARINE DALL'ASPETTO AFFINE \\n QUESTO PESCE È OTTIMO CON LE LINGUINE",
+            "HA SPINE VELENOSE E UN ASPETTO MINACCIOSO \\n MA IN ZUPPA E AL CACCIUCCO È UN PIATTO DELIZIOSO.",
+            "NON È CERTO FAMOSO PER LA SUA GRAN BELLEZZA, CHI È BRUTTO COME LUI SI DICE CON FRANCHEZZA!"
           ],
-          "confermaAudio": "",
-          "soluzione": ""
+          "confermaAudio": "/Audio/strumenti/4_10_GionnyScandal   Pesca_[cut_17sec].mp3",
+          "soluzione": "SCORFANO",
+          "categoria": "ANIMALE"
         }
       }
     },

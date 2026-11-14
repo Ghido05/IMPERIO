@@ -4,6 +4,7 @@ import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
 import { sendSerialReset } from './lib/webSerial';
+import AutoFitText from './components/AutoFitText';
 
 // ============================================================================
 // Gioco 2 - IMMAGINE: Logica a Step con Rivelazione Griglia e Indizi
@@ -492,9 +493,15 @@ const GameBoard = ({ interactive = true, revealAll = false, isPresenter = false 
             >
               <div className="w-[102px] h-[102px] bg-[#fe7507] border-[9px] border-[#0f2d54] rounded-full flex items-center justify-center z-10 shadow-lg flex-shrink-0" />
               <div className="ml-6 pl-10 pr-8 flex-1 bg-[#fe7507] border-[9px] border-[#0f2d54] rounded-[50px] flex items-center shadow-md h-[102px]">
-                <p className="text-white font-black text-[22px] leading-tight whitespace-pre-line">
-                  {(indizio.testo || '').replace(/\\n/g, '\n')}
-                </p>
+                <AutoFitText
+                  text={indizio.testo}
+                  maxFontSize={38}
+                  minFontSize={13}
+                  fallbackWidth={760}
+                  fallbackHeight={84}
+                  align="left"
+                  className="text-white font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] tracking-tight"
+                />
               </div>
             </div>
           ))}

@@ -4,6 +4,7 @@ import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
 import { sendSerialReset } from './lib/webSerial';
+import AutoFitText from './components/AutoFitText';
 
 // ============================================================================
 // Layout esportato da Figma e reso Responsivo con Navigazione a Frecce e Audio
@@ -94,15 +95,22 @@ const DynamicHint: React.FC<{
             bottom: `${100 - (boxH / compH * 100)}%`, 
             left: `${(boxL / compW) * 100}%`,
             width: `${(boxW / compW) * 100}%`,
+            height: `${(boxH / compH) * 100}%`,
             minHeight: `${(boxH / compH) * 100}%`,
             borderRadius: stemSide === 'left' ? '1.5rem 1.5rem 1.5rem 0' : '1.5rem 1.5rem 0 1.5rem',
             transform: `translateY(-${yOffset}px)`
           }}
         >
-          <p className="text-white font-black text-center text-[26px] xl:text-[28px] leading-snug whitespace-pre-line drop-shadow-[0_2px_5px_rgba(0,0,0,0.9)] tracking-tight">
-            {(note?.text || '').replace(/\\n/g, '\n')}
-          </p>
-          <div className="absolute top-[10%] left-[5%] w-[25%] h-[10%] rounded-full bg-white/30"></div>
+          <AutoFitText
+            text={note?.text}
+            maxFontSize={38}
+            minFontSize={13}
+            fallbackWidth={isUp ? 496 : 530}
+            fallbackHeight={96}
+            align="center"
+            className="text-white font-black drop-shadow-[0_2px_5px_rgba(0,0,0,0.9)] tracking-tight"
+          />
+          <div className="absolute top-[10%] left-[5%] w-[25%] h-[10%] rounded-full bg-white/30 pointer-events-none"></div>
         </div>
 
         {/* 2. L'ASTA (Rectangle 2) */}

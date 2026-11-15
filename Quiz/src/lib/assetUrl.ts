@@ -39,6 +39,7 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   '1_2_Tuttoperunaragione_Benji.mp3': '/Audio/strumenti/1_2_Tuttoperunaragione_Benji.mp3',
   '1_8_thinkabouttheway.mp3': '/Audio/strumenti/1_8_thinkabouttheway.mp3',
   '4_7_Pedro_Carra.mp3': '/Audio/stacchetto/4_7_Pedro_Carra.mp3',
+  '0_1_2_3_4_5_transizioni_Yocontigo.m4a': '/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a',
   // Audio Spiegazione Box 0 - 4 (nella cartella Spiegazioni)
   'spiegazione_fasi_audio.mp3': '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3',
   '#4 Spiegazione.mp3': '/Audio/Spiegazioni/spiegazione_fasi_audio.mp3',

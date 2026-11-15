@@ -19,6 +19,7 @@ export interface MappaTorneoData {
   notePresentatore?: string;
   sfondoSpiegazione?: string;
   audioSpiegazione?: string;
+  audioTransizione?: string;
 }
 
 interface MappaTorneoBoardProps {
@@ -354,6 +355,93 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
     return null;
   }, []);
 
+  const shouldPlayAudio = useMemo(() => {
+    if (!interactive) return false;
+    return isPresenterMode;
+  }, [interactive, isPresenterMode]);
+
+  const transitionAudioUrl = useMemo(() => {
+    return (
+      data?.audioTransizione ||
+      setupConfig?.[`gioco${activeBox}`]?.audioTransizione ||
+      '/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a'
+    );
+  }, [data?.audioTransizione, setupConfig, activeBox]);
+
+  const transitionAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
+
+  const stopTransitionAudio = useCallback(() => {
+    if (transitionAudioRef.current) {
+      try {
+        transitionAudioRef.current.pause();
+        transitionAudioRef.current.currentTime = 0;
+      } catch {}
+      setIsAudioPlaying(false);
+    }
+  }, []);
+
+  const playTransitionAudio = useCallback(() => {
+    if (!interactive || !shouldPlayAudio || isZoomed) return;
+    try {
+      if (!transitionAudioRef.current) {
+        const audio = new Audio(assetUrl(transitionAudioUrl));
+        audio.addEventListener('ended', () => setIsAudioPlaying(false));
+        audio.addEventListener('pause', () => setIsAudioPlaying(false));
+        audio.addEventListener('play', () => setIsAudioPlaying(true));
+        transitionAudioRef.current = audio;
+      } else {
+        transitionAudioRef.current.src = assetUrl(transitionAudioUrl);
+      }
+      transitionAudioRef.current.currentTime = 0;
+      transitionAudioRef.current.play().then(() => {
+        setIsAudioPlaying(true);
+      }).catch((err) => {
+        console.warn('Autoplay audio transizione omini mappa intercettato:', err);
+      });
+    } catch (e) {
+      console.warn('Errore avvio audio transizione:', e);
+    }
+  }, [interactive, shouldPlayAudio, isZoomed, transitionAudioUrl]);
+
+  const toggleTransitionAudio = useCallback(() => {
+    if (isAudioPlaying) {
+      stopTransitionAudio();
+    } else {
+      playTransitionAudio();
+    }
+  }, [isAudioPlaying, stopTransitionAudio, playTransitionAudio]);
+
+  const prevUnlockedStepRef = useRef<number>(unlockedStep);
+  useEffect(() => {
+    if (!interactive || !shouldPlayAudio) return;
+
+    if (activeBox === 1) {
+      if (isIslandIntro && !isZoomed) {
+        playTransitionAudio();
+      }
+    } else {
+      if (unlockedStep === 1 && prevUnlockedStepRef.current === 0) {
+        playTransitionAudio();
+      } else if (unlockedStep === 0 && prevUnlockedStepRef.current === 1) {
+        stopTransitionAudio();
+      }
+    }
+    prevUnlockedStepRef.current = unlockedStep;
+  }, [unlockedStep, activeBox, isIslandIntro, isZoomed, interactive, shouldPlayAudio, playTransitionAudio, stopTransitionAudio]);
+
+  useEffect(() => {
+    if (isZoomed) {
+      stopTransitionAudio();
+    }
+  }, [isZoomed, stopTransitionAudio]);
+
+  useEffect(() => {
+    return () => {
+      stopTransitionAudio();
+    };
+  }, [stopTransitionAudio]);
+
   const dynamicZones = useMemo(() => {
     return ZONES.map((z) => {
       let customTitle = z.title;
@@ -507,13 +595,16 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
         if (isZoomed) {
           e.preventDefault();
           handleReturnToMap();
+        } else if (e.key === 'm' || e.key === 'M') {
+          e.preventDefault();
+          toggleTransitionAudio();
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, isZoomed, activeBox, unlockedStep, setUnlockedStep, animProgress, setIsZoomed, handleToggleZoom, handleReturnToMap]);
+  }, [interactive, isZoomed, activeBox, unlockedStep, setUnlockedStep, animProgress, setIsZoomed, handleToggleZoom, handleReturnToMap, toggleTransitionAudio]);
 
   // Listener per eventi di ritorno alla mappa da componenti figli
   useEffect(() => {
@@ -1124,6 +1215,27 @@ export default function MappaTorneoBoard({ interactive = true, revealAll = false
               ? targetZone.description
               : 'Premi la Freccia Destra [→] per far muovere i campioni delle squadre lungo il sentiero e svelare questa nuova porzione della mappa!'}
           </p>
+
+          {/* Bottone Canzone Marcia Omini (Solo Relatore sulla mappa) */}
+          {interactive && isPresenterMode && (
+            <div className="mt-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleTransitionAudio}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-2 cursor-pointer transition-all ${
+                  isAudioPlaying
+                    ? 'bg-amber-500 text-slate-950 border-amber-400 font-black shadow-lg shadow-amber-500/30'
+                    : 'bg-slate-900/80 hover:bg-slate-800 border-white/20 text-white/90'
+                }`}
+                title="Riproduci/Pausa Canzone Marcia Omini (M)"
+              >
+                <span>{isAudioPlaying ? '⏸ Ferma Marcia' : '🎵 Canzone Marcia'}</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-black/40 font-mono text-amber-300">
+                  M
+                </span>
+              </button>
+            </div>
+          )}
         </div>
 
       </div>

@@ -129,6 +129,7 @@ export interface Gioco5Setup {
   videoSpiegazione?: string;
   sfondoSpiegazione?: string;
   audioSpiegazione?: string;
+  audioTransizione?: string;
 }
 
 export interface BoxGenericSetup {
@@ -181,6 +182,7 @@ export interface Gioco4Setup {
   videoSpiegazione?: string;
   sfondoSpiegazione?: string;
   audioSpiegazione?: string;
+  audioTransizione?: string;
 }
 
 export interface NadiaQuestionItem {
@@ -210,6 +212,7 @@ export interface QuizSetupState {
     videoSpiegazione?: string;
     sfondoSpiegazione?: string;
     audioSpiegazione?: string;
+    audioTransizione?: string;
     questions: Record<number, Gioco1Question>;
     sfondoGenerale?: string;
   };
@@ -220,6 +223,7 @@ export interface QuizSetupState {
     videoSpiegazione?: string;
     sfondoSpiegazione?: string;
     audioSpiegazione?: string;
+    audioTransizione?: string;
     questions: Record<number, Gioco2Question>;
     sfondoGenerale?: string;
   };
@@ -230,6 +234,7 @@ export interface QuizSetupState {
     videoSpiegazione?: string;
     sfondoSpiegazione?: string;
     audioSpiegazione?: string;
+    audioTransizione?: string;
     questions: Record<number, Gioco3Question>;
     sfondoGenerale?: string;
   };
@@ -239,6 +244,7 @@ export interface QuizSetupState {
 }
 
 const STORAGE_KEY = 'imperio_quiz_setup_config_v1';
+export const DEFAULT_MAPPA_TRANSIZIONE_AUDIO = '/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a';
 
 export function createDefaultGioco1Question(): Gioco1Question {
   return {
@@ -489,6 +495,7 @@ function normalizeGioco3(
     videoSpiegazione: data.videoSpiegazione || '',
     sfondoSpiegazione: data.sfondoSpiegazione || '',
     audioSpiegazione: data.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box3.mp3',
+    audioTransizione: data.audioTransizione || def.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO,
     questions,
     sfondoGenerale: data.sfondoGenerale || '',
   };
@@ -515,6 +522,7 @@ function normalizeGioco4(raw: any, def: Gioco4Setup): Gioco4Setup {
     videoSpiegazione: raw.videoSpiegazione || '',
     sfondoSpiegazione: raw.sfondoSpiegazione || '',
     audioSpiegazione: raw.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box4.mp3',
+    audioTransizione: raw.audioTransizione || def.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO,
   };
 }
 
@@ -547,6 +555,7 @@ function normalizeGioco5(raw: any, def: Gioco5Setup): Gioco5Setup {
     videoSpiegazione: raw.videoSpiegazione || '',
     sfondoSpiegazione: raw.sfondoSpiegazione || '',
     audioSpiegazione: raw.audioSpiegazione || '',
+    audioTransizione: raw.audioTransizione || def.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO,
   };
 }
 
@@ -668,6 +677,7 @@ export function getDefaultSetupState(): QuizSetupState {
       videoSpiegazione: '',
       sfondoSpiegazione: '/Mappa/spiegazione_box1_ambientazione.jpg',
       audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_box1.mp3',
+      audioTransizione: DEFAULT_MAPPA_TRANSIZIONE_AUDIO,
       questions: q1,
       sfondoGenerale: '/Icone/sfondi/sfondo_box1_foresta_musicale.jpg',
     },
@@ -678,6 +688,7 @@ export function getDefaultSetupState(): QuizSetupState {
       videoSpiegazione: '',
       sfondoSpiegazione: '',
       audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_box2.mp3',
+      audioTransizione: DEFAULT_MAPPA_TRANSIZIONE_AUDIO,
       questions: q2,
       sfondoGenerale: '/Icone/sfondi/sfondo_box2_cristalli.jpg',
     },
@@ -688,6 +699,7 @@ export function getDefaultSetupState(): QuizSetupState {
       videoSpiegazione: '',
       sfondoSpiegazione: '',
       audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_box3.mp3',
+      audioTransizione: DEFAULT_MAPPA_TRANSIZIONE_AUDIO,
       questions: q3,
       sfondoGenerale: '',
     },
@@ -697,6 +709,7 @@ export function getDefaultSetupState(): QuizSetupState {
       videoSpiegazione: '',
       sfondoSpiegazione: '/Icone/sfondi/sfondo_box4_orologi_tempo.jpg',
       audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_box4.mp3',
+      audioTransizione: DEFAULT_MAPPA_TRANSIZIONE_AUDIO,
       note: 'Inserisci le frasi da indovinare per il gioco Frase Tempo',
       frasi: DEFAULT_FRASI_TEMPO.map((testo) => createDefaultFraseTempoItem(testo)),
       sfondoGenerale: '',
@@ -707,6 +720,7 @@ export function getDefaultSetupState(): QuizSetupState {
       videoSpiegazione: '',
       sfondoSpiegazione: '',
       audioSpiegazione: '',
+      audioTransizione: DEFAULT_MAPPA_TRANSIZIONE_AUDIO,
       sfondoGenerale: '/sfondo_finale_acqua.jpg',
       numeroDomande: 15,
       domande: Array.from({ length: 15 }, (_, i) => ({
@@ -1118,6 +1132,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               }
               return a;
             })(),
+            audioTransizione: loadedState.gioco1?.audioTransizione || def.gioco1.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO,
             questions: { ...def.gioco1.questions, ...loadedState.gioco1?.questions },
             sfondoGenerale: loadedState.gioco1?.sfondoGenerale || '',
           },
@@ -1128,6 +1143,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
             videoSpiegazione: loadedState.gioco2?.videoSpiegazione || '',
             sfondoSpiegazione: loadedState.gioco2?.sfondoSpiegazione || '',
             audioSpiegazione: loadedState.gioco2?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box2.mp3',
+            audioTransizione: loadedState.gioco2?.audioTransizione || def.gioco2.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO,
             questions: { ...def.gioco2.questions, ...loadedState.gioco2?.questions },
             sfondoGenerale: loadedState.gioco2?.sfondoGenerale || '',
           },
@@ -4095,7 +4111,71 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   </div>
                 </div>
 
-                {/* 3. Video Spiegazione Box 1 (Opzionale) */}
+                {/* 3. Canzone Transizione Mappa (Marcia Omini) Box 1 */}
+                <div className="bg-[#120f1e] p-4 rounded-xl border border-amber-500/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🎵</span> Canzone Transizione Mappa (Marcia Omini)
+                    </span>
+                    <span className="text-[10px] text-white/40">Musica quando gli omini si muovono verso questo gioco</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.gioco1.audioTransizione?.startsWith('data:') || state.gioco1.audioTransizione?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                          🎵 {formatBase64Info(state.gioco1.audioTransizione)?.name || 'Audio Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, audioTransizione: DEFAULT_MAPPA_TRANSIZIONE_AUDIO } }))}
+                          className="text-amber-400 hover:text-amber-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Ripristina Default
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder={`Percorso audio (default: ${DEFAULT_MAPPA_TRANSIZIONE_AUDIO})...`}
+                        value={state.gioco1.audioTransizione !== undefined ? state.gioco1.audioTransizione : DEFAULT_MAPPA_TRANSIZIONE_AUDIO}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, audioTransizione: val } }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
+                      />
+                    )}
+
+                    {/* Bottone Ascolta / Pausa */}
+                    <button
+                      type="button"
+                      onClick={() => togglePreviewAudio(state.gioco1.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO)}
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors ${
+                        previewAudioUrl === (state.gioco1.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO)
+                          ? 'bg-amber-500 text-slate-950 font-black'
+                          : 'bg-white/10 hover:bg-white/15 text-white'
+                      }`}
+                    >
+                      {previewAudioUrl === (state.gioco1.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO) ? '⏸ Ferma' : '▶ Ascolta'}
+                    </button>
+
+                    <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🎵 Sfoglia
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({ ...prev, gioco1: { ...prev.gioco1, audioTransizione: base64 } }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* 4. Video Spiegazione Box 1 (Opzionale) */}
                 <div className="bg-[#120f1e] p-4 rounded-xl border border-amber-500/20 space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
@@ -5101,6 +5181,70 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   </div>
                 </div>
 
+                {/* Canzone Transizione Mappa (Marcia Omini) Box 2 */}
+                <div className="bg-[#120f1e] p-4 rounded-xl border border-indigo-500/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <span>🎵</span> Canzone Transizione Mappa (Marcia Omini)
+                    </span>
+                    <span className="text-[10px] text-white/40">Musica quando gli omini si muovono verso questo gioco</span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.gioco2.audioTransizione?.startsWith('data:') || state.gioco2.audioTransizione?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                          🎵 {formatBase64Info(state.gioco2.audioTransizione)?.name || 'Audio Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, audioTransizione: DEFAULT_MAPPA_TRANSIZIONE_AUDIO } }))}
+                          className="text-indigo-400 hover:text-indigo-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Ripristina Default
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder={`Percorso audio (default: ${DEFAULT_MAPPA_TRANSIZIONE_AUDIO})...`}
+                        value={state.gioco2.audioTransizione !== undefined ? state.gioco2.audioTransizione : DEFAULT_MAPPA_TRANSIZIONE_AUDIO}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, audioTransizione: val } }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                      />
+                    )}
+
+                    {/* Bottone Ascolta / Pausa */}
+                    <button
+                      type="button"
+                      onClick={() => togglePreviewAudio(state.gioco2.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO)}
+                      className={`px-2.5 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors ${
+                        previewAudioUrl === (state.gioco2.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO)
+                          ? 'bg-indigo-500 text-white font-black'
+                          : 'bg-white/10 hover:bg-white/15 text-white'
+                      }`}
+                    >
+                      {previewAudioUrl === (state.gioco2.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO) ? '⏸ Ferma' : '▶ Ascolta'}
+                    </button>
+
+                    <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🎵 Sfoglia
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({ ...prev, gioco2: { ...prev.gioco2, audioTransizione: base64 } }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
                 {/* 3. Video Spiegazione Box 2 (Opzionale) */}
                 <div className="bg-[#120f1e] p-4 rounded-xl border border-indigo-500/20 space-y-2">
                   <div className="flex items-center justify-between">
@@ -5992,6 +6136,70 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 </div>
               </div>
 
+              {/* Canzone Transizione Mappa (Marcia Omini) Box 3 */}
+              <div className="bg-[#120f1e] p-4 rounded-xl border border-emerald-500/20 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>🎵</span> Canzone Transizione Mappa (Marcia Omini)
+                  </span>
+                  <span className="text-[10px] text-white/40">Musica quando gli omini si muovono verso questo gioco</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco3.audioTransizione?.startsWith('data:') || state.gioco3.audioTransizione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[220px]">
+                        🎵 {formatBase64Info(state.gioco3.audioTransizione)?.name || 'Audio Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({ ...prev, gioco3: { ...prev.gioco3, audioTransizione: DEFAULT_MAPPA_TRANSIZIONE_AUDIO } }))}
+                        className="text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Ripristina Default
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder={`Percorso audio (default: ${DEFAULT_MAPPA_TRANSIZIONE_AUDIO})...`}
+                      value={state.gioco3.audioTransizione !== undefined ? state.gioco3.audioTransizione : DEFAULT_MAPPA_TRANSIZIONE_AUDIO}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({ ...prev, gioco3: { ...prev.gioco3, audioTransizione: val } }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400"
+                    />
+                  )}
+
+                  {/* Bottone Ascolta / Pausa */}
+                  <button
+                    type="button"
+                    onClick={() => togglePreviewAudio(state.gioco3.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO)}
+                    className={`px-2.5 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors ${
+                      previewAudioUrl === (state.gioco3.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO)
+                        ? 'bg-emerald-500 text-slate-950 font-black'
+                        : 'bg-white/10 hover:bg-white/15 text-white'
+                    }`}
+                  >
+                    {previewAudioUrl === (state.gioco3.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO) ? '⏸ Ferma' : '▶ Ascolta'}
+                  </button>
+
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎵 Sfoglia
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({ ...prev, gioco3: { ...prev.gioco3, audioTransizione: base64 } }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
               {/* 3. Video Spiegazione Box 3 (Opzionale) */}
               <div className="bg-[#120f1e] p-4 rounded-xl border border-emerald-500/20 space-y-2">
                 <div className="flex items-center justify-between">
@@ -6674,6 +6882,67 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 </div>
               </div>
 
+              {/* Canzone Transizione Mappa (Marcia Omini) Box 4 */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-semibold text-slate-300">
+                    Canzone Transizione Mappa (Marcia Omini):
+                  </label>
+                  <span className="text-[10px] text-white/40">Musica quando gli omini si muovono verso questo gioco</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco4.audioTransizione?.startsWith('data:') || state.gioco4.audioTransizione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                        🎵 {formatBase64Info(state.gioco4.audioTransizione)?.name || 'Audio Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({ ...prev, gioco4: { ...prev.gioco4, audioTransizione: DEFAULT_MAPPA_TRANSIZIONE_AUDIO } }))}
+                        className="text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Ripristina Default
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder={`Percorso audio (default: ${DEFAULT_MAPPA_TRANSIZIONE_AUDIO})...`}
+                      value={state.gioco4.audioTransizione !== undefined ? state.gioco4.audioTransizione : DEFAULT_MAPPA_TRANSIZIONE_AUDIO}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({ ...prev, gioco4: { ...prev.gioco4, audioTransizione: val } }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-cyan-400"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => togglePreviewAudio(state.gioco4.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO)}
+                    className={`px-2.5 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors ${
+                      previewAudioUrl === (state.gioco4.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO)
+                        ? 'bg-cyan-500 text-slate-950 font-black'
+                        : 'bg-white/10 hover:bg-white/15 text-white'
+                    }`}
+                  >
+                    {previewAudioUrl === (state.gioco4.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO) ? '⏸ Ferma' : '▶ Ascolta'}
+                  </button>
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎵 Sfoglia
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({ ...prev, gioco4: { ...prev.gioco4, audioTransizione: base64 } }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
               {/* 3. Video Spiegazione Box 4 (Opzionale) */}
               <div className="space-y-1.5">
                 <label className="block text-[11px] font-semibold text-slate-300">
@@ -7217,6 +7486,67 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                       onChange={(e) =>
                         handleFileUpload(e, (base64) =>
                           setState(prev => ({ ...prev, gioco5: { ...prev.gioco5, audioSpiegazione: base64 } }))
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Canzone Transizione Mappa (Marcia Omini) Box 5 */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-[11px] font-semibold text-slate-300">
+                    Canzone Transizione Mappa (Marcia Omini):
+                  </label>
+                  <span className="text-[10px] text-white/40">Musica quando gli omini si muovono verso questo gioco</span>
+                </div>
+                <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                  {state.gioco5.audioTransizione?.startsWith('data:') || state.gioco5.audioTransizione?.startsWith('idb://') ? (
+                    <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                      <span className="text-emerald-400 font-medium truncate max-w-[200px]">
+                        🎵 {formatBase64Info(state.gioco5.audioTransizione)?.name || 'Audio Caricato'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setState(prev => ({ ...prev, gioco5: { ...prev.gioco5, audioTransizione: DEFAULT_MAPPA_TRANSIZIONE_AUDIO } }))}
+                        className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                      >
+                        Ripristina Default
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      placeholder={`Percorso audio (default: ${DEFAULT_MAPPA_TRANSIZIONE_AUDIO})...`}
+                      value={state.gioco5.audioTransizione !== undefined ? state.gioco5.audioTransizione : DEFAULT_MAPPA_TRANSIZIONE_AUDIO}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setState(prev => ({ ...prev, gioco5: { ...prev.gioco5, audioTransizione: val } }));
+                      }}
+                      className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-red-400"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => togglePreviewAudio(state.gioco5.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO)}
+                    className={`px-2.5 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors ${
+                      previewAudioUrl === (state.gioco5.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO)
+                        ? 'bg-red-500 text-white font-black'
+                        : 'bg-white/10 hover:bg-white/15 text-white'
+                    }`}
+                  >
+                    {previewAudioUrl === (state.gioco5.audioTransizione || DEFAULT_MAPPA_TRANSIZIONE_AUDIO) ? '⏸ Ferma' : '▶ Ascolta'}
+                  </button>
+                  <label className="px-2.5 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                    🎵 Sfoglia
+                    <input
+                      type="file"
+                      accept="audio/*"
+                      className="hidden"
+                      onChange={(e) =>
+                        handleFileUpload(e, (base64) =>
+                          setState(prev => ({ ...prev, gioco5: { ...prev.gioco5, audioTransizione: base64 } }))
                         )
                       }
                     />

@@ -133,10 +133,11 @@
   "gioco1": {
     "titolo": "IL MIO NOME è NESSUNO",
     "sottotitolo": "Musica & Immagini",
-    "selectedQuestion": 10,
+    "selectedQuestion": 9,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Mappa/spiegazione_box1_ambientazione.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box1.mp3",
+    "audioTransizione": "/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a",
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -424,7 +425,7 @@
             "SE PRECIPITA SI GODE L'IMPATTO, \\n SE SI INCENDIO LO SPAZIO RIMANE INTATTO",
             "INCURANTE DEL SUO DESTINO, \\n LUI SAI CHE FA? ABBASSA IL TETTINO"
           ],
-          "soluzioneAudio": "",
+          "soluzioneAudio": "/Audio/soluzioni a conferma/g01m09soluzione.mp3",
           "titolo": "PERDUTAMENTE",
           "anno": "ACHILLE LAURO - 2025"
         },
@@ -467,7 +468,7 @@
             "NUOTA SENZA PROFERIR PAROLA \\n NEL REGNO ACQUATICO è UNA SPECIE CHE NON VOLA",
             "TRA MOLTE SPECIE MARINE DALL'ASPETTO AFFINE \\n QUESTO PESCE È OTTIMO CON LE LINGUINE",
             "HA SPINE VELENOSE E UN ASPETTO MINACCIOSO \\n MA IN ZUPPA E AL CACCIUCCO È UN PIATTO DELIZIOSO.",
-            "NON È CERTO FAMOSO PER LA SUA GRAN BELLEZZA, CHI È BRUTTO COME LUI SI DICE CON FRANCHEZZA!"
+            "NON È CERTO FAMOSO PER LA SUA GRAN BELLEZZA, \\n CHI È BRUTTO COME LUI SI DICE CON FRANCHEZZA!"
           ],
           "confermaAudio": "/Audio/strumenti/4_10_GionnyScandal   Pesca_[cut_17sec].mp3",
           "soluzione": "SCORFANO",
@@ -484,6 +485,7 @@
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box2_cristalli.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box2.mp3",
+    "audioTransizione": "/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a",
     "questions": {
       "1": {
         "tipo": "canzone",
@@ -822,6 +824,7 @@
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box3_forzieri.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box3.mp3",
+    "audioTransizione": "/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a",
     "questions": {
       "1": {
         "sfondo": "/Icone/sfondi/3_1_superereoi.png",
@@ -1254,7 +1257,7 @@
       {
         "testo": "IL TRAPPER PERCEPISCE CHE IL TALENTO L' HA PORTATO LONTANO DAGLI AFFETTI",
         "sfondo": "/Icone/nessuno_img/4_9_sferaebbasta.png",
-        "confermaAudio": "",
+        "confermaAudio": "/Audio/strumenti/4_9_Lontano.mp3",
         "lettereVisibili": [
           0,
           8,
@@ -1319,7 +1322,8 @@
     "sfondoGenerale": "/Icone/nessuno_img/sfondo_box4_orologi_tempo.jpg",
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box4_orologi_tempo.jpg",
-    "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box4.mp3"
+    "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box4.mp3",
+    "audioTransizione": "/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a"
   },
   "gioco5": {
     "titolo": "TERMOPILI — SCONTRO FINALE",
@@ -1421,7 +1425,8 @@
     "notePresentatore": "",
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box5_arena_acqua.jpg",
-    "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box5.mp3"
+    "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box5.mp3",
+    "audioTransizione": "/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a"
   },
   "punteggi": {
     "sfondo": "/Icone/sfondi/sfondo_generale_torneo.jpg",

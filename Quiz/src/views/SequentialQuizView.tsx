@@ -181,9 +181,17 @@ export function getSlideForBoxQuestion(
       4: (setupState.gioco4 as any)?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box4.mp3',
       5: (setupState.gioco5 as any)?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_box5.mp3',
     };
+    const boxTransitionAudios: Record<number, string> = {
+      1: setupState.gioco1?.audioTransizione || '/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a',
+      2: setupState.gioco2?.audioTransizione || '/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a',
+      3: setupState.gioco3?.audioTransizione || '/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a',
+      4: (setupState.gioco4 as any)?.audioTransizione || '/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a',
+      5: (setupState.gioco5 as any)?.audioTransizione || '/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a',
+    };
     const currentVideo = boxVideos[boxNum] || '';
     const currentSfondo = boxSfondi[boxNum] || '';
     const currentAudio = boxAudios[boxNum] || '';
+    const currentTransitionAudio = boxTransitionAudios[boxNum] || '/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a';
     return {
       id: `box${boxNum}_mappa_spiegazione`,
       type: 'mappa_torneo',
@@ -193,6 +201,7 @@ export function getSlideForBoxQuestion(
         videoUrl: currentVideo,
         sfondoSpiegazione: currentSfondo,
         audioSpiegazione: currentAudio,
+        audioTransizione: currentTransitionAudio,
         titolo: boxTitles[boxNum] || `BOX ${boxNum}`,
         titoloGioco: (setupState as any)[`gioco${boxNum}`]?.titolo,
         sottotitolo: `Mappa dell'Isola e Spiegazione Regole`,

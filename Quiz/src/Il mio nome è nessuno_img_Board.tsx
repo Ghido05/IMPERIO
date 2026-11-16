@@ -5,6 +5,7 @@ import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
 import { sendSerialReset } from './lib/webSerial';
 import AutoFitText from './components/AutoFitText';
+import { playTeamBookingSound } from './lib/teamBookingSound';
 
 // ============================================================================
 // Gioco 2 - IMMAGINE: Logica a Step con Rivelazione Griglia e Indizi
@@ -111,6 +112,7 @@ const GameBoard = ({ interactive = true, revealAll = false, isPresenter = false 
     if (lockedStep === null) {
       setLockedStep(step);
     }
+    playTeamBookingSound();
   };
 
   const handleResetPoints = () => {

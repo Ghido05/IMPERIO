@@ -6,6 +6,7 @@ import { BussolottiOverlay } from './Gioco password_squadre_Board';
 import { getInitialPasswordGrid, type WordItem } from './lib/passwordUtils';
 import type { ActiveRevealData } from './components/TempleWordSuspenseOverlay';
 import { templeSoundFX } from './lib/templeSoundFX';
+import { playTeamBookingSound } from './lib/teamBookingSound';
 
 const getStoredActiveReveal = (): ActiveRevealData | null => {
   try {
@@ -556,6 +557,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       window.dispatchEvent(new CustomEvent('local-storage-update', {
         detail: { key: 'password_current_team', value: nextTeam.toString() }
       }));
+      playTeamBookingSound();
     }
   };
 

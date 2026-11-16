@@ -5,6 +5,7 @@ import { useSyncedState } from './hooks/useSyncedState';
 import { useScores } from './context/ScoreContext';
 import { sendSerialReset } from './lib/webSerial';
 import AutoFitText from './components/AutoFitText';
+import { playTeamBookingSound } from './lib/teamBookingSound';
 
 // ============================================================================
 // Layout esportato da Figma e reso Responsivo con Navigazione a Frecce e Audio
@@ -309,6 +310,7 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
     if (lockedStep === null) {
       setLockedStep(step);
     }
+    playTeamBookingSound();
   };
 
   const handleResetPoints = () => {

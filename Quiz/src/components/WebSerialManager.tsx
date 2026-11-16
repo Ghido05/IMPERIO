@@ -15,6 +15,7 @@ import {
   isBuzzerPollingActive,
   type BookingTeam
 } from '../lib/webSerial';
+import { playTeamBookingSound } from '../lib/teamBookingSound';
 
 interface WebSerialManagerProps {
   activeSlideId: string;
@@ -132,6 +133,7 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
         }
         setBookedTeam(playerNum.toString());
         console.log(`[WebSerialManager] Registrata prenotazione NADIA squadra ${teamColor.toUpperCase()} (${playerNum})`);
+        playTeamBookingSound();
         return true;
       }
       return false;
@@ -205,6 +207,7 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
 
       setBookedTeam(playerNum.toString());
       console.log(`[WebSerialManager] Registrata prenotazione squadra ${teamColor.toUpperCase()} (${playerNum}) per ${activeSlideId} a step ${currentStep}`);
+      playTeamBookingSound();
 
       if (isTestSlide) {
         // In modalità collaudo sblocca l'hardware dopo 500ms per consentire il test alle altre squadre

@@ -4,6 +4,7 @@ import { useScores } from './context/ScoreContext';
 import { useSyncedState } from './hooks/useSyncedState';
 import { assetUrl } from './lib/assetUrl';
 import { sendSerialReset } from './lib/webSerial';
+import { playTeamBookingSound } from './lib/teamBookingSound';
 
 export type TeamId = 1 | 2 | 3;
 
@@ -1104,7 +1105,7 @@ export default function FinaleSquadre_Board() {
 
   useEffect(() => {
     if (bookedTeam !== null && prevBookedRef.current !== bookedTeam) {
-      playSound('correct');
+      playTeamBookingSound();
     }
     prevBookedRef.current = bookedTeam;
   }, [bookedTeam]);

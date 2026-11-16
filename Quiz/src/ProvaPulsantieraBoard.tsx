@@ -3,6 +3,7 @@ import { useGameData } from './context/GameDataContext';
 import { useSyncedState } from './hooks/useSyncedState';
 import { sendSerialReset, subscribeSerialStatus } from './lib/webSerial';
 import { assetUrl } from './lib/assetUrl';
+import { playTeamBookingSound } from './lib/teamBookingSound';
 
 interface ProvaPulsantieraData {
   slideId?: string;
@@ -89,30 +90,9 @@ export default function ProvaPulsantieraBoard({
   );
 
   // Suono di feedback al click (solo relatore)
-  const playBuzzerTone = useCallback((teamNum: number) => {
+  const playBuzzerTone = useCallback((_teamNum?: number) => {
     if (!canPlayAudio) return;
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const now = ctx.currentTime;
-      const freq = teamNum === 1 ? 523.25 : teamNum === 2 ? 659.25 : 783.99;
-
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now);
-      osc.frequency.exponentialRampToValueAtTime(freq * 1.25, now + 0.15);
-      gain.gain.setValueAtTime(0.3, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.45);
-      setTimeout(() => {
-        try { ctx.close(); } catch {}
-      }, 600);
-    } catch {}
+    playTeamBookingSound();
   }, [canPlayAudio]);
 
   const lastHandledHitRef = useRef<number | null>(null);

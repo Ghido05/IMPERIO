@@ -4,6 +4,7 @@ import { useSyncedState } from './hooks/useSyncedState';
 import { assetUrl } from './lib/assetUrl';
 import { loadSetupStateDb } from './lib/quizDb';
 import { formatScoreNumber } from './lib/formatUtils';
+import { playTeamBookingSound } from './lib/teamBookingSound';
 
 const EditableScore: React.FC<{ 
   index: number; 
@@ -554,6 +555,7 @@ const ClassificaGenerale_Board: React.FC = () => {
                   onClick={() => {
                     if (activeBox === 2) {
                       setBox2ActiveTeamIdx(i);
+                      playTeamBookingSound();
                     }
                   }}
                   className={`

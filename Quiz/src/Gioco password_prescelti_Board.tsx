@@ -208,6 +208,19 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     }, 1700);
   }, [activeRevealTs, activeRevealType, activeRevealTeam, shouldPlayAudio]);
 
+  const prevTurnStateRef = useRef<{ manche: number; team: number }>({
+    manche: currentManche,
+    team: currentTeam,
+  });
+
+  useEffect(() => {
+    const prev = prevTurnStateRef.current;
+    prevTurnStateRef.current = { manche: currentManche, team: currentTeam };
+    if (shouldPlayAudio && prev.manche === currentManche && prev.team !== currentTeam) {
+      playTeamBookingSound();
+    }
+  }, [currentManche, currentTeam, shouldPlayAudio]);
+
   useEffect(() => {
     return () => {
       if (revealOutcomeTimeoutRef.current) {
@@ -646,6 +659,7 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       window.dispatchEvent(new CustomEvent('local-storage-update', {
         detail: { key: 'password_current_team', value: prevTeam.toString() }
       }));
+      playTeamBookingSound();
     }
   };
 
@@ -707,9 +721,10 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     setAudioPlaying(false);
     setSuggestionTimerEndAt(0);
     
+    const firstSeq = getTurnSequence(0);
+    prevTurnStateRef.current = { manche: 0, team: firstSeq[0] };
     setCurrentManche(0);
     setCurrentRound(1);
-    const firstSeq = getTurnSequence(0);
     setCurrentTeam(firstSeq[0]);
     setExcludedTeams([]);
     setChosenSuggestion("");

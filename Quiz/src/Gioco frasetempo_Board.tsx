@@ -4,6 +4,7 @@ import { useSyncedState } from './hooks/useSyncedState';
 import { assetUrl, sanitizeSetupStateWithKnownAssets } from './lib/assetUrl';
 import { getPhraseLetter, isPhraseLetterToken, normalizeFraseTempoItem, parsePhraseTokens } from './lib/fraseTempoUtils';
 import { useScores } from './context/ScoreContext';
+import { playTeamBookingSound } from './lib/teamBookingSound';
 
 const getBonusSlotIndex = (slideBonus: string): number => {
   if (!slideBonus) return 0;
@@ -173,24 +174,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   // Suono energico del buzzer di prenotazione squadra
   const playBuzzerSound = useCallback(() => {
     if (!isPresenter) return;
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.exponentialRampToValueAtTime(554.37, now + 0.18);
-      gain.gain.setValueAtTime(0.24, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.3);
-      setTimeout(() => ctx.close(), 500);
-    } catch {}
+    playTeamBookingSound();
   }, [isPresenter]);
 
   // Suono di riapertura asta dopo 3 secondi dalla prenotazione (doppio rintocco armonico brillante)

@@ -20,6 +20,7 @@ import { triggerFadeOutBroadcast } from '../lib/audioTracker';
 import WebSerialManager from '../components/WebSerialManager';
 import { sendSerialReset } from '../lib/webSerial';
 import { sanitizeSetupStateWithKnownAssets, assetUrl } from '../lib/assetUrl';
+import { playTeamBookingSound } from '../lib/teamBookingSound';
 
 export function getSlideForBoxQuestion(
   setupState: QuizSetupState,
@@ -900,6 +901,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     if (nadiaExcludedTeams.includes(teamNum)) return;
     if (nadiaAssignedTeam === null && nadiaBookedTeam === null && nadiaStep >= 4 && !nadiaSolutionShown) {
       setNadiaBookedTeam(teamNum);
+      playTeamBookingSound();
     }
   };
 

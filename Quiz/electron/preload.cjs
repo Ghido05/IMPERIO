@@ -43,4 +43,6 @@ contextBridge.exposeInMainWorld('electron', {
   esp32Leggi: (ip) => ipcRenderer.invoke('esp32-leggi', ip),
   esp32Sblocca: (ip) => ipcRenderer.invoke('esp32-sblocca', ip),
   saveAssetFile: (payload) => ipcRenderer.invoke('save-asset-file', payload),
+  saveHtmlPdf: (payload) => ipcRenderer.invoke('save-html-pdf', payload),
+  openHtmlPreview: (payload) => ipcRenderer.invoke('open-html-preview', payload),
 });

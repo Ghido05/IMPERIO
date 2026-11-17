@@ -686,22 +686,26 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         />
       )}
 
-      {/* Sfondo proprio della frase (Step >= 3, al 90% con sfumatura radiale e dissolvenza morbida ai bordi) */}
+      {/* Sfondo proprio della frase (Step >= 3, al 90% con sfumatura morbida su tutti i bordi) */}
       {showPhraseSfondo && phrase.sfondo && (() => {
         const isDante = phraseIndex === 6 || 
           (typeof phrase.testo === 'string' && phrase.testo.toUpperCase().includes('DANTE')) ||
           (typeof phrase.sfondo === 'string' && phrase.sfondo.toLowerCase().includes('dante'));
         const overlayGradient = isDante
           ? 'linear-gradient(rgba(0,0,0,.15), rgba(0,0,0,.25))'
-          : 'linear-gradient(180deg, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.15) 35%, rgba(0,0,0,0.20) 65%, rgba(0,0,0,0.60) 100%), radial-gradient(circle at center, transparent 35%, rgba(0,0,0,0.55) 100%)';
+          : 'linear-gradient(180deg, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.15) 35%, rgba(0,0,0,0.20) 65%, rgba(0,0,0,0.60) 100%), radial-gradient(ellipse 65% 65% at center, transparent 40%, rgba(0,0,0,0.55) 100%)';
+        const horizontalEdgeMask = 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.45) 4%, rgba(0,0,0,0.9) 10%, black 15%, black 85%, rgba(0,0,0,0.9) 90%, rgba(0,0,0,0.45) 96%, transparent 100%)';
+        const verticalEdgeMask = 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.45) 4%, rgba(0,0,0,0.9) 10%, black 15%, black 85%, rgba(0,0,0,0.9) 90%, rgba(0,0,0,0.45) 96%, transparent 100%)';
+        const combinedMask = `${horizontalEdgeMask}, ${verticalEdgeMask}`;
         return (
           <div 
-            className="absolute inset-[5%] w-[90%] h-[90%] rounded-3xl overflow-hidden bg-cover bg-center animate-fade-in pointer-events-none z-0 border border-white/10"
+            className="absolute inset-[5%] w-[90%] h-[90%] overflow-hidden bg-cover bg-center animate-fade-in pointer-events-none z-0"
             style={{
               backgroundImage: `${overlayGradient}, url("${assetUrl(phrase.sfondo)}")`,
-              boxShadow: 'inset 0 0 100px 30px rgba(0,0,0,0.85), 0 20px 60px rgba(0,0,0,0.9)',
-              maskImage: 'radial-gradient(ellipse 96% 96% at 50% 50%, black 72%, rgba(0,0,0,0.6) 88%, transparent 100%)',
-              WebkitMaskImage: 'radial-gradient(ellipse 96% 96% at 50% 50%, black 72%, rgba(0,0,0,0.6) 88%, transparent 100%)',
+              maskImage: combinedMask,
+              maskComposite: 'intersect',
+              WebkitMaskImage: combinedMask,
+              WebkitMaskComposite: 'source-in',
             }}
           />
         );

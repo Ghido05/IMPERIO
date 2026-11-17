@@ -38,6 +38,8 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   'g01m05s05trombe_nordsudovestest.mp3': '/Audio/strumenti/g01m05s05trombe_nordsudovestest.mp3',
   '1_2_Tuttoperunaragione_Benji.mp3': '/Audio/strumenti/1_2_Tuttoperunaragione_Benji.mp3',
   '1_8_thinkabouttheway.mp3': '/Audio/strumenti/1_8_thinkabouttheway.mp3',
+  '0_MilleeunaNadia_versionelunga.mp3': '/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3',
+  'DJ Antoine ft The Beat Shakers   Ma Chérie (_[cut_23sec].mp3': '/Audio/strumenti/DJ Antoine ft The Beat Shakers   Ma Chérie (_[cut_23sec].mp3',
   '4_7_Pedro_Carra.mp3': '/Audio/stacchetto/4_7_Pedro_Carra.mp3',
   '0_1_2_3_4_5_transizioni_Yocontigo.m4a': '/Audio/stacchetto/0_1_2_3_4_5_transizioni_Yocontigo.m4a',
   // Audio Spiegazione Box 0 - 4 (nella cartella Spiegazioni)
@@ -159,7 +161,7 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
 
 export function findKnownPublicAsset(rawNameOrPath: string | undefined | null): string | null {
   if (!rawNameOrPath || typeof rawNameOrPath !== 'string') return null;
-  let clean = rawNameOrPath.trim();
+  let clean = rawNameOrPath.trim().normalize('NFC');
 
   // Se è già un percorso valido con cartelle (es. Icone/..., Audio/..., ecc.)
   // e NON è un idb:// o data:, non deve essere riscritto a meno che non sia un path non esistente noto!
@@ -389,7 +391,7 @@ export function assetUrl(path: string | undefined | null): string {
     return trimmed;
   }
   const base = import.meta.env.BASE_URL || './';
-  const relative = trimmed.replace(/^\.?\//, '');
+  const relative = trimmed.normalize('NFC').replace(/^\.?\//, '');
   return `${base}${relative}`;
 }
 

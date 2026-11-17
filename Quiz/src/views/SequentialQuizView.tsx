@@ -7,6 +7,7 @@ import QRCode from 'qrcode';
 import { ScoreProvider, useScores } from '../context/ScoreContext';
 import type { Slide } from '../App';
 import { normalizeFraseTempoItem } from '../lib/fraseTempoUtils';
+import { getNadiaQuestionOrder } from '../lib/nadiaUtils';
 import {
   getDefaultSetupState,
   createDefaultGioco1Question,
@@ -761,6 +762,10 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   const [, setNadiaErrorTrigger] = useSyncedState<number>('playstate_nadia_error_trigger', 0);
   const [nadiaExcludedTeams, setNadiaExcludedTeams] = useSyncedState<number[]>('playstate_nadia_excluded_teams', []);
   const nadiaAudioRef = useRef<HTMLAudioElement | null>(null);
+  const nadiaAudioTokenRef = useRef<number>(0);
+  const preloadedJingleAudioRef = useRef<{ url: string; audio: HTMLAudioElement } | null>(null);
+  const preloadedVictoryAudioRef = useRef<{ url: string; audio: HTMLAudioElement } | null>(null);
+  const [nadiaIdbTick, setNadiaIdbTick] = useState(0);
   const [nadiaAudioPlaying, setNadiaAudioPlaying] = useState(false);
 
   // Transizione cinematica Box 1: da Spiegazione a Domanda 1
@@ -779,29 +784,173 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     setNadiaErrorTrigger(timestamp);
   };
 
+  useEffect(() => {
+    const onIdbLoaded = () => setNadiaIdbTick((t) => t + 1);
+    window.addEventListener('idb-file-loaded', onIdbLoaded);
+    return () => window.removeEventListener('idb-file-loaded', onIdbLoaded);
+  }, []);
+
+  // Precarica sigla e canzone vittoria di Nadia per evitare latenze o mancate riproduzioni al cambio traccia
+  useEffect(() => {
+    const jingleUrl = setupState.nadia?.musicaStacchetto ? assetUrl(setupState.nadia.musicaStacchetto) : '';
+    if (jingleUrl && preloadedJingleAudioRef.current?.url !== jingleUrl) {
+      try {
+        const audio = new Audio(jingleUrl);
+        audio.preload = 'auto';
+        audio.load();
+        preloadedJingleAudioRef.current = { url: jingleUrl, audio };
+      } catch {}
+    } else if (!jingleUrl) {
+      preloadedJingleAudioRef.current = null;
+    }
+
+    const victoryUrl = setupState.nadia?.canzoneStacchetto ? assetUrl(setupState.nadia.canzoneStacchetto) : '';
+    if (victoryUrl && preloadedVictoryAudioRef.current?.url !== victoryUrl) {
+      try {
+        const audio = new Audio(victoryUrl);
+        audio.preload = 'auto';
+        audio.load();
+        preloadedVictoryAudioRef.current = { url: victoryUrl, audio };
+      } catch {}
+    } else if (!victoryUrl) {
+      preloadedVictoryAudioRef.current = null;
+    }
+  }, [setupState.nadia?.musicaStacchetto, setupState.nadia?.canzoneStacchetto, nadiaIdbTick]);
+
   const stopNadiaAudio = useCallback(() => {
-    if (nadiaAudioRef.current) {
-      nadiaAudioRef.current.pause();
-      nadiaAudioRef.current.currentTime = 0;
-      nadiaAudioRef.current = null;
+    nadiaAudioTokenRef.current += 1;
+    const current = nadiaAudioRef.current;
+    nadiaAudioRef.current = null;
+    if (current) {
+      // Stacca gli handler prima di pause() per evitare che l'evento asincrono pause sovrascriva lo stato della nuova traccia
+      current.onplay = null;
+      current.onpause = null;
+      current.onended = null;
+      current.onerror = null;
+      try {
+        current.pause();
+        current.currentTime = 0;
+      } catch {}
     }
     setNadiaAudioPlaying(false);
   }, []);
 
-  const playNadiaJingle = useCallback(() => {
-    if (!setupState.nadia?.musicaStacchetto) return;
-    try {
-      stopNadiaAudio();
-      const audio = new Audio(assetUrl(setupState.nadia.musicaStacchetto));
-      audio.onplay = () => setNadiaAudioPlaying(true);
-      audio.onpause = () => setNadiaAudioPlaying(false);
-      audio.onended = () => setNadiaAudioPlaying(false);
-      nadiaAudioRef.current = audio;
-      audio.play().catch((err) => console.log('Autoplay stacchetto:', err));
-    } catch (e) {
-      console.warn('Errore esecuzione stacchetto audio:', e);
+  const playNadiaTrack = useCallback((
+    rawUrl: string | undefined,
+    preloadedRef: React.MutableRefObject<{ url: string; audio: HTMLAudioElement } | null>,
+    label: string
+  ) => {
+    if (!rawUrl) return;
+    stopNadiaAudio();
+    const myToken = ++nadiaAudioTokenRef.current;
+
+    const attachAudioListeners = (audio: HTMLAudioElement) => {
+      audio.onplay = () => {
+        if (nadiaAudioTokenRef.current === myToken && nadiaAudioRef.current === audio) {
+          setNadiaAudioPlaying(true);
+        }
+      };
+      audio.onpause = () => {
+        if (nadiaAudioTokenRef.current === myToken && nadiaAudioRef.current === audio) {
+          setNadiaAudioPlaying(false);
+        }
+      };
+      audio.onended = () => {
+        if (nadiaAudioTokenRef.current === myToken && nadiaAudioRef.current === audio) {
+          setNadiaAudioPlaying(false);
+        }
+      };
+      audio.onerror = () => {
+        if (nadiaAudioTokenRef.current === myToken && nadiaAudioRef.current === audio) {
+          setNadiaAudioPlaying(false);
+        }
+      };
+    };
+
+    const startWithUrl = (resolvedUrl: string) => {
+      if (!resolvedUrl || nadiaAudioTokenRef.current !== myToken) return;
+      try {
+        const preloaded = preloadedRef.current;
+        const canReusePreloaded = Boolean(
+          preloaded &&
+          preloaded.url === resolvedUrl &&
+          !preloaded.audio.error &&
+          !preloaded.audio.ended &&
+          preloaded.audio.readyState >= 2
+        );
+        const audio = canReusePreloaded ? preloaded!.audio : new Audio(resolvedUrl);
+        if (!canReusePreloaded) {
+          audio.preload = 'auto';
+        }
+        audio.volume = 1;
+        audio.muted = false;
+        try {
+          audio.currentTime = 0;
+        } catch {}
+
+        attachAudioListeners(audio);
+        nadiaAudioRef.current = audio;
+
+        const p = audio.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch((err) => {
+            if (nadiaAudioTokenRef.current !== myToken) return;
+            console.warn(`Primo tentativo ${label} fallito, eseguo fallback:`, err);
+            audio.onplay = null;
+            audio.onpause = null;
+            audio.onended = null;
+            audio.onerror = null;
+
+            const fallback = new Audio(resolvedUrl);
+            fallback.preload = 'auto';
+            fallback.volume = 1;
+            fallback.muted = false;
+            attachAudioListeners(fallback);
+            nadiaAudioRef.current = fallback;
+
+            let retried = false;
+            const retryPlay = () => {
+              if (retried || nadiaAudioTokenRef.current !== myToken || nadiaAudioRef.current !== fallback) return;
+              retried = true;
+              fallback.volume = 1;
+              fallback.muted = false;
+              fallback.play().catch((e2) => console.log(`Autoplay ${label}:`, e2));
+            };
+            fallback.addEventListener('canplay', retryPlay, { once: true });
+            try {
+              fallback.load();
+            } catch {}
+            setTimeout(retryPlay, 120);
+          });
+        }
+      } catch (e) {
+        console.warn(`Errore riproduzione ${label}:`, e);
+      }
+    };
+
+    const resolved = assetUrl(rawUrl);
+    if (resolved) {
+      startWithUrl(resolved);
+    } else if (rawUrl.startsWith('idb://')) {
+      const onIdbReady = () => {
+        if (nadiaAudioTokenRef.current !== myToken) {
+          window.removeEventListener('idb-file-loaded', onIdbReady);
+          return;
+        }
+        const lateUrl = assetUrl(rawUrl);
+        if (lateUrl) {
+          window.removeEventListener('idb-file-loaded', onIdbReady);
+          startWithUrl(lateUrl);
+        }
+      };
+      window.addEventListener('idb-file-loaded', onIdbReady);
+      setTimeout(() => window.removeEventListener('idb-file-loaded', onIdbReady), 5000);
     }
-  }, [setupState.nadia?.musicaStacchetto, stopNadiaAudio]);
+  }, [stopNadiaAudio]);
+
+  const playNadiaJingle = useCallback(() => {
+    playNadiaTrack(setupState.nadia?.musicaStacchetto, preloadedJingleAudioRef, 'sigla Nadia');
+  }, [setupState.nadia?.musicaStacchetto, playNadiaTrack]);
 
   const toggleNadiaJingle = useCallback(() => {
     if (!setupState.nadia?.musicaStacchetto) return;
@@ -814,20 +963,8 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
   }, [setupState.nadia?.musicaStacchetto, playNadiaJingle]);
 
   const playNadiaVictoryAudio = useCallback(() => {
-    const songUrl = setupState.nadia?.canzoneStacchetto;
-    if (!songUrl) return;
-    try {
-      stopNadiaAudio();
-      const audio = new Audio(assetUrl(songUrl));
-      audio.onplay = () => setNadiaAudioPlaying(true);
-      audio.onpause = () => setNadiaAudioPlaying(false);
-      audio.onended = () => setNadiaAudioPlaying(false);
-      nadiaAudioRef.current = audio;
-      audio.play().catch((err) => console.log('Autoplay canzone vittoria Nadia:', err));
-    } catch (e) {
-      console.warn('Errore canzone stacchetto vittoria:', e);
-    }
-  }, [setupState.nadia?.canzoneStacchetto, stopNadiaAudio]);
+    playNadiaTrack(setupState.nadia?.canzoneStacchetto, preloadedVictoryAudioRef, 'canzone vittoria Nadia');
+  }, [setupState.nadia?.canzoneStacchetto, playNadiaTrack]);
 
   const toggleNadiaVictoryAudio = useCallback(() => {
     const songUrl = setupState.nadia?.canzoneStacchetto;
@@ -847,7 +984,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     };
   }, [stopNadiaAudio]);
 
-  const handleAssignNadiaPoints = (teamNum: number) => {
+  const handleAssignNadiaPoints = useCallback((teamNum: number) => {
     if (nadiaAssignedTeam !== null) return;
     // Quando c'è Mille e una Nadia la risposta corretta dà SEMPRE 1000 punti
     addScore(teamNum - 1, 1000);
@@ -856,7 +993,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     setNadiaSolutionShown(true);
     sendSerialReset();
     playNadiaVictoryAudio();
-  };
+  }, [nadiaAssignedTeam, addScore, setNadiaAssignedTeam, setNadiaBookedTeam, setNadiaSolutionShown, playNadiaVictoryAudio]);
 
   const handleResetNadiaPoints = () => {
     if (nadiaAssignedTeam !== null) {
@@ -910,21 +1047,17 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     const qId = nadiaQuestionForCurrentSlot.id;
     const orderKey = `playstate_nadia_order_${qId}`;
 
-    // Calcoliamo la permutazione [0, 1, 2] se non già memorizzata
-    let order = [0, 1, 2];
-    const saved = localStorage.getItem(orderKey);
-    if (!saved) {
-      // Fisher-Yates shuffle casuale
-      order = [0, 1, 2].sort(() => Math.random() - 0.5);
-      localStorage.setItem(orderKey, JSON.stringify(order));
-      window.dispatchEvent(new CustomEvent('local-storage-update', {
-        detail: { key: orderKey, value: JSON.stringify(order) }
-      }));
-      if ((window as any).electron?.broadcastState) {
-        (window as any).electron.broadcastState({
-          localStorageUpdate: { key: orderKey, value: JSON.stringify(order) }
-        });
-      }
+    // Usa l'ordine fisso configurato nel Setup (o fallback deterministico stabile)
+    const order = getNadiaQuestionOrder(nadiaQuestionForCurrentSlot);
+    const serializedOrder = JSON.stringify(order);
+    localStorage.setItem(orderKey, serializedOrder);
+    window.dispatchEvent(new CustomEvent('local-storage-update', {
+      detail: { key: orderKey, value: serializedOrder }
+    }));
+    if ((window as any).electron?.broadcastState) {
+      (window as any).electron.broadcastState({
+        localStorageUpdate: { key: orderKey, value: serializedOrder }
+      });
     }
 
     setNadiaQuestionId(qId);
@@ -1035,7 +1168,19 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
           if (nadiaStep > 0 && !nadiaSolutionShown) {
             setNadiaStep(nadiaStep - 1);
           }
-        } else if (e.key === 's' || e.key === 'S' || e.key === 'Enter') {
+        } else if (e.key === 'Enter') {
+          if (nadiaBookedTeam !== null && nadiaAssignedTeam === null) {
+            e.preventDefault();
+            handleAssignNadiaPoints(nadiaBookedTeam);
+          } else {
+            setNadiaSolutionShown((prev) => !prev);
+          }
+        } else if (e.key === 'c' || e.key === 'C') {
+          if (nadiaBookedTeam !== null && nadiaAssignedTeam === null) {
+            e.preventDefault();
+            handleAssignNadiaPoints(nadiaBookedTeam);
+          }
+        } else if (e.key === 's' || e.key === 'S') {
           setNadiaSolutionShown((prev) => !prev);
         } else if (e.key === 'e' || e.key === 'E' || e.key === 'x' || e.key === 'X') {
           // Segnala Errore con grande X rossa + scossa
@@ -1047,7 +1192,11 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
             handleCloseNadia();
           }
         } else if (e.key === 'm' || e.key === 'M') {
-          toggleNadiaJingle();
+          if (nadiaAssignedTeam !== null && setupState.nadia?.canzoneStacchetto) {
+            toggleNadiaVictoryAudio();
+          } else {
+            toggleNadiaJingle();
+          }
         } else if (e.key === 'Backspace') {
           if (nadiaBookedTeam !== null) {
             handleCancelNadiaBooking(true);
@@ -1057,7 +1206,7 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [nadiaActive, nadiaStep, setNadiaStep, nadiaBookedTeam, nadiaAssignedTeam, nadiaSolutionShown, setNadiaSolutionShown, handleCloseNadia, toggleNadiaJingle]);
+  }, [nadiaActive, nadiaStep, setNadiaStep, nadiaBookedTeam, nadiaAssignedTeam, nadiaSolutionShown, setNadiaSolutionShown, handleCloseNadia, toggleNadiaJingle, toggleNadiaVictoryAudio, handleAssignNadiaPoints, setupState.nadia?.canzoneStacchetto]);
 
   // Quando si cambia domanda o box, ferma SEMPRE qualsiasi audio di Nadia e chiudi Nadia se ancora aperta
   const prevSlotRef = useRef({ box: activeBox, q: activeQuestion });

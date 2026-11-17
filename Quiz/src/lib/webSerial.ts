@@ -369,6 +369,79 @@ export function isBuzzerPollingActive(): boolean {
   return isFastPollingActive;
 }
 
+function isEmptyStorageVal(val: string | null | undefined): boolean {
+  return val === null || val === undefined || val === '' || val === 'null';
+}
+
+/**
+ * Calcola in tempo reale se la pulsantiera è attiva (pronta a ricevere prenotazioni)
+ * in base allo stato corrente del gioco salvato in localStorage.
+ */
+export function computeIsBuzzerActiveFromStorage(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    if (localStorage.getItem('buzzer_search_paused') === 'true') {
+      return false;
+    }
+
+    const isNadiaActive = localStorage.getItem('playstate_nadia_active') === 'true';
+    if (isNadiaActive) {
+      const nadiaStep = parseInt(localStorage.getItem('playstate_nadia_step') || '0', 10);
+      const nadiaSol = localStorage.getItem('playstate_nadia_solution_shown') === 'true';
+      const nadiaBooked = localStorage.getItem('playstate_nadia_booked_team');
+      const nadiaAssigned = localStorage.getItem('playstate_nadia_assigned_team');
+      return (
+        nadiaStep >= 4 &&
+        !nadiaSol &&
+        isEmptyStorageVal(nadiaBooked) &&
+        isEmptyStorageVal(nadiaAssigned)
+      );
+    }
+
+    const activeBox = parseInt(localStorage.getItem('playstate_active_box') || '1', 10);
+    const activeQuestion = parseInt(localStorage.getItem('playstate_active_question') || '1', 10);
+
+    if (activeBox === 0) {
+      return activeQuestion === 5;
+    }
+
+    if (activeBox === 1) {
+      if (activeQuestion < 1) return false;
+      const slideId = `box1_q${activeQuestion}`;
+      const booked = localStorage.getItem(`playstate_${slideId}_booked_team`);
+      const assigned = localStorage.getItem(`playstate_${slideId}_assigned_team`);
+      return isEmptyStorageVal(booked) && isEmptyStorageVal(assigned);
+    }
+
+    if (activeBox === 2 || activeBox === 3) {
+      return false;
+    }
+
+    if (activeBox === 4) {
+      if (activeQuestion < 1) return false;
+      const slideId = `box4_q${activeQuestion}`;
+      const pIdx = Math.max(0, activeQuestion - 1);
+      const prefix = `playstate_${slideId}_p${pIdx}`;
+      const step = parseInt(localStorage.getItem(`${prefix}_step`) || '0', 10);
+      const auctionLocked = localStorage.getItem(`${prefix}_auction_locked`) === 'true';
+      const revealed = localStorage.getItem(`${prefix}_revealed`) === 'true';
+      const booked = localStorage.getItem(`playstate_${slideId}_booked_team`);
+      return step >= 5 && !auctionLocked && !revealed && isEmptyStorageVal(booked);
+    }
+
+    if (activeBox === 5) {
+      if (activeQuestion < 1) return false;
+      const booked = localStorage.getItem('playstate_finale_squadre_booked_team');
+      const assigned = localStorage.getItem('playstate_finale_squadre_assigned_team');
+      return isEmptyStorageVal(booked) && isEmptyStorageVal(assigned);
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Singola verifica dello stato hardware con notifica immediata dei listener UI
  */

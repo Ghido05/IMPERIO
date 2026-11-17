@@ -9,6 +9,10 @@ import SlideCanvas from '../components/SlideCanvas';
 import { ScoreProvider, useScores } from '../context/ScoreContext';
 import { formatScoreNumber } from '../lib/formatUtils';
 import { assetUrl } from '../lib/assetUrl';
+import { getNadiaQuestionOrder, isValidNadiaOrder } from '../lib/nadiaUtils';
+import StageViewport from '../components/StageViewport';
+import { STAGE_W, STAGE_H } from '../hooks/useStageBox';
+import DjLaunchpadPanel from '../components/DjLaunchpadPanel';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -64,8 +68,9 @@ function IpadContent() {
   const [wsConnected, setWsConnected] = useState(false);
   const [setupState, setSetupState] = useState<any>(null);
   const [bookedTeam, setBookedTeam] = useState<number | null>(null);
+  const [showLaunchpad, setShowLaunchpad] = useState<boolean>(false);
 
-  const { scores, bonuses, toggleBonus } = useScores();
+  const { scores, bonuses } = useScores();
 
   const IPAD_BONUS_CONFIGS = [
     { key: 'dado', label: 'Dado', emoji: '🎲' },
@@ -443,9 +448,8 @@ function IpadContent() {
   const [nadiaActive] = useSyncedState<boolean>('playstate_nadia_active', false);
   const [nadiaQuestionId] = useSyncedState<string>('playstate_nadia_question_id', '');
   const [nadiaSolutionShown] = useSyncedState<boolean>('playstate_nadia_solution_shown', false);
-  const [nadiaBookedTeam, setNadiaBookedTeam] = useSyncedState<number | null>('playstate_nadia_booked_team', null);
+  const [nadiaBookedTeam] = useSyncedState<number | null>('playstate_nadia_booked_team', null);
   const [nadiaAssignedTeam] = useSyncedState<number | null>('playstate_nadia_assigned_team', null);
-  const [, setNadiaErrorTrigger] = useSyncedState<number>('playstate_nadia_error_trigger', 0);
   const [nadiaShuffledOrder] = useSyncedState<[number, number, number]>(
     `playstate_nadia_order_${nadiaQuestionId}`,
     [0, 1, 2]
@@ -453,6 +457,10 @@ function IpadContent() {
 
   const effectiveNadiaSetup = setupState?.nadia || null;
   const effectiveNadiaQuestion = (effectiveNadiaSetup?.domande || []).find((d: any) => d.id === nadiaQuestionId) || effectiveNadiaSetup?.domande?.[0] || null;
+  const effectiveNadiaOrder =
+    nadiaQuestionId && localStorage.getItem(`playstate_nadia_order_${nadiaQuestionId}`) && isValidNadiaOrder(nadiaShuffledOrder)
+      ? nadiaShuffledOrder
+      : getNadiaQuestionOrder(effectiveNadiaQuestion);
 
   // Trova la slide password_prescelti all'interno del progetto per caricarne i dati
   const presceltiSlide = slides.find(s => s.type === 'password_prescelti');
@@ -472,25 +480,29 @@ function IpadContent() {
 
   let mainContent = null;
 
-  if (nadiaActive && effectiveNadiaSetup && effectiveNadiaQuestion) {
+  if (showLaunchpad) {
+    mainContent = (
+      <div className="w-full h-full flex items-center justify-center bg-[#14141b] p-1">
+        <DjLaunchpadPanel onBackToScores={() => setShowLaunchpad(false)} />
+      </div>
+    );
+  } else if (nadiaActive && effectiveNadiaSetup && effectiveNadiaQuestion) {
     mainContent = (
       <div className="w-full h-full flex items-center justify-center bg-black relative overflow-hidden">
-        <div className="relative aspect-[16/9] w-full max-h-full max-w-[1920px] flex items-center justify-center">
-          <MilleEUnaNadiaBoard
-            nadiaSetup={effectiveNadiaSetup}
-            question={effectiveNadiaQuestion}
-            shuffledOrder={nadiaShuffledOrder}
-            solutionShown={nadiaSolutionShown}
-            isPresenter={true}
-            bookedTeam={nadiaBookedTeam}
-            assignedTeam={nadiaAssignedTeam}
-            teamNames={teamNames}
-            onCancelBooking={() => {
-              setNadiaErrorTrigger(Date.now());
-              setNadiaBookedTeam(null);
-            }}
-          />
-        </div>
+        <StageViewport mode="fit" interactive={false}>
+          <div className="relative" style={{ width: STAGE_W, height: STAGE_H }}>
+            <MilleEUnaNadiaBoard
+              nadiaSetup={effectiveNadiaSetup}
+              question={effectiveNadiaQuestion}
+              shuffledOrder={effectiveNadiaOrder}
+              solutionShown={nadiaSolutionShown}
+              isPresenter={true}
+              bookedTeam={nadiaBookedTeam}
+              assignedTeam={nadiaAssignedTeam}
+              teamNames={teamNames}
+            />
+          </div>
+        </StageViewport>
       </div>
     );
   } else if (isPasswordGame && activeSlide) {
@@ -713,20 +725,15 @@ function IpadContent() {
           const isAvailable = Boolean(bonuses?.[teamIdx]?.[bIdx]);
           const customIcon = setupState?.punteggi?.iconeBonus?.[bIdx];
           return (
-            <button
+            <div
               key={bIdx}
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                toggleBonus(teamIdx, bIdx);
-              }}
-              title={`${bConfig.label}: ${isAvailable ? 'Disponibile (tocca per spendere)' : 'Utilizzato / Non disponibile (tocca per assegnare)'}`}
-              className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all duration-200 border cursor-pointer active:scale-95 ${
+              title={`${bConfig.label}: ${isAvailable ? 'Disponibile' : 'Utilizzato / Non disponibile'}`}
+              className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-lg flex items-center justify-center transition-all duration-200 border ${
                 isAvailable
                   ? isBooked
                     ? 'bg-white/40 border-white text-white shadow-md scale-105'
                     : 'bg-amber-400/25 border-amber-300 text-amber-200 shadow-[0_0_10px_rgba(251,191,36,0.5)] scale-100 ring-1 ring-amber-400/50'
-                  : 'bg-black/40 border-white/10 opacity-25 grayscale scale-90 hover:opacity-40'
+                  : 'bg-black/40 border-white/10 opacity-25 grayscale scale-90'
               }`}
             >
               {customIcon ? (
@@ -734,7 +741,7 @@ function IpadContent() {
               ) : (
                 <span className="text-xs sm:text-sm md:text-base leading-none select-none">{bConfig.emoji}</span>
               )}
-            </button>
+            </div>
           );
         })}
       </div>
@@ -742,7 +749,7 @@ function IpadContent() {
   };
 
   return (
-    <div className="w-full h-screen bg-slate-950 text-white flex flex-col overflow-hidden font-sans select-none">
+    <div className="w-full h-dvh bg-slate-950 text-white flex flex-col overflow-hidden font-sans select-none">
       {/* CSS per Animazione di Lampeggio Buzzer Conduttore */}
       <style>{`
         @keyframes ipad-blink {
@@ -771,6 +778,19 @@ function IpadContent() {
           <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-400'}`} />
           <span>{wsConnected ? 'LIVE' : 'OFFLINE'}</span>
         </div>
+
+        {/* Pulsante rapido Launchpad / Gioco su iPad */}
+        <button
+          type="button"
+          onClick={() => setShowLaunchpad((prev) => !prev)}
+          className={`absolute top-2 left-2 z-30 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-wider cursor-pointer transition-all active:scale-95 ${
+            showLaunchpad
+              ? 'bg-amber-500 text-black border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.6)]'
+              : 'bg-black/70 text-cyan-300 border-cyan-500/40 hover:bg-cyan-950/60'
+          }`}
+        >
+          <span>{showLaunchpad ? '🎮 GIOCO' : '🎛️ LAUNCHPAD'}</span>
+        </button>
 
         {/* Squadra 3 (Verde) */}
         <div 

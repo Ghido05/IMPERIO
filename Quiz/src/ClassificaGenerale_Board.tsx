@@ -5,13 +5,71 @@ import { assetUrl } from './lib/assetUrl';
 import { loadSetupStateDb } from './lib/quizDb';
 import { formatScoreNumber } from './lib/formatUtils';
 import { playTeamBookingSound } from './lib/teamBookingSound';
+import { computeIsBuzzerActiveFromStorage } from './lib/webSerial';
+
+let sharedScoreAudioCtx: AudioContext | null = null;
+function getScoreAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (!sharedScoreAudioCtx || sharedScoreAudioCtx.state === 'closed') {
+    sharedScoreAudioCtx = new AudioCtx();
+  }
+  if (sharedScoreAudioCtx.state === 'suspended') {
+    sharedScoreAudioCtx.resume().catch(() => {});
+  }
+  return sharedScoreAudioCtx;
+}
+
+function playScoreTickTone(progress: number) {
+  try {
+    const ctx = getScoreAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    // Frequenza crescente fluida da 440Hz a 980Hz mentre i punti salgono
+    const freq = 440 + Math.min(1, Math.max(0, progress)) * 540;
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, now);
+    osc.frequency.exponentialRampToValueAtTime(freq * 1.08, now + 0.045);
+    gain.gain.setValueAtTime(0.11, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.048);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.05);
+  } catch {}
+}
+
+function playScoreCompleteChime() {
+  try {
+    const ctx = getScoreAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+    [880, 1108.73, 1318.51].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.045);
+      gain.gain.setValueAtTime(0.14 / (idx + 1), now + idx * 0.045);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.045 + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + idx * 0.045);
+      osc.stop(now + idx * 0.045 + 0.38);
+    });
+  } catch {}
+}
 
 const EditableScore: React.FC<{ 
   index: number; 
   score: number; 
   setScore: (i: number, val: number) => void;
   isAnimated?: boolean;
-}> = ({ index, score, setScore, isAnimated = false }) => {
+  canPlaySound?: boolean;
+  onAnimationProgress?: (index: number, isAnimating: boolean, currentScore: number) => void;
+}> = ({ index, score, setScore, isAnimated = false, canPlaySound = false, onAnimationProgress }) => {
   const [isEditing, setIsEditing] = React.useState(false);
   const [localValue, setLocalValue] = React.useState(score.toString());
   const [animScore, setAnimScore] = React.useState(isAnimated ? 0 : score);
@@ -26,6 +84,9 @@ const EditableScore: React.FC<{
   const prevIsAnimatedRef = React.useRef(isAnimated);
   const animIdRef = React.useRef<number | null>(null);
   const pulseTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const lastTickSoundRef = React.useRef<number>(0);
+  const onAnimProgressRef = React.useRef(onAnimationProgress);
+  onAnimProgressRef.current = onAnimationProgress;
 
   const triggerPulse = React.useCallback(() => {
     if (pulseTimerRef.current) {
@@ -48,10 +109,14 @@ const EditableScore: React.FC<{
 
     if (startVal === targetVal) {
       setAnimScore(targetVal);
+      onAnimProgressRef.current?.(index, false, targetVal);
       return;
     }
 
+    const isIncreasing = targetVal > startVal;
     let startTimestamp: number | null = null;
+    lastTickSoundRef.current = 0;
+    onAnimProgressRef.current?.(index, isIncreasing, startVal);
 
     const step = (timestamp: number) => {
       if (startTimestamp === null) {
@@ -69,17 +134,29 @@ const EditableScore: React.FC<{
       const ease = 1 - Math.pow(1 - progress, 3);
       const current = Math.round(startVal + (targetVal - startVal) * ease);
       setAnimScore(current);
+      onAnimProgressRef.current?.(index, isIncreasing && progress < 1, current);
+
+      if (canPlaySound && isIncreasing && progress < 1) {
+        if (timestamp - lastTickSoundRef.current >= 60) {
+          lastTickSoundRef.current = timestamp;
+          playScoreTickTone(progress);
+        }
+      }
 
       if (progress < 1) {
         animIdRef.current = requestAnimationFrame(step);
       } else {
         setAnimScore(targetVal);
+        onAnimProgressRef.current?.(index, false, targetVal);
+        if (canPlaySound && isIncreasing) {
+          playScoreCompleteChime();
+        }
         animIdRef.current = null;
       }
     };
 
     animIdRef.current = requestAnimationFrame(step);
-  }, []);
+  }, [index, canPlaySound]);
 
   // Cleanup animazioni e timer all'unmount
   React.useEffect(() => {
@@ -302,15 +379,81 @@ const ClassificaGenerale_Board: React.FC = () => {
     return () => window.removeEventListener('idb-file-loaded', handleIdbLoaded);
   }, [setup]);
 
+  const canPlaySound = React.useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    if (mode === 'games' || mode === 'scores' || mode === 'ipad') return false;
+    return true;
+  }, []);
+
+  const [isBuzzerActive, setIsBuzzerActive] = React.useState<boolean>(() => computeIsBuzzerActiveFromStorage());
+
+  React.useEffect(() => {
+    const updateBuzzer = () => {
+      setIsBuzzerActive(computeIsBuzzerActiveFromStorage());
+    };
+    updateBuzzer();
+    window.addEventListener('storage', updateBuzzer);
+    window.addEventListener('local-storage-update', updateBuzzer);
+    const interval = setInterval(updateBuzzer, 250);
+    return () => {
+      window.removeEventListener('storage', updateBuzzer);
+      window.removeEventListener('local-storage-update', updateBuzzer);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const [animatingTeams, setAnimatingTeams] = React.useState<Record<number, boolean>>({});
+  const [pulseCounters, setPulseCounters] = React.useState<Record<number, number>>({ 0: 0, 1: 0, 2: 0 });
+  const [liveAnimScores, setLiveAnimScores] = React.useState<Record<number, number>>({});
+  const prevAnimatingRef = React.useRef<Record<number, boolean>>({});
+
+  const handleAnimationProgress = React.useCallback((idx: number, isAnimating: boolean, currentScore: number) => {
+    setLiveAnimScores((prev) => (prev[idx] === currentScore ? prev : { ...prev, [idx]: currentScore }));
+    if (isAnimating && !prevAnimatingRef.current[idx]) {
+      prevAnimatingRef.current[idx] = true;
+      setAnimatingTeams((prev) => ({ ...prev, [idx]: true }));
+      setPulseCounters((prev) => ({ ...prev, [idx]: (prev[idx] || 0) + 1 }));
+    } else if (!isAnimating && prevAnimatingRef.current[idx]) {
+      prevAnimatingRef.current[idx] = false;
+      setTimeout(() => {
+        setAnimatingTeams((prev) => ({ ...prev, [idx]: false }));
+      }, 450);
+    }
+  }, []);
+
   const teamNames = setup?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
   const teamConfigs = [
-    { name: teamNames[0] || 'SQUADRA 1', color: 'bg-red-600', textColor: 'text-red-500' },
-    { name: teamNames[1] || 'SQUADRA 2', color: 'bg-blue-600', textColor: 'text-blue-500' },
-    { name: teamNames[2] || 'SQUADRA 3', color: 'bg-green-600', textColor: 'text-green-500' },
+    {
+      name: teamNames[0] || 'SQUADRA 1',
+      color: 'bg-red-600',
+      textColor: 'text-red-500',
+      backGlow: 'from-red-600/45 via-amber-500/25 to-red-900/35',
+      beamGlow: 'from-transparent via-red-400/55 to-amber-200/80',
+      borderGlow: 'border-red-400/70 shadow-[0_0_45px_rgba(239,68,68,0.45),inset_0_0_40px_rgba(239,68,68,0.3)]',
+    },
+    {
+      name: teamNames[1] || 'SQUADRA 2',
+      color: 'bg-blue-600',
+      textColor: 'text-blue-500',
+      backGlow: 'from-blue-600/45 via-cyan-400/25 to-blue-900/35',
+      beamGlow: 'from-transparent via-cyan-300/55 to-white/80',
+      borderGlow: 'border-cyan-400/70 shadow-[0_0_45px_rgba(59,130,246,0.45),inset_0_0_40px_rgba(59,130,246,0.3)]',
+    },
+    {
+      name: teamNames[2] || 'SQUADRA 3',
+      color: 'bg-green-600',
+      textColor: 'text-green-500',
+      backGlow: 'from-emerald-600/45 via-amber-300/25 to-emerald-900/35',
+      beamGlow: 'from-transparent via-emerald-300/55 to-amber-200/80',
+      borderGlow: 'border-emerald-400/70 shadow-[0_0_45px_rgba(16,185,129,0.45),inset_0_0_40px_rgba(16,185,129,0.3)]',
+    },
   ];
 
   const maxScore = Math.max(...scores, 10000); // Scale histogram to at least 10k
   const isBox0 = activeBox === 0;
+  const isAnyTeamAnimating = Boolean(animatingTeams[0] || animatingTeams[1] || animatingTeams[2]);
 
   const prevBoxRef = React.useRef<number | null>(null);
   const [isTransitioning, setIsTransitioning] = React.useState(false);
@@ -441,22 +584,54 @@ const ClassificaGenerale_Board: React.FC = () => {
         }`}
       />
 
-      {/* Fascio di luce dorata che spazza lo schermo alla transizione */}
-      {isTransitioning && (
-        <div className="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+      {/* Fascio di luce dorata che spazza lo schermo alla transizione o all'aumento punti */}
+      {(isTransitioning || isAnyTeamAnimating) && (
+        <div
+          key={`sweep-${isTransitioning ? 'init' : `${pulseCounters[0]}-${pulseCounters[1]}-${pulseCounters[2]}`}`}
+          className="absolute inset-0 pointer-events-none z-10 overflow-hidden"
+        >
           <div className="w-[180%] h-full bg-gradient-to-r from-transparent via-amber-300/25 to-transparent animate-gold-sweep" />
         </div>
       )}
 
-      {/* Background decoration in Box 0 (sfuma via fluidamente entrando in Box 1) */}
+      {/* Background decoration in Box 0 o durante incremento punti (colora lo sfondo dietro gli istogrammi come nella transizione iniziale) */}
       <div
-        className={`absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none transition-opacity duration-1200 ${
-          isBox0 ? 'opacity-25' : 'opacity-0'
+        className={`absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none transition-opacity duration-700 ${
+          isBox0 || isTransitioning || isAnyTeamAnimating ? 'opacity-35' : 'opacity-0'
         }`}
       >
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-600/20 blur-[120px] rounded-full" />
-        <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] bg-blue-600/20 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[-10%] left-[30%] w-[40%] h-[40%] bg-green-600/20 blur-[120px] rounded-full" />
+        <div
+          className={`absolute top-[-10%] left-[-10%] w-[45%] h-[55%] bg-red-600/30 blur-[120px] rounded-full transition-opacity duration-500 ${
+            isBox0 || isTransitioning || animatingTeams[0] ? 'opacity-100' : 'opacity-20'
+          }`}
+        />
+        <div
+          className={`absolute top-[20%] left-[28%] w-[45%] h-[55%] bg-blue-600/30 blur-[120px] rounded-full transition-opacity duration-500 ${
+            isBox0 || isTransitioning || animatingTeams[1] ? 'opacity-100' : 'opacity-20'
+          }`}
+        />
+        <div
+          className={`absolute bottom-[-10%] right-[-10%] w-[45%] h-[55%] bg-emerald-600/30 blur-[120px] rounded-full transition-opacity duration-500 ${
+            isBox0 || isTransitioning || animatingTeams[2] ? 'opacity-100' : 'opacity-20'
+          }`}
+        />
+      </div>
+
+      {/* Indicatore sempre presente stato Pulsantiera (Pallino Verde = Attiva / Rosso = Non attiva) */}
+      <div
+        className="absolute top-8 right-10 z-30 flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/65 border border-white/15 backdrop-blur-md shadow-xl"
+        title={isBuzzerActive ? 'Pulsantiera attiva' : 'Pulsantiera non attiva'}
+      >
+        <span
+          className={`w-4 h-4 rounded-full transition-all duration-300 ${
+            isBuzzerActive
+              ? 'bg-emerald-500 shadow-[0_0_16px_#10b981] animate-pulse'
+              : 'bg-red-500 shadow-[0_0_14px_#ef4444]'
+          }`}
+        />
+        <span className="text-xs font-black uppercase tracking-wider text-white/80">
+          {isBuzzerActive ? 'Pulsantiera Attiva' : 'Pulsantiera Bloccata'}
+        </span>
       </div>
 
       <h1 className="text-5xl font-black text-center mb-6 tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0 z-20">
@@ -514,6 +689,8 @@ const ClassificaGenerale_Board: React.FC = () => {
                       score={scores[i]} 
                       setScore={setScore} 
                       isAnimated={isTransitioning}
+                      canPlaySound={canPlaySound}
+                      onAnimationProgress={handleAnimationProgress}
                     />
                   </div>
                 </div>
@@ -541,8 +718,9 @@ const ClassificaGenerale_Board: React.FC = () => {
               isBox1Booked ||
               (!nadiaActive && activeBox === 2 && blinkingTeamIdx === i);
 
-            const teamScore = scores[i] || 0;
+            const teamScore = liveAnimScores[i] !== undefined ? liveAnimScores[i] : (scores[i] || 0);
             const barHeightPct = Math.max((teamScore / maxScore) * 100, 6); // Base minima visibile del 6%
+            const isTeamAnimating = isTransitioning || Boolean(animatingTeams[i]);
 
             return (
               <div 
@@ -590,18 +768,44 @@ const ClassificaGenerale_Board: React.FC = () => {
                   score={scores[i]} 
                   setScore={setScore} 
                   isAnimated={isTransitioning}
+                  canPlaySound={canPlaySound}
+                  onAnimationProgress={handleAnimationProgress}
                 />
 
                 {/* Traccia Istogramma e Colonna che cresce dal basso verso l'alto */}
-                <div className="w-full relative overflow-hidden min-h-[180px] my-2 rounded-t-3xl bg-white/5 border border-white/10 shadow-inner">
-                  {/* Fascio di energia che sale all'inizio del box 1 */}
-                  {isTransitioning && (
+                <div
+                  className={`w-full relative overflow-hidden min-h-[180px] my-2 rounded-t-3xl border transition-all duration-500 ${
+                    isTeamAnimating
+                      ? `bg-gradient-to-t ${team.backGlow} ${team.borderGlow}`
+                      : 'bg-white/5 border-white/10 shadow-inner'
+                  }`}
+                >
+                  {/* Retro dell'istogramma che si colora e s'illumina durante la transizione iniziale o l'aumento punti */}
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-t ${team.backGlow} pointer-events-none transition-opacity duration-500 ${
+                      isTeamAnimating ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  />
+
+                  {/* Fascio di energia che sale lungo il retro dell'istogramma */}
+                  {isTeamAnimating && (
                     <div
-                      className="absolute inset-x-0 h-28 bg-gradient-to-t from-transparent via-amber-300/40 to-white/70 blur-md pointer-events-none z-10"
+                      key={`beam-${i}-${pulseCounters[i] || 0}-${isTransitioning ? 'init' : 'inc'}`}
+                      className={`absolute inset-x-0 h-32 bg-gradient-to-t ${team.beamGlow} blur-md pointer-events-none z-10`}
                       style={{
-                        animation: `energyBeamSweep 1.6s ease-out ${i * 0.25}s forwards`,
+                        animation: `energyBeamSweep 1.4s ease-out ${isTransitioning ? i * 0.25 : 0}s forwards`,
                       }}
                     />
+                  )}
+
+                  {/* Riflesso dorato diagonale sul retro dell'istogramma */}
+                  {isTeamAnimating && (
+                    <div
+                      key={`gold-${i}-${pulseCounters[i] || 0}-${isTransitioning ? 'init' : 'inc'}`}
+                      className="absolute inset-0 pointer-events-none z-10 overflow-hidden"
+                    >
+                      <div className="w-[180%] h-full bg-gradient-to-r from-transparent via-amber-200/35 to-transparent animate-gold-sweep" />
+                    </div>
                   )}
 
                   {/* Barra colorata dell'istogramma con crescita graduale */}
@@ -612,11 +816,11 @@ const ClassificaGenerale_Board: React.FC = () => {
                       animation: isTransitioning
                         ? `barGrowUp 1.6s cubic-bezier(0.16, 1, 0.3, 1) ${i * 0.25}s backwards`
                         : undefined,
-                      transition: isTransitioning ? undefined : 'height 1000ms ease-out',
+                      transition: isTransitioning ? undefined : 'height 120ms linear',
                     }}
                   >
                     <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    <div className="absolute top-0 left-0 w-full h-1.5 bg-white/50 shadow-[0_0_10px_white]" />
+                    <div className={`absolute top-0 left-0 w-full h-1.5 bg-white/70 ${isTeamAnimating ? 'shadow-[0_0_20px_#fde047,0_0_10px_white]' : 'shadow-[0_0_10px_white]'}`} />
                   </div>
                 </div>
 

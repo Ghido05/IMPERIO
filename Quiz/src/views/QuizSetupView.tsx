@@ -2,6 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { assetUrl, idbNameCache, findKnownPublicAsset, sanitizeSetupStateWithKnownAssets } from '../lib/assetUrl';
 import { saveSetupStateDb, loadSetupStateDb } from '../lib/quizDb';
 import { createDefaultFraseTempoItem, isPhraseLetterToken, normalizeFraseTempoItem, parsePhraseTokens, type FraseTempoItem } from '../lib/fraseTempoUtils';
+import {
+  NADIA_LETTERS,
+  buildNadiaCardsPrintHtml,
+  cycleSingleNadiaOrder,
+  generateRandomNadiaOrder,
+  getDeterministicNadiaOrder,
+  getNadiaCorrectLetter,
+  getNadiaOrderedOptions,
+  getNadiaQuestionOrder,
+  isValidNadiaOrder,
+  shuffleAllNadiaOrders,
+  type NadiaAnswerOrder,
+} from '../lib/nadiaUtils';
 
 // Data types for Box 1 (Gioco 1)
 export interface Gioco1CanzoneData {
@@ -193,6 +206,7 @@ export interface NadiaQuestionItem {
   risposta3: string; // Opzione 3 errata
   targetBox: number; // 1..5
   targetQuestion: number; // numero domanda o frase nel box
+  ordineRisposte?: NadiaAnswerOrder; // Ordine fisso delle 3 risposte [origIdxA, origIdxB, origIdxC]
 }
 
 export interface NadiaSetup {
@@ -588,6 +602,7 @@ export function createDefaultNadiaQuestion(box: number = 1, q: number = 1): Nadi
     risposta3: '',
     targetBox: box,
     targetQuestion: q,
+    ordineRisposte: generateRandomNadiaOrder(),
   };
 }
 
@@ -605,6 +620,7 @@ export function createDefaultNadiaSetup(): NadiaSetup {
         risposta3: '',
         targetBox: 1,
         targetQuestion: 1,
+        ordineRisposte: getDeterministicNadiaOrder('nadia_1'),
       },
     ],
   };
@@ -614,15 +630,21 @@ export function normalizeNadia(raw: any, def: NadiaSetup): NadiaSetup {
   if (!raw || typeof raw !== 'object') return def;
   let domande: NadiaQuestionItem[] = [];
   if (Array.isArray(raw.domande) && raw.domande.length > 0) {
-    domande = raw.domande.map((d: any, idx: number) => ({
-      id: d.id || `nadia_${idx + 1}`,
-      domanda: d.domanda || '',
-      rispostaCorretta: d.rispostaCorretta || '',
-      risposta2: d.risposta2 || '',
-      risposta3: d.risposta3 || '',
-      targetBox: Number(d.targetBox) || 1,
-      targetQuestion: Number(d.targetQuestion) || 1,
-    }));
+    domande = raw.domande.map((d: any, idx: number) => {
+      const id = d.id || `nadia_${idx + 1}`;
+      return {
+        id,
+        domanda: d.domanda || '',
+        rispostaCorretta: d.rispostaCorretta || '',
+        risposta2: d.risposta2 || '',
+        risposta3: d.risposta3 || '',
+        targetBox: Number(d.targetBox) || 1,
+        targetQuestion: Number(d.targetQuestion) || 1,
+        ordineRisposte: isValidNadiaOrder(d.ordineRisposte)
+          ? ([...d.ordineRisposte] as NadiaAnswerOrder)
+          : getDeterministicNadiaOrder(id),
+      };
+    });
   } else {
     domande = def.domande;
   }
@@ -1342,7 +1364,21 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
     }
   };
 
-  const handleDownloadPDF = () => {
+  const openPrintFallbackWindow = (htmlDoc: string, width = 1140, height = 800, autoPrint = true) => {
+    const printWindow = window.open('', '_blank', `width=${width},height=${height}`);
+    if (!printWindow) {
+      showToast('❌ Popup bloccato! Consenti i popup per questo sito e riprova.');
+      return;
+    }
+    printWindow.document.write(htmlDoc);
+    printWindow.document.close();
+    printWindow.focus();
+    if (autoPrint) {
+      setTimeout(() => { printWindow.print(); }, 600);
+    }
+  };
+
+  const handleDownloadPDF = async () => {
     const squadreNomi = state.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
 
     const fileLabel = (val: string | undefined): string => {
@@ -1360,6 +1396,16 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
       return parts[parts.length - 1] || trimmed;
     };
 
+    const escapeHtml = (val: string | undefined): string => {
+      if (!val) return '';
+      return val
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    };
+
     let sectionsHtml = '';
 
     // ── MILLE E UNA NADIA ────────────────────────────────────────────────────
@@ -1369,13 +1415,19 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
         sectionsHtml += `<section class="game-section">
           <h2>✨ MILLE E UNA NADIA — Evento Speciale</h2>`;
         validNadia.forEach((nd, idx) => {
+          const orderedOpts = getNadiaOrderedOptions(nd);
+          const correctLetter = getNadiaCorrectLetter(getNadiaQuestionOrder(nd));
           sectionsHtml += `<div class="slide-block">
-            <div class="slide-num">Domanda Nadia #${idx + 1} — Attiva in: BOX ${nd.targetBox} Domanda #${nd.targetQuestion}</div>
+            <div class="slide-num">Domanda Nadia #${idx + 1} — Attiva in: BOX ${nd.targetBox} Domanda #${nd.targetQuestion} — Lettera Esatta: <strong>${correctLetter}</strong></div>
             <table>
-              <tr><th>Domanda</th><td><strong>${nd.domanda || '—'}</strong></td></tr>
-              <tr style="background:#e8f5e9"><th>Risposta Corretta</th><td style="color:#2e7d32;font-weight:bold">✓ ${nd.rispostaCorretta || '—'}</td></tr>
-              <tr><th>Risposta Errata 1</th><td>${nd.risposta2 || '—'}</td></tr>
-              <tr><th>Risposta Errata 2</th><td>${nd.risposta3 || '—'}</td></tr>
+              <tr><th>Domanda</th><td><strong>${escapeHtml(nd.domanda) || '—'}</strong></td></tr>
+              ${orderedOpts
+                .map((opt) =>
+                  opt.isCorrect
+                    ? `<tr style="background:#e8f5e9"><th>Opzione ${opt.letter} (ESATTA)</th><td style="color:#2e7d32;font-weight:bold">✓ ${opt.letter} — ${escapeHtml(opt.text) || '—'}</td></tr>`
+                    : `<tr><th>Opzione ${opt.letter}</th><td>${opt.letter} — ${escapeHtml(opt.text) || '—'}</td></tr>`
+                )
+                .join('')}
             </table>
           </div>`;
         });
@@ -1579,6 +1631,7 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
   <meta charset="UTF-8"/>
   <title>IMPERIO — Riepilogo Setup</title>
   <style>
+    @page { size: A4 portrait; margin: 10mm; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; font-size: 11pt; color: #1a1a2e; background: #fff; padding: 20mm 15mm; }
     .cover { text-align: center; padding: 12mm 0 10mm; border-bottom: 3px solid #d24726; margin-bottom: 10mm; }
@@ -1608,20 +1661,27 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 </body>
 </html>`;
 
-    const printWindow = window.open('', '_blank', 'width=960,height=720');
-    if (!printWindow) {
-      showToast('❌ Popup bloccato! Consenti i popup per questo sito e riprova.');
+    if ((window as any).electron?.saveHtmlPdf) {
+      const res = await (window as any).electron.saveHtmlPdf({
+        html: htmlDoc,
+        defaultFileName: 'IMPERIO — Riepilogo Setup.pdf',
+        landscape: false,
+        pageSize: 'A4',
+      });
+      if (res?.success) {
+        showToast('✅ PDF riepilogo salvato con successo!');
+      } else if (!res?.canceled) {
+        openPrintFallbackWindow(htmlDoc, 960, 720);
+      }
       return;
     }
-    printWindow.document.write(htmlDoc);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => { printWindow.print(); }, 700);
+
+    openPrintFallbackWindow(htmlDoc, 960, 720);
   };
 
-  const handleSave = async () => {
+  const persistSetupState = async (nextState: QuizSetupState, toastMsg: string) => {
     try {
-      const cleanState = sanitizeSetupStateWithKnownAssets(state);
+      const cleanState = sanitizeSetupStateWithKnownAssets(nextState);
       setState(cleanState);
       await saveSetupStateDb(cleanState);
       try {
@@ -1629,14 +1689,14 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
       } catch (e) {
         console.warn('LocalStorage limit reached, saved safely to IndexedDB:', e);
       }
-      
+
       const isElectron = (window as any).electron !== undefined;
       if (isElectron) {
         try {
           await (window as any).electron.writeSetupFile(cleanState);
-          console.log("[Setup] Salvato con successo nel file JSON condiviso.");
+          console.log('[Setup] Salvato con successo nel file JSON condiviso.');
         } catch (err) {
-          console.error("[Setup] Errore nel salvataggio su file condiviso:", err);
+          console.error('[Setup] Errore nel salvataggio su file condiviso:', err);
         }
       }
 
@@ -1645,11 +1705,90 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
           setupStateUpdate: cleanState,
         });
       }
-      showToast('✅ Configurazioni salvate e sincronizzate nel file di progetto!');
+      showToast(toastMsg);
     } catch (e) {
       console.error('Failed to save setup:', e);
       showToast('❌ Errore durante il salvataggio dei dati');
     }
+  };
+
+  const handleSave = async () => {
+    await persistSetupState(state, '✅ Configurazioni salvate e sincronizzate nel file di progetto!');
+  };
+
+  const syncNadiaPlaystateOrders = (domande: NadiaQuestionItem[]) => {
+    domande.forEach((d) => {
+      if (!d.id) return;
+      const key = `playstate_nadia_order_${d.id}`;
+      const val = JSON.stringify(getNadiaQuestionOrder(d));
+      try {
+        localStorage.setItem(key, val);
+      } catch { /* ignore */ }
+      window.dispatchEvent(new CustomEvent('local-storage-update', { detail: { key, value: val } }));
+      if ((window as any).electron?.broadcastState) {
+        (window as any).electron.broadcastState({
+          localStorageUpdate: { key, value: val },
+        });
+      }
+    });
+  };
+
+  const handleShuffleAllNadia = async () => {
+    const currentNadia = state.nadia || createDefaultNadiaSetup();
+    const shuffledDomande = shuffleAllNadiaOrders(currentNadia.domande);
+    const nextState: QuizSetupState = {
+      ...state,
+      nadia: {
+        ...currentNadia,
+        domande: shuffledDomande,
+      },
+    };
+    syncNadiaPlaystateOrders(shuffledDomande);
+    await persistSetupState(
+      nextState,
+      `🎲 Risposte A/B/C mescolate e salvate per tutte le ${shuffledDomande.length} domande!`
+    );
+  };
+
+  const handleRerollSingleNadia = async (questionId: string) => {
+    const currentNadia = state.nadia || createDefaultNadiaSetup();
+    const updatedDomande = currentNadia.domande.map((d) =>
+      d.id === questionId ? { ...d, ordineRisposte: cycleSingleNadiaOrder(d) } : d
+    );
+    const nextState: QuizSetupState = {
+      ...state,
+      nadia: {
+        ...currentNadia,
+        domande: updatedDomande,
+      },
+    };
+    syncNadiaPlaystateOrders(updatedDomande);
+    const updatedQ = updatedDomande.find((d) => d.id === questionId);
+    const letter = updatedQ ? getNadiaCorrectLetter(getNadiaQuestionOrder(updatedQ)) : 'A';
+    await persistSetupState(nextState, `🔀 Risposta esatta spostata su ${letter} e salvata!`);
+  };
+
+  const handleOpenNadiaCardsPreview = async () => {
+    const domande = (state.nadia?.domande || []).filter((d) => d.domanda || d.rispostaCorretta);
+    if (domande.length === 0) {
+      showToast('⚠️ Nessuna domanda di Nadia configurata.');
+      return;
+    }
+    const htmlDoc = buildNadiaCardsPrintHtml(domande);
+    if ((window as any).electron?.openHtmlPreview) {
+      const res = await (window as any).electron.openHtmlPreview({
+        html: htmlDoc,
+        title: 'Cartoncini Nadia — Mille e una Nadia',
+        landscape: true,
+        pageSize: 'A4',
+        defaultPdfName: 'Cartoncini Nadia — Mille e una Nadia.pdf',
+      });
+      if (!res?.success) {
+        openPrintFallbackWindow(htmlDoc, 1220, 860, false);
+      }
+      return;
+    }
+    openPrintFallbackWindow(htmlDoc, 1220, 860, false);
   };
 
   // Helper for reading uploaded files and storing them to IndexedDB
@@ -1728,6 +1867,12 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
   const nadiaData = state.nadia || createDefaultNadiaSetup();
   const currentNadiaQ = nadiaData.domande[selectedNadiaIdx] || nadiaData.domande[0] || createDefaultNadiaQuestion();
+  const currentNadiaOrder = getNadiaQuestionOrder(currentNadiaQ);
+  const currentNadiaOrderedOptions = getNadiaOrderedOptions(currentNadiaQ);
+  const getNadiaSlotLetter = (origIdx: 0 | 1 | 2) => {
+    const slot = currentNadiaOrder.indexOf(origIdx);
+    return NADIA_LETTERS[slot >= 0 ? slot : origIdx];
+  };
 
   const updateNadia = (updater: (prev: NadiaSetup) => NadiaSetup) => {
     setState((prev) => ({
@@ -2406,17 +2551,33 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
 
           {/* Sezione Domande di Mille e una Nadia */}
           <div className="bg-[#120f1e] p-5 rounded-xl border border-amber-500/20 space-y-5">
-            {/* Header Domande con selettore Scheda e Tasto Aggiungi */}
+            {/* Header Domande con selettore Scheda, Mescola Tutte e Stampa Cartoncini */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-amber-300 uppercase tracking-wider">
                   📋 Domande dell'evento ({nadiaData.domande.length})
                 </span>
                 <span className="text-[11px] text-white/40">
-                  — Seleziona la scheda per configurare domanda, risposte e abbinamento
+                  — Lettere A / B / C fisse e salvate per i cartoncini
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={handleShuffleAllNadia}
+                  title="Mescola in modo equilibrato le lettere A, B, C di tutte le domande e salva subito"
+                  className="px-3 py-1 text-xs font-bold bg-indigo-500/20 hover:bg-indigo-500/35 text-indigo-200 border border-indigo-400/40 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  🎲 Mescola Tutte (A/B/C)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenNadiaCardsPreview}
+                  title="Apri l'anteprima dei cartoncini di Nadia con tasto Stampa / PDF in alto"
+                  className="px-3 py-1 text-xs font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  🃏 Cartoncini
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -2459,23 +2620,36 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
               <span className="text-[10px] text-white/40">Domande ordinate automaticamente dal Box 1 al Box 5</span>
             </div>
             <div className="flex items-center gap-2 overflow-x-auto py-1">
-              {nadiaData.domande.map((d, idx) => (
-                <button
-                  key={d.id || idx}
-                  type="button"
-                  onClick={() => setSelectedNadiaIdx(idx)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all shrink-0 flex items-center gap-1.5 ${
-                    selectedNadiaIdx === idx
-                      ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
-                      : 'bg-[#1c182d] text-white/70 hover:text-white border-white/10 hover:bg-[#25203b]'
-                  }`}
-                >
-                  <span>Domanda #{idx + 1}</span>
-                  <span className="text-[10px] opacity-80 font-semibold px-1 py-0.5 rounded bg-black/30">
-                    Box {d.targetBox} • D#{d.targetQuestion}
-                  </span>
-                </button>
-              ))}
+              {nadiaData.domande.map((d, idx) => {
+                const fixedLetter = getNadiaCorrectLetter(getNadiaQuestionOrder(d));
+                return (
+                  <button
+                    key={d.id || idx}
+                    type="button"
+                    onClick={() => setSelectedNadiaIdx(idx)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all shrink-0 flex items-center gap-1.5 ${
+                      selectedNadiaIdx === idx
+                        ? 'bg-amber-500 text-black border-amber-400 shadow-lg shadow-amber-500/20'
+                        : 'bg-[#1c182d] text-white/70 hover:text-white border-white/10 hover:bg-[#25203b]'
+                    }`}
+                  >
+                    <span>Domanda #{idx + 1}</span>
+                    <span className="text-[10px] opacity-80 font-semibold px-1 py-0.5 rounded bg-black/30">
+                      Box {d.targetBox} • D#{d.targetQuestion}
+                    </span>
+                    <span
+                      className={`text-[10px] font-black px-1.5 py-0.5 rounded ${
+                        selectedNadiaIdx === idx
+                          ? 'bg-emerald-900 text-emerald-200'
+                          : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                      }`}
+                      title={`Lettera esatta fissata: ${fixedLetter}`}
+                    >
+                      ✓ {fixedLetter}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Form per la domanda selezionata */}
@@ -2559,22 +2733,27 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                   <label className="text-xs font-bold text-slate-200">
                     🎯 3 Riquadri Opzioni di Risposta:
                   </label>
-                  <span className="text-[11px] text-amber-300/80 font-medium">
-                    (Nel gioco verranno mischiate casualmente con A, B, C)
+                  <span className="text-[11px] text-emerald-300/90 font-medium">
+                    Ordine A/B/C fisso: usa &quot;🎲 Mescola Tutte (A/B/C)&quot; in alto se vuoi rimescolarle
                   </span>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                   {/* Riquadro 1: Corretta */}
                   <div className="bg-[#121c16] border-2 border-emerald-500/60 rounded-xl p-3.5 space-y-2 shadow-lg shadow-emerald-950/30">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                         <span className="w-5 h-5 rounded-full bg-emerald-500/30 border border-emerald-400 flex items-center justify-center text-[11px]">1</span>
                         Risposta Corretta
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40">
-                        ESATTA
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded bg-emerald-500 text-black text-[10px] font-black">
+                          Lettera {getNadiaSlotLetter(0)}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/40">
+                          ESATTA
+                        </span>
+                      </div>
                     </div>
                     <textarea
                       rows={2}
@@ -2587,20 +2766,25 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                       className="w-full bg-black/40 border border-emerald-500/40 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-emerald-400 font-semibold"
                     />
                     <p className="text-[10px] text-emerald-300/70">
-                      Questo riquadro contiene la risposta esatta che verrà svelata durante la manche.
+                      Su schermo questa risposta apparirà sempre nella posizione <strong>{getNadiaSlotLetter(0)}</strong>.
                     </p>
                   </div>
 
                   {/* Riquadro 2: Errata 1 */}
                   <div className="bg-[#161324] border border-white/10 rounded-xl p-3.5 space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                         <span className="w-5 h-5 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-[11px]">2</span>
                         Risposta Errata
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-white/5 text-white/40 text-[10px] font-bold border border-white/10">
-                        ERRATA
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/30">
+                          Lettera {getNadiaSlotLetter(1)}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-white/5 text-white/40 text-[10px] font-bold border border-white/10">
+                          ERRATA
+                        </span>
+                      </div>
                     </div>
                     <textarea
                       rows={2}
@@ -2613,20 +2797,25 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                       className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
                     />
                     <p className="text-[10px] text-slate-400">
-                      Seconda opzione alternativa (falsa).
+                      Su schermo apparirà sempre nella posizione <strong>{getNadiaSlotLetter(1)}</strong>.
                     </p>
                   </div>
 
                   {/* Riquadro 3: Errata 2 */}
                   <div className="bg-[#161324] border border-white/10 rounded-xl p-3.5 space-y-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                         <span className="w-5 h-5 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-[11px]">3</span>
                         Risposta Errata
                       </span>
-                      <span className="px-2 py-0.5 rounded bg-white/5 text-white/40 text-[10px] font-bold border border-white/10">
-                        ERRATA
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-black border border-amber-500/30">
+                          Lettera {getNadiaSlotLetter(2)}
+                        </span>
+                        <span className="px-2 py-0.5 rounded bg-white/5 text-white/40 text-[10px] font-bold border border-white/10">
+                          ERRATA
+                        </span>
+                      </div>
                     </div>
                     <textarea
                       rows={2}
@@ -2639,8 +2828,51 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                       className="w-full bg-black/40 border border-white/10 rounded-lg p-2.5 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-amber-400"
                     />
                     <p className="text-[10px] text-slate-400">
-                      Terza opzione alternativa (falsa).
+                      Su schermo apparirà sempre nella posizione <strong>{getNadiaSlotLetter(2)}</strong>.
                     </p>
+                  </div>
+                </div>
+
+                {/* Anteprima compatta ordine fisso A / B / C per scrivere il cartoncino */}
+                <div className="mt-3 bg-[#1a162b] border border-amber-500/25 rounded-xl p-3.5 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">
+                      📺 Ordine fisso su schermo (per il cartoncino di Nadia)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRerollSingleNadia(currentNadiaQ.id)}
+                      className="px-2.5 py-1 text-[11px] font-bold rounded-lg bg-white/5 hover:bg-white/10 text-slate-200 border border-white/15 transition-all cursor-pointer self-start sm:self-auto"
+                      title="Sposta la risposta esatta di questa singola domanda su un'altra lettera"
+                    >
+                      🔀 Sposta solo questa domanda
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                    {currentNadiaOrderedOptions.map((opt) => (
+                      <div
+                        key={opt.letter}
+                        className={`px-3 py-2 rounded-lg border flex items-center gap-2.5 text-xs ${
+                          opt.isCorrect
+                            ? 'bg-emerald-950/50 border-emerald-500/50 text-emerald-100 font-bold'
+                            : 'bg-black/30 border-white/10 text-slate-300'
+                        }`}
+                      >
+                        <span
+                          className={`w-6 h-6 rounded-md flex items-center justify-center font-black text-xs shrink-0 ${
+                            opt.isCorrect
+                              ? 'bg-emerald-500 text-black'
+                              : 'bg-white/10 text-amber-300'
+                          }`}
+                        >
+                          {opt.letter}
+                        </span>
+                        <span className="truncate flex-1">{opt.text}</span>
+                        {opt.isCorrect && (
+                          <span className="text-[10px] font-black text-emerald-300 shrink-0">✓ ESATTA</span>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

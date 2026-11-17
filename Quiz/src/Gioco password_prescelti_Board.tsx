@@ -863,44 +863,38 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
               </button>
             )}
           </div>
-          {/* Step Selector per iPad */}
+          {/* Step Selector per iPad (solo lettura) */}
           <div className="flex items-center gap-1.5 pt-2 border-t border-slate-700/60">
             <span className="text-[10px] font-black uppercase text-slate-400 shrink-0">
               Schermo:
             </span>
-            <button
-              type="button"
-              onClick={() => setPresentationStep(0)}
-              className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black transition-all cursor-pointer text-center truncate ${
+            <div
+              className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black text-center truncate ${
                 presentationStep === 0
                   ? 'bg-yellow-500 text-slate-950 shadow ring-1 ring-yellow-400'
                   : 'bg-slate-700/80 text-slate-300'
               }`}
             >
               0: Sfondo
-            </button>
-            <button
-              type="button"
-              onClick={() => setPresentationStep(1)}
-              className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black transition-all cursor-pointer text-center truncate ${
+            </div>
+            <div
+              className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black text-center truncate ${
                 presentationStep === 1
                   ? 'bg-yellow-500 text-slate-950 shadow ring-1 ring-yellow-400'
                   : 'bg-slate-700/80 text-slate-300'
               }`}
             >
               1: Canzone & Img
-            </button>
-            <button
-              type="button"
-              onClick={() => setPresentationStep(2)}
-              className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black transition-all cursor-pointer text-center truncate ${
+            </div>
+            <div
+              className={`flex-1 py-1.5 px-2 rounded-lg text-[11px] font-black text-center truncate ${
                 presentationStep === 2
                   ? 'bg-yellow-500 text-slate-950 shadow ring-1 ring-yellow-400'
                   : 'bg-slate-700/80 text-slate-300'
               }`}
             >
               2: Gioco
-            </button>
+            </div>
           </div>
         </div>
       )}
@@ -913,11 +907,11 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
               <div
                 key={i}
                 onClick={() => {
-                  if (interactive && !item.guessed) {
+                  if (!ipadMode && interactive && !item.guessed) {
                     handleWordClick(i);
                   }
                 }}
-                className={`p-2 sm:p-3 rounded border sm:border-2 text-xs sm:text-sm font-bold text-center transition-all ${teamColors[item.type]} ${item.guessed ? 'opacity-30 scale-95' : 'cursor-pointer hover:scale-105 active:scale-95'}`}
+                className={`p-2 sm:p-3 rounded border sm:border-2 text-xs sm:text-sm font-bold text-center transition-all ${teamColors[item.type]} ${item.guessed ? 'opacity-30 scale-95' : !ipadMode ? 'cursor-pointer hover:scale-105 active:scale-95' : 'cursor-default'}`}
               >
                 {item.word}
                 {item.type === 'bomb' && <span className="block text-[8px] sm:text-[10px] text-red-450 font-black">BOMBA</span>}
@@ -997,28 +991,30 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
               )}
             </div>
 
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={prevTurn}
-                className="flex-1 py-2.5 sm:py-3 bg-slate-700 hover:bg-slate-650 text-white font-black text-xs sm:text-sm rounded-xl transition-all shadow border border-slate-600 uppercase tracking-tighter cursor-pointer"
-              >
-                ← Indietro
-              </button>
-              <button
-                type="button"
-                onClick={nextTurn}
-                disabled={isLastTurn}
-                className={`flex-1 py-2.5 sm:py-3 font-black text-xs sm:text-sm rounded-xl transition-all shadow-lg uppercase tracking-tighter ${
-                  isLastTurn
-                    ? 'bg-slate-700/50 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
-                    : 'bg-white hover:bg-yellow-400 text-black cursor-pointer'
-                }`}
-                title={isLastTurn ? "Ultimo turno del Round 3 raggiunto (manche completata)" : "Passa al prossimo turno"}
-              >
-                Prossimo →
-              </button>
-            </div>
+            {!ipadMode && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={prevTurn}
+                  className="flex-1 py-2.5 sm:py-3 bg-slate-700 hover:bg-slate-650 text-white font-black text-xs sm:text-sm rounded-xl transition-all shadow border border-slate-600 uppercase tracking-tighter cursor-pointer"
+                >
+                  ← Indietro
+                </button>
+                <button
+                  type="button"
+                  onClick={nextTurn}
+                  disabled={isLastTurn}
+                  className={`flex-1 py-2.5 sm:py-3 font-black text-xs sm:text-sm rounded-xl transition-all shadow-lg uppercase tracking-tighter ${
+                    isLastTurn
+                      ? 'bg-slate-700/50 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
+                      : 'bg-white hover:bg-yellow-400 text-black cursor-pointer'
+                  }`}
+                  title={isLastTurn ? "Ultimo turno del Round 3 raggiunto (manche completata)" : "Passa al prossimo turno"}
+                >
+                  Prossimo →
+                </button>
+              </div>
+            )}
             
             {chosenSuggestion ? (
               <div className="mt-3 p-2.5 bg-yellow-500 text-black rounded-xl flex items-center justify-between shadow-lg animate-pulse font-black">

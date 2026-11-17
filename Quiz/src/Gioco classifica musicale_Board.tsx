@@ -6,6 +6,7 @@ import { useScores } from './context/ScoreContext';
 import { ClassificaStaircaseSuspenseOverlay, type Box2SuspenseData } from './components/ClassificaStaircaseSuspenseOverlay';
 import { CrystalRankingBox, CrystalNumberMarker } from './components/CrystalRankingBlocks';
 import { box2SuspenseSoundFX } from './lib/box2SuspenseSoundFX';
+import AutoFitText from './components/AutoFitText';
 
 // ============================================================================
 // Cronometro circolare (stile Box 4) — Manche Canzoni (Classifica Musicale)
@@ -1172,9 +1173,19 @@ const ClassificaMusicaleBoard = ({
                     className={`flex-1 flex items-center justify-between px-4 rounded-xl transition-all duration-700 ${getPhraseStyle(el.posizione, isRevealed)}`}
                     style={{ boxShadow: isRevealed ? "inset 0 0 20px rgba(255,255,255,0.2)" : "none" }}
                   >
-                    <span className={`font-black tracking-tight text-[clamp(14px,1.5vw,28px)] text-left flex-1 transition-all duration-700 ${isRevealed ? 'opacity-100 scale-100' : 'opacity-0 scale-90 text-transparent'}`}>
-                      {(el as any).frase || el.testo}
-                    </span>
+                    <div className={`flex-1 min-w-0 h-full flex items-center transition-all duration-700 ${isRevealed ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}>
+                      <AutoFitText
+                        text={isRevealed ? ((el as any).frase || el.testo || '') : ''}
+                        maxFontSize={40}
+                        minFontSize={16}
+                        maxLines={2}
+                        lineHeight={1.08}
+                        fallbackWidth={490}
+                        fallbackHeight={76}
+                        align="left"
+                        className="font-black tracking-tight"
+                      />
+                    </div>
                     {isRevealed && (
                       <div className="h-[85%] max-h-[76px] aspect-square flex items-center justify-center shrink-0 ml-3 transition-transform duration-300 hover:scale-110 drop-shadow-[0_4px_10px_rgba(0,0,0,0.5)] animate-zoom-in">
                         <img
@@ -1253,22 +1264,30 @@ const ClassificaMusicaleBoard = ({
                       e.preventDefault();
                       triggerErrorSuspense();
                     }}
-                    className={`absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[3%] transition-all ${
+                    className={`absolute left-[53.073%] w-[33.229%] flex items-center justify-center px-[2%] transition-all ${
                       !isRevealed ? 'cursor-pointer hover:scale-[1.01]' : ''
                     }`}
                     style={{
-                      top: marker.top,
-                      height: "4.352%"
+                      top: `calc(${marker.top} - 0.724%)`,
+                      height: "5.8%"
                     }}
                     title={!isRevealed ? "Click: Rivelazione esatta | Shift+Click o Tasto destro: Scalata errata" : undefined}
                   >
-                    <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${
-                      marker.value <= 4 
-                        ? 'text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]' 
-                        : 'text-[#141414] drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)]'
-                    }`}>
-                      {isRevealed ? el?.testo : ""}
-                    </p>
+                    <AutoFitText
+                      text={isRevealed ? (el?.testo || '') : ''}
+                      maxFontSize={38}
+                      minFontSize={16}
+                      maxLines={2}
+                      lineHeight={1.06}
+                      fallbackWidth={612}
+                      fallbackHeight={60}
+                      align="center"
+                      className={`font-black uppercase ${
+                        marker.value <= 4
+                          ? 'text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]'
+                          : 'text-[#141414] drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)]'
+                      }`}
+                    />
                   </div>
 
                   {/* Marker numerico a forma di cristallo a destra (1-7) */}

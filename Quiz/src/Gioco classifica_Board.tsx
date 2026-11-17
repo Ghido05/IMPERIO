@@ -7,6 +7,7 @@ import { ClassificaStaircaseSuspenseOverlay, type Box2SuspenseData } from './com
 import { CountdownTimer } from './Gioco classifica musicale_Board';
 import { CrystalRankingBox, CrystalNumberMarker } from './components/CrystalRankingBlocks';
 import { box2SuspenseSoundFX } from './lib/box2SuspenseSoundFX';
+import AutoFitText from './components/AutoFitText';
 
 const ClassificaBoard = ({ 
   interactive = true, 
@@ -773,18 +774,26 @@ const ClassificaBoard = ({
                       !isRevealed ? 'cursor-pointer hover:scale-[1.01]' : ''
                     }`}
                     style={{
-                      top: marker.top,
-                      height: "4.352%"
+                      top: `calc(${marker.top} - 0.324%)`,
+                      height: "5.0%"
                     }}
                     title={!isRevealed ? "Click: Rivelazione esatta | Shift+Click o Tasto destro: Scalata errata" : undefined}
                   >
-                    <p className={`w-full font-black uppercase text-[clamp(10px,1.2vw,24px)] leading-tight text-center ${
-                      marker.value <= 5 
-                        ? 'text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]' 
-                        : 'text-[#141414] drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)]'
-                    }`}>
-                      {isRevealed ? gameData.elementi[marker.value - 1]?.testo : ""}
-                    </p>
+                    <AutoFitText
+                      text={isRevealed ? (gameData.elementi[marker.value - 1]?.testo || '') : ''}
+                      maxFontSize={30}
+                      minFontSize={14}
+                      maxLines={2}
+                      lineHeight={1.06}
+                      fallbackWidth={612}
+                      fallbackHeight={52}
+                      align="center"
+                      className={`font-black uppercase ${
+                        marker.value <= 5
+                          ? 'text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.85)]'
+                          : 'text-[#141414] drop-shadow-[0_1px_1px_rgba(255,255,255,0.6)]'
+                      }`}
+                    />
                   </div>
 
                   {/* Marker numerico a forma di cristallo a destra (1-10) */}

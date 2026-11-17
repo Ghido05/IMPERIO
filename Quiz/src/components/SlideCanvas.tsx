@@ -9,6 +9,7 @@ import MilleEUnaNadiaBoard from './MilleEUnaNadiaBoard';
 import { useSyncedState } from '../hooks/useSyncedState';
 import type { NadiaSetup, NadiaQuestionItem, QuizSetupState } from '../views/QuizSetupView';
 import { sendSerialReset } from '../lib/webSerial';
+import { getNadiaQuestionOrder, isValidNadiaOrder, type NadiaAnswerOrder } from '../lib/nadiaUtils';
 
 interface SlideCanvasProps {
   slide: Slide;
@@ -96,6 +97,16 @@ export default function SlideCanvas({
     return found || effectiveNadiaSetup.domande[0];
   }, [effectiveNadiaSetup, nadiaQuestionId]);
 
+  const effectiveNadiaOrder = useMemo<NadiaAnswerOrder>(() => {
+    if (effectiveNadiaQuestion && isValidNadiaOrder(effectiveNadiaQuestion.ordineRisposte)) {
+      return effectiveNadiaQuestion.ordineRisposte;
+    }
+    if (nadiaQuestionId && localStorage.getItem(`playstate_nadia_order_${nadiaQuestionId}`) && isValidNadiaOrder(nadiaShuffledOrder)) {
+      return nadiaShuffledOrder;
+    }
+    return getNadiaQuestionOrder(effectiveNadiaQuestion);
+  }, [effectiveNadiaQuestion, nadiaQuestionId, nadiaShuffledOrder]);
+
   useEffect(() => {
     const handleLoaded = () => {
       setTick(t => t + 1);
@@ -167,7 +178,7 @@ export default function SlideCanvas({
           <MilleEUnaNadiaBoard
             nadiaSetup={effectiveNadiaSetup}
             question={effectiveNadiaQuestion}
-            shuffledOrder={nadiaShuffledOrder}
+            shuffledOrder={effectiveNadiaOrder}
             solutionShown={nadiaSolutionShown}
             isPresenter={isPresenter}
             bookedTeam={nadiaBookedTeam}

@@ -305,6 +305,148 @@ ipcMain.handle('save-asset-file', async (_event, { fileName, base64, category })
   }
 });
 
+async function withPrintableHtmlWindow(html, runAction) {
+  const tmpHtmlPath = path.join(
+    os.tmpdir(),
+    `imperio_print_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.html`
+  );
+  let printWin = null;
+  try {
+    fs.writeFileSync(tmpHtmlPath, html, 'utf-8');
+    printWin = new BrowserWindow({
+      show: false,
+      width: 1200,
+      height: 850,
+      webPreferences: {
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+    await printWin.loadFile(tmpHtmlPath);
+    return await runAction(printWin);
+  } finally {
+    if (printWin && !printWin.isDestroyed()) {
+      printWin.destroy();
+    }
+    try {
+      if (fs.existsSync(tmpHtmlPath)) {
+        fs.unlinkSync(tmpHtmlPath);
+      }
+    } catch {
+      // ignora errori di pulizia file temporaneo
+    }
+  }
+}
+
+ipcMain.handle('save-html-pdf', async (_event, { html, defaultFileName = 'document.pdf', landscape = true, pageSize = 'A4' }) => {
+  try {
+    const parentWin = presenterWindow && !presenterWindow.isDestroyed() ? presenterWindow : undefined;
+    const { canceled, filePath } = await dialog.showSaveDialog(parentWin, {
+      title: 'Salva PDF',
+      defaultPath: defaultFileName,
+      filters: [{ name: 'Documento PDF', extensions: ['pdf'] }],
+    });
+
+    if (canceled || !filePath) {
+      return { success: false, canceled: true };
+    }
+
+    const pdfBuffer = await withPrintableHtmlWindow(html, (printWin) =>
+      printWin.webContents.printToPDF({
+        pageSize: pageSize || 'A4',
+        landscape: Boolean(landscape),
+        printBackground: true,
+        preferCSSPageSize: true,
+      })
+    );
+
+    fs.writeFileSync(filePath, pdfBuffer);
+    return { success: true, filePath };
+  } catch (err) {
+    console.error('[SaveHtmlPdf] Errore:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+const previewMetaMap = new Map();
+
+ipcMain.handle(
+  'open-html-preview',
+  async (_event, { html, title = 'Anteprima Stampa', landscape = true, pageSize = 'A4', defaultPdfName = 'document.pdf' }) => {
+    const tmpHtmlPath = path.join(
+      os.tmpdir(),
+      `imperio_preview_${Date.now()}_${Math.random().toString(36).slice(2, 8)}.html`
+    );
+    try {
+      fs.writeFileSync(tmpHtmlPath, html, 'utf-8');
+      const previewWin = new BrowserWindow({
+        width: 1220,
+        height: 860,
+        title,
+        show: true,
+        autoHideMenuBar: true,
+        webPreferences: {
+          preload: path.join(__dirname, 'previewPreload.cjs'),
+          sandbox: true,
+          contextIsolation: true,
+          nodeIntegration: false,
+        },
+      });
+      const wcId = previewWin.webContents.id;
+      previewMetaMap.set(wcId, {
+        landscape: Boolean(landscape),
+        pageSize: pageSize || 'A4',
+        defaultPdfName: defaultPdfName || 'document.pdf',
+      });
+      previewWin.on('closed', () => {
+        previewMetaMap.delete(wcId);
+        try {
+          if (fs.existsSync(tmpHtmlPath)) {
+            fs.unlinkSync(tmpHtmlPath);
+          }
+        } catch {
+          // ignora errori di pulizia file temporaneo
+        }
+      });
+      await previewWin.loadFile(tmpHtmlPath);
+      previewWin.focus();
+      return { success: true };
+    } catch (err) {
+      console.error('[OpenHtmlPreview] Errore:', err);
+      try {
+        if (fs.existsSync(tmpHtmlPath)) fs.unlinkSync(tmpHtmlPath);
+      } catch {
+        // ignora
+      }
+      return { success: false, error: err.message };
+    }
+  }
+);
+
+ipcMain.handle('preview-print', async (event) => {
+  const meta = previewMetaMap.get(event.sender.id) || { landscape: true, pageSize: 'A4' };
+  return new Promise((resolve) => {
+    event.sender.print(
+      {
+        silent: false,
+        printBackground: true,
+        landscape: meta.landscape,
+        pageSize: meta.pageSize,
+      },
+      (success, failureReason) => {
+        if (success) {
+          resolve({ success: true });
+        } else if (failureReason === 'cancelled' || failureReason === 'canceled') {
+          resolve({ success: false, canceled: true });
+        } else {
+          resolve({ success: false, error: failureReason || 'Stampa non completata' });
+        }
+      }
+    );
+  });
+});
+
 let localServer;
 let wss;
 const clients = new Set();

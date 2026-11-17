@@ -11,7 +11,12 @@
         "risposta2": "Cicerone",
         "risposta3": "Mecenate",
         "targetBox": 1,
-        "targetQuestion": 2
+        "targetQuestion": 2,
+        "ordineRisposte": [
+          0,
+          2,
+          1
+        ]
       },
       {
         "id": "nadia_1792340284874_kb0u",
@@ -20,7 +25,12 @@
         "risposta2": "Una cabina telefonica",
         "risposta3": "Un ascensore",
         "targetBox": 1,
-        "targetQuestion": 6
+        "targetQuestion": 6,
+        "ordineRisposte": [
+          2,
+          1,
+          0
+        ]
       },
       {
         "id": "nadia_1790272964098_kwak",
@@ -29,7 +39,12 @@
         "risposta2": "Il Tempio delle Lacrime",
         "risposta3": "La casa dell'eternità",
         "targetBox": 1,
-        "targetQuestion": 8
+        "targetQuestion": 8,
+        "ordineRisposte": [
+          0,
+          1,
+          2
+        ]
       },
       {
         "id": "nadia_1792744528334_88x8",
@@ -38,7 +53,12 @@
         "risposta2": "Un ammiraglio della Marina Militare",
         "risposta3": "Un ingegnere navale della Repubblica di Venezia",
         "targetBox": 1,
-        "targetQuestion": 9
+        "targetQuestion": 9,
+        "ordineRisposte": [
+          0,
+          1,
+          2
+        ]
       },
       {
         "id": "nadia_1792797306298_h37j",
@@ -47,7 +67,12 @@
         "risposta2": "IN ONORE DELLA REGINA CLEOPATRA, CHE ESIGEVA ESCLUSIVAMENTE LE UOVA DI QUESTO ANIMALE",
         "risposta3": "A CAUSA DELLA PROTUBERANZA OSSEA SULLA SUA TESTA, CHE RICORDA IL COPRICAPO DEI FARAONI",
         "targetBox": 2,
-        "targetQuestion": 2
+        "targetQuestion": 2,
+        "ordineRisposte": [
+          1,
+          2,
+          0
+        ]
       },
       {
         "id": "nadia_1790712588000_qjr1",
@@ -56,7 +81,12 @@
         "risposta2": "Un gatto che suona la tastiera",
         "risposta3": "Un gruppo di amici che brinda con la birra",
         "targetBox": 2,
-        "targetQuestion": 5
+        "targetQuestion": 5,
+        "ordineRisposte": [
+          1,
+          0,
+          2
+        ]
       },
       {
         "id": "nadia_1792796618500_ywzb",
@@ -65,7 +95,12 @@
         "risposta2": "SPIDER MAN",
         "risposta3": "INDIANA JONES",
         "targetBox": 3,
-        "targetQuestion": 1
+        "targetQuestion": 1,
+        "ordineRisposte": [
+          1,
+          2,
+          0
+        ]
       },
       {
         "id": "nadia_1792340521197_z0qd",
@@ -74,7 +109,12 @@
         "risposta2": "Ai Normanni",
         "risposta3": "Ai Normanni",
         "targetBox": 3,
-        "targetQuestion": 2
+        "targetQuestion": 2,
+        "ordineRisposte": [
+          1,
+          0,
+          2
+        ]
       },
       {
         "id": "nadia_1",
@@ -83,7 +123,12 @@
         "risposta2": "L'arteria d'America",
         "risposta3": "La bretella lungo la vita",
         "targetBox": 4,
-        "targetQuestion": 1
+        "targetQuestion": 1,
+        "ordineRisposte": [
+          2,
+          0,
+          1
+        ]
       }
     ]
   },

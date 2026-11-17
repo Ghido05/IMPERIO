@@ -221,15 +221,15 @@ export default function MilleEUnaNadiaBoard({
               let shadowClass = 'shadow-2xl shadow-black/60';
 
               const isEliminated = eliminatedOptions.includes(opt.originalIndex);
-              const canClick = isPresenter && bookedTeam !== null && !isEliminated && !solutionShown;
+              const canClick = isPresenter && bookedTeam !== null && assignedTeam === null && !isEliminated;
 
               if (solutionShown) {
                 if (isThisCorrect) {
-                  cardBg = 'bg-gradient-to-br from-emerald-600 to-emerald-700 border-emerald-300 text-white scale-[1.03]';
+                  cardBg = `bg-gradient-to-br from-emerald-600 to-emerald-700 border-emerald-300 text-white scale-[1.03]${canClick ? ' cursor-pointer' : ''}`;
                   letterBg = 'bg-white text-emerald-800 border-white';
                   shadowClass = 'shadow-[0_0_60px_rgba(16,185,129,0.8)] ring-4 ring-emerald-400/50 animate-pulse';
                 } else {
-                  cardBg = 'bg-[#120f1a]/50 border-white/5 text-white/30 scale-[0.98]';
+                  cardBg = `bg-[#120f1a]/50 border-white/5 text-white/30 scale-[0.98]${canClick ? ' cursor-pointer' : ''}`;
                   letterBg = 'bg-white/5 text-white/20 border-white/10';
                   shadowClass = 'shadow-none opacity-40';
                 }
@@ -239,7 +239,7 @@ export default function MilleEUnaNadiaBoard({
                 shadowClass = 'shadow-none opacity-50 pointer-events-none grayscale';
               } else if (isPresenter && isThisCorrect) {
                 // Nel relatore evidenziamo discretamente la corretta in anticipo
-                cardBg = 'bg-[#181326]/95 border-emerald-500/70 text-white hover:bg-[#251d38]/90 hover:border-emerald-400';
+                cardBg = `bg-[#181326]/95 border-emerald-500/70 text-white hover:bg-[#251d38]/90 hover:border-emerald-400${canClick ? ' cursor-pointer' : ''}`;
                 letterBg = 'bg-emerald-500/30 text-emerald-300 border-emerald-400/50';
               } else if (isPresenter && bookedTeam !== null) {
                 cardBg = 'bg-[#181326]/90 border-white/30 text-white hover:bg-[#2a2240] hover:border-amber-400/60 cursor-pointer';

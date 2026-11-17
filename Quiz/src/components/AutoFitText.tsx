@@ -36,6 +36,7 @@ export interface AutoFitTextProps {
   text?: string | null;
   maxFontSize?: number;
   minFontSize?: number;
+  maxLines?: number;
   lineHeight?: number;
   align?: 'center' | 'left';
   fallbackWidth?: number;
@@ -44,10 +45,64 @@ export interface AutoFitTextProps {
   style?: React.CSSProperties;
 }
 
+function applyTextTransform(text: string, textTransform: string): string {
+  if (textTransform === 'uppercase') return text.toUpperCase();
+  if (textTransform === 'lowercase') return text.toLowerCase();
+  return text;
+}
+
+function wrapParagraphsForSize(
+  paragraphs: string[],
+  fontSize: number,
+  availableW: number,
+  fontFamily: string,
+  fontWeight: string | number,
+  letterSpacing: string,
+  textTransform: string
+): { lines: string[]; fitsWidth: boolean } {
+  const result: string[] = [];
+  let fitsWidth = true;
+
+  for (const para of paragraphs) {
+    if (!para) {
+      result.push('');
+      continue;
+    }
+    const words = para.split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+      result.push('');
+      continue;
+    }
+
+    let currentLine = words[0];
+    if (measureLineWidth(applyTextTransform(currentLine, textTransform), fontFamily, fontWeight, fontSize, letterSpacing) > availableW) {
+      fitsWidth = false;
+    }
+
+    for (let i = 1; i < words.length; i++) {
+      const word = words[i];
+      if (measureLineWidth(applyTextTransform(word, textTransform), fontFamily, fontWeight, fontSize, letterSpacing) > availableW) {
+        fitsWidth = false;
+      }
+      const candidate = `${currentLine} ${word}`;
+      if (measureLineWidth(applyTextTransform(candidate, textTransform), fontFamily, fontWeight, fontSize, letterSpacing) <= availableW) {
+        currentLine = candidate;
+      } else {
+        result.push(currentLine);
+        currentLine = word;
+      }
+    }
+    result.push(currentLine);
+  }
+
+  return { lines: result, fitsWidth };
+}
+
 export default function AutoFitText({
   text = '',
   maxFontSize = 38,
   minFontSize = 12,
+  maxLines,
   lineHeight = 1.15,
   align = 'center',
   fallbackWidth = 500,
@@ -67,6 +122,7 @@ export default function AutoFitText({
   );
   const [fontWeight, setFontWeight] = useState<string | number>('900');
   const [letterSpacing, setLetterSpacing] = useState('normal');
+  const [textTransform, setTextTransform] = useState('none');
 
   // Normalizza il testo e separa le righe SOLO in corrispondenza di \n
   const lines = useMemo(() => {
@@ -91,8 +147,9 @@ export default function AutoFitText({
       if (computed.fontFamily) setFontFamily(computed.fontFamily);
       if (computed.fontWeight) setFontWeight(computed.fontWeight);
       if (computed.letterSpacing) setLetterSpacing(computed.letterSpacing);
+      if (computed.textTransform) setTextTransform(computed.textTransform);
     }
-  }, []);
+  }, [className]);
 
   // Monitora le dimensioni effettive del contenitore
   useLayoutEffect(() => {
@@ -127,25 +184,67 @@ export default function AutoFitText({
     };
   }, []);
 
-  // Calcolo dinamico della dimensione del font ottimale
-  const fontSize = useMemo(() => {
+  // Calcolo dinamico della dimensione del font ottimale (e wrapping opzionale su più righe)
+  const { fontSize, renderedLines } = useMemo(() => {
     if (!lines || lines.length === 0 || (lines.length === 1 && lines[0] === '')) {
-      return maxFontSize;
+      return { fontSize: maxFontSize, renderedLines: lines };
     }
 
     const containerW = dimensions.width;
     const containerH = dimensions.height;
 
     if (containerW <= 0 || containerH <= 0) {
-      return maxFontSize;
+      return { fontSize: maxFontSize, renderedLines: lines };
+    }
+
+    const availableH = containerH * 0.94;
+    const availableW = containerW * 0.96;
+
+    if (maxLines && maxLines > 1) {
+      let low = minFontSize;
+      let high = maxFontSize;
+      let bestSize = minFontSize;
+      let bestLines = wrapParagraphsForSize(
+        lines,
+        minFontSize,
+        availableW,
+        fontFamily,
+        fontWeight,
+        letterSpacing,
+        textTransform
+      ).lines;
+
+      for (let iter = 0; iter < 12; iter++) {
+        const mid = (low + high) / 2;
+        const wrapped = wrapParagraphsForSize(
+          lines,
+          mid,
+          availableW,
+          fontFamily,
+          fontWeight,
+          letterSpacing,
+          textTransform
+        );
+        const fitsHeight = wrapped.lines.length * mid * lineHeight <= availableH;
+        if (wrapped.fitsWidth && wrapped.lines.length <= maxLines && fitsHeight) {
+          bestSize = mid;
+          bestLines = wrapped.lines;
+          low = mid;
+        } else {
+          high = mid;
+        }
+      }
+
+      return {
+        fontSize: Math.max(minFontSize, Math.floor(bestSize * 10) / 10),
+        renderedLines: bestLines,
+      };
     }
 
     // Vincolo altezza: tutte le righe devono rientrare nell'altezza del contenitore
-    const availableH = containerH * 0.94;
     const maxByHeight = availableH / (lines.length * lineHeight);
 
     // Vincolo larghezza: ogni singola riga deve rientrare nella larghezza del contenitore (no a capo)
-    const availableW = containerW * 0.96;
     const refSize = 100;
 
     let maxByWidth = maxFontSize;
@@ -153,7 +252,8 @@ export default function AutoFitText({
 
     for (const line of lines) {
       if (!line) continue;
-      const wAtRef = measureLineWidth(line, fontFamily, fontWeight, refSize, letterSpacing);
+      const measuredText = applyTextTransform(line, textTransform);
+      const wAtRef = measureLineWidth(measuredText, fontFamily, fontWeight, refSize, letterSpacing);
       if (wAtRef > 0) {
         const allowedSize = (availableW / wAtRef) * refSize;
         if (allowedSize < minAllowedWidthSize) {
@@ -167,8 +267,11 @@ export default function AutoFitText({
     }
 
     const optimal = Math.min(maxFontSize, maxByHeight, maxByWidth);
-    return Math.max(minFontSize, Math.floor(optimal * 10) / 10);
-  }, [lines, dimensions, maxFontSize, minFontSize, lineHeight, fontFamily, fontWeight, letterSpacing]);
+    return {
+      fontSize: Math.max(minFontSize, Math.floor(optimal * 10) / 10),
+      renderedLines: lines,
+    };
+  }, [lines, dimensions, maxFontSize, minFontSize, maxLines, lineHeight, fontFamily, fontWeight, letterSpacing, textTransform]);
 
   return (
     <div
@@ -178,7 +281,7 @@ export default function AutoFitText({
       } overflow-hidden pointer-events-none select-none ${className}`}
       style={style}
     >
-      {lines.map((line, idx) => (
+      {renderedLines.map((line, idx) => (
         <span
           key={idx}
           style={{

@@ -93,8 +93,8 @@ export function fadeOutActiveAudios(durationMs = 1500) {
         } catch (err) {
           console.error("[AudioTracker] Error pausing audio after fade:", err);
         }
+        playingAudios.delete(audio);
       });
-      playingAudios.clear();
       console.log("[AudioTracker] All audio tracks faded out and paused.");
     }
   }, intervalMs);

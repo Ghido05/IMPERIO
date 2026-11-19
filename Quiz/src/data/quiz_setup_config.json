@@ -107,7 +107,7 @@
         "domanda": "Nella manche dei dolci abbiamo incontrato classici siciliani come il Cannolo e la Cassata. A quale antica dominazione dell'isola si deve l'introduzione di ingredienti fondamentali per questi dessert, come la canna da zucchero e la canditura?",
         "rispostaCorretta": "Agli Arabi",
         "risposta2": "Ai Normanni",
-        "risposta3": "Ai Normanni",
+        "risposta3": "Agli Spagnoli",
         "targetBox": 3,
         "targetQuestion": 2,
         "ordineRisposte": [
@@ -526,7 +526,7 @@
   "gioco2": {
     "titolo": "LA SCALATA DEI CRISTALLI",
     "sottotitolo": "Classifica & Classifica Musicale",
-    "selectedQuestion": 2,
+    "selectedQuestion": 6,
     "videoSpiegazione": "",
     "sfondoSpiegazione": "/Icone/sfondi/sfondo_box2_cristalli.jpg",
     "audioSpiegazione": "/Audio/Spiegazioni/Spiegazione_box2.mp3",
@@ -748,7 +748,8 @@
           "soluzioneTesto": "CADO DALLE NUBI",
           "categoria": "FILM",
           "domanda": "10 SPORT CON PIÙ TESSERATI IN ITALIA"
-        }
+        },
+        "notePresentatore": "SPECIFICA:\"La classifica si basa sugli ultimi dati ufficiali del report 'I numeri dello sport italiano' certificati dal CONI (riferiti ai tesserati federali dell'ultimo bilancio consuntivo disponibile, 2024/2025). \n\nNonostante lo straordinario boom del tennis e del padel (la FITP ha superato per la prima volta nella storia quota 800.000 tesserati grazie all'effetto Sinner, consolidando il secondo posto assoluto), il Calcio (FIGC) mantiene saldamente il primato con oltre 1,1 milioni di tesserati ufficiali.\""
       },
       "5": {
         "tipo": "canzone",
@@ -803,7 +804,7 @@
           "soluzioneAudio": "",
           "soluzioneTesto": ""
         },
-        "notePresentatore": "\"CONSIDERANDO I SOLI CREATOR E YOUTUBER DI CONTENUTI LUNGHI IN LINGUA ITALIANA, QUAL È IL CANALE CON IL MAGGIOR NUMERO DI VISUALIZZAZIONI TOTALI DELLA STORIA?\"\n\nAccettiamo come risposta il nome dello youtuber\nBARBADIANA= DELLE BARBADOS\n\nIl video si intitola \"Me at the zoo\" e dura solo 18 secondi. Fu caricato da Jawed Karim, uno dei co-fondatori di YouTube, il 23 aprile 2005 presso lo zoo di San Diego."
+        "notePresentatore": "\"CONSIDERANDO I SOLI CREATOR E YOUTUBER DI CONTENUTI LUNGHI IN LINGUA ITALIANA, QUAL È IL CANALE CON IL MAGGIOR NUMERO DI VISUALIZZAZIONI TOTALI DELLA STORIA?\"\n\nAccettiamo come risposta il nome dello youtuber\n\nBARBADIANA= DELLE BARBADOS\n\nIl video si intitola \"Me at the zoo\" e dura solo 18 secondi. Fu caricato da Jawed Karim, uno dei co-fondatori di YouTube, il 23 aprile 2005 presso lo zoo di San Diego."
       },
       "6": {
         "tipo": "immagine",
@@ -857,7 +858,8 @@
           "soluzioneTesto": "RAFANO",
           "domanda": "10 COSE DA FARE IN CASO DI ATTACCO ALIENO",
           "categoria": "ORTAGGIO"
-        }
+        },
+        "notePresentatore": "Questa lista riprende i protocolli standard della protezione civile (come quelli del FEMA americano o delle guide satiriche di sopravvivenza apocalittica) adattati a un'invasione extraterrestre"
       }
     },
     "sfondoGenerale": "/Icone/sfondi/sfondo_box2_cristalli.jpg"
@@ -1135,7 +1137,7 @@
         "indizio": "11 NOVEMBRE 2026, ROUTE 66",
         "bonus": "",
         "punti": 3000,
-        "notePresentatore": "❓MILLE E UNA NADIA \n\"L'11 novembre 2026 celebriamo i 100 anni dalla nascita della Route 66, inaugurata ufficialmente nel 1926. Questa leggendaria autostrada, lunga originariamente quasi 4.000 chilometri, tagliava l'America in diagonale collegando Chicago a Santa Monica, in California, attraversando ben 8 Stati. Anche se nel 1985 è stata ufficialmente cancellata dalle mappe del sistema autostradale americano (sostituita dalle più veloci Interstate), il suo spirito non è mai morto. Oggi, i tratti sopravvissuti formano la 'Historic Route 66'. Festeggiare il suo centenario non significa solo celebrare un pezzo di asfalto, ma omaggiare il simbolo per eccellenza della libertà, dell'avventura e del classico viaggio on the road americano.\""
+        "notePresentatore": "[C=6], [D=2], [G=2], [H=2], [L=4], [M=3], [N=4], [R=2], [S=2], [T=4]\n❓MILLE E UNA NADIA \n\"L'11 novembre 2026 celebriamo i 100 anni dalla nascita della Route 66, inaugurata ufficialmente nel 1926. Questa leggendaria autostrada, lunga originariamente quasi 4.000 chilometri, tagliava l'America in diagonale collegando Chicago a Santa Monica, in California, attraversando ben 8 Stati. Anche se nel 1985 è stata ufficialmente cancellata dalle mappe del sistema autostradale americano (sostituita dalle più veloci Interstate), il suo spirito non è mai morto. Oggi, i tratti sopravvissuti formano la 'Historic Route 66'. Festeggiare il suo centenario non significa solo celebrare un pezzo di asfalto, ma omaggiare il simbolo per eccellenza della libertà, dell'avventura e del classico viaggio on the road americano.\""
       },
       {
         "testo": "PER CAUSA SUA I TEMPLI DI ABU SIMBEL FURONO SPOSTATI",
@@ -1159,7 +1161,7 @@
         "indizio": "ANNI '60, DIGA DI ASSUAN",
         "bonus": "dado",
         "punti": 0,
-        "notePresentatore": "Negli anni '60 la costruzione dell'imponente Diga di Assuan creò un enorme bacino artificiale che rischiava di sommergere per sempre i templi di Abu Simbel. Per salvarli, l'UNESCO compì un vero miracolo ingegneristico, smontando e ricostruendo l'intero complesso blocco per blocco più in alto!"
+        "notePresentatore": "[B=2], [C=1], [D=1], [F=1], [L=2], [M=2], [N=1], [P=3], [R=2], [S=5], [T=3]\nNegli anni '60 la costruzione dell'imponente Diga di Assuan creò un enorme bacino artificiale che rischiava di sommergere per sempre i templi di Abu Simbel. Per salvarli, l'UNESCO compì un vero miracolo ingegneristico, smontando e ricostruendo l'intero complesso blocco per blocco più in alto!"
       },
       {
         "testo": "L' ITALIANO LUCA PARMITANO PARTECIPERà ALLA MISSIONE SPAZIALE",
@@ -1184,7 +1186,7 @@
         "indizio": "FINE 2027, ARTEMIS III",
         "bonus": "switch",
         "punti": 2000,
-        "notePresentatore": "❓A seguito dei drastici cambiamenti annunciati nel 2026, quale sarà il vero obiettivo della missione Artemis III della NASA (posticipata al 2027)?\nA) Atterrare sul Polo Sud lunare B) Testare l'attracco con i lander lunari nell'orbita terrestre C) Sorvolare Marte\nRisposta corretta: B) Testare l'attracco con i lander lunari nell'orbita terrestre. \nL'atterraggio sulla Luna avverrà con Artemis IV nel 2028.\n"
+        "notePresentatore": "[C=2], [L=6], [M=2], [N=3], [P=4], [R=3], [S=3], [T=3], [Z=1]\n❓A seguito dei drastici cambiamenti annunciati nel 2026, quale sarà il vero obiettivo della missione Artemis III della NASA (posticipata al 2027)?\nA) Atterrare sul Polo Sud lunare B) Testare l'attracco con i lander lunari nell'orbita terrestre C) Sorvolare Marte\nRisposta corretta: B) Testare l'attracco con i lander lunari nell'orbita terrestre. \nL'atterraggio sulla Luna avverrà con Artemis IV nel 2028.\n"
       },
       {
         "testo": "ARCHIMEDE BRUCIò LE NAVI ROMANE CON GLI SPECCHI",
@@ -1203,7 +1205,7 @@
         "indizio": "212 A.C., SIRACUSA",
         "bonus": "",
         "punti": 4000,
-        "notePresentatore": ""
+        "notePresentatore": "[B=1], [C=4], [D=1], [G=1], [H=2], [L=2], [M=2], [N=3], [P=1], [R=3], [S=1], [V=1]"
       },
       {
         "testo": "L' ARSENAL DI RICCARDO CALAFIORI VINCE LA PREMIER LEAGUE",
@@ -1226,7 +1228,7 @@
         "indizio": "31 MAGGIO 2026, EMIRATES STADIUM, LONDRA",
         "bonus": "arco",
         "punti": 2000,
-        "notePresentatore": ""
+        "notePresentatore": "[C=4], [D=2], [F=1], [G=1], [L=4], [M=1], [N=2], [P=1], [R=5], [S=1], [V=1]"
       },
       {
         "testo": "L' ESPLORATORE SCOZZESE SCOPRì LE CASCATE VITTORIA",
@@ -1247,7 +1249,7 @@
         "indizio": "DAVID LIVINGSTONE, AFRICA CENTRALE, 1855",
         "bonus": "arco",
         "punti": 3000,
-        "notePresentatore": "Il 16 novembre 1855, nel cuore inesplorato dell'Africa centrale, David Livingstone divenne il primo europeo a scorgere le maestose cascate del fiume Zambesi. Decise di omaggiare la sovrana britannica ribattezzandole 'Cascate Vittoria'.\""
+        "notePresentatore": "[C=3], [L=3], [P=2], [R=4], [S=5], [T=4], [V=1], [Z=2]\nIl 16 novembre 1855, nel cuore inesplorato dell'Africa centrale, David Livingstone divenne il primo europeo a scorgere le maestose cascate del fiume Zambesi. Decise di omaggiare la sovrana britannica ribattezzandole 'Cascate Vittoria'.\""
       },
       {
         "testo": "DANTE E VIRGILIO INCONTRANO IL TRADITORE CONTE UGOLINO",
@@ -1270,7 +1272,7 @@
         "indizio": "1300, LAGO DI COCITO",
         "bonus": "scudo",
         "punti": 2000,
-        "notePresentatore": "Nel nono cerchio dell'Inferno, imprigionato nel ghiaccio perenne del lago di Cocito, Dante si imbatte nel Conte Ugolino della Gherardesca. Condannato per tradimento politico, Ugolino è protagonista di uno degli episodi più tragici dell'intero poema: morì di inedia rinchiuso in una torre pisana insieme ai suoi figli e nipoti. Nell'Inferno dantesco è costretto al gelo eterno, condannato a sfogare la sua rabbia contro l'arcivescovo che lo aveva imprigionato.\nSe avete una memoria di ferro per la letteratura, avrete notato che c'è una piccola 'licenza poetica' nell'immagine che vi abbiamo mostrato. Nel testo originale della Divina Commedia, infatti, il Conte Ugolino non si trova affatto da solo nel ghiaccio. È condannato a stare nella stessa buca insieme al suo acerrimo nemico e carceriere, l'Arcivescovo Ruggieri. Per la precisione, Ugolino è posizionato sopra di lui e gli azzanna in eterno la nuca in quello che Dante definisce un fiero pasto. Nell'immagine, Ruggieri è stato provvidenzialmente omesso per non rendere la scena troppo macabra!"
+        "notePresentatore": "[C=2], [D=2], [G=2], [L=3], [N=5], [R=4], [T=4], [V=1]\nNel nono cerchio dell'Inferno, imprigionato nel ghiaccio perenne del lago di Cocito, Dante si imbatte nel Conte Ugolino della Gherardesca. Condannato per tradimento politico, Ugolino è protagonista di uno degli episodi più tragici dell'intero poema: morì di inedia rinchiuso in una torre pisana insieme ai suoi figli e nipoti. Nell'Inferno dantesco è costretto al gelo eterno, condannato a sfogare la sua rabbia contro l'arcivescovo che lo aveva imprigionato.\nSe avete una memoria di ferro per la letteratura, avrete notato che c'è una piccola 'licenza poetica' nell'immagine che vi abbiamo mostrato. Nel testo originale della Divina Commedia, infatti, il Conte Ugolino non si trova affatto da solo nel ghiaccio. È condannato a stare nella stessa buca insieme al suo acerrimo nemico e carceriere, l'Arcivescovo Ruggieri. Per la precisione, Ugolino è posizionato sopra di lui e gli azzanna in eterno la nuca in quello che Dante definisce un fiero pasto. Nell'immagine, Ruggieri è stato provvidenzialmente omesso per non rendere la scena troppo macabra!"
       },
       {
         "testo": "EINSTEIN RICEVE IL PREMIO NOBEL PER GLI STUDI SULL' EFFETTO FOTOELETTRICO",
@@ -1297,7 +1299,7 @@
         "indizio": "STOCCOLMA, OTTOBRE 1922",
         "bonus": "",
         "punti": 4000,
-        "notePresentatore": ""
+        "notePresentatore": "[B=1], [C=2], [D=1], [F=3], [G=1], [L=6], [M=1], [N=3], [P=2], [R=4], [S=3], [T=6], [V=1]"
       },
       {
         "testo": "IL TRAPPER PERCEPISCE CHE IL TALENTO L' HA PORTATO LONTANO DAGLI AFFETTI",
@@ -1323,7 +1325,7 @@
         "indizio": "SFERA EBBASTA, 2026",
         "bonus": "scudo",
         "punti": 4000,
-        "notePresentatore": ""
+        "notePresentatore": "[C=3], [D=1], [F=2], [G=1], [H=2], [L=6], [N=2], [P=4], [R=4], [S=1], [T=7]"
       },
       {
         "testo": "ABRAMO SACRIFICA UN ARIETE CON LE CORNA IMPIGLIATE IN UN CESPUGLIO",
@@ -1351,7 +1353,7 @@
         "indizio": "TERRITORIO DI MORIA, 2000 a. C. CIRCA",
         "bonus": "scudo",
         "punti": 5000,
-        "notePresentatore": ""
+        "notePresentatore": "[B=1], [C=4], [F=1], [G=2], [L=3], [M=2], [N=5], [P=2], [R=4], [S=2], [T=2]"
       },
       {
         "testo": "FRASE PALAZZO TE",

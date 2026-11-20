@@ -42,7 +42,7 @@ export default function SlideRenderer({ type, interactive = true, revealAll = fa
       {type === 'password_squadre' && <PasswordSquadreBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
       {type === 'password_prescelti' && <PasswordPresceltiBoard interactive={interactive} isPresenter={isPresenter} />}
       {type === 'classifica_generale' && <ClassificaGeneraleBoard />}
-      {type === 'finale_squadre' && <FinaleSquadreBoard />}
+      {type === 'finale_squadre' && <FinaleSquadreBoard isPresenter={isPresenter} />}
       {type === 'scenetta' && <ScenettaBoard interactive={interactive} revealAll={revealAll} />}
       {type === 'video' && <VideoBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}
       {type === 'mappa_torneo' && <MappaTorneoBoard interactive={interactive} revealAll={revealAll} isPresenter={isPresenter} />}

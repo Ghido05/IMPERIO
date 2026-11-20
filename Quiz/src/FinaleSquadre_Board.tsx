@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { useScores } from './context/ScoreContext';
 import { useSyncedState } from './hooks/useSyncedState';
@@ -674,113 +674,226 @@ function PedestalCube({
   );
 }
 
-// Generic, Universal Suspended Cyber Monitor (Works gracefully on ANY background theme!)
+// Roman Imperial Bronze & Gold Bonus Shield / Crest Plaque (in tema Colosseo / Naumachia)
 function GenericBonusMonitor({
   label,
   sublabel,
   type,
   active,
+  teamColor = '#f59e0b',
   onToggle,
 }: {
   label: string;
   sublabel: string;
   type: string;
   active: boolean;
+  teamColor?: string;
   onToggle: () => void;
 }) {
+  const uid = useId().replace(/:/g, '');
+  const goldGradId = `roman-gold-${uid}`;
+  const crimsonGradId = `roman-accent-${uid}`;
+
   return (
     <div className="flex flex-col items-center">
-      {/* Hanging metallic cable from top edge */}
-      <div className="w-[2px] h-6 bg-gradient-to-b from-white/70 via-slate-400 to-slate-600 relative">
-        <div className="absolute top-0 -left-1 w-3 h-1.5 bg-slate-500 rounded-sm" />
-        <div className="absolute bottom-0 -left-0.5 w-2 h-1 bg-slate-700 rounded-sm" />
+      {/* Catena in bronzo e anello dorato stile stendardo romano (h-6 totale) */}
+      <div className="h-6 flex flex-col items-center justify-end relative">
+        <div
+          className={`w-2.5 h-2.5 rounded-full border-2 -mb-0.5 ${
+            active
+              ? 'border-amber-300 bg-amber-500/40 shadow-[0_0_8px_rgba(251,191,36,0.8)]'
+              : 'border-stone-500 bg-stone-800/70'
+          }`}
+        />
+        <div
+          className={`w-[3px] h-3.5 rounded-full ${
+            active
+              ? 'bg-gradient-to-b from-amber-200 via-amber-500 to-amber-800'
+              : 'bg-gradient-to-b from-stone-500 to-stone-700'
+          }`}
+        />
+        <div
+          className={`w-4 h-1 rounded-sm ${
+            active ? 'bg-amber-400 shadow-[0_0_6px_rgba(251,191,36,0.7)]' : 'bg-stone-600'
+          }`}
+        />
       </div>
 
-      {/* Modern HUD Screen (Theme-neutral, transparent smoked glass) */}
+      {/* Scudo / Medaglione Imperiale Romano in Bronzo, Oro e Travertino */}
       <button
         type="button"
         onClick={onToggle}
-        className={`group relative w-16 sm:w-20 h-16 sm:h-20 rounded-xl border-2 transition-all duration-300 flex flex-col items-center justify-center cursor-pointer overflow-hidden backdrop-blur-md ${
+        className={`group relative w-[72px] sm:w-[84px] h-[80px] rounded-t-xl rounded-b-[1.35rem] border-[2.5px] transition-all duration-300 flex flex-col items-center justify-center py-1 cursor-pointer overflow-hidden backdrop-blur-md ${
           active
-            ? 'bg-black/60 hover:scale-105'
-            : 'bg-black/80 border-white/10 opacity-30 grayscale hover:opacity-50'
+            ? 'hover:scale-[1.08] active:scale-95'
+            : 'opacity-40 grayscale hover:opacity-60'
         }`}
         style={{
-          borderColor: active ? '#00e5ff' : 'rgba(255,255,255,0.15)',
+          background: active
+            ? 'linear-gradient(175deg, rgba(120, 53, 15, 0.92) 0%, rgba(41, 24, 12, 0.96) 52%, rgba(18, 11, 7, 0.98) 100%)'
+            : 'linear-gradient(175deg, rgba(38, 34, 30, 0.88) 0%, rgba(18, 16, 15, 0.94) 100%)',
+          borderColor: active ? '#fcd34d' : 'rgba(168, 162, 158, 0.35)',
           boxShadow: active
-            ? '0 0 16px rgba(0, 229, 255, 0.4), inset 0 0 10px rgba(0, 229, 255, 0.2)'
-            : 'none',
+            ? '0 0 22px rgba(245, 158, 11, 0.72), 0 8px 18px rgba(0, 0, 0, 0.85), inset 0 1px 10px rgba(253, 224, 71, 0.45)'
+            : '0 4px 10px rgba(0, 0, 0, 0.6)',
         }}
         title={`Bonus ${label} (${sublabel}): ${active ? 'Disponibile (clicca per spendere)' : 'Utilizzato (clicca per ripristinare)'}`}
       >
-        {/* Holographic HUD Corner Brackets */}
-        <div className="absolute top-1 left-1 w-1.5 h-1.5 border-t border-l border-cyan-300/80" />
-        <div className="absolute top-1 right-1 w-1.5 h-1.5 border-t border-r border-cyan-300/80" />
-        <div className="absolute bottom-1 left-1 w-1.5 h-1.5 border-b border-l border-cyan-300/80" />
-        <div className="absolute bottom-1 right-1 w-1.5 h-1.5 border-b border-r border-cyan-300/80" />
-
-        {/* Status LED Dot */}
+        {/* Cornice interna incisa dorata + gemma superiore con colore squadra */}
         <div
-          className={`absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full ${
-            active ? 'bg-cyan-400 shadow-[0_0_6px_#00e5ff] animate-pulse' : 'bg-red-500/50'
+          className={`absolute inset-[3px] rounded-t-[9px] rounded-b-[1.1rem] border pointer-events-none ${
+            active ? 'border-amber-200/45' : 'border-stone-500/20'
           }`}
         />
 
-        {/* Vector SVG Icons matching omini.jpg */}
-        <div className={`transition-transform duration-300 ${active ? 'text-cyan-300 drop-shadow-[0_0_8px_#00e5ff]' : 'text-slate-500'}`}>
+        {/* Fregio/Barra superiore stendardo con riflesso colore squadra */}
+        <div
+          className="absolute top-0 inset-x-0 h-1.5 opacity-90 pointer-events-none"
+          style={{
+            background: active
+              ? `linear-gradient(90deg, #b45309 0%, ${teamColor} 50%, #b45309 100%)`
+              : 'rgba(87, 83, 78, 0.5)',
+          }}
+        />
+
+        {/* Gemma / Sigillo luminoso attivo */}
+        <div
+          className={`absolute top-2 right-2 w-2 h-2 rounded-full pointer-events-none ${
+            active
+              ? 'bg-amber-300 shadow-[0_0_8px_#fde047,0_0_14px_#f59e0b] animate-pulse'
+              : 'bg-stone-600'
+          }`}
+        />
+
+        {/* Emblema vettoriale ingrandito scolpito oro/bronzo imperiale (senza scritta) */}
+        <div
+          className={`relative z-10 flex items-center justify-center transition-transform duration-300 ${
+            active ? 'group-hover:scale-110' : 'opacity-65'
+          }`}
+          style={{
+            filter: active
+              ? 'drop-shadow(0 2px 6px rgba(0,0,0,0.9)) drop-shadow(0 0 10px rgba(251,191,36,0.65))'
+              : 'drop-shadow(0 1px 2px rgba(0,0,0,0.8))',
+          }}
+        >
           {type === 'dice' && (
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <polygon points="14,3 24,8 14,13 4,8" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity="0.25" />
-              <circle cx="14" cy="8" r="1.4" fill="currentColor" />
-              <polygon points="4,8 14,13 14,24 4,19" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity="0.15" />
-              <circle cx="7.5" cy="12.5" r="1.2" fill="currentColor" />
-              <circle cx="10.5" cy="18.5" r="1.2" fill="currentColor" />
-              <polygon points="14,13 24,8 24,19 14,24" stroke="currentColor" strokeWidth="1.8" fill="currentColor" fillOpacity="0.35" />
-              <circle cx="17.5" cy="15.5" r="1.2" fill="currentColor" />
-              <circle cx="20.5" cy="21.5" r="1.2" fill="currentColor" />
-              <circle cx="19" cy="18.5" r="1.2" fill="currentColor" />
+            <svg width="52" height="52" viewBox="0 0 36 36" fill="none">
+              <defs>
+                <linearGradient id={goldGradId} x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#fef3c7" />
+                  <stop offset="45%" stopColor="#fbbf24" />
+                  <stop offset="100%" stopColor="#b45309" />
+                </linearGradient>
+              </defs>
+              {/* Corona di rilancio circolare attorno al dado d'avorio/oro */}
+              <path
+                d="M 7 10 A 14 14 0 0 1 29 10"
+                stroke="#fde68a"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeDasharray="3 2"
+              />
+              <polygon points="18,6 30,12 18,18 6,12" fill="#fef3c7" stroke="#451a03" strokeWidth="1.6" strokeLinejoin="round" />
+              <polygon points="6,12 18,18 18,31 6,25" fill={`url(#${goldGradId})`} stroke="#451a03" strokeWidth="1.6" strokeLinejoin="round" />
+              <polygon points="30,12 18,18 18,31 30,25" fill="#d97706" stroke="#451a03" strokeWidth="1.6" strokeLinejoin="round" />
+              <circle cx="18" cy="12" r="2" fill="#451a03" />
+              <circle cx="10.5" cy="18.5" r="1.7" fill="#451a03" />
+              <circle cx="14" cy="24.5" r="1.7" fill="#451a03" />
+              <circle cx="22" cy="21" r="1.6" fill="#fef3c7" />
+              <circle cx="26" cy="18" r="1.6" fill="#fef3c7" />
+              <circle cx="24" cy="24.5" r="1.6" fill="#fef3c7" />
             </svg>
           )}
 
           {type === 'switch' && (
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <path d="M 4 20 C 10 20, 12 8, 20 8 L 24 8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 20 4 L 24 8 L 20 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M 4 8 C 10 8, 12 20, 20 20 L 24 20" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 20 16 L 24 20 L 20 24" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="52" height="52" viewBox="0 0 36 36" fill="none">
+              <defs>
+                <linearGradient id={goldGradId} x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#fef9c3" />
+                  <stop offset="50%" stopColor="#f59e0b" />
+                  <stop offset="100%" stopColor="#92400e" />
+                </linearGradient>
+              </defs>
+              {/* Scudo/Anello di scambio con doppie frecce imperiali dorate */}
+              <circle cx="18" cy="18" r="14" fill="rgba(180,83,9,0.25)" stroke="#fbbf24" strokeWidth="1.5" strokeOpacity="0.6" />
+              <path
+                d="M 7 13 H 25 M 21 8.5 L 27.5 13 L 21 17.5"
+                stroke={`url(#${goldGradId})`}
+                strokeWidth="3.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M 29 23 H 11 M 15 18.5 L 8.5 23 L 15 27.5"
+                stroke="#fef3c7"
+                strokeWidth="3.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
           )}
 
           {type === 'bow' && (
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <path d="M 7 5 L 14 5 L 21 12 L 21 16 L 14 23 L 7 23" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M 7 5 L 7 23" stroke="currentColor" strokeWidth="1.2" strokeDasharray="2 1" />
-              <path d="M 4 14 L 22 14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-              <path d="M 18 10 L 23 14 L 18 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="52" height="52" viewBox="0 0 36 36" fill="none">
+              <defs>
+                <linearGradient id={goldGradId} x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#fef3c7" />
+                  <stop offset="50%" stopColor="#f59e0b" />
+                  <stop offset="100%" stopColor="#78350f" />
+                </linearGradient>
+                <linearGradient id={crimsonGradId} x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#fca5a5" />
+                  <stop offset="100%" stopColor="#ef4444" />
+                </linearGradient>
+              </defs>
+              {/* Arco romano dorato e freccia da guerra */}
+              <path
+                d="M 11 5 C 24 6, 28 13, 28 18 C 28 23, 24 30, 11 31"
+                stroke={`url(#${goldGradId})`}
+                strokeWidth="3.8"
+                strokeLinecap="round"
+              />
+              <line x1="11" y1="5.5" x2="11" y2="30.5" stroke="#fef3c7" strokeWidth="1.5" strokeOpacity="0.9" />
+              <line x1="6" y1="18" x2="30" y2="18" stroke="#fde68a" strokeWidth="2.8" strokeLinecap="round" />
+              <polygon points="33,18 25,13.5 27,18 25,22.5" fill="#fef08a" stroke="#451a03" strokeWidth="1" />
+              <polygon points="5,15.5 9,18 5,20.5 7,18" fill={`url(#${crimsonGradId})`} />
             </svg>
           )}
 
           {type === 'shield' && (
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-              <path d="M 14 4 L 22 7 L 22 14 C 22 19, 17 23, 14 24 C 11 23, 6 19, 6 14 L 6 7 Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" fill="currentColor" fillOpacity="0.2" />
-              <path d="M 10 14 L 13 17 L 18 11" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            <svg width="52" height="52" viewBox="0 0 36 36" fill="none">
+              <defs>
+                <linearGradient id={goldGradId} x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#fef3c7" />
+                  <stop offset="45%" stopColor="#f59e0b" />
+                  <stop offset="100%" stopColor="#92400e" />
+                </linearGradient>
+                <linearGradient id={crimsonGradId} x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#dc2626" />
+                  <stop offset="100%" stopColor="#7f1d1d" />
+                </linearGradient>
+              </defs>
+              {/* Scutum legionario romano con bordo oro e umbone centrale */}
+              <path
+                d="M 8 6 Q 18 3.5 28 6 L 28 19 C 28 26 22 30.5 18 32.5 C 14 30.5 8 26 8 19 Z"
+                fill={`url(#${crimsonGradId})`}
+                stroke={`url(#${goldGradId})`}
+                strokeWidth="2.8"
+                strokeLinejoin="round"
+              />
+              {/* Nervature imperiali & umbone centrale dorato */}
+              <line x1="18" y1="6" x2="18" y2="31" stroke="#fcd34d" strokeWidth="1.8" strokeOpacity="0.85" />
+              <line x1="9" y1="17" x2="27" y2="17" stroke="#fcd34d" strokeWidth="1.8" strokeOpacity="0.85" />
+              <circle cx="18" cy="17" r="4.5" fill={`url(#${goldGradId})`} stroke="#451a03" strokeWidth="1.4" />
+              <circle cx="18" cy="17" r="1.6" fill="#fef3c7" />
             </svg>
           )}
         </div>
 
-        {/* Clean Label */}
-        <span
-          className={`text-[9px] font-black uppercase tracking-wider mt-1 ${
-            active ? 'text-cyan-300' : 'text-slate-500'
-          }`}
-        >
-          {label}
-        </span>
-
-        {/* Used Badge */}
+        {/* Timbro spento / usato */}
         {!active && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/65 backdrop-blur-[1px]">
-            <span className="text-[9px] font-black uppercase tracking-widest text-red-400 border border-red-500/40 px-1 py-0.5 rounded bg-red-950/70">
+            <span className="-rotate-12 text-[10px] font-black uppercase tracking-widest text-red-200 border-2 border-red-500/70 px-1.5 py-0.5 rounded bg-red-950/90 shadow-md">
               USATO
             </span>
           </div>
@@ -892,6 +1005,7 @@ function ProminentDice3D({
   onRoll,
   canRollBonus,
   onUseBonusRoll,
+  hidePrompt = false,
 }: {
   rolling: boolean;
   isResolving?: boolean;
@@ -899,6 +1013,7 @@ function ProminentDice3D({
   onRoll: () => void;
   canRollBonus: boolean;
   onUseBonusRoll: () => void;
+  hidePrompt?: boolean;
 }) {
   const [rollCount, setRollCount] = useState(0);
   const [rotation, setRotation] = useState({ x: -20, y: 30, z: -5 });
@@ -989,7 +1104,8 @@ function ProminentDice3D({
         </div>
       </div>
 
-      {/* Subtle Hint & Bonus Re-roll */}
+      {/* Subtle Hint & Bonus Re-roll (solo in visuale Relatore) */}
+      {!hidePrompt && (
       <div className="flex flex-col items-center gap-1.5">
         {rolling ? (
           <span className="text-[10px] font-black uppercase tracking-widest text-cyan-300 animate-pulse flex items-center gap-1.5 bg-cyan-950/70 border border-cyan-400/40 px-3 py-1 rounded-full">
@@ -1023,11 +1139,22 @@ function ProminentDice3D({
           </button>
         )}
       </div>
+      )}
     </div>
   );
 }
 
-export default function FinaleSquadre_Board() {
+export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { isPresenter?: boolean } = {}) {
+  const isGamesMode = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    const params = new URLSearchParams(window.location.search);
+    const mode = params.get('mode');
+    if (mode === 'games' || mode === 'scores') return true;
+    if (params.get('project') === 'true') return true;
+    if (isPresenterProp !== undefined) return !isPresenterProp;
+    return false;
+  }, [isPresenterProp]);
+
   const gameData = useGameData() as {
     title?: string;
     subtitle?: string;
@@ -1161,11 +1288,11 @@ export default function FinaleSquadre_Board() {
     }
   }, []);
 
-  // Background image (lagoon water matching omini.jpg, or custom upload)
+  // Background image (nuovo sfondo Naumachia con linea acqua rialzata alle quote degli omini, o upload personalizzato)
   const bgImage = useMemo(() => {
     const raw = gameData?.sfondo || setupConfig?.gioco5?.sfondoGenerale;
     if (!raw || raw === '/sfondo_finale_default.jpg' || raw === '/sfondo_finale_acqua.jpg') {
-      return '/sfondo_finale_acqua.jpg?v=2';
+      return '/sfondo_finale_acqua_v2.jpg';
     }
     return raw;
   }, [gameData?.sfondo, setupConfig?.gioco5?.sfondoGenerale]);
@@ -1273,6 +1400,17 @@ export default function FinaleSquadre_Board() {
     }
   }, [rankingOrder, activeTeam, setActiveTeam, hasEliminatedMembers, manuallySelected, setSelectedDieFace, setDieTargetFace, setTargetTeam]);
 
+  // Assicura che il turno iniziale venga sempre scritto in localStorage per la sincronizzazione con ClassificaGenerale
+  const syncedInitialTurnRef = useRef(false);
+  useEffect(() => {
+    if (!syncedInitialTurnRef.current) {
+      syncedInitialTurnRef.current = true;
+      if (localStorage.getItem('playstate_finale_active_team') === null) {
+        setActiveTeam(activeTeam);
+      }
+    }
+  }, [activeTeam, setActiveTeam]);
+
   // Function to get the next team in rotation (3rd place -> 2nd place -> 1st place -> 3rd place...)
   // Automatically prioritizes teams that still have members alive
   const getNextTurnTeam = (currentTeam: TeamId): TeamId => {
@@ -1296,6 +1434,7 @@ export default function FinaleSquadre_Board() {
     if (rolling || isResolving) return;
     setRolling(true);
     setSelectedDieFace(null);
+    setTargetTeam(null);
     playSound('roll');
 
     const nextFace = DICE_FACES[Math.floor(Math.random() * DICE_FACES.length)];
@@ -1648,6 +1787,21 @@ export default function FinaleSquadre_Board() {
             opacity: 1;
           }
         }
+        @keyframes custom-blink {
+          0%, 100% {
+            opacity: 1;
+            filter: brightness(1.2) contrast(1.1);
+            transform: scale(1.02);
+          }
+          50% {
+            opacity: 0.58;
+            filter: brightness(0.86) contrast(0.95);
+            transform: scale(0.985);
+          }
+        }
+        .animate-custom-blink {
+          animation: custom-blink 1s infinite ease-in-out;
+        }
       `}</style>
 
       {/* 100% UNTOUCHED, FULL-VIEW BACKGROUND (No black overlays or boxes!) */}
@@ -1659,7 +1813,24 @@ export default function FinaleSquadre_Board() {
       {/* Main Interactive Stage Container */}
       <div className="relative z-10 w-full h-full flex flex-col justify-between p-3 sm:p-5">
         
-        {/* Minimalist Floating Top Bar */}
+        {/* Header: Titolo stile Spiegazione (Presentazione) oppure Barra Controlli Turno/Reset (Relatore) */}
+        {isGamesMode ? (
+          <header className="relative z-10 w-full flex flex-col items-center justify-center shrink-0 text-center pt-0.5 pointer-events-none">
+            <h1
+              className="text-3xl sm:text-4xl lg:text-[42px] font-black tracking-tight uppercase text-transparent bg-clip-text bg-gradient-to-r from-red-200 via-rose-200 to-amber-300 font-serif leading-tight"
+              style={{ filter: 'drop-shadow(0 4px 18px rgba(0,0,0,0.92)) drop-shadow(0 0 24px rgba(239,68,68,0.45))' }}
+            >
+              {gameData?.title && gameData.title !== 'Finale Squadre'
+                ? gameData.title
+                : setupConfig?.gioco5?.titolo || 'TERMOPILI — SCONTRO FINALE'}
+            </h1>
+            <p className="text-[10px] sm:text-xs font-semibold tracking-[0.3em] uppercase text-amber-100/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)] mt-0.5">
+              {gameData?.subtitle && gameData.subtitle !== 'Box 5'
+                ? gameData.subtitle
+                : setupConfig?.gioco5?.sottotitolo || "ARENA D'ACQUA • SFIDA DIRETTA A ELIMINAZIONE"}
+            </p>
+          </header>
+        ) : (
         <header className="flex items-center justify-between gap-4 shrink-0 bg-black/45 backdrop-blur-md px-5 py-2 rounded-2xl border border-white/15 shadow-xl max-w-5xl mx-auto w-full">
           <div className="flex items-center gap-2.5">
             <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded bg-red-600/40 text-red-300 border border-red-500/50">
@@ -1757,66 +1928,107 @@ export default function FinaleSquadre_Board() {
             </button>
           </div>
         </header>
+        )}
 
-        {/* Floating Banner for Team Jolly Reservation */}
+        {/* Banner Prenotazione Bonus: Riquadro Imperiale in Presentazione (sopra l'acqua senza spostare gli omini) o Barra Controllo Relatore */}
         {bookedTeam !== null && (
-          <div className="w-full max-w-3xl mx-auto my-2 px-4 animate-in fade-in slide-in-from-top-3 duration-300 z-50">
-            <div
-              className={`px-6 py-3.5 rounded-2xl border-2 shadow-[0_12px_45px_rgba(0,0,0,0.85)] flex items-center justify-between gap-4 backdrop-blur-xl ${
-                bookedTeam === 1
-                  ? 'bg-red-950/95 border-red-500 text-red-100 shadow-[0_0_35px_rgba(239,68,68,0.7)]'
-                  : bookedTeam === 2
-                  ? 'bg-blue-950/95 border-blue-500 text-blue-100 shadow-[0_0_35px_rgba(59,130,246,0.7)]'
-                  : 'bg-emerald-950/95 border-emerald-500 text-emerald-100 shadow-[0_0_35px_rgba(16,185,129,0.7)]'
-              }`}
-            >
-              <div className="flex items-center gap-3.5">
-                <span className="text-3xl animate-bounce">⚡</span>
-                <div className="flex flex-col">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 font-mono">
-                    PRENOTAZIONE JOLLY
+          isGamesMode ? (
+            <div className="absolute bottom-[202px] left-1/2 -translate-x-1/2 z-50 pointer-events-none w-full max-w-2xl px-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <div
+                className="relative px-8 py-4 rounded-2xl border-2 border-amber-300 flex items-center justify-center gap-5 backdrop-blur-xl overflow-hidden"
+                style={{
+                  background:
+                    bookedTeam === 1
+                      ? 'linear-gradient(135deg, rgba(127,29,29,0.95) 0%, rgba(41,20,10,0.96) 50%, rgba(120,53,15,0.95) 100%)'
+                      : bookedTeam === 2
+                      ? 'linear-gradient(135deg, rgba(30,58,138,0.95) 0%, rgba(15,23,42,0.96) 50%, rgba(120,53,15,0.95) 100%)'
+                      : 'linear-gradient(135deg, rgba(6,78,59,0.95) 0%, rgba(15,30,22,0.96) 50%, rgba(120,53,15,0.95) 100%)',
+                  boxShadow:
+                    '0 0 45px rgba(251,191,36,0.75), 0 18px 45px rgba(0,0,0,0.85), inset 0 1px 12px rgba(253,224,71,0.45)',
+                }}
+              >
+                <div className="absolute inset-1 rounded-xl border border-amber-200/35 pointer-events-none" />
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 border-2 border-amber-100 flex items-center justify-center shadow-[0_0_20px_rgba(251,191,36,0.85)] shrink-0 animate-pulse">
+                  <span className="text-2xl">🛡️</span>
+                </div>
+                <div className="flex flex-col items-center text-center">
+                  <span className="text-xs font-black uppercase tracking-[0.35em] text-amber-300 drop-shadow">
+                    GIOCA IL BONUS
                   </span>
-                  <span className="font-black text-lg sm:text-xl uppercase tracking-wider text-white drop-shadow">
-                    {teamNames[bookedTeam - 1] || `SQUADRA ${bookedTeam}`} SI È PRENOTATA!
+                  <span className="font-black text-2xl sm:text-3xl uppercase tracking-widest text-white drop-shadow-[0_3px_10px_rgba(0,0,0,0.95)] font-serif">
+                    {teamNames[bookedTeam - 1] || `SQUADRA ${bookedTeam}`}
                   </span>
                 </div>
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 border-2 border-amber-100 flex items-center justify-center shadow-[0_0_20px_rgba(251,191,36,0.85)] shrink-0 animate-pulse">
+                  <span className="text-2xl">⚔️</span>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setBookedTeam(null);
-                  localStorage.removeItem('playstate_finale_squadre_booked_team');
-                  sendSerialReset();
-                  window.dispatchEvent(new Event('storage'));
-                  window.dispatchEvent(new CustomEvent('local-storage-update', {
-                    detail: { key: 'playstate_finale_squadre_booked_team', value: null }
-                  }));
-                }}
-                className="px-4 py-2 text-xs font-black uppercase rounded-xl bg-white/20 hover:bg-white/30 text-white border border-white/30 shadow transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0"
-                title="Sblocca prenotazione (Esc)"
-              >
-                <span>✕</span> Sblocca
-              </button>
             </div>
-          </div>
+          ) : (
+            <div className="w-full max-w-3xl mx-auto my-2 px-4 animate-in fade-in slide-in-from-top-3 duration-300 z-50">
+              <div
+                className={`px-6 py-3.5 rounded-2xl border-2 shadow-[0_12px_45px_rgba(0,0,0,0.85)] flex items-center justify-between gap-4 backdrop-blur-xl ${
+                  bookedTeam === 1
+                    ? 'bg-red-950/95 border-red-500 text-red-100 shadow-[0_0_35px_rgba(239,68,68,0.7)]'
+                    : bookedTeam === 2
+                    ? 'bg-blue-950/95 border-blue-500 text-blue-100 shadow-[0_0_35px_rgba(59,130,246,0.7)]'
+                    : 'bg-emerald-950/95 border-emerald-500 text-emerald-100 shadow-[0_0_35px_rgba(16,185,129,0.7)]'
+                }`}
+              >
+                <div className="flex items-center gap-3.5">
+                  <span className="text-3xl animate-bounce">🛡️</span>
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-300 font-mono">
+                      GIOCA IL BONUS
+                    </span>
+                    <span className="font-black text-lg sm:text-xl uppercase tracking-wider text-white drop-shadow">
+                      {teamNames[bookedTeam - 1] || `SQUADRA ${bookedTeam}`}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBookedTeam(null);
+                    localStorage.removeItem('playstate_finale_squadre_booked_team');
+                    sendSerialReset();
+                    window.dispatchEvent(new Event('storage'));
+                    window.dispatchEvent(new CustomEvent('local-storage-update', {
+                      detail: { key: 'playstate_finale_squadre_booked_team', value: null }
+                    }));
+                  }}
+                  className="px-4 py-2 text-xs font-black uppercase rounded-xl bg-white/20 hover:bg-white/30 text-white border border-white/30 shadow transition-all hover:scale-105 active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0"
+                  title="Sblocca prenotazione (Esc)"
+                >
+                  <span>✕</span> Sblocca
+                </button>
+              </div>
+            </div>
+          )
         )}
 
         {/* ============================================================ */}
-        {/* THE 3 TEAMS: VERTICALLY CENTERED in the screen, floating freely! */}
+        {/* THE 3 TEAMS: Dimensioni equilibrate, centrati e ben distanziati dal titolo */}
         {/* ============================================================ */}
-        <div className="flex-1 grid grid-cols-3 gap-4 lg:gap-8 my-2 min-h-0 items-center">
+        <div className="flex-1 grid grid-cols-3 gap-5 lg:gap-9 mt-4 mb-2 max-w-[1620px] mx-auto w-full min-h-0 items-center">
           {([1, 2, 3] as TeamId[]).map((teamId) => {
             const meta = TEAMS_CONFIG[teamId];
             const isActive = activeTeam === teamId;
             const isBooked = bookedTeam === teamId;
-            const isTarget =
-              targetTeam === 'both'
-                ? activeTeam !== teamId
-                : targetTeam !== 'none' && targetTeam === teamId;
             const teamMembersCount = startingMembers[teamId];
             const teamEliminatedList = eliminatedMembers[teamId] || [];
             const remainingCount = Math.max(0, teamMembersCount - teamEliminatedList.length);
             const isEliminated = teamMembersCount > 0 && remainingCount === 0;
+            const hasDiceTarget = Boolean(selectedDieFace && !rolling && targetTeam !== null);
+            const isTarget =
+              hasDiceTarget &&
+              !isEliminated &&
+              (targetTeam === 'both'
+                ? activeTeam !== teamId
+                : targetTeam !== 'none' && targetTeam === teamId);
+            const isSalvezzaActive = hasDiceTarget && targetTeam === 'none' && isActive && !isEliminated;
+            const isDimmedByDice =
+              hasDiceTarget && !isEliminated && !isTarget && !isActive && !isBooked;
 
             const aliveTeams = ([1, 2, 3] as TeamId[]).filter((tId) => {
               const maxC = startingMembers[tId] ?? 6;
@@ -1829,20 +2041,77 @@ export default function FinaleSquadre_Board() {
             return (
               <div
                 key={teamId}
-                className={`relative flex flex-col justify-center h-full transition-all duration-700 rounded-3xl p-1 sm:p-2 ${
+                className={`relative flex flex-col justify-center h-[92%] max-h-[715px] max-w-[495px] w-full mx-auto my-auto transition-all duration-500 rounded-3xl px-2.5 sm:px-3 pt-5 pb-2 ${
                   isEliminated
                     ? 'grayscale-[0.85] opacity-60 hover:opacity-90 ring-1 ring-red-500/40 bg-red-950/20 shadow-[0_0_30px_rgba(239,68,68,0.2)]'
                     : isWinner
                     ? 'ring-2 ring-yellow-400/80 bg-yellow-500/5 shadow-[0_0_35px_rgba(234,179,8,0.25)]'
                     : isBooked
-                    ? 'ring-4 ring-amber-400 shadow-[0_0_45px_rgba(245,158,11,0.85)] scale-[1.02] z-30'
+                    ? 'ring-4 ring-amber-400 bg-amber-500/15 shadow-[0_0_55px_rgba(245,158,11,0.9)] z-30'
+                    : isTarget
+                    ? 'ring-4 ring-red-500 bg-red-950/35 shadow-[0_0_70px_rgba(239,68,68,0.85),inset_0_0_40px_rgba(239,68,68,0.3)] z-20'
+                    : isSalvezzaActive
+                    ? 'ring-4 ring-emerald-400 bg-emerald-950/25 shadow-[0_0_55px_rgba(16,185,129,0.75)] z-20'
+                    : isDimmedByDice
+                    ? 'opacity-40 scale-[0.97] grayscale-[0.35]'
+                    : isActive
+                    ? 'ring-4 ring-amber-300 bg-amber-500/10 shadow-[0_0_65px_rgba(251,191,36,0.8),inset_0_0_36px_rgba(251,191,36,0.22)] z-20'
                     : ''
                 }`}
                 style={{
-                  background: isActive && !isEliminated ? meta.spotlightGlow : undefined,
+                  background: isTarget
+                    ? 'radial-gradient(ellipse at 50% 50%, rgba(239, 68, 68, 0.42) 0%, rgba(185, 28, 28, 0.16) 52%, transparent 78%)'
+                    : isActive && !isEliminated
+                    ? `radial-gradient(ellipse at 50% 45%, rgba(251, 191, 36, 0.28) 0%, transparent 70%), ${meta.spotlightGlow}`
+                    : undefined,
                 }}
               >
-                {/* Top Section: Hanging Generic Cyber Bonus Monitors */}
+                {/* Cornice pulsante e badge prominente quando la squadra è scelta dal dado, è di turno o ha prenotato */}
+                {!isEliminated && !isWinner && isBooked && (
+                  <>
+                    <div className="absolute inset-0 rounded-3xl border-2 border-amber-300 animate-pulse pointer-events-none z-30" />
+                    <div className="absolute top-1.5 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+                      <div className="px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 via-yellow-300 to-amber-500 border-2 border-white text-black font-black text-xs sm:text-sm uppercase tracking-widest shadow-[0_0_30px_rgba(251,191,36,0.95)] flex items-center gap-2 whitespace-nowrap animate-bounce">
+                        <span>🛡️</span>
+                        <span>GIOCA IL BONUS</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {!isBooked && isTarget && (
+                  <>
+                    <div className="absolute inset-0 rounded-3xl border-2 border-red-400/90 animate-pulse pointer-events-none z-30" />
+                    <div className="absolute top-1.5 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+                      <div className="px-4 py-1.5 rounded-full bg-gradient-to-r from-red-600 via-rose-500 to-red-600 border-2 border-red-200 text-white font-black text-xs sm:text-sm uppercase tracking-widest shadow-[0_0_30px_rgba(239,68,68,0.95)] flex items-center gap-2 whitespace-nowrap animate-bounce">
+                        <span>🎯</span>
+                        <span>BERSAGLIO DEL DADO</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {isSalvezzaActive && !isBooked && (
+                  <>
+                    <div className="absolute inset-0 rounded-3xl border-2 border-emerald-400/90 animate-pulse pointer-events-none z-30" />
+                    <div className="absolute top-1.5 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+                      <div className="px-4 py-1.5 rounded-full bg-gradient-to-r from-emerald-600 via-teal-500 to-emerald-600 border-2 border-emerald-200 text-white font-black text-xs sm:text-sm uppercase tracking-widest shadow-[0_0_28px_rgba(16,185,129,0.9)] flex items-center gap-2 whitespace-nowrap animate-pulse">
+                        <span>🛡️</span>
+                        <span>TURNO • SALVEZZA</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {!isEliminated && !isWinner && !isTarget && !isSalvezzaActive && !isBooked && isActive && (
+                  <>
+                    <div className="absolute inset-0 rounded-3xl border-2 border-amber-300/95 animate-pulse pointer-events-none z-30" />
+                    <div className="absolute top-1.5 left-1/2 -translate-x-1/2 z-40 pointer-events-none">
+                      <div className="px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 via-yellow-300 to-amber-500 border-2 border-white text-black font-black text-xs sm:text-sm uppercase tracking-widest shadow-[0_0_30px_rgba(251,191,36,0.95)] flex items-center gap-2 whitespace-nowrap animate-pulse">
+                        <span>🎲</span>
+                        <span>È IL SUO TURNO</span>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {/* Sezione superiore: Stendardi / Scudi Bonus Romani */}
                 <div className="flex flex-col items-center">
                   <div className="grid grid-cols-4 gap-1.5 sm:gap-2 w-full justify-items-center">
                     {BONUS_CONFIGS.map((bConfig, bIdx) => (
@@ -1852,12 +2121,81 @@ export default function FinaleSquadre_Board() {
                         sublabel={bConfig.sublabel}
                         type={bConfig.type}
                         active={Boolean(teamBonuses[bIdx])}
+                        teamColor={meta.colorHex}
                         onToggle={() => toggleBonus(teamId - 1, bIdx)}
                       />
                     ))}
                   </div>
 
-                  {/* Sleek Floating Team Banner */}
+                  {/* Sleek Floating Team Banner (Relatore) o Solo Nome Centrato (Giocatori) */}
+                  {isGamesMode ? (
+                    <div
+                      className={`mt-3 w-full h-[46px] flex flex-col items-center justify-center select-none pointer-events-none transition-all duration-300 ${
+                        isBooked || (isActive && !isTarget && !isEliminated && !isWinner) || isSalvezzaActive
+                          ? 'animate-custom-blink'
+                          : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-2.5 max-w-full px-2">
+                        <span
+                          className="w-3.5 h-3.5 rounded-full shrink-0 border border-white/60"
+                          style={{
+                            backgroundColor: isEliminated ? '#ef4444' : meta.colorHex,
+                            boxShadow: isEliminated
+                              ? '0 0 14px #ef4444'
+                              : `0 0 16px ${meta.colorNeon}, 0 0 6px #ffffff`,
+                          }}
+                        />
+                        <h2
+                          className={`text-2xl sm:text-[28px] leading-tight font-black tracking-[0.14em] uppercase truncate max-w-[360px] ${
+                            isEliminated
+                              ? 'text-red-300/80 line-through decoration-red-500 decoration-2'
+                              : isWinner
+                              ? 'text-yellow-300'
+                              : isTarget
+                              ? 'text-red-100'
+                              : isSalvezzaActive
+                              ? 'text-emerald-200'
+                              : isActive || isBooked
+                              ? 'text-amber-200'
+                              : 'text-white'
+                          }`}
+                          style={{
+                            textShadow: isEliminated
+                              ? '0 3px 8px rgba(0,0,0,0.95), 0 0 16px rgba(239,68,68,0.75)'
+                              : isWinner
+                              ? '0 3px 10px rgba(0,0,0,0.98), 0 0 22px rgba(250,204,21,0.95)'
+                              : isTarget
+                              ? '0 3px 10px rgba(0,0,0,0.98), 0 0 22px rgba(239,68,68,0.95)'
+                              : isSalvezzaActive
+                              ? '0 3px 10px rgba(0,0,0,0.98), 0 0 22px rgba(16,185,129,0.95)'
+                              : isActive || isBooked
+                              ? `0 3px 10px rgba(0,0,0,0.98), 0 0 22px rgba(251,191,36,0.95), 0 0 10px ${meta.colorNeon}`
+                              : `0 3px 10px rgba(0,0,0,0.98), 0 1px 3px rgba(0,0,0,1), 0 0 18px ${meta.colorGlow}`,
+                          }}
+                        >
+                          {teamNames[teamId - 1] || meta.defaultName}
+                        </h2>
+                      </div>
+                      <div
+                        className="mt-1 h-[3px] w-40 rounded-full transition-all duration-300"
+                        style={{
+                          background: isEliminated
+                            ? 'linear-gradient(90deg, transparent 0%, #ef4444 50%, transparent 100%)'
+                            : isTarget
+                            ? 'linear-gradient(90deg, transparent 0%, #ef4444 50%, transparent 100%)'
+                            : isActive || isBooked || isWinner
+                            ? `linear-gradient(90deg, transparent 0%, #fde047 25%, ${meta.colorHex} 50%, #fde047 75%, transparent 100%)`
+                            : `linear-gradient(90deg, transparent 0%, ${meta.colorHex} 50%, transparent 100%)`,
+                          boxShadow: isTarget
+                            ? '0 0 12px rgba(239,68,68,0.95)'
+                            : isActive || isBooked
+                            ? '0 0 14px rgba(251,191,36,0.95)'
+                            : `0 0 10px ${meta.colorGlow}`,
+                        }}
+                      />
+                    </div>
+                  ) : (
                   <div
                     className={`mt-3 flex items-center justify-between w-full px-2.5 py-1.5 backdrop-blur-md rounded-xl border shadow-lg transition-all ${
                       isEliminated
@@ -1865,7 +2203,13 @@ export default function FinaleSquadre_Board() {
                         : isWinner
                         ? 'bg-yellow-950/60 border-yellow-400/70 shadow-[0_0_25px_rgba(234,179,8,0.4)]'
                         : isBooked
-                        ? 'bg-amber-950/80 border-amber-400/80 shadow-[0_0_25px_rgba(245,158,11,0.6)]'
+                        ? 'animate-custom-blink bg-amber-950/85 border-amber-300 ring-4 ring-amber-400/70 shadow-[0_0_40px_rgba(251,191,36,0.9)]'
+                        : isTarget
+                        ? 'bg-red-950/90 border-2 border-red-400 shadow-[0_0_32px_rgba(239,68,68,0.85)]'
+                        : isSalvezzaActive
+                        ? 'animate-custom-blink bg-emerald-950/85 border-emerald-300 ring-4 ring-emerald-400/60 shadow-[0_0_35px_rgba(16,185,129,0.85)]'
+                        : isActive
+                        ? 'animate-custom-blink bg-amber-950/80 border-amber-300 ring-4 ring-amber-400/70 shadow-[0_0_40px_rgba(251,191,36,0.9)]'
                         : 'bg-black/45 border-white/15'
                     }`}
                   >
@@ -1935,13 +2279,13 @@ export default function FinaleSquadre_Board() {
                             </span>
                           )}
                           {isActive && (
-                            <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-full bg-white text-black animate-pulse shadow-md">
-                              TURNO
+                            <span className="px-3 py-1 text-xs font-black uppercase tracking-widest rounded-full bg-amber-300 text-black border border-white animate-pulse shadow-[0_0_16px_rgba(251,191,36,0.95)]">
+                              🎲 TURNO
                             </span>
                           )}
                           {isTarget && !isActive && (
-                            <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-widest rounded-full bg-red-600 text-white animate-bounce shadow-md">
-                              TARGET
+                            <span className="px-3 py-1 text-xs font-black uppercase tracking-widest rounded-full bg-red-600 text-white border border-red-200 animate-pulse shadow-[0_0_18px_rgba(239,68,68,0.95)]">
+                              🎯 BERSAGLIO
                             </span>
                           )}
                         </>
@@ -2005,6 +2349,7 @@ export default function FinaleSquadre_Board() {
                       </button>
                     </div>
                   </div>
+                  )}
                 </div>
 
                 {/* Center: 3D Cubes & Omini (Centered in the vertical space, floating freely over the landscape) */}
@@ -2120,8 +2465,53 @@ export default function FinaleSquadre_Board() {
         </div>
 
         {/* ============================================================ */}
-        {/* ENLARGED & PROMINENT FLOATING DOCK: 3D Dice, Challenge Resolution, Question Matrix */}
+        {/* FLOATING DOCK: Dado + 15 Domande (Presentazione) oppure Completo (Relatore) */}
         {/* ============================================================ */}
+        {isGamesMode ? (
+          <footer className="bg-black/70 backdrop-blur-2xl border-2 border-amber-300/35 rounded-3xl px-7 py-4 shadow-[0_25px_70px_rgba(0,0,0,0.85)] shrink-0 w-fit mx-auto flex items-center justify-center gap-7">
+            {/* Left: 3D Dice cliccabile anche in Presentazione */}
+            <div className="flex items-center justify-center pr-6 border-r border-white/15">
+              <ProminentDice3D
+                rolling={rolling}
+                isResolving={isResolving}
+                targetFace={dieTargetFace}
+                onRoll={rollDice}
+                canRollBonus={false}
+                onUseBonusRoll={handleUseBonusRoll}
+                hidePrompt
+              />
+            </div>
+
+            {/* Right: Matrice 15 Domande cliccabile (senza tasto Reset) */}
+            <div className="flex flex-col justify-center min-w-[260px]">
+              <div className="flex items-center justify-center mb-2">
+                <span className="text-xs uppercase font-black tracking-widest text-amber-200/90">
+                  Domande ({questionNumbers.length - eliminatedQuestions.length} rimaste)
+                </span>
+              </div>
+
+              <div className="grid grid-cols-5 gap-1.5">
+                {questionNumbers.map((qNum) => {
+                  const isEliminated = eliminatedQuestions.includes(qNum);
+                  return (
+                    <button
+                      key={qNum}
+                      type="button"
+                      onClick={() => toggleQuestionNumber(qNum)}
+                      className={`h-8 rounded-lg font-black text-xs transition-all cursor-pointer flex items-center justify-center ${
+                        isEliminated
+                          ? 'bg-black/60 text-white/25 border border-white/10 line-through'
+                          : 'bg-cyan-500/25 hover:bg-cyan-500/45 text-cyan-100 border border-cyan-400/40 hover:scale-105 shadow-sm'
+                      }`}
+                    >
+                      {qNum}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </footer>
+        ) : (
         <footer className="bg-black/75 backdrop-blur-2xl border-2 border-white/25 rounded-3xl p-4 sm:p-5 shadow-[0_25px_70px_rgba(0,0,0,0.85)] shrink-0 max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-[230px_1fr_290px] gap-4 items-center">
           {/* Left: Prominent 3D Dice Console */}
           <div className="flex justify-center md:justify-start border-b md:border-b-0 md:border-r border-white/15 pb-3 md:pb-0 md:pr-4">
@@ -2254,6 +2644,7 @@ export default function FinaleSquadre_Board() {
             </div>
           </div>
         </footer>
+        )}
 
         {/* Grand Victory Trophy Modal Overlay */}
         {winningTeamId !== null && !dismissTrophy && (() => {

@@ -106,7 +106,7 @@ function App() {
         {game === 'password_squadre' && <PasswordSquadreBoard />}
         {game === 'password_prescelti' && <PasswordPresceltiBoard />}
         {game === 'classifica_generale' && <ClassificaGeneraleBoard />}
-        {game === 'finale_squadre' && <FinaleSquadreBoard />}
+        {game === 'finale_squadre' && <FinaleSquadreBoard isPresenter={!isProjecting} />}
         {game === 'spiegazione_fasi' && <SpiegazioneFasiBoard />}
         {game === 'spiegazione_box1' && <SpiegazioneBox1Board />}
         {game === 'spiegazione_box2' && <SpiegazioneBox2Board />}

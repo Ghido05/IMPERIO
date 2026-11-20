@@ -32,8 +32,6 @@ export default function MilleEUnaNadiaBoard({
   const [errorTrigger] = useSyncedState<number>('playstate_nadia_error_trigger', 0);
   const [nadiaStep] = useSyncedState<number>('playstate_nadia_step', 0);
   const [eliminatedOptions] = useSyncedState<number[]>('playstate_nadia_eliminated_options', []);
-  const [syncedExcludedTeams] = useSyncedState<number[]>('playstate_nadia_excluded_teams', []);
-  const excludedTeams = syncedExcludedTeams || [];
   const lastErrorRef = useRef(errorTrigger);
 
   const showQuestion = nadiaStep >= 1 || solutionShown;
@@ -119,7 +117,7 @@ export default function MilleEUnaNadiaBoard({
         </div>
       )}
 
-      {/* Header Superiore Elegante con Stato Squadre */}
+      {/* Header Superiore Elegante */}
       <header className="relative z-10 w-full flex items-center justify-between pt-2">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-600 p-[2px] shadow-lg shadow-orange-500/30">
@@ -135,50 +133,6 @@ export default function MilleEUnaNadiaBoard({
               Evento Speciale {question.targetBox ? `• Box ${question.targetBox}` : ''}
             </p>
           </div>
-        </div>
-
-        {/* Indicatore Stato Squadre in Tempo Reale */}
-        <div className="flex items-center gap-3">
-          {[1, 2, 3].map((tNum) => {
-            const isBooked = bookedTeam === tNum;
-            const isWinner = assignedTeam === tNum;
-            const isExcluded = excludedTeams.includes(tNum);
-            const teamName = teamNames[tNum - 1] || `Squadra ${tNum}`;
-            const teamGrad =
-              tNum === 1
-                ? 'from-red-600 to-rose-700 border-red-400 shadow-red-500/50'
-                : tNum === 2
-                ? 'from-blue-600 to-indigo-700 border-blue-400 shadow-blue-500/50'
-                : 'from-emerald-600 to-teal-700 border-emerald-400 shadow-emerald-500/50';
-
-            return (
-              <div
-                key={tNum}
-                className={`px-3 py-1.5 rounded-xl border text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all duration-300 ${
-                  isExcluded
-                    ? 'bg-black/60 border-slate-700 text-slate-500 opacity-35 grayscale line-through scale-90'
-                    : isWinner
-                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-300 text-white shadow-[0_0_20px_rgba(16,185,129,0.7)] scale-105'
-                    : isBooked
-                    ? `bg-gradient-to-r ${teamGrad} text-white animate-pulse ring-4 ring-white/60 shadow-[0_0_25px_rgba(255,255,255,0.7)] scale-105`
-                    : 'bg-black/40 border-white/20 text-white/80'
-                }`}
-              >
-                {isExcluded ? (
-                  <span className="text-red-400">✕</span>
-                ) : isWinner ? (
-                  <span>🏆</span>
-                ) : isBooked ? (
-                  <span className="animate-bounce">⚡</span>
-                ) : (
-                  <span className={`w-2 h-2 rounded-full ${tNum === 1 ? 'bg-red-400' : tNum === 2 ? 'bg-blue-400' : 'bg-emerald-400'}`} />
-                )}
-                <span>{teamName}</span>
-                {isWinner && <span className="text-[10px] bg-black/40 px-1 py-0.5 rounded font-mono">+1000 PT</span>}
-                {isExcluded && <span className="text-[10px] text-red-400 font-mono no-underline">ESCLUSA</span>}
-              </div>
-            );
-          })}
         </div>
 
         {/* Badge di stato soluzione per il relatore */}

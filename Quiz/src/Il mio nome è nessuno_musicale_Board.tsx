@@ -278,7 +278,7 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
 
   const displayedPoints = lockedStep !== null ? getPointsForStep(lockedStep) : getPointsForStep(step);
 
-  const handleCorrectAnswer = (teamNum: number) => {
+  const handleCorrectAnswer = (teamNum: number, autoAdvance = true) => {
     const pts = displayedPoints;
     addScore(teamNum - 1, pts);
     setAssignedTeam(teamNum);
@@ -287,7 +287,7 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
     }
     setBookedTeam(null);
     // Svela la soluzione in automatico come se fosse stato premuto 'S'
-    if (step < 10) {
+    if (autoAdvance && step < 10) {
       setIsAutoAdvancing(true);
     }
   };
@@ -467,7 +467,7 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
 
       // Se una squadra è prenotata:
       if (bookedTeam !== null && assignedTeam === null) {
-        if (e.key === 'Enter' || e.key.toLowerCase() === 'c') {
+        if (e.key === 'Enter' || e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 's') {
           e.preventDefault();
           handleCorrectAnswer(bookedTeam);
           return;
@@ -511,6 +511,13 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
       }
 
       if (e.key === 'ArrowRight') {
+        if (bookedTeam !== null && assignedTeam === null && step + 1 >= 10) {
+          e.preventDefault();
+          handleCorrectAnswer(bookedTeam, false);
+          setPrevStep(step);
+          setStep(10);
+          return;
+        }
         setStep((prev) => {
           if (prev < 10) {
             setPrevStep(prev);
@@ -736,14 +743,9 @@ const GameBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresen
                 </span>
                 {interactive && (
                   <div className="flex items-center gap-2 ml-2">
-                    <button
-                      type="button"
-                      onClick={() => handleCorrectAnswer(bookedTeam)}
-                      className="px-3 py-1.5 text-xs font-black uppercase rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg transition-all cursor-pointer flex items-center gap-1.5 hover:scale-105 active:scale-95 border border-emerald-400"
-                      title="Risposta corretta: assegna punti alla squadra e svela la soluzione (Invio / C)"
-                    >
-                      <span>✓</span> Corretta (+{displayedPoints.toLocaleString('it-IT')} pt)
-                    </button>
+                    <span className="px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider rounded-lg bg-black/40 text-white/85 border border-white/15">
+                      Premi S / Invio per Soluzione (+{displayedPoints.toLocaleString('it-IT')} pt)
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleWrongAnswer(bookedTeam)}

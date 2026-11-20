@@ -222,7 +222,7 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
     }
 
     return false;
-  }, [activeSlideId]);
+  }, [activeSlideId, activeSlideType]);
 
   // 4. Gestione Polling Rapido (/leggi) quando il quiz è pronto per ricevere prenotazioni
   useEffect(() => {
@@ -363,9 +363,26 @@ export default function WebSerialManager({ activeSlideId, activeSlideType }: Web
     await sendSerialReset();
     if (activeSlideId) {
       const isNadiaActive = localStorage.getItem('playstate_nadia_active') === 'true';
-      const keysToClear = isNadiaActive 
-        ? ['playstate_nadia_booked_team', `playstate_${activeSlideId}_booked_team`]
-        : [`playstate_${activeSlideId}_booked_team`];
+      const bookedKey = `playstate_${activeSlideId}_booked_team`;
+      const assignedKey = `playstate_${activeSlideId}_assigned_team`;
+      const currentAssigned = localStorage.getItem(assignedKey);
+      const hasAssigned = currentAssigned !== null && currentAssigned !== '' && currentAssigned !== 'null';
+      const currentBooked = localStorage.getItem(bookedKey);
+      const hasBooked = currentBooked !== null && currentBooked !== '' && currentBooked !== 'null';
+
+      const keysToClear = isNadiaActive
+        ? ['playstate_nadia_booked_team', bookedKey]
+        : [bookedKey];
+
+      const isBox1Game = activeSlideType === 'music' || activeSlideType === 'img' || activeSlideId.startsWith('box1_');
+      if (!isNadiaActive && isBox1Game && !hasAssigned) {
+        const isAuto = localStorage.getItem(`playstate_${activeSlideId}_auto`) === 'true';
+        const currentStep = parseInt(localStorage.getItem(`playstate_${activeSlideId}_step`) || '0', 10);
+        const maxStep = activeSlideType === 'img' ? 9 : 10;
+        if (hasBooked || (!isAuto && currentStep < maxStep)) {
+          keysToClear.push(`playstate_${activeSlideId}_locked_step`);
+        }
+      }
 
       keysToClear.forEach(key => {
         localStorage.removeItem(key);

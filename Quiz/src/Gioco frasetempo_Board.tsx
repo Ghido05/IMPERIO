@@ -66,12 +66,10 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   const [scoreAwarded, setScoreAwarded] = useSyncedState<boolean>(`${phrasePrefix}_score_awarded`, false);
 
   // GESTIONE PRENOTAZIONE (Buzzer Hardware WebSerialManager + Tastiera)
-  // bookedTeam: sincronizzato con la pulsantiera fisica (si resetta dopo 3s per consentire nuove prenotazioni)
+  // bookedTeam: sincronizzato con la pulsantiera fisica (reset manuale tramite WebSerialManager)
   const [bookedTeam, setBookedTeam] = useSyncedState<number | null>(`playstate_${slideId}_booked_team`, null);
   // activeBidder: squadra che detiene l'offerta corrente nell'asta, rimane visibile sotto l'indizio finché un'altra non si prenota o fino ad aggiudicazione con Invio
   const [activeBidder, setActiveBidder] = useSyncedState<number | null>(`${phrasePrefix}_active_bidder`, null);
-
-  const buzzerResetTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Scores context
   const { bonuses, awardBonusAndPoints } = useScores();
@@ -177,33 +175,6 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
     playTeamBookingSound();
   }, [isPresenter]);
 
-  // Suono di riapertura asta dopo 3 secondi dalla prenotazione (doppio rintocco armonico brillante)
-  const playReopenAuctionSound = useCallback(() => {
-    if (!isPresenter) return;
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-      const now = ctx.currentTime;
-
-      // Due note cristalline di riapertura (E5: 659.25Hz -> B5: 987.77Hz)
-      const freqs = [659.25, 987.77];
-      freqs.forEach((freq, idx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, now + idx * 0.12);
-        gain.gain.setValueAtTime(0.2, now + idx * 0.12);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.45);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now + idx * 0.12);
-        osc.stop(now + idx * 0.12 + 0.5);
-      });
-      setTimeout(() => ctx.close(), 800);
-    } catch {}
-  }, [isPresenter]);
-
   // Trigger gavel strike animation when letter counter changes after lock
   useEffect(() => {
     if (auctionLocked && letterCounter < prevLetterCounter.current) {
@@ -274,7 +245,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   // GESTIONE PRENOTAZIONE SQUADRE (BUZZER) PER IL GIOCO 4
   // - Si attiva SOLO dopo lo Step 5 (quando appare il tabellone frase e l'asta)
   // - Mostra il rettangolo con il nome e colore della squadra sotto l'indizio
-  // - Resetta la pulsantiera hardware automaticamente dopo 3 secondi ed emette il suono di riapertura
+  // - La pulsantiera rimane bloccata fino a reset manuale del relatore o aggiudicazione
   // - Il rettangolo rimane visibile finché un'altra squadra si prenota o finché si preme Invio
   // ============================================================
   useEffect(() => {
@@ -292,30 +263,9 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         // Assegna l'offerta corrente a questa squadra
         setActiveBidder(teamNum);
         playBuzzerSound();
-
-        // Cancella eventuale timer di reset precedente
-        if (buzzerResetTimerRef.current) {
-          clearTimeout(buzzerResetTimerRef.current);
-        }
-
-        // Resetta la pulsantiera in automatico dopo 3 secondi per consentire rilanci al ribasso
-        buzzerResetTimerRef.current = setTimeout(() => {
-          if (!auctionLocked) {
-            setBookedTeam(null);
-            playReopenAuctionSound();
-          }
-        }, 3000);
       }
     }
-  }, [bookedTeam, step, auctionLocked, playBuzzerSound, playReopenAuctionSound, setActiveBidder, setBookedTeam]);
-
-  useEffect(() => {
-    return () => {
-      if (buzzerResetTimerRef.current) {
-        clearTimeout(buzzerResetTimerRef.current);
-      }
-    };
-  }, []);
+  }, [bookedTeam, step, auctionLocked, playBuzzerSound, setActiveBidder, setBookedTeam]);
 
   const initGame = useCallback((idx: number) => {
     if (phraseList.length === 0) {
@@ -513,9 +463,6 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
       }
-      if (buzzerResetTimerRef.current) {
-        clearTimeout(buzzerResetTimerRef.current);
-      }
       const visible = new Set(phrase.lettereVisibili || []);
       const initialTokens = targetTokens.map((t, tokenIndex) => (isPhraseLetterToken(t) ? (visible.has(tokenIndex) ? t : '_') : t));
       setTokens(initialTokens);
@@ -589,9 +536,6 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
 
       // Invio: conferma e aggiudica l'offerta corrente
       if (e.key === 'Enter') {
-        if (buzzerResetTimerRef.current) {
-          clearTimeout(buzzerResetTimerRef.current);
-        }
         setAuctionLocked(true);
         setLetterCounter(auctionValue);
 
@@ -933,9 +877,6 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
                     disabled={!interactive || auctionLocked || !showFraseAndAsta}
                     onClick={() => {
                       if (!interactive || auctionLocked || !showFraseAndAsta) return;
-                      if (buzzerResetTimerRef.current) {
-                        clearTimeout(buzzerResetTimerRef.current);
-                      }
                       setAuctionValue(stepNum);
                       setLetterCounter(stepNum);
                       setAuctionLocked(true);

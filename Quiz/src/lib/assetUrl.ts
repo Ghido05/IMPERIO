@@ -141,6 +141,7 @@ export const KNOWN_PUBLIC_ASSETS: Record<string, string> = {
   '1001Nadia.jpeg': '/Icone/sfondi/sfondo_nadia_lampada.jpg',
   // Sfondi e Finale
   'sfondo_finale_acqua.jpg': '/sfondo_finale_acqua.jpg',
+  'sfondo_finale_acqua_v2.jpg': '/sfondo_finale_acqua_v2.jpg',
   'sfondo_finale_default.jpg': '/sfondo_finale_default.jpg',
   'sfondo_box1_foresta_musicale.jpg': '/Icone/sfondi/sfondo_box1_foresta_musicale.jpg',
   'sfondo_box2_cristalli.jpg': '/Icone/sfondi/sfondo_box2_cristalli.jpg',

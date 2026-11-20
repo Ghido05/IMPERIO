@@ -38,31 +38,6 @@ export default function IntroduzioneNadiaBoard({
 
   const canPlayAudio = interactive && isPresenterMode;
 
-  // Nomi squadre sincronizzati da setup
-  const [teamNames, setTeamNames] = useState<string[]>(['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']);
-
-  useEffect(() => {
-    const loadTeamNames = () => {
-      try {
-        const raw = localStorage.getItem('imperio_quiz_setup_config_v1');
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.punteggi?.nomiSquadre && Array.isArray(parsed.punteggi.nomiSquadre)) {
-            setTeamNames(parsed.punteggi.nomiSquadre);
-          }
-        }
-      } catch {}
-    };
-
-    loadTeamNames();
-    window.addEventListener('storage', loadTeamNames);
-    window.addEventListener('local-storage-update', loadTeamNames);
-    return () => {
-      window.removeEventListener('storage', loadTeamNames);
-      window.removeEventListener('local-storage-update', loadTeamNames);
-    };
-  }, []);
-
   // Controllo presenza video configurato
   const videoSrc = data?.video || data?.videoUrl || data?.src || '';
   const hasVideo = Boolean(videoSrc && videoSrc.trim() !== '');
@@ -235,26 +210,6 @@ export default function IntroduzioneNadiaBoard({
               Evento Speciale • Intermezzo a Sorpresa tra i Box
             </p>
           </div>
-        </div>
-
-        {/* Indicatore Squadre in Gara */}
-        <div className="flex items-center gap-3">
-          {[1, 2, 3].map((tNum) => {
-            const teamName = teamNames[tNum - 1] || `Squadra ${tNum}`;
-            return (
-              <div
-                key={tNum}
-                className="px-4 py-2 rounded-xl border border-white/20 bg-black/50 backdrop-blur-md text-xs font-black uppercase tracking-wider flex items-center gap-2"
-              >
-                <span
-                  className={`w-2.5 h-2.5 rounded-full ${
-                    tNum === 1 ? 'bg-red-400' : tNum === 2 ? 'bg-blue-400' : 'bg-emerald-400'
-                  }`}
-                />
-                <span>{teamName}</span>
-              </div>
-            );
-          })}
         </div>
       </header>
 

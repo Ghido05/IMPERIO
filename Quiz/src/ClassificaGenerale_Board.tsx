@@ -5,7 +5,8 @@ import { assetUrl } from './lib/assetUrl';
 import { loadSetupStateDb } from './lib/quizDb';
 import { formatScoreNumber } from './lib/formatUtils';
 import { playTeamBookingSound } from './lib/teamBookingSound';
-import { computeIsBuzzerActiveFromStorage } from './lib/webSerial';
+import BuzzerStatusBadge from './components/BuzzerStatusBadge';
+import { useBuzzerActive } from './hooks/useBuzzerActive';
 
 let sharedScoreAudioCtx: AudioContext | null = null;
 function getScoreAudioContext(): AudioContext | null {
@@ -288,6 +289,9 @@ const ClassificaGenerale_Board: React.FC = () => {
   const [box1AssignedTeam] = useSyncedState<number | null>(`playstate_${activeSlideId}_assigned_team`, null);
   const [box1ExcludedTeams] = useSyncedState<number[]>(`playstate_${activeSlideId}_excluded_teams`, []);
 
+  // Sincronizzazione stato Box 5 (Finale a Squadre): lampeggio in classifica solo su prenotazione bonus
+  const [finaleBookedTeam] = useSyncedState<number | null>('playstate_finale_squadre_booked_team', null);
+
   // Sincronizzazione stato Mille e una Nadia per illuminazione ed esclusione squadre
   const [nadiaActive] = useSyncedState<boolean>('playstate_nadia_active', false);
   const [nadiaBookedTeam] = useSyncedState<number | null>('playstate_nadia_booked_team', null);
@@ -387,22 +391,7 @@ const ClassificaGenerale_Board: React.FC = () => {
     return true;
   }, []);
 
-  const [isBuzzerActive, setIsBuzzerActive] = React.useState<boolean>(() => computeIsBuzzerActiveFromStorage());
-
-  React.useEffect(() => {
-    const updateBuzzer = () => {
-      setIsBuzzerActive(computeIsBuzzerActiveFromStorage());
-    };
-    updateBuzzer();
-    window.addEventListener('storage', updateBuzzer);
-    window.addEventListener('local-storage-update', updateBuzzer);
-    const interval = setInterval(updateBuzzer, 250);
-    return () => {
-      window.removeEventListener('storage', updateBuzzer);
-      window.removeEventListener('local-storage-update', updateBuzzer);
-      clearInterval(interval);
-    };
-  }, []);
+  const isBuzzerActive = useBuzzerActive();
 
   const [animatingTeams, setAnimatingTeams] = React.useState<Record<number, boolean>>({});
   const [pulseCounters, setPulseCounters] = React.useState<Record<number, number>>({ 0: 0, 1: 0, 2: 0 });
@@ -618,21 +607,11 @@ const ClassificaGenerale_Board: React.FC = () => {
       </div>
 
       {/* Indicatore sempre presente stato Pulsantiera (Pallino Verde = Attiva / Rosso = Non attiva) */}
-      <div
-        className="absolute top-8 right-10 z-30 flex items-center gap-2.5 px-4 py-2 rounded-full bg-black/65 border border-white/15 backdrop-blur-md shadow-xl"
-        title={isBuzzerActive ? 'Pulsantiera attiva' : 'Pulsantiera non attiva'}
-      >
-        <span
-          className={`w-4 h-4 rounded-full transition-all duration-300 ${
-            isBuzzerActive
-              ? 'bg-emerald-500 shadow-[0_0_16px_#10b981] animate-pulse'
-              : 'bg-red-500 shadow-[0_0_14px_#ef4444]'
-          }`}
-        />
-        <span className="text-xs font-black uppercase tracking-wider text-white/80">
-          {isBuzzerActive ? 'Pulsantiera Attiva' : 'Pulsantiera Bloccata'}
-        </span>
-      </div>
+      <BuzzerStatusBadge
+        isActive={isBuzzerActive}
+        variant="stage"
+        className="absolute top-7 right-10 z-30"
+      />
 
       <h1 className="text-5xl font-black text-center mb-6 tracking-tighter uppercase italic drop-shadow-[0_0_20px_rgba(255,255,255,0.3)] shrink-0 z-20">
         Classifica Generale
@@ -711,11 +690,14 @@ const ClassificaGenerale_Board: React.FC = () => {
             const isBox1Excluded = !nadiaActive && activeBox === 1 && (box1ExcludedTeams || []).includes(teamNum);
             const isBox1Winner = !nadiaActive && activeBox === 1 && box1AssignedTeam !== null && (box1AssignedTeam - 1) === i;
 
+            const isBox5Booked = !nadiaActive && activeBox === 5 && activeQuestion >= 1 && finaleBookedTeam !== null && (finaleBookedTeam - 1) === i;
+
             const isExcluded = isNadiaExcluded || isBox1Excluded;
             const isWinner = isNadiaWinner || isBox1Winner;
             const isBlinking = 
               isNadiaBooked ||
               isBox1Booked ||
+              isBox5Booked ||
               (!nadiaActive && activeBox === 2 && blinkingTeamIdx === i);
 
             const teamScore = liveAnimScores[i] !== undefined ? liveAnimScores[i] : (scores[i] || 0);

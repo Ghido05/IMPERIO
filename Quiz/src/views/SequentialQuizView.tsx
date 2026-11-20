@@ -1689,49 +1689,14 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
                             </button>
                           </div>
                         </div>
-                      ) : (
-                        /* Nessuno Prenotato: Tasti Rapidi per Testare la Prenotazione */
-                        <div className="flex items-center justify-between gap-2 flex-wrap text-xs">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[11px] font-black uppercase text-amber-400/80 mr-1 flex items-center gap-1">
-                              <span>⚡</span> Test Prenota:
-                            </span>
-                            {[1, 2, 3].map((tNum) => {
-                              const isExcluded = nadiaExcludedTeams.includes(tNum);
-                              return (
-                                <button
-                                  key={tNum}
-                                  type="button"
-                                  disabled={isExcluded}
-                                  onClick={() => handleBookTeamNadia(tNum)}
-                                  className={`px-2.5 py-1 rounded text-[11px] font-black border transition-all flex items-center gap-1 ${
-                                    isExcluded
-                                      ? 'bg-black/40 border-slate-700 text-slate-500 opacity-30 grayscale cursor-not-allowed line-through'
-                                      : tNum === 1
-                                      ? 'bg-red-500/15 hover:bg-red-500/30 text-red-300 border-red-500/30 cursor-pointer'
-                                      : tNum === 2
-                                      ? 'bg-blue-500/15 hover:bg-blue-500/30 text-blue-300 border-blue-500/30 cursor-pointer'
-                                      : 'bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border-emerald-500/30 cursor-pointer'
-                                  }`}
-                                >
-                                  <span>{teamNames[tNum - 1] || `S${tNum}`}</span>
-                                  {isExcluded ? (
-                                    <span className="text-[9px] text-red-400 font-bold no-underline">✕ ESCLUSA</span>
-                                  ) : (
-                                    <kbd className="text-[9px] bg-black/40 px-1 rounded opacity-70">{tNum}</kbd>
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                          <span className="text-[11px] text-white/40 italic">
-                            In attesa di prenotazione al buzzer...
-                          </span>
-                        </div>
-                      )}
+                      ) : null}
 
                       {/* Barra Inferiore Controlli (Rivelazione risposte, Soluzione, Stacchetto, Chiudi) */}
-                      <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/10 flex-wrap">
+                      <div className={`flex items-center justify-between gap-2 flex-wrap ${
+                        (nadiaBookedTeam !== null && nadiaAssignedTeam === null) || nadiaAssignedTeam !== null
+                          ? 'pt-1 border-t border-white/10'
+                          : ''
+                      }`}>
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-[11px] font-black text-amber-300 uppercase tracking-wider flex items-center gap-1 mr-1">
                             <span>✨</span> Mille e una Nadia

@@ -15,6 +15,7 @@ import {
   shuffleAllNadiaOrders,
   type NadiaAnswerOrder,
 } from '../lib/nadiaUtils';
+import { buildPasswordCardsPrintHtml } from '../lib/passwordUtils';
 
 // Data types for Box 1 (Gioco 1)
 export interface Gioco1CanzoneData {
@@ -1782,6 +1783,45 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
         landscape: true,
         pageSize: 'A4',
         defaultPdfName: 'Cartoncini Nadia — Mille e una Nadia.pdf',
+      });
+      if (!res?.success) {
+        openPrintFallbackWindow(htmlDoc, 1220, 860, false);
+      }
+      return;
+    }
+    openPrintFallbackWindow(htmlDoc, 1220, 860, false);
+  };
+
+  const handleOpenPasswordCardsPreview = async () => {
+    const questionsMap = state.gioco3?.questions || {};
+    const orderedNums = Object.keys(questionsMap)
+      .map(Number)
+      .filter((n) => !Number.isNaN(n))
+      .sort((a, b) => a - b);
+
+    if (orderedNums.length === 0) {
+      showToast('⚠️ Nessuna manche di Password configurata.');
+      return;
+    }
+
+    const teamNames = state.punteggi?.nomiSquadre || ['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3'];
+    const manches = orderedNums.map((num) => ({
+      mancheNum: num,
+      question: questionsMap[num],
+    }));
+
+    const htmlDoc = buildPasswordCardsPrintHtml(
+      manches,
+      teamNames,
+      state.gioco3?.titolo || 'Password & Bussolotti'
+    );
+    if ((window as any).electron?.openHtmlPreview) {
+      const res = await (window as any).electron.openHtmlPreview({
+        html: htmlDoc,
+        title: 'Cartoncini Gioco 3 — Password',
+        landscape: true,
+        pageSize: 'A4',
+        defaultPdfName: 'Cartoncini Gioco 3 — Password.pdf',
       });
       if (!res?.success) {
         openPrintFallbackWindow(htmlDoc, 1220, 860, false);
@@ -6148,9 +6188,19 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                 <p className="text-[11px] text-slate-400">Modulo Password</p>
               </div>
             </div>
-            <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              3 Domande
-            </span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={handleOpenPasswordCardsPreview}
+                title="Apri l'anteprima dei cartoncini del Gioco 3 (Password) con griglia, squadre, bomba e suggerimenti"
+                className="px-3 py-1 text-xs font-bold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                🃏 Cartoncini
+              </button>
+              <span className="px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                3 Domande
+              </span>
+            </div>
           </div>
 
           {/* Configurazione Nome e Sottotitolo Gioco 3 */}

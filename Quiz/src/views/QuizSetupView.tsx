@@ -101,6 +101,7 @@ export interface Box0IntroduzioneNadiaSetup {
   video?: string;
   sfondo?: string;
   audioStacchetto?: string;
+  audioSpiegazione?: string;
   notePresentatore?: string;
 }
 
@@ -366,6 +367,7 @@ export function createDefaultBox0Setup(): Box0Setup {
       video: '',
       sfondo: '',
       audioStacchetto: '/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3',
+      audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_nadia.mp3',
       notePresentatore: 'Introduzione di Nadia, spiegazione del gettone e delle modalità di invocazione.',
     },
     sfondoSpiegazione: '',
@@ -414,6 +416,7 @@ export function normalizeBox0(raw: any, def: Box0Setup): Box0Setup {
       video: raw.introduzioneNadia?.video || def.introduzioneNadia?.video || '',
       sfondo: raw.introduzioneNadia?.sfondo || def.introduzioneNadia?.sfondo || '',
       audioStacchetto: raw.introduzioneNadia?.audioStacchetto || def.introduzioneNadia?.audioStacchetto || '/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3',
+      audioSpiegazione: raw.introduzioneNadia?.audioSpiegazione || def.introduzioneNadia?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_nadia.mp3',
       notePresentatore: raw.introduzioneNadia?.notePresentatore || def.introduzioneNadia?.notePresentatore || 'Introduzione di Nadia, spiegazione del gettone e delle modalità di invocazione.',
     },
     sfondoSpiegazione: sfondoSpieg,
@@ -3724,6 +3727,91 @@ export default function QuizSetupView({ onStartQuiz }: QuizSetupViewProps) {
                                 introduzioneNadia: {
                                   ...(prev.box0?.introduzioneNadia || createDefaultBox0Setup().introduzioneNadia!),
                                   video: base64
+                                }
+                              }
+                            }))
+                          )
+                        }
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                {/* Audio Spiegazione Nadia (Voce Narrante) */}
+                <div>
+                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                    🎙️ Audio Spiegazione Nadia (Voce Narrante):
+                  </label>
+                  <div className="flex items-center gap-2 bg-[#141417] p-1.5 rounded-lg border border-white/5">
+                    {state.box0?.introduzioneNadia?.audioSpiegazione?.startsWith('data:') || state.box0?.introduzioneNadia?.audioSpiegazione?.startsWith('idb://') ? (
+                      <div className="flex-1 flex items-center justify-between bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white">
+                        <span className="text-emerald-400 font-medium truncate max-w-[150px]">
+                          🎵 {formatBase64Info(state.box0.introduzioneNadia.audioSpiegazione)?.name || 'Audio Caricato'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setState(prev => ({
+                            ...prev,
+                            box0: {
+                              ...(prev.box0 || createDefaultBox0Setup()),
+                              introduzioneNadia: {
+                                ...(prev.box0?.introduzioneNadia || createDefaultBox0Setup().introduzioneNadia!),
+                                audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_nadia.mp3'
+                              }
+                            }
+                          }))}
+                          className="text-red-400 hover:text-red-300 font-semibold cursor-pointer text-[10px] bg-transparent border-0"
+                        >
+                          Ripristina
+                        </button>
+                      </div>
+                    ) : (
+                      <input
+                        type="text"
+                        placeholder="Default: /Audio/Spiegazioni/Spiegazione_nadia.mp3..."
+                        value={state.box0?.introduzioneNadia?.audioSpiegazione ?? '/Audio/Spiegazioni/Spiegazione_nadia.mp3'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setState(prev => ({
+                            ...prev,
+                            box0: {
+                              ...(prev.box0 || createDefaultBox0Setup()),
+                              introduzioneNadia: {
+                                ...(prev.box0?.introduzioneNadia || createDefaultBox0Setup().introduzioneNadia!),
+                                audioSpiegazione: val
+                              }
+                            }
+                          }));
+                        }}
+                        className="flex-1 bg-black/40 border border-white/10 rounded px-2 py-1 text-[11px] text-white placeholder:text-white/30 focus:outline-none focus:border-indigo-400"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => togglePreviewAudio(state.box0?.introduzioneNadia?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_nadia.mp3')}
+                      className={`px-2 py-1 text-[10px] font-bold rounded cursor-pointer transition-colors shrink-0 ${
+                        previewAudioUrl === (state.box0?.introduzioneNadia?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_nadia.mp3')
+                          ? 'bg-indigo-500 text-white'
+                          : 'bg-white/10 hover:bg-white/15 text-white'
+                      }`}
+                    >
+                      {previewAudioUrl === (state.box0?.introduzioneNadia?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_nadia.mp3') ? '⏸ Ferma' : '▶ Ascolta'}
+                    </button>
+                    <label className="px-2 py-1 text-[10px] font-semibold bg-white/10 hover:bg-white/15 text-white rounded cursor-pointer shrink-0 text-center">
+                      🎵 Sfoglia
+                      <input
+                        type="file"
+                        accept="audio/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleFileUpload(e, (base64) =>
+                            setState(prev => ({
+                              ...prev,
+                              box0: {
+                                ...(prev.box0 || createDefaultBox0Setup()),
+                                introduzioneNadia: {
+                                  ...(prev.box0?.introduzioneNadia || createDefaultBox0Setup().introduzioneNadia!),
+                                  audioSpiegazione: base64
                                 }
                               }
                             }))

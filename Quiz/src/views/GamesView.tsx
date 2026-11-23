@@ -1,14 +1,28 @@
 import { useState, useEffect } from 'react';
 import SlideCanvas from '../components/SlideCanvas';
-import type { Slide } from '../App';
+import type { Slide, SlideType } from '../App';
 import { ScoreProvider } from '../context/ScoreContext';
 import BuzzerStatusBadge from '../components/BuzzerStatusBadge';
 import { useBuzzerActive } from '../hooks/useBuzzerActive';
+import { useSyncedState } from '../hooks/useSyncedState';
+
+const BUZZER_SLIDE_TYPES = new Set<SlideType>([
+  'prova_pulsantiera',
+  'img',
+  'music',
+  'gioco_frase_tempo',
+  'finale_squadre',
+]);
 
 export default function GamesView() {
   const [activeSlide, setActiveSlide] = useState<Slide | null>(null);
   const [nadiaSetup, setNadiaSetup] = useState<any>(null);
   const isBuzzerActive = useBuzzerActive();
+  const [nadiaActive] = useSyncedState<boolean>('playstate_nadia_active', false);
+
+  const showBuzzerBadge = Boolean(
+    nadiaActive || (activeSlide && BUZZER_SLIDE_TYPES.has(activeSlide.type))
+  );
 
   useEffect(() => {
     const isElectron = (window as any).electron !== undefined;
@@ -30,12 +44,14 @@ export default function GamesView() {
   return (
     <ScoreProvider>
       <div className="fixed inset-0 bg-black overflow-hidden">
-        {/* Indicatore sempre visibile stato pulsantiera (Verde = Attiva, Rosso = Non attiva) */}
-        <BuzzerStatusBadge
-          isActive={isBuzzerActive}
-          variant="viewport"
-          className="fixed top-3.5 right-4 z-[150]"
-        />
+        {/* Indicatore stato pulsantiera: visibile solo durante i giochi con prenotazione o Mille e una Nadia */}
+        {showBuzzerBadge && (
+          <BuzzerStatusBadge
+            isActive={isBuzzerActive}
+            variant="viewport"
+            className="fixed top-3.5 right-4 z-[150]"
+          />
+        )}
 
         {activeSlide ? (
           <SlideCanvas

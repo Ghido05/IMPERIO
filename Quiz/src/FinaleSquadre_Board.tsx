@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { useScores } from './context/ScoreContext';
 import { useSyncedState } from './hooks/useSyncedState';
@@ -24,6 +24,12 @@ export interface DiceFaceMeta {
   value: number;
   direction?: 'right' | 'left' | 'both';
   labelShort: string;
+}
+
+export interface DiceRollState {
+  rollId: number;
+  face: DiceFaceKey;
+  startedAt: number;
 }
 
 export const DICE_FACES_CONFIG: Record<DiceFaceKey, DiceFaceMeta> = {
@@ -1002,6 +1008,7 @@ function ProminentDice3D({
   rolling,
   isResolving = false,
   targetFace,
+  rollId = 0,
   onRoll,
   canRollBonus,
   onUseBonusRoll,
@@ -1010,13 +1017,14 @@ function ProminentDice3D({
   rolling: boolean;
   isResolving?: boolean;
   targetFace: DiceFaceKey | null;
+  rollId?: number;
   onRoll: () => void;
   canRollBonus: boolean;
   onUseBonusRoll: () => void;
   hidePrompt?: boolean;
 }) {
-  const [rollCount, setRollCount] = useState(0);
-  const [rotation, setRotation] = useState({ x: -20, y: 30, z: -5 });
+  const rollCountRef = useRef(0);
+  const lastSpunRollIdRef = useRef<number>(0);
 
   const faceAngles: Record<DiceFaceKey, { x: number; y: number; z: number }> = useMemo(
     () => ({
@@ -1030,29 +1038,37 @@ function ProminentDice3D({
     []
   );
 
-  useEffect(() => {
-    if (rolling && targetFace) {
-      const nextCount = rollCount + 1;
-      setRollCount(nextCount);
-      const angle = faceAngles[targetFace];
-      if (angle) {
-        setRotation({
-          x: angle.x + 360 * 3 * nextCount,
-          y: angle.y + 360 * 4 * nextCount,
-          z: angle.z + 360 * 2 * nextCount,
-        });
-      }
-    } else if (!rolling && targetFace) {
-      const angle = faceAngles[targetFace];
-      if (angle) {
-        setRotation({
-          x: angle.x + 360 * 3 * rollCount,
-          y: angle.y + 360 * 4 * rollCount,
-          z: angle.z + 360 * 2 * rollCount,
-        });
-      }
+  const [rotation, setRotation] = useState<{ x: number; y: number; z: number }>(() => {
+    if (targetFace && faceAngles[targetFace]) {
+      return faceAngles[targetFace];
     }
-  }, [rolling, targetFace, faceAngles]);
+    return { x: -20, y: 30, z: -5 };
+  });
+
+  useEffect(() => {
+    if (!targetFace) return;
+    const angle = faceAngles[targetFace];
+    if (!angle) return;
+
+    if (rolling) {
+      if (rollId !== 0 && rollId === lastSpunRollIdRef.current) return;
+      lastSpunRollIdRef.current = rollId;
+      rollCountRef.current += 1;
+      const nextCount = rollCountRef.current;
+      setRotation({
+        x: angle.x + 360 * 3 * nextCount,
+        y: angle.y + 360 * 4 * nextCount,
+        z: angle.z + 360 * 2 * nextCount,
+      });
+    } else if (rollId === 0 || rollId === lastSpunRollIdRef.current) {
+      const count = rollCountRef.current;
+      setRotation({
+        x: angle.x + 360 * 3 * count,
+        y: angle.y + 360 * 4 * count,
+        z: angle.z + 360 * 2 * count,
+      });
+    }
+  }, [rolling, targetFace, rollId, faceAngles]);
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -1144,7 +1160,10 @@ function ProminentDice3D({
   );
 }
 
-export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { isPresenter?: boolean } = {}) {
+export default function FinaleSquadre_Board({
+  isPresenter: isPresenterProp,
+  interactive = true,
+}: { isPresenter?: boolean; interactive?: boolean } = {}) {
   const isGamesMode = useMemo(() => {
     if (typeof window === 'undefined') return false;
     const params = new URLSearchParams(window.location.search);
@@ -1212,6 +1231,10 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
     'playstate_finale_target_face',
     null
   );
+  const [diceRollState, setDiceRollState] = useSyncedState<DiceRollState | null>(
+    'playstate_finale_dice_roll',
+    null
+  );
   const [targetTeam, setTargetTeam] = useSyncedState<TeamId | 'both' | 'none' | null>(
     'playstate_finale_target_team',
     null
@@ -1232,13 +1255,16 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
 
   useEffect(() => {
     if (bookedTeam !== null && prevBookedRef.current !== bookedTeam) {
-      playTeamBookingSound();
+      if (interactive) {
+        playTeamBookingSound();
+      }
     }
     prevBookedRef.current = bookedTeam;
-  }, [bookedTeam]);
+  }, [bookedTeam, interactive]);
 
   // Keyboard shortcut: 1, 2, 3 per prenotare un jolly, Esc/Backspace per sbloccare
   useEffect(() => {
+    if (!interactive) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
         return;
@@ -1264,9 +1290,80 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setBookedTeam]);
+  }, [interactive, setBookedTeam]);
 
   const [rolling, setRolling] = useState(false);
+  const rollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastHandledRollIdRef = useRef<number | null>(null);
+
+  // Sync dice roll animation across Presenter and Presentation windows
+  useEffect(() => {
+    let startFrame: number | null = null;
+
+    if (!diceRollState) {
+      if (rollTimerRef.current) {
+        clearTimeout(rollTimerRef.current);
+        rollTimerRef.current = null;
+      }
+      lastHandledRollIdRef.current = null;
+      startFrame = requestAnimationFrame(() => setRolling(false));
+      return () => {
+        if (startFrame !== null) cancelAnimationFrame(startFrame);
+      };
+    }
+
+    if (diceRollState.rollId === lastHandledRollIdRef.current) return;
+    lastHandledRollIdRef.current = diceRollState.rollId;
+
+    const elapsed = Date.now() - diceRollState.startedAt;
+    if (elapsed < 0 || elapsed >= 1200) {
+      startFrame = requestAnimationFrame(() => setRolling(false));
+      return () => {
+        if (startFrame !== null) cancelAnimationFrame(startFrame);
+      };
+    }
+
+    const remaining = Math.max(100, 1200 - elapsed);
+    if (interactive) {
+      playSound('roll');
+    }
+    if (rollTimerRef.current) {
+      clearTimeout(rollTimerRef.current);
+    }
+    startFrame = requestAnimationFrame(() => setRolling(true));
+    rollTimerRef.current = setTimeout(() => {
+      rollTimerRef.current = null;
+      setRolling(false);
+      if (interactive) {
+        playSound('land');
+      }
+    }, remaining);
+
+    return () => {
+      if (startFrame !== null) cancelAnimationFrame(startFrame);
+    };
+  }, [diceRollState, interactive]);
+
+  useEffect(() => {
+    return () => {
+      if (rollTimerRef.current) {
+        clearTimeout(rollTimerRef.current);
+      }
+    };
+  }, []);
+
+  const clearDiceState = useCallback(() => {
+    if (rollTimerRef.current) {
+      clearTimeout(rollTimerRef.current);
+      rollTimerRef.current = null;
+    }
+    lastHandledRollIdRef.current = null;
+    setRolling(false);
+    setDiceRollState(null);
+    setSelectedDieFace(null);
+    setDieTargetFace(null);
+    setTargetTeam(null);
+  }, [setDiceRollState, setSelectedDieFace, setDieTargetFace, setTargetTeam]);
   const [teamNames, setTeamNames] = useState<string[]>(['SQUADRA 1', 'SQUADRA 2', 'SQUADRA 3']);
   const [setupConfig, setSetupConfig] = useState<any>(null);
 
@@ -1325,7 +1422,10 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
     if (dieTargetFace && !(dieTargetFace in DICE_FACES_CONFIG)) {
       setDieTargetFace(null);
     }
-  }, [selectedDieFace, dieTargetFace, setSelectedDieFace, setDieTargetFace]);
+    if (diceRollState && !(diceRollState.face in DICE_FACES_CONFIG)) {
+      setDiceRollState(null);
+    }
+  }, [selectedDieFace, dieTargetFace, diceRollState, setSelectedDieFace, setDieTargetFace, setDiceRollState]);
 
   // Check if any team has suffered eliminations
   const hasEliminatedMembers = useMemo(() => {
@@ -1343,11 +1443,11 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
       const wasEliminated = prevEliminatedMapRef.current[tId];
 
       if (isEliminated && !wasEliminated) {
-        playSound('wipeout');
+        if (interactive) playSound('wipeout');
       }
       prevEliminatedMapRef.current[tId] = isEliminated;
     });
-  }, [eliminatedMembers, startingMembers]);
+  }, [eliminatedMembers, startingMembers, interactive]);
 
   // Detect winning team (when game has started and exactly 1 team remains with omini)
   const winningTeamId: TeamId | null = useMemo(() => {
@@ -1366,11 +1466,11 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
   // Play fanfare when winner emerges
   useEffect(() => {
     if (winningTeamId && prevWinnerRef.current !== winningTeamId) {
-      playSound('victory');
+      if (interactive) playSound('victory');
       setDismissTrophy(false);
     }
     prevWinnerRef.current = winningTeamId;
-  }, [winningTeamId]);
+  }, [winningTeamId, interactive]);
 
   // Synchronize active team with 3rd place team (fewest points)
   useEffect(() => {
@@ -1384,9 +1484,7 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
       setManuallySelected(false);
       const startingTeam = rankingOrder[0];
       setActiveTeam(startingTeam);
-      setSelectedDieFace(null);
-      setDieTargetFace(null);
-      setTargetTeam(null);
+      clearDiceState();
       return;
     }
 
@@ -1398,7 +1496,7 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
         setActiveTeam(startingTeam);
       }
     }
-  }, [rankingOrder, activeTeam, setActiveTeam, hasEliminatedMembers, manuallySelected, setSelectedDieFace, setDieTargetFace, setTargetTeam]);
+  }, [rankingOrder, activeTeam, setActiveTeam, hasEliminatedMembers, manuallySelected, clearDiceState]);
 
   // Assicura che il turno iniziale venga sempre scritto in localStorage per la sincronizzazione con ClassificaGenerale
   const syncedInitialTurnRef = useRef(false);
@@ -1431,15 +1529,31 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
 
   // Dice roll handler
   const rollDice = () => {
-    if (rolling || isResolving) return;
-    setRolling(true);
-    setSelectedDieFace(null);
-    setTargetTeam(null);
-    playSound('roll');
+    const isActiveRoll = Boolean(
+      rolling ||
+      (diceRollState && Date.now() - diceRollState.startedAt >= 0 && Date.now() - diceRollState.startedAt < 1200)
+    );
+    if (isActiveRoll || isResolving) return;
+
+    if (rollTimerRef.current) {
+      clearTimeout(rollTimerRef.current);
+      rollTimerRef.current = null;
+    }
 
     const nextFace = DICE_FACES[Math.floor(Math.random() * DICE_FACES.length)];
     const faceMeta = DICE_FACES_CONFIG[nextFace];
+    const now = Date.now();
+    const nextRollId = Math.max(now, (diceRollState?.rollId ?? 0) + 1);
+    lastHandledRollIdRef.current = nextRollId;
+
+    setRolling(true);
+    setSelectedDieFace(null);
+    setTargetTeam(null);
+    setDiceRollState({ rollId: nextRollId, face: nextFace, startedAt: now });
     setDieTargetFace(nextFace);
+    if (interactive) {
+      playSound('roll');
+    }
 
     // Compute target automatically according to user rules:
     // -> : squadra a destra
@@ -1474,11 +1588,14 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
       resolvedTarget = 'none';
     }
 
-    setTimeout(() => {
+    rollTimerRef.current = setTimeout(() => {
+      rollTimerRef.current = null;
       setSelectedDieFace(nextFace);
       setTargetTeam(resolvedTarget);
       setRolling(false);
-      playSound('land');
+      if (interactive) {
+        playSound('land');
+      }
     }, 1200);
   };
 
@@ -1587,9 +1704,7 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
     resolveTimerRef.current = setTimeout(() => {
       const next = getNextTurnTeam(activeTeam);
       setActiveTeam(next);
-      setSelectedDieFace(null);
-      setDieTargetFace(null);
-      setTargetTeam(null);
+      clearDiceState();
       setIsResolving(false);
     }, animationDelay);
   };
@@ -1602,9 +1717,7 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
     setIsResolving(false);
     const next = getNextTurnTeam(activeTeam);
     setActiveTeam(next);
-    setSelectedDieFace(null);
-    setDieTargetFace(null);
-    setTargetTeam(null);
+    clearDiceState();
   };
 
   // Toggle question number used
@@ -1862,9 +1975,7 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
                     setIsResolving(false);
                     setManuallySelected(true);
                     setActiveTeam(tId);
-                    setSelectedDieFace(null);
-                    setDieTargetFace(null);
-                    setTargetTeam(null);
+                    clearDiceState();
                   }}
                   className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                     isEliminated
@@ -1909,9 +2020,7 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
                 setDismissTrophy(false);
                 setEliminatedMembers({ 1: [], 2: [], 3: [] });
                 setEliminatedQuestions([]);
-                setSelectedDieFace(null);
-                setDieTargetFace(null);
-                setTargetTeam(null);
+                clearDiceState();
                 setActiveTeam(rankingOrder[0]);
                 setBookedTeam(null);
                 localStorage.removeItem('playstate_finale_squadre_booked_team');
@@ -2474,7 +2583,8 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
               <ProminentDice3D
                 rolling={rolling}
                 isResolving={isResolving}
-                targetFace={dieTargetFace}
+                targetFace={diceRollState?.face ?? dieTargetFace}
+                rollId={diceRollState?.rollId ?? 0}
                 onRoll={rollDice}
                 canRollBonus={false}
                 onUseBonusRoll={handleUseBonusRoll}
@@ -2518,7 +2628,8 @@ export default function FinaleSquadre_Board({ isPresenter: isPresenterProp }: { 
             <ProminentDice3D
               rolling={rolling}
               isResolving={isResolving}
-              targetFace={dieTargetFace}
+              targetFace={diceRollState?.face ?? dieTargetFace}
+              rollId={diceRollState?.rollId ?? 0}
               onRoll={rollDice}
               canRollBonus={hasDiceBonusAvailable}
               onUseBonusRoll={handleUseBonusRoll}

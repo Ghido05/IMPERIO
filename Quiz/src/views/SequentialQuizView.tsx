@@ -108,6 +108,7 @@ export function getSlideForBoxQuestion(
           videoUrl: setupState.box0?.introduzioneNadia?.video || '',
           sfondo: setupState.box0?.introduzioneNadia?.sfondo || '',
           audioStacchetto: setupState.box0?.introduzioneNadia?.audioStacchetto || '/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3',
+          audioSpiegazione: setupState.box0?.introduzioneNadia?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_nadia.mp3',
           slideId: 'box0_nadia',
           notePresentatore: setupState.box0?.introduzioneNadia?.notePresentatore || 'Introduzione di Nadia, spiegazione del gettone e delle modalità di invocazione.',
         },

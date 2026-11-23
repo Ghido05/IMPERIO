@@ -11,6 +11,7 @@ interface IntroduzioneNadiaData {
   videoUrl?: string;
   src?: string;
   audioStacchetto?: string;
+  audioSpiegazione?: string;
   notePresentatore?: string;
 }
 
@@ -52,13 +53,25 @@ export default function IntroduzioneNadiaBoard({
     }
   }, [isPresenterMode]);
 
-  // Gestione Audio Sigla Nadia (se non c'è video)
+  // Gestione Audio Sigla Nadia e Audio Spiegazione (se non c'è video)
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioUrlRef = useRef<string>('');
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+
+  const explanationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const explanationAudioUrlRef = useRef<string>('');
+  const [isExplanationPlaying, setIsExplanationPlaying] = useState(false);
 
   const toggleNadiaMusic = useCallback(() => {
     if (!canPlayAudio) return;
-    if (audioRef.current) {
+    const targetUrl = assetUrl(data?.audioStacchetto || '/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3');
+
+    if (explanationAudioRef.current && !explanationAudioRef.current.paused) {
+      explanationAudioRef.current.pause();
+      setIsExplanationPlaying(false);
+    }
+
+    if (audioRef.current && audioUrlRef.current === targetUrl) {
       if (audioRef.current.paused) {
         audioRef.current.play().then(() => setIsAudioPlaying(true)).catch(() => {});
       } else {
@@ -66,15 +79,48 @@ export default function IntroduzioneNadiaBoard({
         setIsAudioPlaying(false);
       }
     } else {
-      const audioUrl = assetUrl(data?.audioStacchetto || '/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3');
-      const audio = new Audio(audioUrl);
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      const audio = new Audio(targetUrl);
       audio.onplay = () => setIsAudioPlaying(true);
       audio.onpause = () => setIsAudioPlaying(false);
       audio.onended = () => setIsAudioPlaying(false);
       audioRef.current = audio;
+      audioUrlRef.current = targetUrl;
       audio.play().then(() => setIsAudioPlaying(true)).catch(() => {});
     }
-  }, [canPlayAudio]);
+  }, [canPlayAudio, data?.audioStacchetto]);
+
+  const toggleExplanationAudio = useCallback(() => {
+    if (!canPlayAudio) return;
+    const targetUrl = assetUrl(data?.audioSpiegazione || '/Audio/Spiegazioni/Spiegazione_nadia.mp3');
+
+    if (audioRef.current && !audioRef.current.paused) {
+      audioRef.current.pause();
+      setIsAudioPlaying(false);
+    }
+
+    if (explanationAudioRef.current && explanationAudioUrlRef.current === targetUrl) {
+      if (explanationAudioRef.current.paused) {
+        explanationAudioRef.current.play().then(() => setIsExplanationPlaying(true)).catch(() => {});
+      } else {
+        explanationAudioRef.current.pause();
+        setIsExplanationPlaying(false);
+      }
+    } else {
+      if (explanationAudioRef.current) {
+        explanationAudioRef.current.pause();
+      }
+      const audio = new Audio(targetUrl);
+      audio.onplay = () => setIsExplanationPlaying(true);
+      audio.onpause = () => setIsExplanationPlaying(false);
+      audio.onended = () => setIsExplanationPlaying(false);
+      explanationAudioRef.current = audio;
+      explanationAudioUrlRef.current = targetUrl;
+      audio.play().then(() => setIsExplanationPlaying(true)).catch(() => {});
+    }
+  }, [canPlayAudio, data?.audioSpiegazione]);
 
   // Pulizia audio/video all'unmount
   useEffect(() => {
@@ -83,14 +129,23 @@ export default function IntroduzioneNadiaBoard({
         audioRef.current.pause();
         audioRef.current = null;
       }
+      if (explanationAudioRef.current) {
+        explanationAudioRef.current.pause();
+        explanationAudioRef.current = null;
+      }
     };
   }, []);
 
-  // Scorciatoie tastiera: M per musica, K o Spazio per video
+  // Scorciatoie tastiera: Spazio/P per spiegazione vocale, M per musica sigla, K/Spazio per video
   useEffect(() => {
     if (!interactive) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT')) {
+        return;
+      }
+
       if (hasVideo) {
         if (e.key === ' ' || e.key.toLowerCase() === 'k') {
           e.preventDefault();
@@ -104,7 +159,11 @@ export default function IntroduzioneNadiaBoard({
           }
         }
       } else {
-        if (e.key.toLowerCase() === 'm') {
+        if (e.code === 'Space' || e.key.toLowerCase() === 'p') {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleExplanationAudio();
+        } else if (e.key.toLowerCase() === 'm') {
           e.preventDefault();
           toggleNadiaMusic();
         }
@@ -113,7 +172,7 @@ export default function IntroduzioneNadiaBoard({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, hasVideo, toggleNadiaMusic]);
+  }, [interactive, hasVideo, toggleNadiaMusic, toggleExplanationAudio]);
 
   // Sfondo: Lampada di Nadia al centro
   const defaultBg = '/Icone/sfondi/sfondo_nadia_lampada.jpg';
@@ -276,25 +335,40 @@ export default function IntroduzioneNadiaBoard({
         </div>
       </main>
 
-      {/* Footer Relatore con Tasto Stacchetto Nadia */}
+      {/* Footer Relatore con Tasti Spiegazione Vocale & Sigla Nadia */}
       <footer className="relative z-40 w-full flex items-center justify-between pt-4 border-t border-white/10">
         <span className="text-xs text-white/50">
-          Scorciatoia: <strong>M</strong> per avviare/fermare la sigla musicale di Nadia
+          Scorciatoie: <strong>Spazio / P</strong> per la spiegazione vocale • <strong>M</strong> per la sigla musicale di Nadia
         </span>
 
         {isPresenterMode && interactive && (
-          <button
-            type="button"
-            onClick={toggleNadiaMusic}
-            className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
-              isAudioPlaying
-                ? 'bg-amber-500 border-amber-300 text-black shadow-lg shadow-amber-500/50 animate-pulse'
-                : 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
-            }`}
-          >
-            <span>{isAudioPlaying ? '⏸' : '🎵'}</span>
-            <span>{isAudioPlaying ? 'Pausa Sigla Nadia' : 'Suona Sigla Nadia'}</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleExplanationAudio}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
+                isExplanationPlaying
+                  ? 'bg-emerald-500 border-emerald-300 text-black shadow-lg shadow-emerald-500/50 animate-pulse'
+                  : 'bg-indigo-600/40 hover:bg-indigo-500/60 border-indigo-400/50 text-white'
+              }`}
+            >
+              <span>{isExplanationPlaying ? '⏸' : '🎙️'}</span>
+              <span>{isExplanationPlaying ? 'Pausa Spiegazione' : 'Riproduci Spiegazione'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={toggleNadiaMusic}
+              className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer flex items-center gap-2 ${
+                isAudioPlaying
+                  ? 'bg-amber-500 border-amber-300 text-black shadow-lg shadow-amber-500/50 animate-pulse'
+                  : 'bg-white/10 hover:bg-white/20 border-white/20 text-white'
+              }`}
+            >
+              <span>{isAudioPlaying ? '⏸' : '🎵'}</span>
+              <span>{isAudioPlaying ? 'Pausa Sigla Nadia' : 'Suona Sigla Nadia'}</span>
+            </button>
+          </div>
         )}
       </footer>
     </div>

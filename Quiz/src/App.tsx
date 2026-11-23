@@ -4,6 +4,18 @@ import PresenterView from './views/PresenterView';
 import GamesView from './views/GamesView';
 import ScoresView from './views/ScoresView';
 import IpadView from './views/IpadView';
+import { djSoundEngine, type DjPadConfig } from './lib/djSoundEngine';
+import {
+  LAUNCHPAD_PADS_UPDATED_EVENT,
+  LAUNCHPAD_STORAGE_KEY,
+  type LaunchpadCommand,
+  type LaunchpadPadsUpdatedDetail,
+  loadLaunchpadPads,
+  mergeRemotePadsWithLocal,
+  resolvePadForPlayback,
+  sanitizePadsForRemote,
+  saveLaunchpadPads,
+} from './lib/launchpadSync';
 
 export type SlideType =
   | 'empty'
@@ -174,6 +186,97 @@ function App() {
       setMode('presenter');
     }
   }, []);
+
+  // Bridge Launchpad audio and state on the Mac presenter window so remote iPad triggers play on the computer
+  useEffect(() => {
+    if (mode !== 'presenter' || isSandbox) return;
+    interface ElectronLaunchpadApi {
+      sendLaunchpadState?: (state: { playingPadIds: string[]; masterVolume: number }) => void;
+      sendLaunchpadPads?: (pads: DjPadConfig[]) => void;
+      onLaunchpadCommand?: (cb: (cmd: LaunchpadCommand) => void) => () => void;
+      onLaunchpadPadsFromRemote?: (cb: (pads: DjPadConfig[]) => void) => () => void;
+    }
+    const electron = (window as unknown as { electron?: ElectronLaunchpadApi }).electron;
+    if (!electron) return;
+
+    let currentPlayingIds = djSoundEngine.getPlayingPadIds();
+    let currentVolume = djSoundEngine.getMasterVolume();
+
+    const pushState = () => {
+      electron.sendLaunchpadState?.({
+        playingPadIds: currentPlayingIds,
+        masterVolume: currentVolume,
+      });
+    };
+
+    const pushPads = () => {
+      const sanitized = sanitizePadsForRemote(loadLaunchpadPads());
+      electron.sendLaunchpadPads?.(sanitized);
+    };
+
+    pushPads();
+    pushState();
+
+    const unsubPlaying = djSoundEngine.subscribe((ids) => {
+      currentPlayingIds = Array.from(ids);
+      pushState();
+    });
+
+    const unsubVolume = djSoundEngine.subscribeVolume((vol) => {
+      currentVolume = vol;
+      pushState();
+    });
+
+    const handleLocalPadsUpdated = (e: Event) => {
+      const detail = (e as CustomEvent<LaunchpadPadsUpdatedDetail>).detail;
+      if (detail?.source === 'local') {
+        pushPads();
+      }
+    };
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === LAUNCHPAD_STORAGE_KEY) {
+        pushPads();
+      }
+    };
+
+    window.addEventListener(LAUNCHPAD_PADS_UPDATED_EVENT, handleLocalPadsUpdated);
+    window.addEventListener('storage', handleStorage);
+
+    const unsubCommand = electron.onLaunchpadCommand?.((cmd: LaunchpadCommand) => {
+      if (!cmd) return;
+      if (cmd.action === 'trigger') {
+        const resolved = resolvePadForPlayback(cmd.padId, cmd.pad);
+        djSoundEngine.triggerPad(resolved);
+      } else if (cmd.action === 'stopPad') {
+        djSoundEngine.stopPad(cmd.padId);
+      } else if (cmd.action === 'stopAll') {
+        djSoundEngine.stopAll();
+      } else if (cmd.action === 'setMasterVolume' && typeof cmd.volume === 'number') {
+        djSoundEngine.setMasterVolume(cmd.volume);
+      }
+    });
+
+    const unsubRemotePads = electron.onLaunchpadPadsFromRemote?.((incomingPads: DjPadConfig[]) => {
+      if (!Array.isArray(incomingPads) || incomingPads.length !== 12) return;
+      const merged = mergeRemotePadsWithLocal(incomingPads, loadLaunchpadPads());
+      saveLaunchpadPads(merged, { source: 'remote', notifyEvent: true });
+
+      const sanitized = sanitizePadsForRemote(merged);
+      if (JSON.stringify(sanitized) !== JSON.stringify(incomingPads)) {
+        electron.sendLaunchpadPads?.(sanitized);
+      }
+    });
+
+    return () => {
+      unsubPlaying();
+      unsubVolume();
+      window.removeEventListener(LAUNCHPAD_PADS_UPDATED_EVENT, handleLocalPadsUpdated);
+      window.removeEventListener('storage', handleStorage);
+      unsubCommand?.();
+      unsubRemotePads?.();
+    };
+  }, [mode, isSandbox]);
 
   if (isSandbox) {
     return <Sandbox />;

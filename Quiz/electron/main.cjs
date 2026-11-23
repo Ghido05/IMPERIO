@@ -454,6 +454,8 @@ let latestSlides = null;
 let latestActiveSlideId = '';
 let latestActiveSlide = null;
 const latestLocalStorage = {};
+let latestLaunchpadState = { playingPadIds: [], masterVolume: 0.9 };
+let latestLaunchpadPads = null;
 
 function getAllIpAddresses() {
   const interfaces = os.networkInterfaces();
@@ -602,7 +604,9 @@ function startLocalServer() {
         slides: latestSlides,
         activeSlideId: latestActiveSlideId,
         activeSlide: latestActiveSlide,
-        localStorage: latestLocalStorage
+        localStorage: latestLocalStorage,
+        launchpadState: latestLaunchpadState,
+        launchpadPads: latestLaunchpadPads
       }
     }));
     
@@ -616,7 +620,9 @@ function startLocalServer() {
               slides: latestSlides,
               activeSlideId: latestActiveSlideId,
               activeSlide: latestActiveSlide,
-              localStorage: latestLocalStorage
+              localStorage: latestLocalStorage,
+              launchpadState: latestLaunchpadState,
+              launchpadPads: latestLaunchpadPads
             }
           }));
         } else if (msg.type === 'local-storage-update') {
@@ -643,6 +649,27 @@ function startLocalServer() {
           for (const client of clients) {
             if (client !== ws && client.readyState === 1) { // 1 = OPEN
               client.send(wsMessage);
+            }
+          }
+        } else if (msg.type === 'launchpad-command') {
+          // Route remote Launchpad playback/volume commands exclusively to Presenter window on PC
+          if (presenterWindow && !presenterWindow.webContents.isDestroyed()) {
+            presenterWindow.webContents.send('launchpad-command', msg.data);
+          }
+        } else if (msg.type === 'launchpad-pads-update') {
+          if (Array.isArray(msg.data?.pads)) {
+            latestLaunchpadPads = msg.data.pads;
+            if (presenterWindow && !presenterWindow.webContents.isDestroyed()) {
+              presenterWindow.webContents.send('launchpad-pads-from-remote', msg.data.pads);
+            }
+            const wsMessage = JSON.stringify({
+              type: 'launchpad-pads-update',
+              data: { pads: msg.data.pads }
+            });
+            for (const client of clients) {
+              if (client !== ws && client.readyState === 1) {
+                client.send(wsMessage);
+              }
             }
           }
         }
@@ -728,6 +755,34 @@ ipcMain.on('broadcast-state', (event, state) => {
     }
   });
 
+  for (const client of clients) {
+    if (client.readyState === 1) {
+      client.send(wsMessage);
+    }
+  }
+});
+
+ipcMain.on('launchpad-state', (_event, state) => {
+  if (!state) return;
+  latestLaunchpadState = state;
+  const wsMessage = JSON.stringify({
+    type: 'launchpad-state',
+    data: state
+  });
+  for (const client of clients) {
+    if (client.readyState === 1) {
+      client.send(wsMessage);
+    }
+  }
+});
+
+ipcMain.on('launchpad-pads', (_event, pads) => {
+  if (!Array.isArray(pads)) return;
+  latestLaunchpadPads = pads;
+  const wsMessage = JSON.stringify({
+    type: 'launchpad-pads-update',
+    data: { pads }
+  });
   for (const client of clients) {
     if (client.readyState === 1) {
       client.send(wsMessage);

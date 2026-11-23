@@ -1,9 +1,12 @@
 // DJ Sound Engine & Procedural FX Synthesizer for Imperio Launchpad
 // Low latency (<15ms) Web Audio API sound generator + custom audio playback manager.
+import { assetUrl } from './assetUrl';
 
 export type PadColor = 'cyan' | 'magenta' | 'lime' | 'amber' | 'red' | 'purple' | 'blue' | 'white';
 
 export type PlaybackMode = 'oneshot' | 'loop' | 'restart';
+
+export const REMOTE_AUDIO_PLACEHOLDER = 'mac-local-audio';
 
 export interface DjPadConfig {
   id: string;
@@ -147,12 +150,18 @@ export class DjSoundEngine {
   private masterGain: GainNode | null = null;
   private masterVolume: number = 0.9;
   private activeVoices = new Map<string, { stop: () => void }>();
-  private activeAudioElements = new Map<string, HTMLAudioElement>();
+  private activeAudioElements = new Map<string, { audio: HTMLAudioElement; padVolume: number }>();
   private playingPadIds = new Set<string>();
   private listeners: Array<(playingIds: Set<string>) => void> = [];
+  private volumeListeners: Array<(volume: number) => void> = [];
 
   constructor() {
     // Lazy initialized on first user interaction
+  }
+
+  private isRemoteIpadWindow(): boolean {
+    if (typeof window === 'undefined') return false;
+    return new URLSearchParams(window.location.search).get('mode') === 'ipad';
   }
 
   private getAudioContext(): AudioContext | null {
@@ -173,18 +182,24 @@ export class DjSoundEngine {
   }
 
   public setMasterVolume(vol: number) {
-    this.masterVolume = Math.max(0, Math.min(1, vol));
+    const nextVol = Math.max(0, Math.min(1, vol));
+    this.masterVolume = nextVol;
     if (this.ctx && this.masterGain) {
       this.masterGain.gain.setValueAtTime(this.masterVolume, this.ctx.currentTime);
     }
-    // Also adjust HTMLAudioElements
-    this.activeAudioElements.forEach(el => {
-      el.volume = this.masterVolume;
+    // Also adjust HTMLAudioElements respecting per-pad volume
+    this.activeAudioElements.forEach(({ audio, padVolume }) => {
+      audio.volume = Math.max(0, Math.min(1, padVolume * this.masterVolume));
     });
+    this.volumeListeners.forEach(fn => fn(this.masterVolume));
   }
 
   public getMasterVolume(): number {
     return this.masterVolume;
+  }
+
+  public getPlayingPadIds(): string[] {
+    return Array.from(this.playingPadIds);
   }
 
   public subscribe(fn: (playingIds: Set<string>) => void): () => void {
@@ -195,12 +210,22 @@ export class DjSoundEngine {
     };
   }
 
+  public subscribeVolume(fn: (volume: number) => void): () => void {
+    this.volumeListeners.push(fn);
+    fn(this.masterVolume);
+    return () => {
+      this.volumeListeners = this.volumeListeners.filter(l => l !== fn);
+    };
+  }
+
   private notify() {
     const copy = new Set(this.playingPadIds);
     this.listeners.forEach(fn => fn(copy));
   }
 
   private markPlaying(padId: string, isPlaying: boolean) {
+    const alreadyPlaying = this.playingPadIds.has(padId);
+    if (alreadyPlaying === isPlaying) return;
     if (isPlaying) {
       this.playingPadIds.add(padId);
     } else {
@@ -213,51 +238,107 @@ export class DjSoundEngine {
     return this.playingPadIds.has(padId);
   }
 
-  /** Trigger or toggle playback for a specific pad */
-  public triggerPad(pad: DjPadConfig) {
-    // If pad is currently playing and in loop mode, toggle off
-    if (this.isPadPlaying(pad.id)) {
-      if (pad.mode === 'loop' || pad.mode === 'restart') {
-        this.stopPad(pad.id);
-        if (pad.mode === 'loop') return;
+  private stopPadInternal(padId: string, keepPlayingFlag = false) {
+    // Stop procedural voice
+    const voice = this.activeVoices.get(padId);
+    if (voice) {
+      this.activeVoices.delete(padId);
+      try {
+        voice.stop();
+      } catch {
+        // Ignore already-stopped AudioNode errors
       }
     }
 
-    this.stopPad(pad.id);
+    // Stop audio element
+    const entry = this.activeAudioElements.get(padId);
+    if (entry) {
+      this.activeAudioElements.delete(padId);
+      const { audio } = entry;
+      audio.onplay = null;
+      audio.onpause = null;
+      audio.onended = null;
+      audio.onerror = null;
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch {
+        // Ignore media reset errors
+      }
+    }
 
-    const padVol = (pad.volume ?? 1) * this.masterVolume;
+    if (!keepPlayingFlag) {
+      this.playingPadIds.delete(padId);
+    }
+  }
+
+  /** Trigger or toggle playback for a specific pad */
+  public triggerPad(pad: DjPadConfig) {
+    // Never play local audio inside the iPad remote view
+    if (this.isRemoteIpadWindow()) {
+      return;
+    }
+
+    // If pad is currently playing and in loop mode, toggle off
+    if (this.isPadPlaying(pad.id) && pad.mode === 'loop') {
+      this.stopPad(pad.id);
+      return;
+    }
+
+    const wasPlaying = this.playingPadIds.has(pad.id);
+    this.stopPadInternal(pad.id, true);
+
+    const padBaseVol = pad.volume ?? 1;
+    const padVol = padBaseVol * this.masterVolume;
 
     // Custom audio file playback
-    if (pad.soundType === 'file' && pad.fileUrl) {
-      try {
-        const audio = new Audio(pad.fileUrl);
-        audio.volume = Math.max(0, Math.min(1, padVol));
-        audio.loop = pad.mode === 'loop';
+    if (pad.soundType === 'file' && pad.fileUrl && pad.fileUrl !== REMOTE_AUDIO_PLACEHOLDER) {
+      const resolvedUrl = assetUrl(pad.fileUrl);
+      if (resolvedUrl) {
+        try {
+          const audio = new Audio(resolvedUrl);
+          audio.volume = Math.max(0, Math.min(1, padVol));
+          audio.loop = pad.mode === 'loop';
 
-        audio.onplay = () => this.markPlaying(pad.id, true);
-        audio.onended = () => {
-          this.activeAudioElements.delete(pad.id);
-          this.markPlaying(pad.id, false);
-        };
-        audio.onerror = () => {
-          this.activeAudioElements.delete(pad.id);
-          this.markPlaying(pad.id, false);
-        };
+          const cleanupAudio = () => {
+            const current = this.activeAudioElements.get(pad.id);
+            if (current?.audio === audio) {
+              this.activeAudioElements.delete(pad.id);
+              this.markPlaying(pad.id, false);
+            }
+          };
 
-        this.activeAudioElements.set(pad.id, audio);
-        audio.play().catch(err => {
-          console.warn("[DjSoundEngine] Errore play audio:", err);
-          this.markPlaying(pad.id, false);
-        });
-        return;
-      } catch (err) {
-        console.warn("[DjSoundEngine] Errore apertura file audio:", err);
+          audio.onplay = () => {
+            const current = this.activeAudioElements.get(pad.id);
+            if (current?.audio === audio) {
+              this.markPlaying(pad.id, true);
+            }
+          };
+          audio.onended = cleanupAudio;
+          audio.onpause = cleanupAudio;
+          audio.onerror = cleanupAudio;
+
+          this.activeAudioElements.set(pad.id, { audio, padVolume: padBaseVol });
+          this.markPlaying(pad.id, true);
+          audio.play().catch(err => {
+            console.warn("[DjSoundEngine] Errore play audio:", err);
+            cleanupAudio();
+          });
+          return;
+        } catch (err) {
+          console.warn("[DjSoundEngine] Errore apertura file audio:", err);
+        }
       }
     }
 
     // Procedural synthesizer sound
     const ctx = this.getAudioContext();
-    if (!ctx) return;
+    if (!ctx) {
+      if (wasPlaying) {
+        this.markPlaying(pad.id, false);
+      }
+      return;
+    }
 
     this.markPlaying(pad.id, true);
 
@@ -275,43 +356,42 @@ export class DjSoundEngine {
   }
 
   public stopPad(padId: string) {
-    // Stop procedural voice
-    const voice = this.activeVoices.get(padId);
-    if (voice) {
-      try { voice.stop(); } catch {}
-      this.activeVoices.delete(padId);
+    const wasPlaying = this.playingPadIds.has(padId);
+    this.stopPadInternal(padId, false);
+    if (wasPlaying) {
+      this.notify();
     }
-
-    // Stop audio element
-    const audio = this.activeAudioElements.get(padId);
-    if (audio) {
-      try {
-        audio.pause();
-        audio.currentTime = 0;
-      } catch {}
-      this.activeAudioElements.delete(padId);
-    }
-
-    this.markPlaying(padId, false);
   }
 
   /** Stop all sounds instantly (Panic button) */
   public stopAll() {
     this.activeVoices.forEach(v => {
-      try { v.stop(); } catch {}
+      try {
+        v.stop();
+      } catch {
+        // Ignore already-stopped AudioNode errors
+      }
     });
     this.activeVoices.clear();
 
-    this.activeAudioElements.forEach(a => {
+    this.activeAudioElements.forEach(({ audio }) => {
+      audio.onplay = null;
+      audio.onpause = null;
+      audio.onended = null;
+      audio.onerror = null;
       try {
-        a.pause();
-        a.currentTime = 0;
-      } catch {}
+        audio.pause();
+        audio.currentTime = 0;
+      } catch {
+        // Ignore media reset errors
+      }
     });
     this.activeAudioElements.clear();
 
-    this.playingPadIds.clear();
-    this.notify();
+    if (this.playingPadIds.size > 0) {
+      this.playingPadIds.clear();
+      this.notify();
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────────

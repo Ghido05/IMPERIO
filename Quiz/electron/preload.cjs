@@ -45,4 +45,16 @@ contextBridge.exposeInMainWorld('electron', {
   saveAssetFile: (payload) => ipcRenderer.invoke('save-asset-file', payload),
   saveHtmlPdf: (payload) => ipcRenderer.invoke('save-html-pdf', payload),
   openHtmlPreview: (payload) => ipcRenderer.invoke('open-html-preview', payload),
+  sendLaunchpadState: (state) => ipcRenderer.send('launchpad-state', state),
+  sendLaunchpadPads: (pads) => ipcRenderer.send('launchpad-pads', pads),
+  onLaunchpadCommand: (callback) => {
+    const subscription = (_event, command) => callback(command);
+    ipcRenderer.on('launchpad-command', subscription);
+    return () => ipcRenderer.removeListener('launchpad-command', subscription);
+  },
+  onLaunchpadPadsFromRemote: (callback) => {
+    const subscription = (_event, pads) => callback(pads);
+    ipcRenderer.on('launchpad-pads-from-remote', subscription);
+    return () => ipcRenderer.removeListener('launchpad-pads-from-remote', subscription);
+  },
 });

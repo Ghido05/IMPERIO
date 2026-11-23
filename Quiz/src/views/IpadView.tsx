@@ -1,4 +1,4 @@
-import { useState, useEffect, Component, type ErrorInfo, type ReactNode } from 'react';
+import { useState, useEffect, useRef, useCallback, Component, type ErrorInfo, type ReactNode } from 'react';
 import PasswordPresceltiBoard from '../Gioco password_prescelti_Board';
 import MilleEUnaNadiaBoard from '../components/MilleEUnaNadiaBoard';
 import { useSyncedState } from '../hooks/useSyncedState';
@@ -13,6 +13,12 @@ import { getNadiaQuestionOrder, isValidNadiaOrder } from '../lib/nadiaUtils';
 import StageViewport from '../components/StageViewport';
 import { STAGE_W, STAGE_H } from '../hooks/useStageBox';
 import DjLaunchpadPanel from '../components/DjLaunchpadPanel';
+import { DEFAULT_LAUNCHPAD_PADS, type DjPadConfig } from '../lib/djSoundEngine';
+import {
+  type LaunchpadCommand,
+  sanitizePadForTransport,
+  sanitizePadsForRemote,
+} from '../lib/launchpadSync';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -69,6 +75,11 @@ function IpadContent() {
   const [setupState, setSetupState] = useState<any>(null);
   const [bookedTeam, setBookedTeam] = useState<number | null>(null);
   const [showLaunchpad, setShowLaunchpad] = useState<boolean>(false);
+  const [launchpadPlayingIds, setLaunchpadPlayingIds] = useState<string[]>([]);
+  const [launchpadMasterVol, setLaunchpadMasterVol] = useState<number>(0.9);
+  const [launchpadPads, setLaunchpadPads] = useState<DjPadConfig[]>(DEFAULT_LAUNCHPAD_PADS);
+  const wsRef = useRef<WebSocket | null>(null);
+  const lastVolumeSentAtRef = useRef<number>(0);
 
   const { scores, bonuses } = useScores();
 
@@ -297,6 +308,7 @@ function IpadContent() {
     function connect() {
       try {
         ws = new WebSocket(socketUrl);
+        wsRef.current = ws;
       } catch (err) {
         console.error('Failed to instantiate WebSocket:', err);
         reconnectTimeout = setTimeout(connect, 2000);
@@ -305,6 +317,7 @@ function IpadContent() {
 
       ws.onopen = () => {
         console.log('Connected to Mac Server');
+        wsRef.current = ws;
         setWsConnected(true);
         if (ws) ws.send(JSON.stringify({ type: 'request-state' }));
       };
@@ -314,12 +327,29 @@ function IpadContent() {
           const msg = JSON.parse(event.data);
           
           if (msg.type === 'init-state') {
-            const { slides: serverSlides, localStorage: serverLocalStorage, activeSlide: serverActiveSlide } = msg.data;
+            const {
+              slides: serverSlides,
+              localStorage: serverLocalStorage,
+              activeSlide: serverActiveSlide,
+              launchpadState,
+              launchpadPads: serverLaunchpadPads,
+            } = msg.data;
             if (serverSlides) {
               setSlides(serverSlides);
             }
             if (serverActiveSlide !== undefined) {
               setActiveSlide(serverActiveSlide);
+            }
+            if (launchpadState) {
+              if (Array.isArray(launchpadState.playingPadIds)) {
+                setLaunchpadPlayingIds(launchpadState.playingPadIds);
+              }
+              if (typeof launchpadState.masterVolume === 'number') {
+                setLaunchpadMasterVol(launchpadState.masterVolume);
+              }
+            }
+            if (Array.isArray(serverLaunchpadPads) && serverLaunchpadPads.length === 12) {
+              setLaunchpadPads(serverLaunchpadPads);
             }
             if (serverLocalStorage) {
               Object.entries(serverLocalStorage).forEach(([key, value]) => {
@@ -412,6 +442,20 @@ function IpadContent() {
                 // ignore
               }
             }
+          } else if (msg.type === 'launchpad-state') {
+            if (Array.isArray(msg.data?.playingPadIds)) {
+              setLaunchpadPlayingIds(msg.data.playingPadIds);
+            }
+            if (
+              typeof msg.data?.masterVolume === 'number' &&
+              Date.now() - lastVolumeSentAtRef.current > 300
+            ) {
+              setLaunchpadMasterVol(msg.data.masterVolume);
+            }
+          } else if (msg.type === 'launchpad-pads-update') {
+            if (Array.isArray(msg.data?.pads) && msg.data.pads.length === 12) {
+              setLaunchpadPads(msg.data.pads);
+            }
           }
         } catch (err) {
           console.error('Error parsing WS message:', err);
@@ -420,6 +464,9 @@ function IpadContent() {
 
       ws.onclose = () => {
         console.log('Disconnected from Mac Server, reconnecting...');
+        if (wsRef.current === ws) {
+          wsRef.current = null;
+        }
         setWsConnected(false);
         reconnectTimeout = setTimeout(connect, 2000);
       };
@@ -435,6 +482,9 @@ function IpadContent() {
     connect();
 
     return () => {
+      if (wsRef.current === ws) {
+        wsRef.current = null;
+      }
       if (ws) {
         try { ws.close(); } catch(e){}
       }
@@ -442,6 +492,39 @@ function IpadContent() {
       Storage.prototype.setItem = originalSetItem;
       Storage.prototype.removeItem = originalRemoveItem;
     };
+  }, []);
+
+  const sendLaunchpadCommand = useCallback((cmd: LaunchpadCommand) => {
+    const socket = wsRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: 'launchpad-command', data: cmd }));
+    }
+  }, []);
+
+  const handleRemoteTriggerPad = useCallback((pad: DjPadConfig) => {
+    sendLaunchpadCommand({
+      action: 'trigger',
+      padId: pad.id,
+      pad: sanitizePadForTransport(pad),
+    });
+  }, [sendLaunchpadCommand]);
+
+  const handleRemoteStopAll = useCallback(() => {
+    sendLaunchpadCommand({ action: 'stopAll' });
+  }, [sendLaunchpadCommand]);
+
+  const handleRemoteVolumeChange = useCallback((volume: number) => {
+    lastVolumeSentAtRef.current = Date.now();
+    setLaunchpadMasterVol(volume);
+    sendLaunchpadCommand({ action: 'setMasterVolume', volume });
+  }, [sendLaunchpadCommand]);
+
+  const handleRemotePadsChange = useCallback((nextPads: DjPadConfig[]) => {
+    setLaunchpadPads(sanitizePadsForRemote(nextPads));
+    const socket = wsRef.current;
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type: 'launchpad-pads-update', data: { pads: nextPads } }));
+    }
   }, []);
 
   // Stati sincronizzati per Mille e una Nadia
@@ -483,7 +566,18 @@ function IpadContent() {
   if (showLaunchpad) {
     mainContent = (
       <div className="w-full h-full flex items-center justify-center bg-[#14141b] p-1">
-        <DjLaunchpadPanel onBackToScores={() => setShowLaunchpad(false)} />
+        <DjLaunchpadPanel
+          onBackToScores={() => setShowLaunchpad(false)}
+          remoteMode={true}
+          remoteConnected={wsConnected}
+          remotePlayingPadIds={launchpadPlayingIds}
+          remoteMasterVolume={launchpadMasterVol}
+          remotePads={launchpadPads}
+          onRemoteTriggerPad={handleRemoteTriggerPad}
+          onRemoteStopAll={handleRemoteStopAll}
+          onRemoteMasterVolumeChange={handleRemoteVolumeChange}
+          onRemotePadsChange={handleRemotePadsChange}
+        />
       </div>
     );
   } else if (nadiaActive && effectiveNadiaSetup && effectiveNadiaQuestion) {

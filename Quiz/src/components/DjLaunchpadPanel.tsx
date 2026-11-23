@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   djSoundEngine,
   type DjPadConfig,
@@ -8,8 +8,13 @@ import {
   SOUND_PRESETS,
   DEFAULT_LAUNCHPAD_PADS,
 } from '../lib/djSoundEngine';
-
-const STORAGE_KEY = 'imperio_dj_launchpad_config_v1';
+import {
+  LAUNCHPAD_PADS_UPDATED_EVENT,
+  LAUNCHPAD_STORAGE_KEY,
+  type LaunchpadPadsUpdatedDetail,
+  loadLaunchpadPads,
+  saveLaunchpadPads,
+} from '../lib/launchpadSync';
 
 const STOCK_AUDIO_FILES = [
   { name: 'Nadia Sigla Lunga', path: '/Audio/stacchetto/0_MilleeunaNadia_versionelunga.mp3' },
@@ -28,60 +33,118 @@ const STOCK_AUDIO_FILES = [
 
 const EMOJI_PALETTE = ['🎺', '👏', '🥁', '💥', '🚨', '📉', '💿', '🔔', '🏆', '⚡', '❓', '💣', '🎉', '🔊', '🎸', '👑', '🛑', '🎯', '🔥', '✨'];
 
-function loadPadsFromStorage(): DjPadConfig[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length === 12) {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.warn('[DjLaunchpadPanel] Errore caricamento configurazione pad:', err);
-  }
-  return DEFAULT_LAUNCHPAD_PADS;
-}
-
-function savePadsToStorage(pads: DjPadConfig[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(pads));
-  } catch (err) {
-    console.warn('[DjLaunchpadPanel] Errore salvataggio pad:', err);
-  }
-}
-
 interface DjLaunchpadPanelProps {
   className?: string;
   onBackToScores?: () => void;
+  remoteMode?: boolean;
+  remoteConnected?: boolean;
+  remotePlayingPadIds?: string[];
+  remoteMasterVolume?: number;
+  remotePads?: DjPadConfig[];
+  onRemoteTriggerPad?: (pad: DjPadConfig) => void;
+  onRemoteStopAll?: () => void;
+  onRemoteMasterVolumeChange?: (volume: number) => void;
+  onRemotePadsChange?: (pads: DjPadConfig[]) => void;
 }
 
-export default function DjLaunchpadPanel({ className = '', onBackToScores }: DjLaunchpadPanelProps) {
-  const [pads, setPads] = useState<DjPadConfig[]>(loadPadsFromStorage);
+export default function DjLaunchpadPanel({
+  className = '',
+  onBackToScores,
+  remoteMode = false,
+  remoteConnected = true,
+  remotePlayingPadIds,
+  remoteMasterVolume,
+  remotePads,
+  onRemoteTriggerPad,
+  onRemoteStopAll,
+  onRemoteMasterVolumeChange,
+  onRemotePadsChange,
+}: DjLaunchpadPanelProps) {
+  const isIpadQuery =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('mode') === 'ipad';
+  const isRemote = Boolean(remoteMode || isIpadQuery);
+
+  const [localPads, setLocalPads] = useState<DjPadConfig[]>(() =>
+    isRemote ? (remotePads ?? DEFAULT_LAUNCHPAD_PADS) : loadLaunchpadPads()
+  );
   const [activeTab, setActiveTab] = useState<'play' | 'settings'>('play');
   const [selectedPadId, setSelectedPadId] = useState<string>('pad_1');
-  const [playingPadIds, setPlayingPadIds] = useState<Set<string>>(new Set());
-  const [masterVol, setMasterVol] = useState<number>(() => djSoundEngine.getMasterVolume());
+  const [localPlayingPadIds, setLocalPlayingPadIds] = useState<Set<string>>(new Set());
+  const [localMasterVol, setLocalMasterVol] = useState<number>(() => djSoundEngine.getMasterVolume());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync state with sound engine
+  const pads = isRemote ? (remotePads ?? localPads) : localPads;
+  const playingPadIds = useMemo(
+    () => (isRemote ? new Set(remotePlayingPadIds ?? []) : localPlayingPadIds),
+    [isRemote, remotePlayingPadIds, localPlayingPadIds]
+  );
+  const masterVol = isRemote ? (remoteMasterVolume ?? localMasterVol) : localMasterVol;
+
+  // Sync state with local sound engine and local storage when running on host PC
   useEffect(() => {
-    return djSoundEngine.subscribe((ids) => {
-      setPlayingPadIds(new Set(ids));
+    if (isRemote) return;
+    const unsubPlaying = djSoundEngine.subscribe((ids) => {
+      setLocalPlayingPadIds(new Set(ids));
     });
-  }, []);
+    const unsubVolume = djSoundEngine.subscribeVolume((vol) => {
+      setLocalMasterVol(vol);
+    });
+    const handlePadsUpdated = (e: Event) => {
+      const detail = (e as CustomEvent<LaunchpadPadsUpdatedDetail>).detail;
+      if (detail?.pads && Array.isArray(detail.pads) && detail.pads.length === 12) {
+        setLocalPads(detail.pads);
+      } else {
+        setLocalPads(loadLaunchpadPads());
+      }
+    };
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === LAUNCHPAD_STORAGE_KEY) {
+        setLocalPads(loadLaunchpadPads());
+      }
+    };
+    window.addEventListener(LAUNCHPAD_PADS_UPDATED_EVENT, handlePadsUpdated);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      unsubPlaying();
+      unsubVolume();
+      window.removeEventListener(LAUNCHPAD_PADS_UPDATED_EVENT, handlePadsUpdated);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [isRemote]);
 
   const updatePad = useCallback((padId: string, updater: (prev: DjPadConfig) => DjPadConfig) => {
-    setPads((prev) => {
+    if (isRemote) {
+      const next = pads.map((p) => (p.id === padId ? updater(p) : p));
+      if (!remotePads) {
+        setLocalPads(next);
+      }
+      onRemotePadsChange?.(next);
+      return;
+    }
+
+    setLocalPads((prev) => {
       const next = prev.map((p) => (p.id === padId ? updater(p) : p));
-      savePadsToStorage(next);
+      saveLaunchpadPads(next, { source: 'local', notifyEvent: true });
       return next;
     });
-  }, []);
+  }, [isRemote, pads, remotePads, onRemotePadsChange]);
 
   const handleTriggerPad = useCallback((pad: DjPadConfig) => {
+    if (isRemote) {
+      onRemoteTriggerPad?.(pad);
+      return;
+    }
     djSoundEngine.triggerPad(pad);
-  }, []);
+  }, [isRemote, onRemoteTriggerPad]);
+
+  const handleStopAll = useCallback(() => {
+    if (isRemote) {
+      onRemoteStopAll?.();
+      return;
+    }
+    djSoundEngine.stopAll();
+  }, [isRemote, onRemoteStopAll]);
 
   // Keyboard shortcut handler
   useEffect(() => {
@@ -93,7 +156,7 @@ export default function DjLaunchpadPanel({ className = '', onBackToScores }: DjL
 
       if (e.code === 'Space') {
         e.preventDefault();
-        djSoundEngine.stopAll();
+        handleStopAll();
         return;
       }
 
@@ -107,14 +170,19 @@ export default function DjLaunchpadPanel({ className = '', onBackToScores }: DjL
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [pads, handleTriggerPad]);
+  }, [pads, handleTriggerPad, handleStopAll]);
 
   const selectedPad = pads.find((p) => p.id === selectedPadId) || pads[0];
   const isAnyPlaying = playingPadIds.size > 0;
 
   const handleMasterVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
-    setMasterVol(val);
+    if (isRemote) {
+      setLocalMasterVol(val);
+      onRemoteMasterVolumeChange?.(val);
+      return;
+    }
+    setLocalMasterVol(val);
     djSoundEngine.setMasterVolume(val);
   };
 
@@ -139,8 +207,15 @@ export default function DjLaunchpadPanel({ className = '', onBackToScores }: DjL
 
   const handleResetAll = () => {
     if (window.confirm('Vuoi ripristinare tutti i 12 pad ai suoni ed impostazioni di fabbrica?')) {
-      setPads(DEFAULT_LAUNCHPAD_PADS);
-      savePadsToStorage(DEFAULT_LAUNCHPAD_PADS);
+      if (isRemote) {
+        if (!remotePads) {
+          setLocalPads(DEFAULT_LAUNCHPAD_PADS);
+        }
+        onRemotePadsChange?.(DEFAULT_LAUNCHPAD_PADS);
+        return;
+      }
+      setLocalPads(DEFAULT_LAUNCHPAD_PADS);
+      saveLaunchpadPads(DEFAULT_LAUNCHPAD_PADS, { source: 'local', notifyEvent: true });
     }
   };
 
@@ -179,10 +254,10 @@ export default function DjLaunchpadPanel({ className = '', onBackToScores }: DjL
               type="button"
               onClick={onBackToScores}
               className="flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-white border border-amber-500/30 text-[9px] font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all ml-1 shadow-sm"
-              title="Torna alla visualizzazione dei punteggi squadre"
+              title={isRemote ? 'Torna alla vista del gioco' : 'Torna alla visualizzazione dei punteggi squadre'}
             >
-              <span>🏆</span>
-              <span>Torna ai Punti</span>
+              <span>{isRemote ? '🎮' : '🏆'}</span>
+              <span>{isRemote ? 'Torna al Gioco' : 'Torna ai Punti'}</span>
             </button>
           )}
         </div>
@@ -190,7 +265,7 @@ export default function DjLaunchpadPanel({ className = '', onBackToScores }: DjL
         {/* Center: STOP ALL Panic Button */}
         <button
           type="button"
-          onClick={() => djSoundEngine.stopAll()}
+          onClick={handleStopAll}
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white border border-red-500/40 transition-all active:scale-95 text-[10px] font-black tracking-wider uppercase cursor-pointer"
           title="Ferma istantaneamente tutti i suoni (Tasto SPAZIO)"
         >
@@ -262,7 +337,7 @@ export default function DjLaunchpadPanel({ className = '', onBackToScores }: DjL
                     key={pad.id}
                     type="button"
                     onClick={() => handleTriggerPad(pad)}
-                    className={`relative w-full h-full min-h-0 rounded-xl flex flex-col justify-between p-2 transition-all duration-100 select-none active:scale-[0.97] cursor-pointer text-left overflow-hidden border-2 group ${
+                    className={`relative w-full h-full min-h-0 rounded-xl flex flex-col justify-between p-2 transition-all duration-100 select-none touch-manipulation active:scale-[0.97] cursor-pointer text-left overflow-hidden border-2 group ${
                       isPlaying
                         ? `${colorConfig.border} ${colorConfig.bgActive} shadow-[0_0_25px_${colorConfig.glow}]`
                         : 'bg-[#1b1b24] border-white/10 hover:border-white/30 hover:bg-[#22222d]'
@@ -332,8 +407,16 @@ export default function DjLaunchpadPanel({ className = '', onBackToScores }: DjL
               <span className="truncate">
                 💡 Tasti <strong className="text-white">1-4</strong>, <strong className="text-white">Q-R</strong>, <strong className="text-white">A-F</strong> • <strong className="text-white">SPAZIO</strong>: Stop
               </span>
-              <span>
-                {isAnyPlaying ? `${playingPadIds.size} ATTIVI` : 'PRONTO'}
+              <span className={isRemote && !remoteConnected ? 'text-red-400 font-bold' : ''}>
+                {isRemote
+                  ? !remoteConnected
+                    ? '⚠️ PC OFFLINE'
+                    : isAnyPlaying
+                      ? `🔊 AUDIO PC • ${playingPadIds.size} ATTIVI`
+                      : '🔊 AUDIO PC • PRONTO'
+                  : isAnyPlaying
+                    ? `${playingPadIds.size} ATTIVI`
+                    : 'PRONTO'}
               </span>
             </div>
           </div>

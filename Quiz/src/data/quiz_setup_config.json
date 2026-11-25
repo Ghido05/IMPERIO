@@ -1329,9 +1329,29 @@
         "notePresentatore": "[C=3], [D=1], [F=2], [G=1], [H=2], [L=6], [N=2], [P=4], [R=4], [S=1], [T=7]"
       },
       {
-        "testo": "ABRAMO SACRIFICA UN ARIETE CON LE CORNA IMPIGLIATE IN UN CESPUGLIO",
-        "sfondo": "/Icone/nessuno_img/4_10_Abramo.jpg",
+        "testo": "GIULIO ROMANO AFFRESCò LA SALA DEI GIGANTI",
+        "sfondo": "/Icone/nessuno_img/4_10_palazzote.jpg",
         "confermaAudio": "/Audio/strumenti/4_10_cestlavie.mp3",
+        "lettereVisibili": [
+          1,
+          5,
+          8,
+          12,
+          21,
+          27,
+          32,
+          36,
+          38
+        ],
+        "indizio": "MANTOVA, 1532-1535",
+        "bonus": "scudo",
+        "punti": 5000,
+        "notePresentatore": "[C=1], [D=1], [F=2], [G=3], [L=3], [M=1], [N=2], [R=2], [S=2], [T=1]"
+      },
+      {
+        "testo": "ABRAMO SACRIFICA UN ARIETE CON LE CORNA IMPIGLIATE IN UN CESPUGLIO",
+        "sfondo": "/Icone/nessuno_img/4_11_Abramo.jpg",
+        "confermaAudio": "/Audio/strumenti/4_11_calienteXmemories.mp3",
         "lettereVisibili": [
           3,
           5,
@@ -1355,16 +1375,6 @@
         "bonus": "scudo",
         "punti": 5000,
         "notePresentatore": "[B=1], [C=4], [F=1], [G=2], [L=3], [M=2], [N=5], [P=2], [R=4], [S=2], [T=2]"
-      },
-      {
-        "testo": "FRASE PALAZZO TE",
-        "sfondo": "",
-        "confermaAudio": "",
-        "lettereVisibili": [],
-        "indizio": "",
-        "bonus": "",
-        "punti": 1000,
-        "notePresentatore": ""
       }
     ],
     "sfondoGenerale": "/Icone/nessuno_img/sfondo_box4_orologi_tempo.jpg",

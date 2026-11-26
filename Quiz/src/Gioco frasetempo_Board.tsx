@@ -605,7 +605,10 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
   const showClockSfondo = step >= 1 || revealAll;
   const showBonusAndPoints = step >= 2 || revealAll;
   const isBonusBigCenter = step === 2 && !revealAll;
-  const showPhraseSfondo = (step >= 3 || revealAll) && Boolean(phrase.sfondo);
+  const hasCustomPhraseSfondo = Boolean(
+    phrase.sfondo && !phrase.sfondo.toLowerCase().includes('sfondo_box4_orologi_tempo')
+  );
+  const showPhraseSfondo = (step >= 3 || revealAll) && hasCustomPhraseSfondo;
   const showIndizio = step >= 4 || revealAll;
   const showFraseAndAsta = step >= 5 || revealAll;
 
@@ -620,38 +623,85 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
       data-asset-refresh={assetRefresh} 
       className={`relative w-full min-h-screen bg-black text-white flex items-center justify-center overflow-hidden select-none transition-transform duration-100 ${showError ? 'animate-shake' : ''}`} 
     >
-      {/* Sfondo Base Orologi (Step >= 1) */}
+      {/* Sfondo Base Orologi (Step >= 1) — immagine originale intatta; allo Step 3+ arretra con un leggero depth-of-field per staccare la foto della domanda */}
       {showClockSfondo && (
-        <div 
-          className="absolute inset-0 bg-cover bg-center animate-fade-in pointer-events-none z-0"
-          style={{
-            backgroundImage: `linear-gradient(rgba(0,0,0,0.30), rgba(0,0,0,0.45)), url("${assetUrl('/Icone/sfondi/sfondo_box4_orologi_tempo.jpg')}")`,
-          }}
-        />
-      )}
-
-      {/* Sfondo proprio della frase (Step >= 3, al 90% con sfumatura morbida su tutti i bordi) */}
-      {showPhraseSfondo && phrase.sfondo && (() => {
-        const isDante = phraseIndex === 6 || 
-          (typeof phrase.testo === 'string' && phrase.testo.toUpperCase().includes('DANTE')) ||
-          (typeof phrase.sfondo === 'string' && phrase.sfondo.toLowerCase().includes('dante'));
-        const overlayGradient = isDante
-          ? 'linear-gradient(rgba(0,0,0,.15), rgba(0,0,0,.25))'
-          : 'linear-gradient(180deg, rgba(0,0,0,0.40) 0%, rgba(0,0,0,0.15) 35%, rgba(0,0,0,0.20) 65%, rgba(0,0,0,0.60) 100%), radial-gradient(ellipse 65% 65% at center, transparent 40%, rgba(0,0,0,0.55) 100%)';
-        const horizontalEdgeMask = 'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.45) 4%, rgba(0,0,0,0.9) 10%, black 15%, black 85%, rgba(0,0,0,0.9) 90%, rgba(0,0,0,0.45) 96%, transparent 100%)';
-        const verticalEdgeMask = 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.45) 4%, rgba(0,0,0,0.9) 10%, black 15%, black 85%, rgba(0,0,0,0.9) 90%, rgba(0,0,0,0.45) 96%, transparent 100%)';
-        const combinedMask = `${horizontalEdgeMask}, ${verticalEdgeMask}`;
-        return (
-          <div 
-            className="absolute inset-[5%] w-[90%] h-[90%] overflow-hidden bg-cover bg-center animate-fade-in pointer-events-none z-0"
+        <div className={`absolute inset-0 overflow-hidden pointer-events-none z-0 ${revealAll ? '' : 'animate-fade-in'}`}>
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-[filter,transform] duration-700 ease-out"
             style={{
-              backgroundImage: `${overlayGradient}, url("${assetUrl(phrase.sfondo)}")`,
-              maskImage: combinedMask,
-              maskComposite: 'intersect',
-              WebkitMaskImage: combinedMask,
-              WebkitMaskComposite: 'source-in',
+              backgroundImage: `linear-gradient(rgba(0,0,0,0.30), rgba(0,0,0,0.45)), url("${assetUrl('/Icone/sfondi/sfondo_box4_orologi_tempo.jpg')}")`,
+              filter: showPhraseSfondo ? 'blur(3px) brightness(0.80) saturate(0.94)' : 'none',
+              transform: showPhraseSfondo ? 'scale(1.02)' : 'scale(1)',
             }}
           />
+        </div>
+      )}
+
+      {/* Sfondo proprio della frase (Step >= 3): portale vellutato con alone scuro, sfumatura stretta definita e filo oro traslucido coerente con il Box 4 */}
+      {showPhraseSfondo && phrase.sfondo && (() => {
+        const isDante = phraseIndex === 6 ||
+          (typeof phrase.testo === 'string' && phrase.testo.toUpperCase().includes('DANTE')) ||
+          (typeof phrase.sfondo === 'string' && phrase.sfondo.toLowerCase().includes('dante'));
+
+        // Leggero velo adattivo: foto nitida e brillante allo Step 3-4, leggermente più contrastata allo Step 5 per la leggibilità del tabellone
+        const baseOverlayGradient = isDante
+          ? 'linear-gradient(180deg, rgba(6,4,12,0.10) 0%, rgba(6,4,12,0.00) 28%, rgba(6,4,12,0.04) 76%, rgba(6,4,12,0.22) 100%)'
+          : 'linear-gradient(180deg, rgba(6,4,12,0.16) 0%, rgba(6,4,12,0.02) 24%, rgba(6,4,12,0.04) 74%, rgba(6,4,12,0.28) 100%)';
+
+        const gameplayScrimGradient = isDante
+          ? 'linear-gradient(180deg, rgba(6,4,12,0.18) 0%, rgba(6,4,12,0.08) 32%, rgba(6,4,12,0.10) 70%, rgba(6,4,12,0.22) 100%)'
+          : 'linear-gradient(180deg, rgba(6,4,12,0.24) 0%, rgba(6,4,12,0.12) 30%, rgba(6,4,12,0.14) 70%, rgba(6,4,12,0.28) 100%)';
+
+        // Sfumatura perimetrale calibrata (~4% sui lati): l'immagine resta ben definita e dissolve nel fondo scuro vellutato senza mai mischiarsi con gli orologi
+        const horizontalEdgeMask =
+          'linear-gradient(to right, transparent 0%, rgba(0,0,0,0.55) 1.2%, rgba(0,0,0,0.92) 2.6%, black 4.2%, black 95.8%, rgba(0,0,0,0.92) 97.4%, rgba(0,0,0,0.55) 98.8%, transparent 100%)';
+        const verticalEdgeMask =
+          'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.55) 1.8%, rgba(0,0,0,0.92) 3.8%, black 5.6%, black 94.4%, rgba(0,0,0,0.92) 96.2%, rgba(0,0,0,0.55) 98.2%, transparent 100%)';
+        const combinedMask = `${horizontalEdgeMask}, ${verticalEdgeMask}`;
+
+        return (
+          <div
+            className={`absolute inset-x-[4.8%] inset-y-[4.6%] rounded-[28px] pointer-events-none z-0 ${
+              revealAll ? '' : 'animate-box4-photo-reveal'
+            }`}
+            style={{
+              backgroundColor: 'rgba(7, 5, 14, 0.94)',
+              boxShadow:
+                '0 28px 85px 22px rgba(4, 3, 10, 0.92), 0 0 60px 16px rgba(7, 5, 14, 0.85), 0 0 38px 2px rgba(245, 178, 66, 0.16)',
+            }}
+          >
+            {/* Foto della domanda con sfumatura vellutata interna (zero double-exposure con lo sfondo) */}
+            <div
+              className="absolute inset-[2px] rounded-[26px] bg-cover bg-center"
+              style={{
+                backgroundImage: `${baseOverlayGradient}, url("${assetUrl(phrase.sfondo)}")`,
+                maskImage: combinedMask,
+                maskComposite: 'intersect',
+                WebkitMaskImage: combinedMask,
+                WebkitMaskComposite: 'source-in',
+              }}
+            />
+
+            {/* Velo di leggibilità progressivo allo Step 5 (tabellone + asta) */}
+            <div
+              className={`absolute inset-[2px] rounded-[26px] transition-opacity duration-500 ease-out ${
+                showFraseAndAsta ? 'opacity-100' : 'opacity-0'
+              }`}
+              style={{
+                backgroundImage: gameplayScrimGradient,
+              }}
+            />
+
+            {/* Profilo caldo traslucido + leggera vignettatura interna coerente con gli orologi dorati del Box 4 */}
+            <div
+              className="absolute inset-0 rounded-[28px]"
+              style={{
+                border: '1px solid rgba(251, 191, 36, 0.28)',
+                boxShadow:
+                  'inset 0 1px 0 0 rgba(254, 243, 199, 0.16), inset 0 0 28px 4px rgba(6, 4, 14, 0.42)',
+              }}
+            />
+          </div>
         );
       })()}
 
@@ -726,6 +776,13 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         .animate-team-blink {
           animation: team-blink 0.8s ease-in-out infinite;
         }
+        @keyframes box4-photo-reveal {
+          0% { opacity: 0; transform: scale(0.975); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        .animate-box4-photo-reveal {
+          animation: box4-photo-reveal 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
       `}</style>
 
       {/* Lettera sbagliata — overlay con suono errore */}
@@ -779,7 +836,7 @@ const FraseConTempo_Board: React.FC<{ interactive?: boolean; revealAll?: boolean
         
         {/* Header Title Banner */}
         {showFraseAndAsta && (
-          <div className="text-center mb-[1%] animate-fade-in">
+          <div className="text-center mt-10 mb-[1%] animate-fade-in">
             <span className="px-4 py-1 text-xs font-black bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-full tracking-widest uppercase mb-2 inline-block">
               BOX 4 — ASTA A RIBASSO
             </span>

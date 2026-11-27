@@ -47,6 +47,141 @@ export function getInitialPasswordGrid(mancheData: PasswordMancheGridInput | nul
   return wordsWithSortKey.map(w => ({ ...w.item }));
 }
 
+export const PASSWORD_STARTER_IDX_KEY = 'password_box3_starter_idx';
+export const PASSWORD_STARTER_LOCKED_KEY = 'password_box3_starter_locked';
+
+/**
+ * Restituisce l'indice (0, 1 o 2) della squadra in svantaggio (punteggio più basso).
+ * In caso di parità sceglie la prima da sinistra (coerente con Box 2).
+ */
+export function getLowestScoreTeamIdx(scores?: number[]): number {
+  let effectiveScores: number[] | null = Array.isArray(scores) && scores.length >= 3 ? scores : null;
+  if (!effectiveScores && typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('imperio_quiz_scores');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed?.scores) && parsed.scores.length >= 3) {
+          effectiveScores = parsed.scores;
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+  if (!effectiveScores) return 0;
+
+  let lowestIdx = 0;
+  for (let i = 1; i < 3; i++) {
+    if (Number(effectiveScores[i] || 0) < Number(effectiveScores[lowestIdx] || 0)) {
+      lowestIdx = i;
+    }
+  }
+  return lowestIdx;
+}
+
+/**
+ * Restituisce la squadra iniziale (indice 0..2) per la Domanda 1 del Box 3:
+ * - Prima dell'inizio effettivo del gioco nel Box 3: segue dinamicamente la squadra in svantaggio.
+ * - Una volta avviato il gioco nel Box 3 (bloccato): mantiene fissato lo starter così da
+ *   garantire la rotazione (Domanda 1 = svantaggio, Domanda 2 = squadra alla sua dx, Domanda 3 = ultima)
+ *   anche dopo l'assegnazione dei punti dei Bussolotti.
+ */
+export function getPasswordBox3StarterIdx(scores?: number[], persistIfUnlocked = false): number {
+  if (typeof window !== 'undefined') {
+    const isLocked = localStorage.getItem(PASSWORD_STARTER_LOCKED_KEY) === 'true';
+    const saved = localStorage.getItem(PASSWORD_STARTER_IDX_KEY);
+    if (isLocked && saved !== null && saved !== 'null') {
+      const parsed = parseInt(saved, 10);
+      if (parsed === 0 || parsed === 1 || parsed === 2) {
+        return parsed;
+      }
+    }
+    const computed = getLowestScoreTeamIdx(scores);
+    if (persistIfUnlocked && localStorage.getItem(PASSWORD_STARTER_IDX_KEY) !== computed.toString()) {
+      localStorage.setItem(PASSWORD_STARTER_IDX_KEY, computed.toString());
+    }
+    return computed;
+  }
+  return getLowestScoreTeamIdx(scores);
+}
+
+/**
+ * Blocca la squadra iniziale del Box 3 al primo atto di gioco (suggerimento, parola o cambio turno).
+ */
+export function lockPasswordBox3StarterIdx(scores?: number[]): number {
+  if (typeof window === 'undefined') return getLowestScoreTeamIdx(scores);
+  const isLocked = localStorage.getItem(PASSWORD_STARTER_LOCKED_KEY) === 'true';
+  const saved = localStorage.getItem(PASSWORD_STARTER_IDX_KEY);
+  if (isLocked && saved !== null && saved !== 'null') {
+    const parsed = parseInt(saved, 10);
+    if (parsed === 0 || parsed === 1 || parsed === 2) {
+      return parsed;
+    }
+  }
+  const starterIdx = getLowestScoreTeamIdx(scores);
+  if (localStorage.getItem(PASSWORD_STARTER_IDX_KEY) !== starterIdx.toString()) {
+    localStorage.setItem(PASSWORD_STARTER_IDX_KEY, starterIdx.toString());
+  }
+  localStorage.setItem(PASSWORD_STARTER_LOCKED_KEY, 'true');
+  return starterIdx;
+}
+
+/**
+ * Calcola l'ordine delle squadre (numeri 1..3) per una specifica manche (0-based):
+ * - Manche 0 (Domanda 1): parte `starterIdx`, poi la squadra alla sua dx, poi l'ultima.
+ * - Manche 1 (Domanda 2): parte la squadra alla dx di `starterIdx`, mantenendo la rotazione verso dx.
+ * - Manche 2 (Domanda 3): parte l'ultima squadra, mantenendo la rotazione verso dx.
+ */
+export function getPasswordTurnSequence(mancheIndex: number, starterIdx?: number): [number, number, number] {
+  const baseIdx =
+    starterIdx === 0 || starterIdx === 1 || starterIdx === 2
+      ? starterIdx
+      : getPasswordBox3StarterIdx();
+  const normalizedManche = ((mancheIndex % 3) + 3) % 3;
+  const firstIdx = (baseIdx + normalizedManche) % 3;
+  return [
+    firstIdx + 1,
+    ((firstIdx + 1) % 3) + 1,
+    ((firstIdx + 2) % 3) + 1,
+  ];
+}
+
+/**
+ * Trova la squadra successiva (direction = 1) o precedente (direction = -1) in loop continuo
+ * rispettando la sequenza della manche e saltando eventuali squadre escluse o già arrivate.
+ */
+export function findNextPasswordTeamInLoop(
+  sequence: number[],
+  fromTeam: number,
+  direction: 1 | -1,
+  excluded: number[],
+  winners: number[] = []
+): number {
+  const len = sequence.length;
+  if (len === 0) return fromTeam;
+  const currentIndex = sequence.indexOf(fromTeam);
+  const baseIndex = currentIndex === -1 ? 0 : currentIndex;
+
+  for (let step = 1; step <= len; step++) {
+    const idx = (baseIndex + direction * step + len * 2) % len;
+    const candidate = sequence[idx];
+    if (!excluded.includes(candidate) && !winners.includes(candidate)) {
+      return candidate;
+    }
+  }
+
+  for (let step = 1; step <= len; step++) {
+    const idx = (baseIndex + direction * step + len * 2) % len;
+    const candidate = sequence[idx];
+    if (!excluded.includes(candidate)) {
+      return candidate;
+    }
+  }
+
+  return sequence[(baseIndex + direction + len) % len];
+}
+
 export interface PasswordPrintableWord {
   parola: string;
 }
@@ -114,9 +249,12 @@ export function buildPasswordCardsPrintHtml(
         mancheIdx
       );
 
-      const turnSeq =
-        mancheIdx % 3 === 0 ? [1, 2, 3] : mancheIdx % 3 === 1 ? [2, 3, 1] : [3, 1, 2];
-      const turnLabel = turnSeq.map((t) => safeTeams[t - 1]).join(' → ');
+      const turnLabel =
+        mancheIdx % 3 === 0
+          ? 'Parte: Squadra in svantaggio ↻'
+          : mancheIdx % 3 === 1
+            ? 'Parte: Squadra alla sua dx ↻'
+            : 'Parte: Ultima squadra ↻';
 
       const getTileMeta = (type: WordType) => {
         if (type === 'team1') return { cls: 't1', badge: safeTeams[0] };
@@ -168,7 +306,7 @@ export function buildPasswordCardsPrintHtml(
       return `<article class="card">
         <div class="card-header">
           <span class="card-num">🔐 PASSWORD • MANCHE #${mancheNum}</span>
-          <span class="card-turns">Ordine: ${escapePasswordCardHtml(turnLabel)}</span>
+          <span class="card-turns">${escapePasswordCardHtml(turnLabel)}</span>
         </div>
 
         <div class="section">

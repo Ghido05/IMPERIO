@@ -364,7 +364,7 @@ export function createDefaultBox0Setup(): Box0Setup {
     introduzioneNadia: {
       titolo: 'MILLE E UNA NADIA',
       sottotitolo: 'Il Jolly del Sultano — Regole e Meccanica',
-      video: '',
+      video: '/Video/introduzione_nadia.mp4',
       sfondo: '',
       audioStacchetto: '/Audio/strumenti/0_MilleeunaNadia_versionelunga.mp3',
       audioSpiegazione: '/Audio/Spiegazioni/Spiegazione_nadia.mp3',

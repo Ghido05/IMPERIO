@@ -4,7 +4,15 @@ import { useScores } from './context/ScoreContext';
 import { assetUrl, assetUrlCss } from './lib/assetUrl';
 import { useSyncedState } from './hooks/useSyncedState';
 
-import { getInitialPasswordGrid, type WordItem, type WordType } from './lib/passwordUtils';
+import {
+  getInitialPasswordGrid,
+  getPasswordBox3StarterIdx,
+  lockPasswordBox3StarterIdx,
+  getPasswordTurnSequence,
+  PASSWORD_STARTER_LOCKED_KEY,
+  type WordItem,
+  type WordType
+} from './lib/passwordUtils';
 import { TempleWordSuspenseOverlay, type ActiveRevealData } from './components/TempleWordSuspenseOverlay';
 import { templeSoundFX } from './lib/templeSoundFX';
 
@@ -260,15 +268,23 @@ export const BussolottiOverlay: React.FC<{
 
 const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPresenter?: boolean }> = ({ interactive = true, revealAll = false, isPresenter }) => {
   const gameDataRaw = useGameData();
+  const { scores } = useScores();
   if (!gameDataRaw) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
   const [currentManche, setCurrentManche] = useState<number>(() => {
     const stored = localStorage.getItem('password_current_manche');
-    return stored ? parseInt(stored) : 0;
+    return stored ? parseInt(stored, 10) : 0;
   });
   const [currentTeam, setCurrentTeam] = useState<number>(() => {
-    const stored = localStorage.getItem('password_current_team');
-    return stored ? parseInt(stored) : 1;
+    const storedManche = localStorage.getItem('password_current_manche');
+    const initialManche = storedManche && storedManche !== "null" ? parseInt(storedManche, 10) : 0;
+    const storedTeam =
+      localStorage.getItem(`password_current_team_m${initialManche}`) ||
+      localStorage.getItem('password_current_team');
+    if (storedTeam && storedTeam !== "null") {
+      return parseInt(storedTeam, 10);
+    }
+    return getPasswordTurnSequence(initialManche, getPasswordBox3StarterIdx(scores))[0];
   });
   const [chosenSuggestion, setChosenSuggestion] = useState<string>(() => {
     const stored = localStorage.getItem('password_chosen_suggestion');
@@ -477,8 +493,12 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPr
       const mancheIdx = (manche && manche !== "null") ? parseInt(manche, 10) : 0;
       setCurrentManche(mancheIdx);
 
-      const team = localStorage.getItem('password_current_team');
-      if (team && team !== "null") setCurrentTeam(parseInt(team, 10));
+      const team = localStorage.getItem(`password_current_team_m${mancheIdx}`) || localStorage.getItem('password_current_team');
+      if (team && team !== "null") {
+        setCurrentTeam(parseInt(team, 10));
+      } else {
+        setCurrentTeam(getPasswordTurnSequence(mancheIdx)[0]);
+      }
 
       const sugg = localStorage.getItem('password_chosen_suggestion') || "";
       setChosenSuggestion(sugg);
@@ -588,11 +608,26 @@ const PasswordBoard: React.FC<{ interactive?: boolean; revealAll?: boolean; isPr
     }
   }, [currentManche, gameData]);
 
+  useEffect(() => {
+    const isLocked = localStorage.getItem(PASSWORD_STARTER_LOCKED_KEY) === 'true';
+    if (!isLocked && !localStorage.getItem(`password_current_team_m${currentManche}`)) {
+      const nextStarter = getPasswordBox3StarterIdx(scores, false);
+      const expectedFirstTeam = getPasswordTurnSequence(currentManche, nextStarter)[0];
+      setCurrentTeam(expectedFirstTeam);
+    }
+  }, [scores, currentManche]);
+
   const handleWordClick = (index: number) => {
     if (gameOver || grid[index]?.guessed || excludedTeams.includes(currentTeam) || activeReveal !== null) return;
 
     const clickedWord = grid[index];
     if (!clickedWord) return;
+
+    lockPasswordBox3StarterIdx(scores);
+    if (!localStorage.getItem(`password_current_team_m${currentManche}`)) {
+      localStorage.setItem(`password_current_team_m${currentManche}`, currentTeam.toString());
+      localStorage.setItem('password_current_team', currentTeam.toString());
+    }
 
     const revealData: ActiveRevealData = {
       index,

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useGameData } from './context/GameDataContext';
 import { assetUrl } from './lib/assetUrl';
+import { useSyncedState } from './hooks/useSyncedState';
 
 interface IntroduzioneNadiaData {
   slideId?: string;
@@ -40,18 +41,49 @@ export default function IntroduzioneNadiaBoard({
   const canPlayAudio = interactive && isPresenterMode;
 
   // Controllo presenza video configurato
+  const slideId = data?.slideId || 'box0_nadia';
   const videoSrc = data?.video || data?.videoUrl || data?.src || '';
   const hasVideo = Boolean(videoSrc && videoSrc.trim() !== '');
 
-  // Gestione Video (se configurato)
+  // Gestione Video sincronizzata tra Relatore e Schermo Pubblico (se configurato)
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useSyncedState<boolean>(
+    `playstate_${slideId}_video_playing`,
+    false
+  );
+  const [restartToken, setRestartToken] = useSyncedState<number>(
+    `playstate_${slideId}_video_restart`,
+    0
+  );
+  const lastRestartRef = useRef<number>(restartToken);
 
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.muted = !isPresenterMode;
     }
   }, [isPresenterMode]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !hasVideo || !interactive) return;
+    if (isVideoPlaying) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [isVideoPlaying, hasVideo, interactive]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !hasVideo || !interactive) return;
+    if (restartToken !== lastRestartRef.current) {
+      lastRestartRef.current = restartToken;
+      video.currentTime = 0;
+      if (isVideoPlaying) {
+        video.play().catch(() => {});
+      }
+    }
+  }, [restartToken, isVideoPlaying, hasVideo, interactive]);
 
   // Gestione Audio Sigla Nadia e Audio Spiegazione (se non c'è video)
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -149,14 +181,11 @@ export default function IntroduzioneNadiaBoard({
       if (hasVideo) {
         if (e.key === ' ' || e.key.toLowerCase() === 'k') {
           e.preventDefault();
-          if (videoRef.current) {
-            if (videoRef.current.paused) {
-              videoRef.current.play().then(() => setIsVideoPlaying(true)).catch(() => {});
-            } else {
-              videoRef.current.pause();
-              setIsVideoPlaying(false);
-            }
-          }
+          setIsVideoPlaying(!isVideoPlaying);
+        } else if (e.key.toLowerCase() === 'r' || e.key === '0') {
+          e.preventDefault();
+          setRestartToken(Date.now());
+          setIsVideoPlaying(true);
         }
       } else {
         if (e.code === 'Space' || e.key.toLowerCase() === 'p') {
@@ -172,7 +201,7 @@ export default function IntroduzioneNadiaBoard({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [interactive, hasVideo, toggleNadiaMusic, toggleExplanationAudio]);
+  }, [interactive, hasVideo, isVideoPlaying, setIsVideoPlaying, setRestartToken, toggleNadiaMusic, toggleExplanationAudio]);
 
   // Sfondo: Lampada di Nadia al centro
   const defaultBg = '/Icone/sfondi/sfondo_nadia_lampada.jpg';
@@ -190,9 +219,9 @@ export default function IntroduzioneNadiaBoard({
           playsInline
           autoPlay={false}
           controls={false}
-          onPlay={() => setIsVideoPlaying(true)}
-          onPause={() => setIsVideoPlaying(false)}
-          onEnded={() => setIsVideoPlaying(false)}
+          onEnded={() => {
+            if (isPresenterMode) setIsVideoPlaying(false);
+          }}
         />
 
         {/* Overlay Controlli Relatore per il Video */}
@@ -203,15 +232,7 @@ export default function IntroduzioneNadiaBoard({
             </span>
             <button
               type="button"
-              onClick={() => {
-                if (videoRef.current) {
-                  if (videoRef.current.paused) {
-                    videoRef.current.play().catch(() => {});
-                  } else {
-                    videoRef.current.pause();
-                  }
-                }
-              }}
+              onClick={() => setIsVideoPlaying(!isVideoPlaying)}
               className="px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-black text-xs uppercase cursor-pointer transition-all"
             >
               {isVideoPlaying ? '⏸ Pausa' : '▶ Riproduci'}
@@ -219,10 +240,8 @@ export default function IntroduzioneNadiaBoard({
             <button
               type="button"
               onClick={() => {
-                if (videoRef.current) {
-                  videoRef.current.currentTime = 0;
-                  videoRef.current.play().catch(() => {});
-                }
+                setRestartToken(Date.now());
+                setIsVideoPlaying(true);
               }}
               className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs uppercase cursor-pointer transition-all"
             >

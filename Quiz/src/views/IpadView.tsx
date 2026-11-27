@@ -10,6 +10,7 @@ import { ScoreProvider, useScores } from '../context/ScoreContext';
 import { formatScoreNumber } from '../lib/formatUtils';
 import { assetUrl } from '../lib/assetUrl';
 import { getNadiaQuestionOrder, isValidNadiaOrder } from '../lib/nadiaUtils';
+import { getPasswordBox3StarterIdx, getPasswordTurnSequence } from '../lib/passwordUtils';
 import StageViewport from '../components/StageViewport';
 import { STAGE_W, STAGE_H } from '../hooks/useStageBox';
 import DjLaunchpadPanel from '../components/DjLaunchpadPanel';
@@ -138,11 +139,18 @@ function IpadContent() {
         currentSlideType === 'password_squadre' || 
         activeBox === 3
       ) {
-        const val = localStorage.getItem('password_current_team');
+        const mancheStored = localStorage.getItem('password_current_manche');
+        const mancheIdx = mancheStored && mancheStored !== 'null'
+          ? parseInt(mancheStored, 10)
+          : Math.max(0, activeQuestion - 1);
+        const val =
+          localStorage.getItem(`password_current_team_m${mancheIdx}`) ||
+          localStorage.getItem('password_current_team');
         if (val && val !== 'null') {
           setBookedTeam(parseInt(val, 10));
         } else {
-          setBookedTeam(null);
+          const starterIdx = getPasswordBox3StarterIdx(scores);
+          setBookedTeam(getPasswordTurnSequence(mancheIdx, starterIdx)[0]);
         }
         return;
       }

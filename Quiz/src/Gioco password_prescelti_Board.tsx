@@ -1,9 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useGameData } from './context/GameDataContext';
+import { useScores } from './context/ScoreContext';
 import { useSyncedState } from './hooks/useSyncedState';
 import { assetUrl } from './lib/assetUrl';
 import { BussolottiOverlay } from './Gioco password_squadre_Board';
-import { getInitialPasswordGrid, type WordItem } from './lib/passwordUtils';
+import {
+  getInitialPasswordGrid,
+  getPasswordBox3StarterIdx,
+  lockPasswordBox3StarterIdx,
+  getPasswordTurnSequence,
+  findNextPasswordTeamInLoop,
+  PASSWORD_STARTER_IDX_KEY,
+  PASSWORD_STARTER_LOCKED_KEY,
+  type WordItem
+} from './lib/passwordUtils';
 import type { ActiveRevealData } from './components/TempleWordSuspenseOverlay';
 import { templeSoundFX } from './lib/templeSoundFX';
 import { playTeamBookingSound } from './lib/teamBookingSound';
@@ -30,19 +40,24 @@ const teamColors = {
 
 const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boolean; isPresenter?: boolean }> = ({ interactive = true, ipadMode = false, isPresenter }) => {
   const gameDataRaw = useGameData();
+  const { scores } = useScores();
   if (!gameDataRaw) return <div className="text-white flex items-center justify-center w-full h-full">In attesa di dati...</div>;
 
   const [currentManche, setCurrentManche] = useState<number>(() => {
     const stored = localStorage.getItem('password_current_manche');
-    return stored ? parseInt(stored) : 0;
+    return stored ? parseInt(stored, 10) : 0;
   });
+  const [starterIdx, setStarterIdx] = useState<number>(() => getPasswordBox3StarterIdx(scores));
   const [currentTeam, setCurrentTeam] = useState<number>(() => {
-    const stored = localStorage.getItem('password_current_team');
-    return stored ? parseInt(stored) : 1;
-  });
-  const [currentRound, setCurrentRound] = useState<number>(() => {
-    const stored = localStorage.getItem('password_current_round');
-    return stored ? parseInt(stored) : 1;
+    const storedManche = localStorage.getItem('password_current_manche');
+    const initialManche = storedManche && storedManche !== "null" ? parseInt(storedManche, 10) : 0;
+    const storedTeam =
+      localStorage.getItem(`password_current_team_m${initialManche}`) ||
+      localStorage.getItem('password_current_team');
+    if (storedTeam && storedTeam !== "null") {
+      return parseInt(storedTeam, 10);
+    }
+    return getPasswordTurnSequence(initialManche, getPasswordBox3StarterIdx(scores))[0];
   });
   const [excludedTeams, setExcludedTeams] = useState<number[]>(() => {
     const stored = localStorage.getItem('password_excluded_teams');
@@ -319,19 +334,15 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       const mancheIdx = (manche && manche !== "null") ? parseInt(manche, 10) : 0;
       setCurrentManche(mancheIdx);
 
+      const nextStarter = getPasswordBox3StarterIdx();
+      setStarterIdx(nextStarter);
+
       const team = localStorage.getItem(`password_current_team_m${mancheIdx}`) || localStorage.getItem('password_current_team');
       if (team && team !== "null") {
         setCurrentTeam(parseInt(team, 10));
       } else {
-        const seq = getTurnSequence(mancheIdx);
+        const seq = getPasswordTurnSequence(mancheIdx, nextStarter);
         setCurrentTeam(seq[0]);
-      }
-      
-      const round = localStorage.getItem(`password_current_round_m${mancheIdx}`) || localStorage.getItem('password_current_round');
-      if (round && round !== "null") {
-        setCurrentRound(parseInt(round, 10));
-      } else {
-        setCurrentRound(1);
       }
 
       const excluded = localStorage.getItem(`password_excluded_teams_m${mancheIdx}`) || localStorage.getItem('password_excluded_teams');
@@ -433,8 +444,37 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     }
   }, [currentManche, gameData]);
 
+  // Prima che il Box 3 sia effettivamente iniziato, aggiorna dinamicamente la squadra di partenza
+  // in base alla squadra in svantaggio (Domanda 1 = svantaggio, Domanda 2 = dx, Domanda 3 = ultima)
+  useEffect(() => {
+    const isLocked = localStorage.getItem(PASSWORD_STARTER_LOCKED_KEY) === 'true';
+    const nextStarter = getPasswordBox3StarterIdx(scores, !isLocked);
+    setStarterIdx(nextStarter);
+
+    if (!isLocked && !localStorage.getItem(`password_current_team_m${currentManche}`)) {
+      const expectedFirstTeam = getPasswordTurnSequence(currentManche, nextStarter)[0];
+      prevTurnStateRef.current = { manche: currentManche, team: expectedFirstTeam };
+      setCurrentTeam(expectedFirstTeam);
+      if (localStorage.getItem('password_current_team') !== expectedFirstTeam.toString()) {
+        localStorage.setItem('password_current_team', expectedFirstTeam.toString());
+        window.dispatchEvent(new Event('storage'));
+        window.dispatchEvent(new CustomEvent('local-storage-update', {
+          detail: { key: 'password_current_team', value: expectedFirstTeam.toString() }
+        }));
+      }
+    }
+  }, [scores, currentManche]);
+
   const selectSuggestion = (sugg: string) => {
     const newSugg = chosenSuggestion === sugg ? "" : sugg;
+    if (newSugg) {
+      const lockedStarter = lockPasswordBox3StarterIdx(scores);
+      setStarterIdx(lockedStarter);
+      if (!localStorage.getItem(`password_current_team_m${currentManche}`)) {
+        localStorage.setItem(`password_current_team_m${currentManche}`, currentTeam.toString());
+        localStorage.setItem('password_current_team', currentTeam.toString());
+      }
+    }
     setChosenSuggestion(newSugg);
     localStorage.setItem(`password_chosen_suggestion_m${currentManche}`, newSugg);
     localStorage.setItem('password_chosen_suggestion', newSugg);
@@ -449,15 +489,17 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     }));
   };
 
-  const getTurnSequence = (mancheIndex: number) => {
-    if (mancheIndex === 0) return [1, 2, 3];
-    if (mancheIndex === 1) return [2, 3, 1];
-    if (mancheIndex === 2) return [3, 1, 2];
-    return [1, 2, 3];
-  };
+  const currentTurnSequence = getPasswordTurnSequence(currentManche, starterIdx);
 
   const handleWordClick = (index: number) => {
     if (!grid[index] || grid[index].guessed || excludedTeams.includes(currentTeam)) return;
+
+    const lockedStarter = lockPasswordBox3StarterIdx(scores);
+    setStarterIdx(lockedStarter);
+    if (!localStorage.getItem(`password_current_team_m${currentManche}`)) {
+      localStorage.setItem(`password_current_team_m${currentManche}`, currentTeam.toString());
+      localStorage.setItem('password_current_team', currentTeam.toString());
+    }
 
     const newGrid = [...grid];
     const clickedWord = { ...newGrid[index] };
@@ -519,161 +561,36 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     }));
   };
 
-  const nextTurn = () => {
-    const currentSeq = getTurnSequence(currentManche);
-    let currentIndex = currentSeq.indexOf(currentTeam);
-    
-    let nextTeam: number | null = null;
-    let nextRound = currentRound;
-    
-    // Trova la prossima squadra valida in questo round
-    for (let i = currentIndex + 1; i < currentSeq.length; i++) {
-      if (!excludedTeams.includes(currentSeq[i])) {
-        nextTeam = currentSeq[i];
-        break;
-      }
-    }
+  const advanceTurnInLoop = (direction: 1 | -1) => {
+    const lockedStarter = lockPasswordBox3StarterIdx(scores);
+    setStarterIdx(lockedStarter);
+    const currentSeq = getPasswordTurnSequence(currentManche, lockedStarter);
+    const targetTeam = findNextPasswordTeamInLoop(
+      currentSeq,
+      currentTeam,
+      direction,
+      excludedTeams,
+      winnersOrder
+    );
 
-    // Se non ci sono altre squadre nel round, passa al prossimo round
-    if (nextTeam === null) {
-      nextRound += 1;
-      
-      if (nextRound > 3) {
-        // Fine della manche (Round 3 completato): non si passa alla manche successiva tramite il tasto Prossimo
-        return;
-      } else {
-        const nextSeq = getTurnSequence(currentManche);
-        for (let i = 0; i < nextSeq.length; i++) {
-          if (!excludedTeams.includes(nextSeq[i])) {
-            nextTeam = nextSeq[i];
-            break;
-          }
-        }
-        if (nextTeam === null) nextTeam = nextSeq[0];
-      }
-    }
+    setCurrentTeam(targetTeam);
+    setChosenSuggestion("");
+    setSuggestionTimerEndAt(0);
 
-    if (nextTeam !== null) {
-      setCurrentTeam(nextTeam);
-      setCurrentRound(nextRound);
-      setChosenSuggestion("");
-      setSuggestionTimerEndAt(0);
-      
-      localStorage.setItem(`password_current_team_m${currentManche}`, nextTeam.toString());
-      localStorage.setItem('password_current_team', nextTeam.toString());
-      localStorage.setItem(`password_current_round_m${currentManche}`, nextRound.toString());
-      localStorage.setItem('password_current_round', nextRound.toString());
-      localStorage.removeItem('password_chosen_suggestion');
-      localStorage.removeItem(`password_chosen_suggestion_m${currentManche}`);
-      localStorage.removeItem('password_suggestion_timer_end');
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new CustomEvent('local-storage-update', {
-        detail: { key: 'password_current_team', value: nextTeam.toString() }
-      }));
-      playTeamBookingSound();
-    }
+    localStorage.setItem(`password_current_team_m${currentManche}`, targetTeam.toString());
+    localStorage.setItem('password_current_team', targetTeam.toString());
+    localStorage.removeItem('password_chosen_suggestion');
+    localStorage.removeItem(`password_chosen_suggestion_m${currentManche}`);
+    localStorage.removeItem('password_suggestion_timer_end');
+    window.dispatchEvent(new Event('storage'));
+    window.dispatchEvent(new CustomEvent('local-storage-update', {
+      detail: { key: 'password_current_team', value: targetTeam.toString() }
+    }));
+    playTeamBookingSound();
   };
 
-  const prevTurn = () => {
-    const currentSeq = getTurnSequence(currentManche);
-    let currentIndex = currentSeq.indexOf(currentTeam);
-    
-    let prevTeam: number | null = null;
-    let prevRound = currentRound;
-    
-    // Trova la squadra precedente valida in questo round
-    for (let i = currentIndex - 1; i >= 0; i--) {
-      if (!excludedTeams.includes(currentSeq[i])) {
-        prevTeam = currentSeq[i];
-        break;
-      }
-    }
-
-    // Se non ci sono squadre precedenti in questo round, torna al round precedente
-    if (prevTeam === null) {
-      prevRound -= 1;
-      
-      if (prevRound < 1) {
-        if (currentManche > 0) {
-          if (confirm("Tornare alla manche precedente?")) {
-            const prevM = currentManche - 1;
-            const prevSeq = getTurnSequence(prevM);
-            let lastTeam = prevSeq[2];
-            for (let i = prevSeq.length - 1; i >= 0; i--) {
-              if (!excludedTeams.includes(prevSeq[i])) {
-                lastTeam = prevSeq[i];
-                break;
-              }
-            }
-            
-            setCurrentManche(prevM);
-            setCurrentRound(3);
-            setCurrentTeam(lastTeam);
-            setChosenSuggestion("");
-            setSuggestionTimerEndAt(0);
-            
-            localStorage.setItem('password_current_manche', prevM.toString());
-            localStorage.setItem(`password_current_round_m${prevM}`, "3");
-            localStorage.setItem('password_current_round', "3");
-            localStorage.setItem(`password_current_team_m${prevM}`, lastTeam.toString());
-            localStorage.setItem('password_current_team', lastTeam.toString());
-            localStorage.removeItem('password_chosen_suggestion');
-            localStorage.removeItem(`password_chosen_suggestion_m${prevM}`);
-            localStorage.removeItem('password_suggestion_timer_end');
-            window.dispatchEvent(new Event('storage'));
-            window.dispatchEvent(new CustomEvent('local-storage-update', {
-              detail: { key: 'password_current_manche', value: prevM.toString() }
-            }));
-            return;
-          }
-        } else {
-          alert("SEI GIÀ ALL'INIZIO DEL GIOCO!");
-          return;
-        }
-      } else {
-        const prevSeq = getTurnSequence(currentManche);
-        for (let i = prevSeq.length - 1; i >= 0; i--) {
-          if (!excludedTeams.includes(prevSeq[i])) {
-            prevTeam = prevSeq[i];
-            break;
-          }
-        }
-        if (prevTeam === null) prevTeam = prevSeq[prevSeq.length - 1];
-      }
-    }
-
-    if (prevTeam !== null) {
-      setCurrentTeam(prevTeam);
-      setCurrentRound(prevRound);
-      setChosenSuggestion("");
-      setSuggestionTimerEndAt(0);
-      
-      localStorage.setItem(`password_current_team_m${currentManche}`, prevTeam.toString());
-      localStorage.setItem('password_current_team', prevTeam.toString());
-      localStorage.setItem(`password_current_round_m${currentManche}`, prevRound.toString());
-      localStorage.setItem('password_current_round', prevRound.toString());
-      localStorage.removeItem('password_chosen_suggestion');
-      localStorage.removeItem(`password_chosen_suggestion_m${currentManche}`);
-      localStorage.removeItem('password_suggestion_timer_end');
-      window.dispatchEvent(new Event('storage'));
-      window.dispatchEvent(new CustomEvent('local-storage-update', {
-        detail: { key: 'password_current_team', value: prevTeam.toString() }
-      }));
-      playTeamBookingSound();
-    }
-  };
-
-  const isLastTurn = React.useMemo(() => {
-    if (currentRound < 3) return false;
-    const currentSeq = getTurnSequence(currentManche);
-    const currentIndex = currentSeq.indexOf(currentTeam);
-    for (let i = currentIndex + 1; i < currentSeq.length; i++) {
-      if (!excludedTeams.includes(currentSeq[i])) {
-        return false;
-      }
-    }
-    return true;
-  }, [currentRound, currentManche, currentTeam, excludedTeams]);
+  const nextTurn = () => advanceTurnInLoop(1);
+  const prevTurn = () => advanceTurnInLoop(-1);
 
   const resetGame = () => {
     if (!confirm("Sei sicuro di voler resettare l'intero gioco (tutte le manche)?")) return;
@@ -689,6 +606,8 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
       'password_current_manche',
       'password_current_round',
       'password_current_team',
+      PASSWORD_STARTER_IDX_KEY,
+      PASSWORD_STARTER_LOCKED_KEY,
       'password_excluded_teams',
       'password_grid_state',
       'password_active_reveal',
@@ -721,13 +640,17 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
     setAudioPlaying(false);
     setSuggestionTimerEndAt(0);
     
-    const firstSeq = getTurnSequence(0);
+    const freshStarter = getPasswordBox3StarterIdx(scores, true);
+    const firstSeq = getPasswordTurnSequence(0, freshStarter);
     prevTurnStateRef.current = { manche: 0, team: firstSeq[0] };
+    setStarterIdx(freshStarter);
     setCurrentManche(0);
-    setCurrentRound(1);
     setCurrentTeam(firstSeq[0]);
     setExcludedTeams([]);
+    setWinnersOrder([]);
     setChosenSuggestion("");
+    localStorage.setItem('password_current_manche', '0');
+    localStorage.setItem('password_current_team', firstSeq[0].toString());
     
     const m0 = manches[0] || gameData;
     if (m0) {
@@ -923,16 +846,49 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
 
         <div className="w-full xl:w-[480px] flex flex-col gap-4">
           <div className="bg-slate-800 p-4 sm:p-5 rounded-xl border border-slate-700 shadow-xl flex flex-col">
-            <div className="flex justify-between items-center mb-3 sm:mb-4 bg-slate-900/60 p-3 rounded-xl border border-slate-700/60">
-              <div>
-                <span className="text-slate-400 text-[10px] sm:text-xs uppercase font-black block">Round</span>
-                <span className="text-xl sm:text-2xl font-black text-white">{currentRound} / 3</span>
-              </div>
-              <div className="text-right">
-                <span className="text-slate-400 text-[10px] sm:text-xs uppercase font-black block">Turno di</span>
-                <span className={`text-xl sm:text-2xl font-black ${currentTeam === 1 ? 'text-red-400' : currentTeam === 2 ? 'text-blue-400' : 'text-green-400'}`}>
+            <div className="flex flex-col gap-2 mb-3 sm:mb-4 bg-slate-900/60 p-3 rounded-xl border border-slate-700/60">
+              <div className="flex justify-between items-center gap-2">
+                <span className="text-slate-400 text-[10px] sm:text-xs uppercase font-black">Turno di</span>
+                <span className={`text-xl sm:text-2xl font-black truncate ${currentTeam === 1 ? 'text-red-400' : currentTeam === 2 ? 'text-blue-400' : 'text-green-400'}`}>
                   {presceltiTeamNames[currentTeam - 1] || `SQUADRA ${currentTeam}`}
                 </span>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-700/50">
+                <span className="text-slate-400 text-[10px] uppercase font-black shrink-0">
+                  Ordine ↻
+                </span>
+                <div className="flex items-center gap-1 min-w-0 flex-wrap justify-end">
+                  {currentTurnSequence.map((t, idx) => {
+                    const isActive = currentTeam === t;
+                    const isExcluded = excludedTeams.includes(t);
+                    const hasWon = winnersOrder.includes(t);
+                    const teamBadgeColor =
+                      t === 1
+                        ? isActive
+                          ? 'bg-red-600 text-white border-red-300 shadow-sm'
+                          : 'bg-red-950/50 text-red-300/80 border-red-500/30'
+                        : t === 2
+                          ? isActive
+                            ? 'bg-blue-600 text-white border-blue-300 shadow-sm'
+                            : 'bg-blue-950/50 text-blue-300/80 border-blue-500/30'
+                          : isActive
+                            ? 'bg-emerald-600 text-white border-emerald-300 shadow-sm'
+                            : 'bg-emerald-950/50 text-emerald-300/80 border-emerald-500/30';
+                    return (
+                      <React.Fragment key={t}>
+                        {idx > 0 && <span className="text-slate-500 text-[10px] font-black">→</span>}
+                        <span
+                          className={`px-2 py-0.5 rounded-md border text-[10px] font-black uppercase truncate max-w-[115px] transition-all ${teamBadgeColor} ${
+                            isExcluded ? 'opacity-40 line-through grayscale' : hasWon ? 'opacity-60' : ''
+                          }`}
+                        >
+                          {presceltiTeamNames[t - 1] || `SQ ${t}`}
+                          {hasWon && ' ✓'}
+                        </span>
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -997,19 +953,15 @@ const PasswordPresceltiBoard: React.FC<{ interactive?: boolean; ipadMode?: boole
                   type="button"
                   onClick={prevTurn}
                   className="flex-1 py-2.5 sm:py-3 bg-slate-700 hover:bg-slate-650 text-white font-black text-xs sm:text-sm rounded-xl transition-all shadow border border-slate-600 uppercase tracking-tighter cursor-pointer"
+                  title="Torna alla squadra precedente (in loop)"
                 >
                   ← Indietro
                 </button>
                 <button
                   type="button"
                   onClick={nextTurn}
-                  disabled={isLastTurn}
-                  className={`flex-1 py-2.5 sm:py-3 font-black text-xs sm:text-sm rounded-xl transition-all shadow-lg uppercase tracking-tighter ${
-                    isLastTurn
-                      ? 'bg-slate-700/50 text-slate-500 border border-slate-700 cursor-not-allowed opacity-60'
-                      : 'bg-white hover:bg-yellow-400 text-black cursor-pointer'
-                  }`}
-                  title={isLastTurn ? "Ultimo turno del Round 3 raggiunto (manche completata)" : "Passa al prossimo turno"}
+                  className="flex-1 py-2.5 sm:py-3 font-black text-xs sm:text-sm rounded-xl transition-all shadow-lg uppercase tracking-tighter bg-white hover:bg-yellow-400 text-black cursor-pointer"
+                  title="Passa alla squadra successiva (in loop)"
                 >
                   Prossimo →
                 </button>

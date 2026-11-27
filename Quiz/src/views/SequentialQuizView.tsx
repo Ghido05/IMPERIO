@@ -22,6 +22,12 @@ import WebSerialManager from '../components/WebSerialManager';
 import { sendSerialReset } from '../lib/webSerial';
 import { sanitizeSetupStateWithKnownAssets, assetUrl } from '../lib/assetUrl';
 import { playTeamBookingSound } from '../lib/teamBookingSound';
+import {
+  PASSWORD_STARTER_IDX_KEY,
+  PASSWORD_STARTER_LOCKED_KEY,
+  getPasswordBox3StarterIdx,
+  getPasswordTurnSequence,
+} from '../lib/passwordUtils';
 
 export function getSlideForBoxQuestion(
   setupState: QuizSetupState,
@@ -495,7 +501,7 @@ export default function SequentialQuizView({ onGoToSetup }: SequentialQuizViewPr
 }
 
 function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
-  const { addScore } = useScores();
+  const { scores, addScore } = useScores();
   const [setupState, setSetupState] = useState<QuizSetupState>(getDefaultSetupState());
   const [activeBox, setActiveBox] = useState<number>(() => {
     const saved = localStorage.getItem('playstate_active_box');
@@ -573,26 +579,42 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
     if (activeBox === 3 && activeQuestion > 0) {
       const targetManche = activeQuestion - 1;
       const stored = localStorage.getItem('password_current_manche');
-      const currentStoredManche = stored ? parseInt(stored) : 0;
-      if (currentStoredManche !== targetManche) {
+      const currentStoredManche = stored !== null ? parseInt(stored, 10) : -1;
+      if (stored === null || currentStoredManche !== targetManche) {
         handlePasswordMancheSelect(targetManche);
       }
     }
   }, [activeBox, activeQuestion]);
 
+  // Prima dell'avvio effettivo del Box 3, mantiene allineata la squadra di partenza con la squadra in svantaggio
+  useEffect(() => {
+    if (activeBox !== 3 || activeQuestion <= 0) return;
+    if (localStorage.getItem(PASSWORD_STARTER_LOCKED_KEY) === 'true') return;
+    const mancheIndex = activeQuestion - 1;
+    if (localStorage.getItem(`password_current_team_m${mancheIndex}`)) return;
+
+    const starterIdx = getPasswordBox3StarterIdx(scores, true);
+    const firstTeam = getPasswordTurnSequence(mancheIndex, starterIdx)[0].toString();
+    if (localStorage.getItem('password_current_team') !== firstTeam) {
+      localStorage.setItem('password_current_team', firstTeam);
+      window.dispatchEvent(new Event('storage'));
+      window.dispatchEvent(new CustomEvent('local-storage-update', {
+        detail: { key: 'password_current_team', value: firstTeam }
+      }));
+    }
+  }, [activeBox, activeQuestion, scores]);
+
   const handlePasswordMancheSelect = (mancheIndex: number) => {
     setPasswordManche(mancheIndex);
     localStorage.setItem('password_current_manche', mancheIndex.toString());
 
-    const turnSeq = mancheIndex === 0 ? [1, 2, 3] : mancheIndex === 1 ? [2, 3, 1] : [3, 1, 2];
+    const isStarterLocked = localStorage.getItem(PASSWORD_STARTER_LOCKED_KEY) === 'true';
+    const starterIdx = getPasswordBox3StarterIdx(scores, !isStarterLocked);
+    const turnSeq = getPasswordTurnSequence(mancheIndex, starterIdx);
     
     // Team
     const savedTeam = localStorage.getItem(`password_current_team_m${mancheIndex}`) || turnSeq[0].toString();
     localStorage.setItem('password_current_team', savedTeam);
-
-    // Round
-    const savedRound = localStorage.getItem(`password_current_round_m${mancheIndex}`) || '1';
-    localStorage.setItem('password_current_round', savedRound);
 
     // Excluded
     const savedExcluded = localStorage.getItem(`password_excluded_teams_m${mancheIndex}`) || JSON.stringify([]);
@@ -631,7 +653,8 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
       const keysToBroadcast = [
         'password_current_manche',
         'password_current_team',
-        'password_current_round',
+        PASSWORD_STARTER_IDX_KEY,
+        PASSWORD_STARTER_LOCKED_KEY,
         'password_excluded_teams',
         'password_winners_order',
         'password_chosen_suggestion',
@@ -642,7 +665,6 @@ function SequentialQuizContent({ onGoToSetup }: SequentialQuizViewProps) {
         'password_grid_state',
         `password_grid_state_m${mancheIndex}`,
         `password_current_team_m${mancheIndex}`,
-        `password_current_round_m${mancheIndex}`,
         `password_excluded_teams_m${mancheIndex}`,
         `password_winners_order_m${mancheIndex}`,
         `password_chosen_suggestion_m${mancheIndex}`,

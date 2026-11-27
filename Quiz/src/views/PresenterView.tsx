@@ -629,6 +629,9 @@ export default function PresenterView() {
         const pwdKeys = [
           'password_current_manche',
           'password_current_team',
+          'password_current_round',
+          'password_box3_starter_idx',
+          'password_box3_starter_locked',
           'password_chosen_suggestion',
           'password_excluded_teams',
           'password_winners_order',

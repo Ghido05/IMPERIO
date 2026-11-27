@@ -949,7 +949,7 @@
           "immagine_premio_squadra2": "dado",
           "immagine_premio_squadra3": "dado"
         },
-        "notePresentatore": "DALLA TORRE DI ASTRONOMIA CADE SILENTE (NON GANDALF)\nIL NECROMANTE è MEFISTO\nTRITONI NEL CALICE DI FUOCO VENGONO INCONTRATI DA HARRY DURANTE LA SECONDA PROVA\nSembra incredibile, ma Topolino è letteralmente il \"capo\" sia dell'Uomo Ragno che del celebre archeologo con la frusta! La Disney, infatti, ha acquistato in blocco la Marvel nel 2009 (portandosi a casa Spider-Man) e la Lucasfilm nel 2012 (acquisendo così i diritti di Star Wars e Indiana Jones). Harry Potter, invece, è la punta di diamante della scuderia rivale, la Warner Bros, che guarda caso è anche la proprietaria dei supereroi DC come Batman e Superman."
+        "notePresentatore": "SQUADRA 1 (Blu - Porto): BATMAN, TOPOLINO, SPONGEBOB\nBATMAN -> ALFRED: È l'indizio chirurgico per eccellenza. Usare MANTELLO è rischioso perché potrebbe far dire Superman (Squadra 2), mentre ALFRED identifica univocamente il maggiordomo di Bruce Wayne.\nTOPOLINO -> 1928: È l'anno di debutto di Topolino (Steamboat Willie). È una data storica precisa che taglia fuori qualsiasi altro personaggio del tabellone.\nSPONGEBOB -> BIKINI: Rimanda direttamente a Bikini Bottom, la città sottomarina in cui vive la spugna. Indizio inequivocabile.\nSQUADRA 2 (Rossa - Marmirolo): SUPERMAN, LUPO ALBERTO, TEX WILLER\nSUPERMAN -> METROPOLIS (oppure MANTELLO): METROPOLIS è la città in cui vive e lavora Clark Kent; è l'indizio più sicuro perché non si sovrappone ad altri eroi. In alternativa, se la Squadra 1 ha già bruciato ALFRED, resta libero MANTELLO.\nLUPO ALBERTO -> SILVER: È lo pseudonimo del fumettista Guido Silvestri, creatore del celebre lupo azzurro e della fattoria McKenzie.\nTEX WILLER -> AQUILA: Rimanda direttamente ad Aquila della Notte, il nome indiano con cui Tex Willer è conosciuto tra i Navajos.\nSQUADRA 3 (Gialla - Goito): LARA CROFT, SPIDERMAN, GANDALF\nLARA CROFT -> ANGELINA JOLIE: È l'indizio più sicuro per evitare la trappola della Parola Nulla Indiana Jones! Se il prescelto usasse ARCHEOLOGIA, rischierebbe di far dire Indiana Jones alla propria squadra; ANGELINA JOLIE (prima celebre interprete cinematografica dell'eroina) porta dritto a Lara Croft senza rischi.\nSPIDERMAN -> QUEENS (oppure NEW YORK): QUEENS è ancora più preciso di NEW YORK perché identifica il quartiere esatto in cui vive Peter Parker, evitando ambiguità.\nSTREGONE -> È la definizione esatta di Gandalf (uno degli Istari, gli stregoni della Terra di Mezzo)"
       },
       "2": {
         "sfondo": "/Icone/sfondi/3_2_dolci.jpg",
@@ -1002,11 +1002,11 @@
           "SAVOIARDI",
           "NATALE",
           "ALCHÈRMES",
-          "GLASSA",
+          "COLAZIONE",
           "CANDITI",
           "MASCARPONE",
           "ZUCCHERO A VELO",
-          "PASTA SFOGLIA"
+          "GLASSA"
         ],
         "bussolotti": {
           "immagine_premio": "/Icone/premio_bonus.png",
@@ -1026,7 +1026,7 @@
           "immagine_premio_squadra2": "switch",
           "immagine_premio_squadra3": "switch"
         },
-        "notePresentatore": ""
+        "notePresentatore": "SQUADRA 1 (Rosso - Porto): torta di mele, babà, cannolo\n1. torta di mele -> CANNELLA: Indizio netto e immediato. È la spezia per eccellenza associata alla torta di mele sul tabellone, perfetta per sbloccare subito la prima parola senza rischi.\n2. babà -> RUM: È l'ingrediente simbolo del babà, ma crea un primo dubbio interessante: se la Squadra 3 non ha ancora indovinato zuppa inglese, la squadra potrebbe esitare tra i due dolci bagnati nel liquore.\n3. cannolo -> RICOTTA (oppure CANDITI): Qui la tensione sale al massimo. La ricotta è l'ingrediente base del cannolo, ma è anche l'anima della Parola Bomba CASSATA (e può far pensare alla cheesecake della Squadra 2). Stesso discorso per CANDITI, che si sovrappone sia al panettone che alla bomba cassata.\nSQUADRA 2 (Blu - Marmirolo): cheesecake, tiramisù, cookies\n1. cheesecake -> FREDDA (oppure SPALMABILE): Essendo la prima parola, serve un indizio che indirizzi bene, pur lasciando un minimo di dubbio: FREDDA (torta fredda) identifica la cheesecake ma potrebbe far venire in mente la Parola Nulla panna cotta o il tiramisù.\n2. tiramisù -> CAFFÈ (o SAVOIARDI): Se il prescelto vuole andare sul sicuro usa CAFFÈ, ma se vuole rischiare o se CAFFÈ non fosse disponibile, SAVOIARDI crea un'ottima sovrapposizione con la zuppa inglese della Squadra 3.\n3. cookies -> GOCCE (oppure AMERICA): GOCCE (le gocce di cioccolato) è un indizio preciso ma pieno di insidie: il cioccolato a gocce si trova anche dentro il cannolo e il panettone! Se invece usa AMERICA, rischia la sovrapposizione con la cheesecake (se non è ancora uscita).\nSQUADRA 3 (Verde - Goito): zuppa inglese, panettone, ciambella\n1. zuppa inglese -> ALCHÈRMES: Indizio chirurgico. Identifica univocamente il liquore rosso della zuppa inglese, evitando di bruciare RUM o SAVOIARDI.\n2. panettone -> NATALE: Rimanda immediatamente al dolce natalizio per eccellenza, ma ha il brivido della Parola Nulla struffoli (altro tipico dolce delle feste natalizie).\n3. ciambella -> GLASSA; se invece il prescelto sceglie COLAZIONE, apre un bivio pericoloso con i cookies della Squadra 2 e la torta di mele della Squadra 1!"
       },
       "3": {
         "sfondo": "/Icone/sfondi/3_3_programmiTV.jpg",
@@ -1074,11 +1074,11 @@
           "200 VOTI",
           "GERRY SCOTTI",
           "PAOLO BONOLIS",
-          "COMICITÀ",
-          "OFFERTA",
+          "INTESA",
+          "ANTONELLA CLERICI",
           "50:50",
-          "IMITAZIONI",
-          "COMICI",
+          "GIURIA",
+          "HUNZINKER",
           "8 DOMANDE",
           "CHARLESTON",
           "DARIA BIGNARDI",
@@ -1103,7 +1103,7 @@
           "immagine_premio_squadra2": "arco",
           "immagine_premio_squadra3": "arco"
         },
-        "notePresentatore": ""
+        "notePresentatore": "SQUADRA 1 (Blu - Porto): GRANDE FRATELLO, CIAO DARWIN, STRISCIA LA NOTIZIA\n1. GRANDE FRATELLO -> DARIA BIGNARDI: Indizio chirurgico e sicuro (prima storica conduttrice del reality) per partire senza bruciare TELEVOTO.\n2. CIAO DARWIN -> 200 VOTI (oppure PAOLO BONOLIS): 200 VOTI identifica il meccanismo del pubblico in studio; PAOLO BONOLIS funziona altrettanto bene, ma crea un incrocio con Affari Tuoi e Striscia la Notizia.\n3. STRISCIA LA NOTIZIA -> SATIRA (oppure HUNZIKER): SATIRA è l'indizio più netto per chiudere; se invece il prescelto usa HUNZIKER, apre un bivio diretto con Zelig della Squadra 2!\nSQUADRA 2 (Rossa - Marmirolo): ZELIG, BALLANDO CON LE STELLE, THE MONEY DROP\n1. ZELIG -> HUNZIKER: Michelle Hunziker è stata una delle conduttrici storiche di Zelig al fianco di Claudio Bisio; ottima scelta, ma con il brivido di far dire Striscia la Notizia (Sq. 1).\n2. BALLANDO CON LE STELLE -> CHARLESTON (oppure GIURIA): CHARLESTON è l'indizio più preciso; se si usa GIURIA, si rischia la sovrapposizione con Tale e Quale Show (Sq. 3) e la Parola Nulla Tu Si Que Vales.\n3. THE MONEY DROP -> 8 DOMANDE: Indizio tecnico sul meccanismo delle botole. Fondamentale evitare GERRY SCOTTI, che farebbe esplodere la Parola Bomba LA RUOTA DELLA FORTUNA (o dire Chi vuol esser milionario?).\nSQUADRA 3 (Gialla - Goito): CHI VUOL ESSER MILIONARIO?, AFFARI TUOI, TALE E QUALE SHOW\n1. CHI VUOL ESSER MILIONARIO? -> 50:50: L'aiuto simbolo del quiz, indizio sicuro che permette di evitare il pericolosissimo GERRY SCOTTI.\n2. AFFARI TUOI -> ANTONELLA CLERICI (oppure PAOLO BONOLIS): Indizio da veri intenditori della tv! Sia la Clerici che Bonolis hanno condotto storiche edizioni di Affari Tuoi, ma entrambi creano un'ottima tensione con altri programmi del tabellone (Ciao Darwin, Striscia e le Parole Nulle).\n3. TALE E QUALE SHOW -> TALENT (o GIURIA / TELEVOTO): Senza più IMITAZIONI, la terza parola di Goito diventa bella tosta! Sia TALENT che GIURIA e TELEVOTO sono validi per il programma di Carlo Conti, ma si sovrappongono a Ballando con le Stelle, Grande Fratello e alla Parola Nulla Tu Si Que Vales, costringendo la squadra a ragionare per esclusione su tutto il tabellone"
       }
     },
     "sfondoGenerale": ""
